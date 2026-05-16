@@ -1506,7 +1506,11 @@ export const RPGBattleArena = ({
         // FIRE!
         const dmg = calculatePetAttackDamage(equippedPetData, equippedPet.level);
         setPetAttacking(true);
-        setEnemyHp(prevHp => Math.max(0, prevHp - dmg));
+        setEnemyHp(prevHp => {
+          const updated = Math.max(0, prevHp - dmg);
+          enemyHpRef.current = updated;
+          return updated;
+        });
         setTotalDamage(d => d + dmg);
         setFloatingDamages(fd => [...fd, {
           id: Date.now() + 9999,
@@ -3269,7 +3273,10 @@ export const RPGBattleArena = ({
                     <div className="bg-slate-800/60 rounded-lg p-4 border border-slate-700">
                       <p className="text-3xl font-bold text-yellow-400 flex items-center justify-center gap-1">
                         <Star className="h-5 w-5" />
-                        {Math.floor(100 + correctWords * 5 + longestStreak * 10)}
+                        {Math.floor(
+                          (100 + correctWords * 5 + longestStreak * 10 + totalDamage * 0.5) *
+                          (1 + ((activeUpgrades.xp_boost || 0) + petXpBonusPct) / 100)
+                        )}
                       </p>
                       <p className="text-xs text-slate-400">XP Earned</p>
                     </div>
