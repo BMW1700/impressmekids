@@ -1,54 +1,62 @@
-## Brutally honest answer: the numbers are real, but the page is lying by mixing them
+## What's actually wrong
 
-I pulled this exact user's data from the database. Every number on that screenshot is a real value from a real row — none of it is fake. **But the page is stitching together three different data sources and labeling them as if they're the same thing**, which is why you're seeing "26 WPM" at the top and "150 WPM" 400px below it on the same screen.
+The last "fix" in `src/pages/game/GameAuth.tsx` changed `<IdentityInput/>` and `<LoginModeToggle/>` from JSX components to function calls (`{IdentityInput({ idPrefix: "login" })}`). That pattern works *most* of the time but is fragile here for two reasons that combine to break input on the small viewport you're using (622px wide):
 
-### What's actually in the database for this reader
+1. **Inner-function identity inputs** — `IdentityInput` is redeclared every render of `GameAuth`. Every keystroke triggers a re-render → a brand-new function instance → React still reconciles the DOM `<input>`, but during the same render the freshly-created `onChange` closure captures the *previous* `studentIdInput` value when paired with React 18's automatic batching + the controlled-input + `maxLength={8}` + value-sanitizer combo. On fast typing the sanitizer (`e.target.value.replace(/\D/g, '')`) wins races against the controlled value, which is why one keystroke "sticks" and the next one looks dropped. The robust fix is to stop nesting these as functions and inline the inputs directly in each tab.
+2. **Full-bleed decorative overlay swallows taps** — line 289 has `<div className="absolute inset-0 bg-[url(...)] opacity-20" />` with **no `pointer-events-none`**. The form has `relative z-10` so it *paints* above the overlay, but on Safari/iPad and inside the Lovable preview iframe the overlay still intercepts the first tap on focusable elements that sit inside `backdrop-blur` cards. That matches your "can't even click into it" report.
 
-| Source table | Row count | Avg WPM | Avg WCPM | Avg Accuracy | What it represents |
-|---|---|---|---|---|---|
-| `reading_sessions` | **457** | **33** | **27** | **87%** | Real reading practice (RPG battles, tug-of-war, screening) |
-| `aura_records` (speaking) | **4** | **150** | n/a | n/a | 4 old "speaking" practice clips from Dec 2025 / Feb 2026 |
-| `student_reading_stats` | 1 | — | — | — | Aggregate row: 369 sessions logged, 18,569 words read |
+## The fix (UI-only, no auth or business logic changes)
 
-### What each card on that screen is *actually* pulling from
+Edit only `src/pages/game/GameAuth.tsx`:
 
-- **"4 Total Sessions"** (top card) → `aura_records.length` — counts only the 4 speaking clips, ignores 457 reading sessions
-- **"18,569 Words Read"** → `student_reading_stats.total_words_read` — all reading combined
-- **"26 Avg WPM"** → last 20 rows of `reading_sessions` (the real reading number)
-- **"23 Avg WCPM"** → last 20 rows of `reading_sessions`
-- **"95% Accuracy"** → last 20 rows of `reading_sessions`
-- **"Instructional" fluency** → derived from that 95%
-- **"3 Day Streak"** → `student_reading_stats.current_streak_days`
-- **"4 Total Sessions / 73 Avg Grade / 150 Avg WPM / 0.0 Avg Pronunciation"** (bottom "Your Progress Over Time" block) → `aura_records` only — the 4 stale speaking clips from months ago
+### 1. Kill the nested render helpers
 
-So **150 WPM is not this kid's reading speed**. It's the average of 4 speaking-prompt clips (32–143 words each, recorded Dec 3 → Feb 23, the most recent one being 32 words in 17 seconds). It's technically real, but it's:
-1. From a different activity (open-ended speaking, not reading aloud)
-2. n=4, three of them >5 months old
-3. Shown next to a "Total Sessions: 4" that contradicts the "Total Sessions: 4" up top contradicting the 369 in `student_reading_stats`
+Delete the `LoginModeToggle = () => (...)` and `IdentityInput = ({ idPrefix }) => (...)` definitions (lines 227–285).
 
-The **26 WPM / 95% accuracy / Instructional** numbers up top are the legitimate, current reading picture for this student. Last 10 sessions span 9–34 WPM, 84–100% accuracy — consistent with a K-5 reader doing short RPG passages of 20–65 words.
+### 2. Inline the toggle + identity input in both tabs
 
-### Why this happened
+In the **Login** tab `<CardContent>` (around lines 316–318) and the **Sign Up** tab `<CardContent>` (around lines 360–378), paste the toggle JSX and the email-or-student-id input JSX directly. Same markup as today, but written once per tab with stable `id` attributes (`login-email`/`login-student-id` and `signup-email`/`signup-student-id`).
 
-`GameAnalytics.tsx` was built to render two things in parallel:
-- The new `useGameReadingSummary` hook (reading_sessions) — added recently
-- The old `AuraProgressChart` + summary tiles that pre-date reading_sessions and read from `aura_records`
+This is the React-canonical pattern and the one that actually survives re-render on every keystroke.
 
-Nobody removed the old tiles, and "Total Sessions" in the top grid still uses `auraRecords.length` instead of the reading_sessions count. Result: same screen, three different "truths."
+### 3. Make the decorative overlay non-interactive
 
-### Plan to fix
+Line 289 — add `pointer-events-none`:
+```tsx
+<div className="absolute inset-0 bg-[url('...')] opacity-20 pointer-events-none" />
+```
 
-1. **Single source of truth for reading stats.** Extend `useGameReadingSummary` to also return `totalSessions` (count from `reading_sessions`, not capped at 20) and pull `totalWordsRead` from `student_reading_stats`. Use that hook for every top-grid tile.
-2. **Top "Total Sessions" tile** in `GameAnalytics.tsx` → switch from `auraRecords?.length` to the reading_sessions total. Expected value for this user: **457**, not 4.
-3. **Kill the misleading bottom block.** In `AuraProgressChart.tsx`, remove the four summary tiles (Total Sessions / Avg Grade / **Avg WPM** / Avg Pronunciation) that compute over `aura_records`. Keep only the line chart, and re-label its title to "Speaking Practice Progress" so it's obvious this chart is about the speaking clips, not reading.
-4. **Reading sessions list.** The "Recent Reading Sessions" tab currently lists `aura_records` (the 4 speaking clips). Swap it to list `reading_sessions` so users see their real practice history with WPM / WCPM / accuracy / mode.
-5. **Sanity guard.** When `reading_sessions` count < 3, show "Need more practice for an accurate average" instead of a number — prevents future "n=4 → 150 WPM" optics.
+### 4. Defensive input hardening for the Student ID field
 
-No DB or business-logic changes. Pure presentation fix in `GameAnalytics.tsx`, `AuraProgressChart.tsx`, and a small extension to `useGameReadingSummary.ts`.
+On the `<Input>` for Student ID (both tabs):
+- Add `autoComplete="off"` and `autoCorrect="off"` so iOS/Safari and 1Password don't fight the field.
+- Replace `onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}` with a slightly safer version that reads `e.currentTarget.value` and only updates state if the sanitized value actually changed (prevents an extra render that can re-collide with the next keystroke on slow devices):
+  ```tsx
+  onChange={(e) => {
+    const next = e.currentTarget.value.replace(/\D/g, '').slice(0, 8);
+    setStudentIdInput((prev) => (prev === next ? prev : next));
+  }}
+  ```
 
-### TL;DR for you
+### 5. Sanity-check the other auth page
 
-- The data is **real and legitimate** — nothing is fabricated.
-- **26 WPM / 95% accuracy is this reader's true current level.** That's the number to trust.
-- **150 WPM is a real artifact** but from 4 old speaking-prompt clips, not reading. It should not be on a reading analytics screen.
-- The page is the bug, not the data. The fix is to remove/relabel the speaking-derived tiles and make every "reading" stat read from `reading_sessions`.
+`src/pages/Auth.tsx` already inlines its Student ID input directly in the JSX (lines 1206–1244, 1404–1443) — no nested helper, no overlay. It's fine and doesn't need changes. The "both pages" you experienced are the **Login tab and Sign Up tab of `/game/auth`**, both of which share the same broken `IdentityInput` helper. The single edit above fixes both tabs at once.
+
+## Out of scope (intentionally)
+
+- No DB, auth, edge function, or RLS changes
+- No changes to `src/pages/Auth.tsx`
+- No changes to rate-limit, synthetic email mapping, or sign-up logic
+- No styling redesign — visuals stay identical
+
+## Files touched
+
+- `src/pages/game/GameAuth.tsx` (single file, ~3 small edits)
+
+## Verification after implementation
+
+1. Open `/game/auth` in the preview at 622px wide.
+2. Switch to Student ID, click into the field — focus ring appears on first click.
+3. Type `12345678` at normal speed — all 8 digits appear in one fluid pass, Login button enables.
+4. Switch to Sign Up tab, repeat — same behavior in the Player Name, Student ID, Class Code, and Password fields.
+5. Submit — handler runs (the network call itself was never the bug).
