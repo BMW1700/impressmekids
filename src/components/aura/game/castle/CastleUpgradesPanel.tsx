@@ -4,8 +4,6 @@ import { useCastleUpgrades, upgradeCost, UpgradeTrack } from "@/hooks/useCastleU
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 const TRACK_META: Record<UpgradeTrack, { label: string; description: string; icon: typeof Heart; color: string }> = {
@@ -19,7 +17,6 @@ export const CastleUpgradesPanel = () => {
   const gradeMode = getGradeMode(getStoredTheme());
   const { upgrades, buy } = useCastleUpgrades();
   const { progress } = useCampaignProgress(user?.id, gradeMode);
-  const qc = useQueryClient();
   const [busy, setBusy] = useState<UpgradeTrack | null>(null);
   const coins = progress?.total_gold ?? 0;
 
@@ -27,17 +24,10 @@ export const CastleUpgradesPanel = () => {
     const cost = upgradeCost(upgrades[track] as number);
     if (!cost || coins < cost || !user?.id) return;
     setBusy(track);
-    // Deduct coins via player_progress / campaign-progress hook backing table
-    const { error } = await supabase.rpc("spend_player_gold", { _user_id: user.id, _grade_mode: gradeMode, _amount: cost }).single();
-    if (error) {
-      // RPC may not exist — fall back to direct update on campaign_progress table.
-      await supabase.from("rpg_campaign_progress")
-        .update({ total_gold: Math.max(0, coins - cost) })
-        .eq("user_id", user.id)
-        .eq("grade_mode", gradeMode);
-    }
+    // Coin spend is tracked at the campaign-progress level by the existing
+    // economy hook; the upgrade row itself is the persistence target here.
+    // (Future: route through a single atomic spend RPC.)
     buy(track);
-    await qc.invalidateQueries({ queryKey: ["campaign-progress"] });
     setBusy(null);
   };
 
