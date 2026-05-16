@@ -374,16 +374,24 @@ export const RPGBattleArena = ({
       flash: Zap, shield: ShieldIcon, jam: Binary, plasma: Bomb,
       neural: Zap,
     };
-    return powerItems.map(item => ({
-      id: item.id,
-      name: item.name,
-      damage: item.value || 0,
-      mpCost: Math.max(15, Math.floor((item.price || 300) / 20)),
-      icon: iconMap[item.effect || 'fire'] || Flame,
-      color: theme === 'agent' ? 'from-cyan-500 to-teal-600' : 'from-purple-500 to-indigo-600',
-      effect: effectMap[item.effect || 'fire'] || 'fire',
-      description: item.description,
-    })) as Spell[];
+    return powerItems.map(item => {
+      // Special-case powers whose value is 0 in store but have meaningful effects:
+      // - time_stop / system_override: spells already skip enemy counter (free action),
+      //   plus deal solid damage and grant 3 shield-charges to feel "legendary"
+      // - cyber_shield: deploys 5 shield-charges (handled in handleCastSpell)
+      const isTimeSkip = item.id === 'time_stop' || item.id === 'system_override';
+      const baseDamage = isTimeSkip ? 45 : (item.value || 0);
+      return {
+        id: item.id,
+        name: item.name,
+        damage: baseDamage,
+        mpCost: Math.max(15, Math.floor((item.price || 300) / 20)),
+        icon: iconMap[item.effect || 'fire'] || Flame,
+        color: theme === 'agent' ? 'from-cyan-500 to-teal-600' : 'from-purple-500 to-indigo-600',
+        effect: effectMap[item.effect || 'fire'] || 'fire',
+        description: item.description,
+      };
+    }) as Spell[];
   }, [playerInventory.ownedItems]);
   const [inventory, setInventory] = useState<Record<string, number>>({});
   
