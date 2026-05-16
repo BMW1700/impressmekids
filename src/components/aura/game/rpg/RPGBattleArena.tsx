@@ -1568,14 +1568,24 @@ export const RPGBattleArena = ({
     setAttackType(spell.effect);
     hasManualSpellRef.current = true;
     setDamageAmount(spell.damage);
-    
+
+    // Power-specific side effects (purchased powers from the store)
+    if (spell.id === 'time_stop' || spell.id === 'system_override') {
+      // Legendary "skip turn" powers: spells already skip enemy counter, but also
+      // grant 3 shield charges so the player gets a meaningful defensive window.
+      setShieldHits(h => h + 3);
+    } else if (spell.id === 'cyber_shield') {
+      // Cyber Shield: deploys a 5-hit digital barrier
+      setShieldHits(h => h + 5);
+    }
+
     // Handle healing spells differently - they target the player
     if (spell.effect === 'heal') {
       battleSounds.magicSparkle();
       battleSounds.healingChime();
       setActiveSpell('heal');
       setShowSpellEffect(true);
-      
+
       // Heal the player
       setPlayerHp(prev => Math.min(maxHpWithBoost, prev + 25));
       
