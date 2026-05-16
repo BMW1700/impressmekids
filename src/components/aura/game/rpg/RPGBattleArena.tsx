@@ -1644,6 +1644,9 @@ export const RPGBattleArena = ({
   const handleUseItem = useCallback((item: Item) => {
     const itemKey = item.id;
     if (!inventory[itemKey] || inventory[itemKey] <= 0) return;
+
+    // Revive feather is passive (auto-consumed on death). Manual use is a no-op.
+    if (item.effect === 'revive') return;
     
     // Deduct from local state immediately for responsive UI
     setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
