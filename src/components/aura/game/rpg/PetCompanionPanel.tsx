@@ -13,9 +13,10 @@ interface PetCompanionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   currentGold?: number;
+  gradeMode?: string;
 }
 
-export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 }: PetCompanionPanelProps) => {
+export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0, gradeMode }: PetCompanionPanelProps) => {
   const {
     ownedPets,
     equippedPet,
@@ -24,7 +25,7 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
     feedPet,
     renamePet,
     isLoading,
-  } = usePlayerPets(studentId);
+  } = usePlayerPets(studentId, gradeMode);
 
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
