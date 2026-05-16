@@ -1445,7 +1445,9 @@ export const RPGBattleArena = ({
   // No random component — all damage is deterministic from reading performance
   const calculateDamage = useCallback((wordLength: number, currentStreak: number, responseTimeMs?: number, sessionAccuracy?: number): { damage: number; speedTier: 'fast' | 'normal' | 'slow'; isCritical: boolean; accuracyMultiplier: number } => {
     let baseDamage = Math.max(8, wordLength * 3);
-    const streakBonus = Math.floor(currentStreak / 2) * 5;
+    // Apply streak_boost upgrade — scales the streak bonus damage
+    const streakBoostPct = activeUpgrades.streak_boost || 0;
+    const streakBonus = Math.floor(Math.floor(currentStreak / 2) * 5 * (1 + streakBoostPct / 100));
     
     // SPEED BONUS: Based on response time (ms between word appearing and correct speech)
     let speedBonus = 0;
@@ -1465,6 +1467,13 @@ export const RPGBattleArena = ({
         speedTier = 'slow';
       }
     }
+
+    // SPEED POTION buff: extra speed bonus and treat as critical
+    if (speedHits > 0) {
+      speedBonus += 10;
+      isCritical = true;
+      setSpeedHits(h => Math.max(0, h - 1));
+    }
     
     // ACCURACY MULTIPLIER: Based on session accuracy (correctWords / wordsRead)
     let accuracyMultiplier = 1.0;
@@ -1483,10 +1492,24 @@ export const RPGBattleArena = ({
     
     // Apply attack_boost from purchased upgrades
     const attackBoost = activeUpgrades.attack_boost || 0;
-    const totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
+    let totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
+
+    // CRIT chance from crit_boost upgrade — doubles damage on roll
+    const critPct = activeUpgrades.crit_boost || 0;
+    if (critPct > 0 && Math.random() * 100 < critPct) {
+      totalDamage = totalDamage * 2;
+      isCritical = true;
+    }
+
+    // RAGE POTION: +100% outgoing damage for next N hits
+    if (rageHitsRef.current > 0) {
+      totalDamage = totalDamage * 2;
+      setRageHits(h => Math.max(0, h - 1));
+    }
     
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed, activeUpgrades.attack_boost]);
+  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits]);
+
 
   // Trigger screen shake
   const triggerScreenShake = () => {
