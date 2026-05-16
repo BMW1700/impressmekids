@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Heart, Sparkles, Mic, MicOff, Shield, Zap, Flame, Snowflake } from "lucide-react";
 import { MiniGoblin } from "@/components/aura/game/rpg/MiniGoblin";
-import { speechRecognitionManager } from "@/lib/speechRecognitionManager";
+import { speechManager } from "@/lib/speechManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
@@ -138,7 +138,7 @@ export const CastleSwarmArena = ({ onExit }: Props) => {
   const endRun = useCallback((reason: "win" | "loss" | "quit") => {
     if (endedRef.current) return;
     endedRef.current = true;
-    speechRecognitionManager.stop("castle_swarm" as any);
+    speechManager.stop("castle_swarm" as any);
     const acc = wordsAttemptedRef.current === 0
       ? 100
       : Math.round((wordsReadRef.current / wordsAttemptedRef.current) * 100);
@@ -235,11 +235,11 @@ export const CastleSwarmArena = ({ onExit }: Props) => {
 
   const toggleMic = useCallback(() => {
     if (recognising) {
-      speechRecognitionManager.stop("castle_swarm" as any);
+      speechManager.stop("castle_swarm" as any);
       setRecognising(false);
       return;
     }
-    const ok = speechRecognitionManager.start({
+    const ok = speechManager.start({
       owner: "castle_swarm" as any,
       continuous: true,
       interimResults: false,
@@ -379,7 +379,7 @@ export const CastleSwarmArena = ({ onExit }: Props) => {
   }, [wave, castleHp, activePassage, passagePool]);
 
   // Cleanup speech on unmount
-  useEffect(() => () => { speechRecognitionManager.stop("castle_swarm" as any); }, []);
+  useEffect(() => () => { speechManager.stop("castle_swarm" as any); }, []);
 
   // ---------- Render ----------
   const enemies = enemiesRef.current;
