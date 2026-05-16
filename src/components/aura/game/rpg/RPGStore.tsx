@@ -179,21 +179,21 @@ export const RPGStore = ({
                             {isOwned ? (
                               <Button
                                 size="sm"
-                                disabled={isEquipped}
+                                disabled={isEquipped || petBusyId === pet.id}
                                 onClick={() => equipPet(pet.id)}
                                 className={`w-full ${isEquipped ? 'bg-green-600' : 'bg-pink-600 hover:bg-pink-500'}`}
                               >
-                                {isEquipped ? <><Check className="w-3 h-3 mr-1" /> Equipped</> : 'Equip'}
+                                {isEquipped ? <><Check className="w-3 h-3 mr-1" /> Equipped</> : petBusyId === pet.id ? 'Equipping…' : 'Equip'}
                               </Button>
                             ) : (
                               <Button
                                 size="sm"
-                                disabled={!canAfford}
+                                disabled={!canAfford || petBusyId === pet.id}
                                 onClick={() => purchasePet({ petId: pet.id, currentGold })}
                                 className={`w-full ${canAfford ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-slate-700 cursor-not-allowed'}`}
                               >
                                 <Coins className="w-3 h-3 mr-1" />
-                                {pet.price.toLocaleString()}
+                                {petBusyId === pet.id ? 'Buying…' : pet.price.toLocaleString()}
                                 {!canAfford && <Lock className="w-3 h-3 ml-1" />}
                               </Button>
                             )}
