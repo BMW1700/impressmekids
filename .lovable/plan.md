@@ -1,67 +1,88 @@
-## Brutally honest audit: what works vs what's broken
+Brutal audit result: no, I cannot honestly say the whole player store works perfectly yet. Several things are wired, but pets are not buyable from the store, pet battle attacks do not exist, pet bonuses are not applied in battle, feed gold is not deducted, revive has a defeat race, and some purchased powers/upgrades/potions do not fully match their descriptions.
 
-I traced every store category through the database → inventory hook → battle code. Here's the truth:
+Plan to fix it properly:
 
-### ✅ Working today
-- **Skins** — purchase saves to `player_inventory`, `equipSkin` flips `is_equipped`, and characters render with the variant in both HUD previews and the battle arena (`RPGBattleArena.tsx:2897`).
-- **Powers (spells)** — purchased powers are converted into real `Spell` objects with damage, MP cost, icon, and effect, and appear in the spell menu (`RPGBattleArena.tsx:331`).
-- **Upgrades that work:** `attack_boost`, `health_boost`, `mp_boost`, `gold_boost`, `xp_boost`.
-- **Potions that work:** `health_potion` (heal_hp), `magic_potion` (restore_mp), `mega_health` / `heal_full`, `mana_surge` / `mp_full`.
+1. Make the store support pets as first-class purchasable items
+- Add a Pets tab/category to `RPGStore`.
+- Show all pet companions with price, rarity, bonus, owned/equipped state, and unique visual identity.
+- Buying a pet will deduct gold from the active grade-mode wallet and insert the pet into the existing `player_pets` table.
+- First purchased pet auto-equips; owned pets can be equipped from either the store or pet panel.
+- Keep pet ownership global per student, but deduct purchase/feed gold from the active grade-mode wallet.
 
-### ❌ Broken — paid for, no effect
+2. Fix pet economy bugs
+- Update `usePlayerPets` to accept `gradeMode` and current gold where needed.
+- Make `unlockPet` actually charge gold.
+- Make `feedPet` actually charge gold before adding XP.
+- Invalidate the campaign progress wallet after pet purchase/feed so the gold number updates immediately.
+- Add clear failed-purchase messages for not enough gold / already owned.
 
-**Upgrades sold but never read anywhere in battle:**
-- `streak_boost` ("Focus Mastery, +50% streak bonus damage") — never applied to streak damage math.
-- `crit_boost` ("Sharp Eye, +15% crit chance") — there is no crit system at all.
-- `defense_boost` ("Adamantine Shield, -15% damage taken") — incoming damage is never multiplied by this.
+3. Make pets visibly unique
+- Add a battle/store pet renderer instead of relying only on tiny emojis.
+- Each pet gets a distinct silhouette/style: Ember dragon, Athena owl, Fortune cat, Leo lion, Shell turtle, Blaze phoenix, Sparkle unicorn, Frost wolf, Aurum golden dragon.
+- Use lightweight CSS/SVG-style visuals so there are no image loading risks.
+- Reuse this renderer in the store, pet panel, and battle companion display.
 
-**Potions sold but the switch in `handleUseItem` has no case for them:**
-- `speed_potion` — no effect.
-- `double_xp` — no effect (no XP multiplier hook).
-- `lucky_coin` / gold boost potion — no effect.
-- `revive_feather` — no effect (no revive-on-death check).
-- `shield_potion` (`defense`) — deducts the potion but applies no buff/timer.
-- `rage_potion` — drains HP but never grants the +100% damage window the description promises.
+4. Put equipped pets alongside the player in battle
+- Import equipped pet data into `RPGBattleArena`.
+- Render the equipped pet beside/near the player party, separate from the existing human companion.
+- Show level/name/charge meter without blocking the reading UI.
+- If no pet is equipped, battle behaves exactly as it does now.
 
-**Catalog mismatch:**
-- `mega_health` exists in the in-battle item menu but is NOT in `STORE_ITEMS`, so players can never buy it.
+5. Add pet charge attacks
+- Add a battle-scoped pet charge meter.
+- Correct reading, streaks, and/or player attacks fill pet charge.
+- When charged, the pet automatically fires a unique attack and resets charge.
+- Pet attacks will be visible, deal real enemy damage, update total damage, and show floating damage/effect text.
+- Different pets get different attack identities, for example fire burst, owl focus beam, lucky coin strike, lion roar, turtle shell bash, phoenix flare, unicorn prism, frost bite, golden dragon breath.
 
-**Cross-mode gold bug:**
-- `RPGPlayerHUD` calls `usePlayerInventory(studentId)` without `gradeMode`, so purchases made from the HUD deduct gold from every grade-mode row, not just the active one (`usePlayerInventory.ts:101`). `RPGBattleArena` passes it correctly.
+6. Apply pet passive bonuses in battle
+- `streak_bonus`: boosts streak damage.
+- `gold_bonus`: boosts battle gold.
+- `xp_bonus`: boosts final XP and displayed XP.
+- `damage_bonus`: boosts outgoing player/pet damage.
+- `defense_bonus`: reduces incoming damage.
+- Scale the bonus by pet level using the existing `calculatePetBonus` logic.
 
----
+7. Fix potions so every bought potion works safely
+- Fix revive feather: prevent defeat before HP hits zero by resolving revive before setting HP to 0.
+- Reset one-battle buffs at battle start/end so Double XP, Lucky Coin, Shield, Rage, and Speed cannot leak into the next fight.
+- Add active buff indicators for Shield, Rage, Speed, Double XP, Lucky Coin, and Revive.
+- Make descriptions match behavior: if it says “for one battle,” keep it battle-scoped; if it says “next 5 hits,” display that clearly.
+- Ensure database quantity is consumed once per use and local UI cannot double-consume from rapid clicks.
 
-## Plan to fix everything
+8. Fix upgrades so they match what the player paid for
+- `attack_boost`: currently behaves like flat damage even though the store says percent; change it to percent damage.
+- `streak_boost`: include both upgrade and pet streak bonus.
+- `crit_boost`: keep real crit chance and visible critical feedback.
+- `defense_boost`: include both upgrade and pet defense bonus in all incoming damage paths.
+- `gold_boost` and `xp_boost`: apply to final persisted rewards, not only temporary on-screen drops.
+- `health_boost` and `mp_boost`: keep max HP/MP boosts and make sure selected character initialization uses them.
 
-### 1. Wire up the three dead upgrades in `RPGBattleArena.tsx`
-- `defense_boost`: multiply every incoming-damage write (enemy attacks, poison tick, rage self-damage if applicable) by `(1 - defense_boost/100)`, floored at 1.
-- `streak_boost`: in the damage calc around line 1439, scale the existing streak bonus by `(1 + streak_boost/100)`.
-- `crit_boost`: add a simple crit roll in the same damage block — on hit, `Math.random() < crit_boost/100` → multiply damage by 2 and show a "CRIT!" damage label. Show the crit chance on the upgrade tooltip.
+9. Fix purchased powers so their promises are real
+- Create one battle effect resolver for store powers instead of the current generic mapping.
+- Make healing powers heal using their purchased value.
+- Make Holy Light damage and heal.
+- Make Time Warp actually skip/prevent the next enemy turn.
+- Make Wind Slash multi-hit.
+- Make Nature/ice/shield/agent powers apply clear real effects or revise their store descriptions so nothing over-promises.
+- Keep purchased powers visible in the Magic/Tech menu after purchase.
 
-### 2. Make every potion do what it says
-Extend `handleUseItem` switch (and add timed buffs via existing state):
-- `speed` → set a `speedBuff` flag for N seconds that reduces enemy turn delay / increases reading window.
-- `double_xp` → set `xpMultiplierBuff = 2` for the rest of the battle, then multiply the `xpBoostPercent` payload at line 1894 accordingly.
-- `gold_boost` (lucky_coin) → same pattern as double_xp but for `goldBoostPercent` at line 1889.
-- `revive` → when `playerHp <= 0`, consume one `revive_feather` from inventory and restore to 50% HP instead of game-over.
-- `defense` (shield_potion) → set a `shieldTurns` counter (e.g. 3 turns) and apply -50% damage taken while active.
-- `rage` → set `ragePending = true` for next N attacks, multiplying outgoing damage by 2 (already self-damages).
+10. Fix reward accounting
+- Final `xpEarned` should include XP upgrades, XP pet bonus, Double XP, and any victory arena bonus.
+- Final `goldEarned` should include gold upgrades, gold pet bonus, Lucky Coin, and collected battle gold.
+- The victory screen should display the same final reward numbers that are actually saved to the wallet.
+- Avoid losing pending gold/XP if victory happens before the coin animation finishes.
 
-### 3. Catalog cleanup
-- Add `mega_health` to `STORE_ITEMS` (price/rarity matching the menu) so it can actually be purchased, OR remove it from `RPGItemMenu` defaults. Default: add it to the store (better player value).
-- Align effect strings: keep menu's `heal_hp`/`restore_mp` and rely on `id` matching (already correct via id-based lookup); no schema change needed.
+11. QA checklist before I tell you it works
+- Buy each store type: skin, power, upgrade, potion, pet.
+- Equip skin and verify character appearance changes in battle.
+- Equip pet and verify it appears beside the player in battle.
+- Verify pet charge fills, attacks, damages enemy, and resets.
+- Verify pet passive bonuses affect damage/rewards/defense.
+- Use every potion and confirm visible effect plus database quantity reduction.
+- Trigger revive and confirm no defeat race.
+- Verify upgrades affect actual battle math and final saved rewards.
+- Verify purchases deduct only the active grade-mode wallet.
+- Check console/network for runtime or database errors.
 
-### 4. Fix the cross-mode gold bug
-- Pass `gradeMode` into `usePlayerInventory` from `RPGPlayerHUD`. Thread `gradeMode` prop from wherever the HUD is mounted (same source the BattleArena uses).
-
-### 5. QA pass
-After each change, manually verify in-preview: buy each upgrade, see the stat tick up; drink each potion, see the matching buff; equip each skin, see character render; cast each purchased power, see damage land.
-
-### Files to touch
-- `src/components/aura/game/rpg/RPGBattleArena.tsx` — damage math, potion switch, revive check, buff state.
-- `src/components/aura/game/rpg/RPGPlayerHUD.tsx` — accept + forward `gradeMode`.
-- Whatever parent mounts `RPGPlayerHUD` — pass `gradeMode` down.
-- `src/lib/gameEconomy.ts` — add `mega_health` entry.
-- (Optional) `src/components/aura/game/rpg/RPGStore.tsx` — surface live values (e.g. "you already have +20% attack") so the player can see upgrades stacking.
-
-No DB schema changes needed — everything is already persisted in `player_inventory`.
+No new database tables are needed; the existing inventory, pet, and campaign progress tables are enough.
