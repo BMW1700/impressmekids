@@ -160,8 +160,47 @@ export const RPGStore = ({
                   value={category} 
                   className="flex-1 overflow-y-auto pr-2 mt-0"
                 >
-                  {/* Special skin layout with character previews */}
-                  {category === 'skin' ? (
+                  {category === 'pet' ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {petsWithStatus.map((pet) => {
+                        const isOwned = pet.isOwned;
+                        const isEquipped = equippedPet?.pet_type === pet.id;
+                        const canAfford = currentGold >= pet.price;
+                        return (
+                          <div key={pet.id} className="bg-slate-800/40 rounded-xl border-2 border-slate-700 p-3 flex flex-col items-center gap-2">
+                            <PetVisual pet={pet} size={72} />
+                            <div className="text-center w-full">
+                              <h3 className="font-bold text-white text-sm truncate">{pet.name}</h3>
+                              <p className="text-[10px] text-slate-400 line-clamp-2 h-7">{pet.description}</p>
+                              <div className="text-xs text-emerald-300 mt-1">{pet.baseBonus.label}</div>
+                              <div className="text-[10px] text-amber-200/80">⚔ {pet.attack.name}</div>
+                            </div>
+                            {isOwned ? (
+                              <Button
+                                size="sm"
+                                disabled={isEquipped}
+                                onClick={() => equipPet(pet.id)}
+                                className={`w-full ${isEquipped ? 'bg-green-600' : 'bg-pink-600 hover:bg-pink-500'}`}
+                              >
+                                {isEquipped ? <><Check className="w-3 h-3 mr-1" /> Equipped</> : 'Equip'}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                disabled={!canAfford}
+                                onClick={() => purchasePet({ petId: pet.id, currentGold })}
+                                className={`w-full ${canAfford ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-slate-700 cursor-not-allowed'}`}
+                              >
+                                <Coins className="w-3 h-3 mr-1" />
+                                {pet.price.toLocaleString()}
+                                {!canAfford && <Lock className="w-3 h-3 ml-1" />}
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : category === 'skin' ? (
                     <div className="grid grid-cols-3 gap-3">
                       {filteredItems.filter(item => item.category === 'skin').map((item) => {
                         const isOwned = ownedItems.includes(item.id);
