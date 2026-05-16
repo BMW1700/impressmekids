@@ -255,22 +255,31 @@ export const RPGCharacter = ({
 
   const spriteType = getSpriteType(character, isEnemy);
 
-  // Skin variant color overrides for hero sprites
+  // Skin variant color overrides via CSS filter — ONLY for hero sprites that don't
+  // have their own real palette swap (Agent X / Cipher / Shadow). Classic heroes
+  // (Sir Valor / Elara / Princess Ella) get their proper colors from skinVariant prop.
   const skinColorStyle = useMemo(() => {
     if (!skinVariant || isEnemy) return {};
+    const heroHasPalette = spriteType === 'knight' || spriteType === 'wizard' || spriteType === 'princess';
+    if (heroHasPalette) return {};
     const skinStyles: Record<string, React.CSSProperties> = {
       golden: { filter: 'sepia(0.6) saturate(2) hue-rotate(-10deg) brightness(1.2)' },
       shadow: { filter: 'brightness(0.6) contrast(1.3) saturate(0.8)' },
-      fire: { filter: 'sepia(0.4) saturate(2.5) hue-rotate(-30deg)' },
-      ice: { filter: 'saturate(0.5) brightness(1.1) hue-rotate(180deg)' },
-      dark: { filter: 'brightness(0.5) contrast(1.4) saturate(1.2)' },
-      neon: { filter: 'saturate(2) brightness(1.3) contrast(1.1)' },
-      stealth: { filter: 'brightness(0.7) saturate(0.3) contrast(1.2)' },
+      stealth: { filter: 'brightness(0.55) saturate(0.3) contrast(1.3)' },
+      arctic: { filter: 'saturate(0.4) brightness(1.25) hue-rotate(180deg)' },
+      desert: { filter: 'sepia(0.7) saturate(1.4) hue-rotate(-20deg) brightness(1.1)' },
+      nightfall: { filter: 'brightness(0.65) saturate(1.4) hue-rotate(220deg)' },
+      holo: { filter: 'saturate(1.8) brightness(1.25) hue-rotate(40deg)' },
+      neon: { filter: 'saturate(2.2) brightness(1.3) contrast(1.15) hue-rotate(280deg)' },
       chrome: { filter: 'saturate(0.2) brightness(1.4) contrast(1.3)' },
-      phantom: { filter: 'opacity(0.8) brightness(1.2) hue-rotate(270deg)' },
+      quantum: { filter: 'saturate(1.6) brightness(1.2) hue-rotate(180deg)' },
+      cloak: { filter: 'brightness(0.45) saturate(0.4) contrast(1.4)' },
+      phantom: { filter: 'opacity(0.85) brightness(1.3) saturate(0.5)' },
+      midnight: { filter: 'brightness(0.5) saturate(1.3) hue-rotate(260deg)' },
+      urban: { filter: 'saturate(0.6) brightness(0.9) contrast(1.2)' },
     };
     return skinStyles[skinVariant] || {};
-  }, [skinVariant, isEnemy]);
+  }, [skinVariant, isEnemy, spriteType]);
 
   // Render premium sprite based on type
   const renderPremiumSprite = () => {
@@ -761,6 +770,7 @@ export const RPGCharacter = ({
           size="medium"
           currentStreak={currentStreak}
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }
@@ -774,6 +784,7 @@ export const RPGCharacter = ({
           maxHp={character.maxHp}
           size="medium"
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }
@@ -787,6 +798,7 @@ export const RPGCharacter = ({
           maxHp={character.maxHp}
           size="medium"
           showHealthBar={showHealthBar}
+          skinVariant={skinVariant as any}
         />
       );
     }

@@ -208,8 +208,11 @@ export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
     isPetOwned,
     getAllPetsWithStatus,
     purchasePet: purchasePet.mutate,
+    purchasePetMutation: purchasePet,
     equipPet: equipPet.mutate,
+    equipPetMutation: equipPet,
     feedPet: feedPet.mutate,
+    feedPetMutation: feedPet,
     renamePet: renamePet.mutate,
     getActiveBonus,
   };

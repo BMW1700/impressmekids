@@ -3014,13 +3014,14 @@ export const RPGBattleArena = ({
                 showHealthBar={true}
                 skinVariant={playerInventory.getEquippedSkin(selectedCharacter || 'valor') || undefined}
               />
-              {/* Companion - NO health bar */}
+              {/* Companion - NO health bar; also picks up its own equipped skin */}
               {companionCharacter && (
                 <RPGCharacter
                   character={companion}
                   currentHp={companion.maxHp}
                   usePremiumSprites={true}
                   showHealthBar={false}
+                  skinVariant={playerInventory.getEquippedSkin(companionCharacter) || undefined}
                 />
               )}
               {/* Pet battle companion */}

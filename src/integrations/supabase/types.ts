@@ -4508,6 +4508,7 @@ export type Database = {
       player_inventory: {
         Row: {
           created_at: string | null
+          grade_mode: string
           id: string
           is_equipped: boolean | null
           item_category: string
@@ -4518,6 +4519,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          grade_mode?: string
           id?: string
           is_equipped?: boolean | null
           item_category: string
@@ -4528,6 +4530,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          grade_mode?: string
           id?: string
           is_equipped?: boolean | null
           item_category?: string

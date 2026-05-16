@@ -27,41 +27,44 @@ export interface ActiveUpgrades {
 export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const gm = gradeMode === '6to12' ? '6to12' : 'k5';
 
-  // Fetch inventory
+  // Fetch inventory — scoped by grade mode
   const { data: inventory = [], isLoading } = useQuery({
-    queryKey: ["player-inventory", studentId],
+    queryKey: ["player-inventory", studentId, gm],
     queryFn: async () => {
       if (!studentId) return [];
-      
+
       const { data, error } = await supabase
         .from("player_inventory")
         .select("*")
-        .eq("student_id", studentId);
-      
+        .eq("student_id", studentId)
+        .eq("grade_mode", gm);
+
       if (error) throw error;
       return data as InventoryItem[];
     },
     enabled: !!studentId,
   });
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+  };
+
   // Get list of owned item IDs
   const ownedItems = inventory.map(item => item.item_id);
 
-  // Get equipped skin for a character
+  // Get equipped skin for a specific character (scoped per character, not first-equipped)
   const getEquippedSkin = (character: string): string | null => {
-    const equippedSkin = inventory.find(
-      item => item.item_category === 'skin' && item.is_equipped
-    );
-    
-    if (!equippedSkin) return null;
-    
-    // Check if this skin belongs to the requested character
-    const skinData = STORE_ITEMS.find(s => s.id === equippedSkin.item_id);
-    if (skinData?.character === character) {
-      return skinData.skinVariant || null;
+    for (const inv of inventory) {
+      if (!inv.is_equipped) continue;
+      const skinData = STORE_ITEMS.find(s => s.id === inv.item_id);
+      if (skinData?.category === 'skin' && skinData.character === character) {
+        return skinData.skinVariant || null;
+      }
     }
-    
     return null;
   };
 
@@ -110,13 +113,12 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       }
 
       // Deduct gold from campaign_progress — scoped by gradeMode
-      let goldQuery = supabase
+      const { error: goldError } = await supabase
         .from("campaign_progress")
         .update({ total_gold: currentGold - item.price })
-        .eq("student_id", studentId);
-      if (gradeMode) goldQuery = goldQuery.eq("grade_mode", gradeMode);
-      const { error: goldError } = await goldQuery;
-      
+        .eq("student_id", studentId)
+        .eq("grade_mode", gm);
+
       if (goldError) throw goldError;
 
       // Add to inventory (or increase quantity for potions)
@@ -137,7 +139,8 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
               item_category: item.category,
               quantity: 1,
               is_equipped: false,
-            });
+              grade_mode: gm,
+            } as any);
           if (error) throw error;
         }
       } else {
@@ -149,15 +152,15 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
             item_category: item.category,
             quantity: 1,
             is_equipped: false,
-          });
+            grade_mode: gm,
+          } as any);
         if (error) throw error;
       }
 
       return item;
     },
     onSuccess: (item) => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      invalidateAll();
       toast({
         title: "✨ Purchase Complete!",
         description: `You bought ${item.name}!`,
@@ -207,11 +210,14 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       return itemId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
+      invalidateAll();
       toast({
         title: "🎨 Skin Equipped!",
         description: "Your character now has a new look!",
       });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Equip Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -219,19 +225,17 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   const usePotion = useMutation({
     mutationFn: async (itemId: string) => {
       if (!studentId) throw new Error("Not logged in");
-      
+
       const invItem = inventory.find(i => i.item_id === itemId);
       if (!invItem || invItem.quantity < 1) throw new Error("No potion to use");
 
       if (invItem.quantity === 1) {
-        // Delete the item entirely
         const { error } = await supabase
           .from("player_inventory")
           .delete()
           .eq("id", invItem.id);
         if (error) throw error;
       } else {
-        // Reduce quantity
         const { error } = await supabase
           .from("player_inventory")
           .update({ quantity: invItem.quantity - 1 })
@@ -242,7 +246,7 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       return STORE_ITEMS.find(s => s.id === itemId);
     },
     onSuccess: (item) => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
+      invalidateAll();
       if (item) {
         toast({
           title: "🧪 Potion Used!",
