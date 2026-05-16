@@ -51,6 +51,7 @@ export const RPGPlayerHUD = ({
     : {
         valor: getEquippedSkin('valor') || undefined,
         elara: getEquippedSkin('elara') || undefined,
+        ella: getEquippedSkin('ella') || undefined,
       };
 
   return (
