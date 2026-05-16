@@ -8,6 +8,9 @@ export interface GameReadingSummary {
   fluencyLabel: "Independent" | "Instructional" | "Frustration" | "—";
   fluencyTone: "good" | "warn" | "bad" | "neutral";
   sessionCount: number;
+  totalSessions: number;
+  totalWordsRead: number;
+  hasEnoughData: boolean;
 }
 
 function fluencyFromAccuracy(acc: number): Pick<GameReadingSummary, "fluencyLabel" | "fluencyTone"> {
