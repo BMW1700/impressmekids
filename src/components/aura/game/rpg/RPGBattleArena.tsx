@@ -1672,16 +1672,35 @@ export const RPGBattleArena = ({
         setWizardMp(maxMp);
         break;
       case 'defense':
-        // Handled via UI buff indicator
+        // Shield Potion: -50% damage taken for next 5 enemy hits
+        setShieldHits(prev => prev + 5);
         break;
       case 'rage':
-        // +100% damage, -20% HP
+        // Rage Potion: +100% outgoing damage for next 5 hits, costs 20% HP
+        setRageHits(prev => prev + 5);
         setPlayerHp(prev => Math.max(1, prev - Math.floor(maxHp * 0.2)));
         break;
+      case 'speed':
+        // Speed Potion: bonus speed damage for next 5 hits
+        setSpeedHits(prev => prev + 5);
+        break;
+      case 'double_xp':
+        setXpMultiplier(prev => Math.max(prev, 2));
+        break;
+      case 'gold_boost':
+        setGoldMultiplier(prev => Math.max(prev, 2));
+        break;
+      case 'revive':
+        // Revive feather is passive: consumed automatically on death.
+        // Using it manually has no effect — refund quantity by re-incrementing local state.
+        setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) + 1 }));
+        // Don't actually consume DB quantity either
+        return;
       default:
         break;
     }
   }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
+
 
   // Enemy turn logic - with failsafe to prevent stuck state
   // UPDATED: Uses setPhaseSafe and scheduleTimeout for terminal state safety
