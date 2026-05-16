@@ -1894,7 +1894,10 @@ export const RPGBattleArena = ({
       setStreak(newStreak);
       correctWordsRef.current += 1;
       setCorrectWords(prev => prev + 1);
-      
+
+      // Pet companion: charge up and fire when ready
+      triggerPetTick();
+
       // Power word detection - show loot drop overlay
       handlePowerWordCheck(word);
       if (newStreak > longestStreakRef.current) {
