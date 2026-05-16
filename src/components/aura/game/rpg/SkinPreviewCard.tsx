@@ -61,6 +61,12 @@ export const SkinPreviewCard = ({
             skinVariant={skinVariant as any}
           />
         );
+      case 'agent_x':
+        return <AgentX state="idle" healthPercent={100} size="small" showHealthBar={false} />;
+      case 'cipher':
+        return <Cipher state="idle" healthPercent={100} size="small" showHealthBar={false} />;
+      case 'shadow':
+        return <Shadow state="idle" healthPercent={100} size="small" showHealthBar={false} />;
       default:
         return null;
     }
