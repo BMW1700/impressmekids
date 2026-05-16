@@ -2318,7 +2318,7 @@ export const RPGBattleArena = ({
       longestStreak,
       damageDealt: totalDamage,
       xpEarned: finalXpEarned,
-      goldEarned,
+      goldEarned: finalGoldEarned,
     };
 
     // Show Victory Arena for boss/final victories as a reward
@@ -2330,7 +2330,7 @@ export const RPGBattleArena = ({
     }
 
     onComplete(victory, finalStats);
-  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType]);
+  }, [correctWords, longestStreak, totalDamage, wordsRead, onComplete, studentId, story, battleMode, saveToAuraRecords, triggerQLearningUpdate, goldEarned, enemyType, activeUpgrades.xp_boost, activeUpgrades.gold_boost, petXpBonusPct, petGoldBonusPct]);
 
   // Get current batch of words for reading - MEMOIZED for stable reference
   // batchStartIndex only changes when we complete a full batch, keeping this stable
