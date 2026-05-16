@@ -34,7 +34,7 @@ export const RPGPlayerHUD = ({
 
   const { hasClaimedToday, currentStreak } = useDailyRewards(studentId);
   const { getTotalStats } = usePlayerAchievements(studentId);
-  const { equippedPet, equippedPetData } = usePlayerPets(studentId);
+  const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
   const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId, gradeMode);
 
   const achievementStats = getTotalStats();
@@ -157,6 +157,7 @@ export const RPGPlayerHUD = ({
         isOpen={showPets}
         onClose={() => setShowPets(false)}
         currentGold={gold}
+        gradeMode={gradeMode}
       />
 
       <RPGStore
@@ -165,6 +166,8 @@ export const RPGPlayerHUD = ({
         currentGold={gold}
         ownedItems={ownedItems}
         equippedSkins={equippedSkins}
+        studentId={studentId}
+        gradeMode={gradeMode}
         onPurchase={(item) => {
           purchaseItem.mutate({ item, currentGold: gold });
         }}

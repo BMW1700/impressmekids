@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { ShoppingBag, X, Coins, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker } from "lucide-react";
+import { ShoppingBag, X, Coins, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STORE_ITEMS, RARITY_COLORS, type StoreItem } from "@/lib/gameEconomy";
 import { useToast } from "@/hooks/use-toast";
 import { SkinPreviewCard } from "./SkinPreviewCard";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { usePlayerPets } from "@/hooks/usePlayerPets";
+import { PetVisual } from "./PetVisual";
 
 interface RPGStoreProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ interface RPGStoreProps {
   onPurchase: (item: StoreItem) => void;
   equippedSkins?: { [key: string]: string | undefined };
   onEquipSkin?: (itemId: string) => void;
+  studentId?: string;
+  gradeMode?: string;
 }
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
@@ -24,6 +28,7 @@ const categoryIcons: Record<string, typeof ShoppingBag> = {
   skin: Palette,
   potion: Beaker,
   upgrade: Shield,
+  pet: Heart,
 };
 
 const categoryLabels: Record<string, string> = {
@@ -31,21 +36,27 @@ const categoryLabels: Record<string, string> = {
   skin: 'Skins',
   potion: 'Potions',
   upgrade: 'Upgrades',
+  pet: 'Pets',
 };
 
-export const RPGStore = ({ 
-  isOpen, 
-  onClose, 
-  currentGold, 
-  ownedItems, 
+export const RPGStore = ({
+  isOpen,
+  onClose,
+  currentGold,
+  ownedItems,
   onPurchase,
   equippedSkins = {},
   onEquipSkin,
+  studentId,
+  gradeMode,
 }: RPGStoreProps) => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('power');
   const theme = getStoredTheme();
   const isAgent = theme === 'agent';
+
+  const { getAllPetsWithStatus, purchasePet, equipPet, equippedPet } = usePlayerPets(studentId, gradeMode);
+  const petsWithStatus = studentId ? getAllPetsWithStatus() : [];
 
   // Filter items by theme: show theme-specific + shared (no theme tag = shared)
   const filteredItems = STORE_ITEMS.filter(item => {
@@ -54,7 +65,8 @@ export const RPGStore = ({
     return item.theme === (isAgent ? 'agent' : 'classic');
   });
 
-  const categories = [...new Set(filteredItems.map(item => item.category))];
+  const baseCategories = [...new Set(filteredItems.map(item => item.category))];
+  const categories = studentId ? [...baseCategories, 'pet'] : baseCategories;
 
   const handlePurchase = (item: StoreItem) => {
     if (currentGold < item.price) {
@@ -148,8 +160,47 @@ export const RPGStore = ({
                   value={category} 
                   className="flex-1 overflow-y-auto pr-2 mt-0"
                 >
-                  {/* Special skin layout with character previews */}
-                  {category === 'skin' ? (
+                  {category === 'pet' ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {petsWithStatus.map((pet) => {
+                        const isOwned = pet.isOwned;
+                        const isEquipped = equippedPet?.pet_type === pet.id;
+                        const canAfford = currentGold >= pet.price;
+                        return (
+                          <div key={pet.id} className="bg-slate-800/40 rounded-xl border-2 border-slate-700 p-3 flex flex-col items-center gap-2">
+                            <PetVisual pet={pet} size={72} />
+                            <div className="text-center w-full">
+                              <h3 className="font-bold text-white text-sm truncate">{pet.name}</h3>
+                              <p className="text-[10px] text-slate-400 line-clamp-2 h-7">{pet.description}</p>
+                              <div className="text-xs text-emerald-300 mt-1">{pet.baseBonus.label}</div>
+                              <div className="text-[10px] text-amber-200/80">⚔ {pet.attack.name}</div>
+                            </div>
+                            {isOwned ? (
+                              <Button
+                                size="sm"
+                                disabled={isEquipped}
+                                onClick={() => equipPet(pet.id)}
+                                className={`w-full ${isEquipped ? 'bg-green-600' : 'bg-pink-600 hover:bg-pink-500'}`}
+                              >
+                                {isEquipped ? <><Check className="w-3 h-3 mr-1" /> Equipped</> : 'Equip'}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                disabled={!canAfford}
+                                onClick={() => purchasePet({ petId: pet.id, currentGold })}
+                                className={`w-full ${canAfford ? 'bg-gradient-to-r from-amber-500 to-orange-500' : 'bg-slate-700 cursor-not-allowed'}`}
+                              >
+                                <Coins className="w-3 h-3 mr-1" />
+                                {pet.price.toLocaleString()}
+                                {!canAfford && <Lock className="w-3 h-3 ml-1" />}
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : category === 'skin' ? (
                     <div className="grid grid-cols-3 gap-3">
                       {filteredItems.filter(item => item.category === 'skin').map((item) => {
                         const isOwned = ownedItems.includes(item.id);

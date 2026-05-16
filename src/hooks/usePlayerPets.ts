@@ -15,11 +15,10 @@ interface PlayerPet {
   unlocked_at: string;
 }
 
-export const usePlayerPets = (studentId?: string) => {
+export const usePlayerPets = (studentId?: string, gradeMode?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all owned pets
   const { data: ownedPets = [], isLoading } = useQuery({
     queryKey: ["player-pets", studentId],
     queryFn: async () => {
@@ -28,23 +27,17 @@ export const usePlayerPets = (studentId?: string) => {
         .select("*")
         .eq("student_id", studentId!)
         .order("unlocked_at", { ascending: true });
-
       if (error) throw error;
       return data as PlayerPet[];
     },
     enabled: !!studentId,
   });
 
-  // Get the currently equipped pet
   const equippedPet = ownedPets.find(p => p.is_equipped);
   const equippedPetData = equippedPet ? getPetById(equippedPet.pet_type) : undefined;
 
-  // Check if a pet is owned
-  const isPetOwned = (petId: string): boolean => {
-    return ownedPets.some(p => p.pet_type === petId);
-  };
+  const isPetOwned = (petId: string): boolean => ownedPets.some(p => p.pet_type === petId);
 
-  // Get all pets with ownership status
   const getAllPetsWithStatus = () => {
     return PETS.map(pet => {
       const owned = ownedPets.find(p => p.pet_type === pet.id);
@@ -57,17 +50,29 @@ export const usePlayerPets = (studentId?: string) => {
     });
   };
 
-  // Unlock a new pet
-  const unlockPet = useMutation({
-    mutationFn: async ({ petId, customName }: { petId: string; customName?: string }) => {
+  // Deduct gold helper — scoped to active grade mode
+  const deductGold = async (currentGold: number, amount: number) => {
+    if (!studentId) throw new Error("No student ID");
+    if (currentGold < amount) throw new Error("Not enough gold");
+    let q = supabase
+      .from("campaign_progress")
+      .update({ total_gold: currentGold - amount })
+      .eq("student_id", studentId);
+    if (gradeMode) q = q.eq("grade_mode", gradeMode);
+    const { error } = await q;
+    if (error) throw error;
+  };
+
+  // Purchase pet — charges gold from active grade-mode wallet
+  const purchasePet = useMutation({
+    mutationFn: async ({ petId, currentGold, customName }: { petId: string; currentGold: number; customName?: string }) => {
       if (!studentId) throw new Error("No student ID");
-      
       const pet = getPetById(petId);
       if (!pet) throw new Error("Pet not found");
-      
-      if (isPetOwned(petId)) {
-        throw new Error("Pet already owned");
-      }
+      if (isPetOwned(petId)) throw new Error("Pet already owned");
+      if (currentGold < pet.price) throw new Error(`Need ${pet.price - currentGold} more gold`);
+
+      await deductGold(currentGold, pet.price);
 
       const { data, error } = await supabase
         .from("player_pets")
@@ -75,133 +80,101 @@ export const usePlayerPets = (studentId?: string) => {
           student_id: studentId,
           pet_type: petId,
           pet_name: customName || null,
-          is_equipped: ownedPets.length === 0, // Auto-equip if first pet
+          is_equipped: ownedPets.length === 0,
         })
         .select()
         .single();
-
       if (error) throw error;
       return { pet, record: data };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
       toast({
-        title: `🎉 New Pet Unlocked!`,
-        description: `${result.pet.emoji} ${result.pet.name} has joined your adventure!`,
+        title: `🎉 ${result.pet.emoji} ${result.pet.name} Joined Your Party!`,
+        description: result.pet.baseBonus.label,
       });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Purchase Failed", description: error.message, variant: "destructive" });
     },
   });
 
-  // Equip a pet
   const equipPet = useMutation({
     mutationFn: async (petId: string) => {
       if (!studentId) throw new Error("No student ID");
-      
-      // Unequip all pets first
-      await supabase
-        .from("player_pets")
-        .update({ is_equipped: false })
-        .eq("student_id", studentId);
-
-      // Equip the selected pet
+      await supabase.from("player_pets").update({ is_equipped: false }).eq("student_id", studentId);
       const { error } = await supabase
         .from("player_pets")
         .update({ is_equipped: true })
         .eq("student_id", studentId)
         .eq("pet_type", petId);
-
       if (error) throw error;
-      
       return getPetById(petId);
     },
     onSuccess: (pet) => {
       queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      
-      if (pet) {
-        toast({
-          title: `${pet.emoji} ${pet.name} Equipped!`,
-          description: pet.baseBonus.label,
-        });
-      }
+      if (pet) toast({ title: `${pet.emoji} ${pet.name} Equipped!`, description: pet.baseBonus.label });
     },
   });
 
-  // Feed a pet (gain XP)
+  // Feed a pet — actually charges gold now
   const feedPet = useMutation({
-    mutationFn: async ({ petId, goldCost }: { petId: string; goldCost: number }) => {
+    mutationFn: async ({ petId, currentGold }: { petId: string; currentGold: number }) => {
       if (!studentId) throw new Error("No student ID");
-      
       const pet = getPetById(petId);
       const playerPet = ownedPets.find(p => p.pet_type === petId);
-      
       if (!pet || !playerPet) throw new Error("Pet not found");
+      if (currentGold < pet.feedCost) throw new Error(`Need ${pet.feedCost - currentGold} more gold`);
 
-      // Add XP (each feed gives 20 XP)
+      await deductGold(currentGold, pet.feedCost);
+
       const xpGain = 20;
       const newXp = playerPet.experience + xpGain;
       const shouldLevelUp = canLevelUp(pet, playerPet.level, newXp);
-      
       const newLevel = shouldLevelUp ? playerPet.level + 1 : playerPet.level;
       const remainingXp = shouldLevelUp ? newXp - (playerPet.level * pet.xpPerLevel) : newXp;
 
       const { error } = await supabase
         .from("player_pets")
-        .update({
-          experience: remainingXp,
-          level: newLevel,
-          last_fed_at: new Date().toISOString(),
-        })
+        .update({ experience: remainingXp, level: newLevel, last_fed_at: new Date().toISOString() })
         .eq("id", playerPet.id);
-
       if (error) throw error;
-      
       return { pet, leveledUp: shouldLevelUp, newLevel };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
       if (result.leveledUp) {
-        toast({
-          title: `🎉 ${result.pet.emoji} ${result.pet.name} Leveled Up!`,
-          description: `Now level ${result.newLevel}! Bonus increased!`,
-        });
+        toast({ title: `🎉 ${result.pet.emoji} Leveled Up!`, description: `Now level ${result.newLevel}!` });
       } else {
-        toast({
-          title: `${result.pet.emoji} ${result.pet.name} Fed!`,
-          description: "+20 XP gained!",
-        });
+        toast({ title: `${result.pet.emoji} Fed!`, description: "+20 XP gained!" });
       }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Cannot Feed", description: error.message, variant: "destructive" });
     },
   });
 
-  // Rename a pet
   const renamePet = useMutation({
     mutationFn: async ({ petId, newName }: { petId: string; newName: string }) => {
       if (!studentId) throw new Error("No student ID");
-      
       const { error } = await supabase
         .from("player_pets")
         .update({ pet_name: newName })
         .eq("student_id", studentId)
         .eq("pet_type", petId);
-
       if (error) throw error;
       return newName;
     },
     onSuccess: (newName) => {
       queryClient.invalidateQueries({ queryKey: ["player-pets", studentId] });
-      toast({
-        title: "Pet Renamed!",
-        description: `Your pet is now called ${newName}`,
-      });
+      toast({ title: "Pet Renamed!", description: `Your pet is now called ${newName}` });
     },
   });
 
-  // Get total active bonuses from equipped pet
   const getActiveBonus = () => {
     if (!equippedPet || !equippedPetData) return null;
-    
     return {
       type: equippedPetData.baseBonus.type,
       value: calculatePetBonus(equippedPetData, equippedPet.level),
@@ -218,7 +191,7 @@ export const usePlayerPets = (studentId?: string) => {
     equippedPetData,
     isPetOwned,
     getAllPetsWithStatus,
-    unlockPet: unlockPet.mutate,
+    purchasePet: purchasePet.mutate,
     equipPet: equipPet.mutate,
     feedPet: feedPet.mutate,
     renamePet: renamePet.mutate,

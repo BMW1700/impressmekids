@@ -13,9 +13,10 @@ interface PetCompanionPanelProps {
   isOpen: boolean;
   onClose: () => void;
   currentGold?: number;
+  gradeMode?: string;
 }
 
-export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 }: PetCompanionPanelProps) => {
+export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0, gradeMode }: PetCompanionPanelProps) => {
   const {
     ownedPets,
     equippedPet,
@@ -24,7 +25,7 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
     feedPet,
     renamePet,
     isLoading,
-  } = usePlayerPets(studentId);
+  } = usePlayerPets(studentId, gradeMode);
 
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -36,7 +37,7 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
   const handleFeed = () => {
     if (!selectedPet || !selectedPet.playerData) return;
     if (currentGold < selectedPet.feedCost) return;
-    feedPet({ petId: selectedPet.id, goldCost: selectedPet.feedCost });
+    feedPet({ petId: selectedPet.id, currentGold });
   };
 
   const handleRename = () => {
@@ -156,10 +157,10 @@ export const PetCompanionPanel = ({ studentId, isOpen, onClose, currentGold = 0 
                         </div>
                       )}
 
-                      {/* Unlock Hint */}
-                      {!isOwned && pet.unlockCondition.type === 'world' && (
-                        <div className="absolute bottom-1 left-1 right-1 text-xs text-slate-400 bg-slate-800/80 rounded px-1">
-                          World {pet.unlockCondition.value}
+                      {/* Price hint for unowned */}
+                      {!isOwned && (
+                        <div className="absolute bottom-1 left-1 right-1 text-xs text-amber-300 bg-slate-800/80 rounded px-1">
+                          🪙 {pet.price}
                         </div>
                       )}
                     </motion.button>

@@ -84,6 +84,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/updateStudentReadingStats";
 import { useMLIntegration } from "@/hooks/useMLIntegration";
 import { usePlayerInventory } from "@/hooks/usePlayerInventory";
+import { usePlayerPets } from "@/hooks/usePlayerPets";
+import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
+import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
 
@@ -133,6 +136,20 @@ export const RPGBattleArena = ({
   // STORE INVENTORY: Read real purchased items from database
   const playerInventory = usePlayerInventory(studentId, gradeMode);
   const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
+  // EQUIPPED PET — drives passive bonuses + charge attack
+  const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
+  const petBonusValue = useMemo(() => (
+    equippedPet && equippedPetData ? calculatePetBonus(equippedPetData, equippedPet.level) : 0
+  ), [equippedPet, equippedPetData]);
+  const petBonusType = equippedPetData?.baseBonus.type;
+  const petDamageBonusPct = petBonusType === 'damage_bonus' ? petBonusValue : 0;
+  const petDefenseBonusPct = petBonusType === 'defense_bonus' ? petBonusValue : 0;
+  const petStreakBonusPct = petBonusType === 'streak_bonus' ? petBonusValue : 0;
+  const petGoldBonusPct = petBonusType === 'gold_bonus' ? petBonusValue : 0;
+  const petXpBonusPct = petBonusType === 'xp_bonus' ? petBonusValue : 0;
+  // Pet charge state (battle-scoped)
+  const [petCharge, setPetCharge] = useState(0);
+  const [petAttacking, setPetAttacking] = useState(false);
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
@@ -412,12 +429,11 @@ export const RPGBattleArena = ({
   const rageHitsRef = useRef(0);
   useEffect(() => { rageHitsRef.current = rageHits; }, [rageHits]);
 
-  // Apply incoming damage with defense_boost upgrade + active shield potion.
-  // CRITs (crit_boost) for outgoing damage are applied separately in calculateDamage.
+  // Apply incoming damage with defense_boost upgrade + pet defense bonus + shield potion.
   const takePlayerDamage = useCallback((raw: number) => {
     if (raw <= 0) return;
-    const defensePct = activeUpgrades.defense_boost || 0;
-    let amount = raw * (1 - defensePct / 100);
+    const defensePct = (activeUpgrades.defense_boost || 0) + petDefenseBonusPct;
+    let amount = raw * (1 - Math.min(80, defensePct) / 100);
     if (shieldHits > 0) {
       amount = amount * 0.5;
       setShieldHits(h => Math.max(0, h - 1));
@@ -425,26 +441,21 @@ export const RPGBattleArena = ({
     const final = Math.max(1, Math.floor(amount));
     setPlayerHp(prev => {
       const next = Math.max(0, prev - final);
-      // Revive check — if player would die and has revive_feather, consume it.
+      // Revive: if hit would kill and feather is available, restore instead of dying.
       if (next === 0 && !reviveAvailableRef.current) {
         const reviveQty = playerInventory.getItemQuantity('revive_feather');
         if (reviveQty > 0) {
           reviveAvailableRef.current = true;
           setReviveAvailable(true);
           playerInventory.usePotion.mutate('revive_feather');
-          const restored = Math.floor(maxHpWithBoost * 0.5);
-          // Apply revive in a microtask so the death-effect doesn't immediately fire
-          setTimeout(() => {
-            setPlayerHp(restored);
-            reviveAvailableRef.current = false;
-            setReviveAvailable(false);
-          }, 0);
-          return next;
+          const restored = Math.max(1, Math.floor(maxHpWithBoost * 0.5));
+          // Synchronously return restored HP so the defeat useEffect never sees 0
+          return restored;
         }
       }
       return next;
     });
-  }, [activeUpgrades.defense_boost, shieldHits, playerInventory, maxHpWithBoost]);
+  }, [activeUpgrades.defense_boost, petDefenseBonusPct, shieldHits, playerInventory, maxHpWithBoost]);
 
   
   // Word reading state
@@ -1445,70 +1456,73 @@ export const RPGBattleArena = ({
   // No random component — all damage is deterministic from reading performance
   const calculateDamage = useCallback((wordLength: number, currentStreak: number, responseTimeMs?: number, sessionAccuracy?: number): { damage: number; speedTier: 'fast' | 'normal' | 'slow'; isCritical: boolean; accuracyMultiplier: number } => {
     let baseDamage = Math.max(8, wordLength * 3);
-    // Apply streak_boost upgrade — scales the streak bonus damage
-    const streakBoostPct = activeUpgrades.streak_boost || 0;
+    // Streak bonus + upgrade + pet streak bonus all stack
+    const streakBoostPct = (activeUpgrades.streak_boost || 0) + petStreakBonusPct;
     const streakBonus = Math.floor(Math.floor(currentStreak / 2) * 5 * (1 + streakBoostPct / 100));
-    
-    // SPEED BONUS: Based on response time (ms between word appearing and correct speech)
+
     let speedBonus = 0;
     let speedTier: 'fast' | 'normal' | 'slow' = 'normal';
     let isCritical = false;
-    
     if (responseTimeMs !== undefined && responseTimeMs > 0) {
-      if (responseTimeMs < 1500) {
-        speedBonus = 15; // Fast reader — critical hit!
-        speedTier = 'fast';
-        isCritical = true;
-      } else if (responseTimeMs < 3000) {
-        speedBonus = 8; // Good pace
-        speedTier = 'normal';
-      } else {
-        speedBonus = 0; // Slow — no bonus
-        speedTier = 'slow';
-      }
+      if (responseTimeMs < 1500) { speedBonus = 15; speedTier = 'fast'; isCritical = true; }
+      else if (responseTimeMs < 3000) { speedBonus = 8; speedTier = 'normal'; }
+      else { speedBonus = 0; speedTier = 'slow'; }
     }
-
-    // SPEED POTION buff: extra speed bonus and treat as critical
     if (speedHits > 0) {
-      speedBonus += 10;
-      isCritical = true;
+      speedBonus += 10; isCritical = true;
       setSpeedHits(h => Math.max(0, h - 1));
     }
-    
-    // ACCURACY MULTIPLIER: Based on session accuracy (correctWords / wordsRead)
+
     let accuracyMultiplier = 1.0;
     if (sessionAccuracy !== undefined) {
-      if (sessionAccuracy >= 0.90) {
-        accuracyMultiplier = 1.2; // 90%+ accuracy = 20% damage boost
-      } else if (sessionAccuracy >= 0.75) {
-        accuracyMultiplier = 1.1; // 75-89% = 10% boost
-      }
+      if (sessionAccuracy >= 0.90) accuracyMultiplier = 1.2;
+      else if (sessionAccuracy >= 0.75) accuracyMultiplier = 1.1;
     }
-    
-    // Apply debuff if active
-    if (isDebuffed) {
-      baseDamage = Math.floor(baseDamage * 0.7);
-    }
-    
-    // Apply attack_boost from purchased upgrades
-    const attackBoost = activeUpgrades.attack_boost || 0;
-    let totalDamage = Math.floor((baseDamage + streakBonus + speedBonus + attackBoost) * accuracyMultiplier);
+    if (isDebuffed) baseDamage = Math.floor(baseDamage * 0.7);
 
-    // CRIT chance from crit_boost upgrade — doubles damage on roll
+    // attack_boost is now a true % multiplier + pet damage bonus
+    const attackBoostPct = (activeUpgrades.attack_boost || 0) + petDamageBonusPct;
+    let totalDamage = Math.floor(
+      (baseDamage + streakBonus + speedBonus) * accuracyMultiplier * (1 + attackBoostPct / 100)
+    );
+
     const critPct = activeUpgrades.crit_boost || 0;
-    if (critPct > 0 && Math.random() * 100 < critPct) {
-      totalDamage = totalDamage * 2;
-      isCritical = true;
-    }
-
-    // RAGE POTION: +100% outgoing damage for next N hits
+    if (critPct > 0 && Math.random() * 100 < critPct) { totalDamage *= 2; isCritical = true; }
     if (rageHitsRef.current > 0) {
-      totalDamage = totalDamage * 2;
+      totalDamage *= 2;
       setRageHits(h => Math.max(0, h - 1));
     }
-    
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits]);
+  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits, petDamageBonusPct, petStreakBonusPct]);
+
+  // Pet auto-attack — call after a correct word.
+  // Increments charge; when full, deals pet damage and resets.
+  const triggerPetTick = useCallback(() => {
+    if (!equippedPetData || !equippedPet) return;
+    const max = equippedPetData.attack.chargeWords;
+    setPetCharge(prev => {
+      const next = prev + 1;
+      if (next >= max) {
+        // FIRE!
+        const dmg = calculatePetAttackDamage(equippedPetData, equippedPet.level);
+        setPetAttacking(true);
+        setEnemyHp(prevHp => Math.max(0, prevHp - dmg));
+        setTotalDamage(d => d + dmg);
+        setFloatingDamages(fd => [...fd, {
+          id: Date.now() + 9999,
+          damage: dmg,
+          x: 25 + Math.random() * 10,
+          y: 40 + Math.random() * 10,
+          isPlayer: false,
+          isCritical: true,
+        }]);
+        setTimeout(() => setPetAttacking(false), 700);
+        return 0;
+      }
+      return next;
+    });
+  }, [equippedPet, equippedPetData]);
+
 
 
   // Trigger screen shake
