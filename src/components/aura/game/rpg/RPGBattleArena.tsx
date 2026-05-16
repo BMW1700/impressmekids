@@ -136,6 +136,20 @@ export const RPGBattleArena = ({
   // STORE INVENTORY: Read real purchased items from database
   const playerInventory = usePlayerInventory(studentId, gradeMode);
   const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
+  // EQUIPPED PET — drives passive bonuses + charge attack
+  const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
+  const petBonusValue = useMemo(() => (
+    equippedPet && equippedPetData ? calculatePetBonus(equippedPetData, equippedPet.level) : 0
+  ), [equippedPet, equippedPetData]);
+  const petBonusType = equippedPetData?.baseBonus.type;
+  const petDamageBonusPct = petBonusType === 'damage_bonus' ? petBonusValue : 0;
+  const petDefenseBonusPct = petBonusType === 'defense_bonus' ? petBonusValue : 0;
+  const petStreakBonusPct = petBonusType === 'streak_bonus' ? petBonusValue : 0;
+  const petGoldBonusPct = petBonusType === 'gold_bonus' ? petBonusValue : 0;
+  const petXpBonusPct = petBonusType === 'xp_bonus' ? petBonusValue : 0;
+  // Pet charge state (battle-scoped)
+  const [petCharge, setPetCharge] = useState(0);
+  const [petAttacking, setPetAttacking] = useState(false);
   // Multi-enemy queue system
   const buildEnemyQueue = useCallback((primaryType: EnemyType): EnemyType[] => {
     // For certain levels, add Drake the Dragon after the primary enemy
