@@ -113,13 +113,12 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       }
 
       // Deduct gold from campaign_progress — scoped by gradeMode
-      let goldQuery = supabase
+      const { error: goldError } = await supabase
         .from("campaign_progress")
         .update({ total_gold: currentGold - item.price })
-        .eq("student_id", studentId);
-      if (gradeMode) goldQuery = goldQuery.eq("grade_mode", gradeMode);
-      const { error: goldError } = await goldQuery;
-      
+        .eq("student_id", studentId)
+        .eq("grade_mode", gm);
+
       if (goldError) throw goldError;
 
       // Add to inventory (or increase quantity for potions)
@@ -140,7 +139,8 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
               item_category: item.category,
               quantity: 1,
               is_equipped: false,
-            });
+              grade_mode: gm,
+            } as any);
           if (error) throw error;
         }
       } else {
@@ -152,15 +152,15 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
             item_category: item.category,
             quantity: 1,
             is_equipped: false,
-          });
+            grade_mode: gm,
+          } as any);
         if (error) throw error;
       }
 
       return item;
     },
     onSuccess: (item) => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+      invalidateAll();
       toast({
         title: "✨ Purchase Complete!",
         description: `You bought ${item.name}!`,
