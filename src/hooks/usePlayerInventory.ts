@@ -210,11 +210,14 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       return itemId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
+      invalidateAll();
       toast({
         title: "🎨 Skin Equipped!",
         description: "Your character now has a new look!",
       });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Equip Failed", description: error.message, variant: "destructive" });
     },
   });
 
@@ -222,19 +225,17 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   const usePotion = useMutation({
     mutationFn: async (itemId: string) => {
       if (!studentId) throw new Error("Not logged in");
-      
+
       const invItem = inventory.find(i => i.item_id === itemId);
       if (!invItem || invItem.quantity < 1) throw new Error("No potion to use");
 
       if (invItem.quantity === 1) {
-        // Delete the item entirely
         const { error } = await supabase
           .from("player_inventory")
           .delete()
           .eq("id", invItem.id);
         if (error) throw error;
       } else {
-        // Reduce quantity
         const { error } = await supabase
           .from("player_inventory")
           .update({ quantity: invItem.quantity - 1 })
@@ -245,7 +246,7 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       return STORE_ITEMS.find(s => s.id === itemId);
     },
     onSuccess: (item) => {
-      queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId] });
+      invalidateAll();
       if (item) {
         toast({
           title: "🧪 Potion Used!",
