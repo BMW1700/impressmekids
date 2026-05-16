@@ -72,6 +72,22 @@ const GameAnalytics = () => {
     enabled: !!user?.id,
   });
 
+  // Real reading sessions (separate from speaking aura_records)
+  const { data: recentReadingSessions } = useQuery({
+    queryKey: ['game-recent-reading-sessions', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data } = await supabase
+        .from('reading_sessions')
+        .select('id, wpm, wcpm, accuracy_percent, words_read, duration_seconds, reading_mode, created_at')
+        .eq('student_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
   // Format data for single-user heatmap
   const heatmapStudents = user ? [{
     student_id: user.id,
