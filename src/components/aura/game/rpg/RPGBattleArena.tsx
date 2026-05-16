@@ -1969,16 +1969,21 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + actualDamage);
       
       // Calculate and trigger gold/XP rewards
+      // Apply Lucky Coin / Double XP potion multipliers on top of permanent upgrades
+      const goldBoostFromUpgrade = activeUpgrades.gold_boost || 0;
+      const xpBoostFromUpgrade = activeUpgrades.xp_boost || 0;
+      const goldBoostTotal = goldBoostFromUpgrade + (goldMultiplier > 1 ? 100 : 0);
+      const xpBoostTotal = xpBoostFromUpgrade + (xpMultiplier > 1 ? 100 : 0);
       const goldAmount = calculateGoldEarned({ 
         wordCorrect: true, 
         streak: newStreak, 
         wordLength: word.length || 5,
-        goldBoostPercent: activeUpgrades.gold_boost || 0,
+        goldBoostPercent: goldBoostTotal,
       });
       const xpAmount = calculateXpEarned({ 
         wordCorrect: true, 
         streak: newStreak,
-        xpBoostPercent: activeUpgrades.xp_boost || 0,
+        xpBoostPercent: xpBoostTotal,
       });
       
       // Trigger coin drop animation
