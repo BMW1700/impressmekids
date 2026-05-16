@@ -19,6 +19,7 @@ interface StoryLibraryProps {
   onSelectStory: (story: CuratedStory) => void;
   onStartCampaign?: () => void;
   onStartRpgMode?: () => void;
+  onStartCastle?: () => void;
   categoryFilter?: string | null;
   gradeMode?: GradeMode;
 }
@@ -27,7 +28,7 @@ const categories = ['all', 'animals', 'space', 'sports', 'fairy_tales', 'science
 const k5Grades = ['all', 'K', '1', '2', '3', '4', '5'];
 const middleHighGrades = ['all', '6', '7', '8', '9', '10', '11', '12'];
 
-export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
+export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, onStartCastle, categoryFilter, gradeMode = 'k5' }: StoryLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryFilter || "all");
   const [selectedGrade, setSelectedGrade] = useState("all");
