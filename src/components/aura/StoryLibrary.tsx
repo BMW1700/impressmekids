@@ -274,6 +274,38 @@ export const StoryLibrary = ({ onSelectStory, onStartCampaign, onStartRpgMode, o
               </CardContent>
             </Card>
           )}
+
+          {/* Castle Swarm Defense */}
+          {onStartCastle && (
+            <Card className="overflow-hidden border-2 border-amber-500/40 bg-gradient-to-r from-rose-600/15 via-amber-500/15 to-yellow-500/15">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center text-3xl shadow-lg">
+                      🏰
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <Castle className="h-5 w-5 text-amber-500" />
+                        Castle Swarm Defense
+                        <Badge className="text-xs bg-amber-500 text-black">NEW</Badge>
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Defend your castle by reading words aloud. Campaign, Endless & Daily challenges.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={onStartCastle}
+                    className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700"
+                  >
+                    <Castle className="h-4 w-4 mr-2" />
+                    Enter Castle
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </motion.div>
       )}
 
