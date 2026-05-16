@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
-import { ShoppingBag, X, Coins, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker } from "lucide-react";
+import { ShoppingBag, X, Coins, Lock, Check, Sparkles, Zap, Shield, Palette, Beaker, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STORE_ITEMS, RARITY_COLORS, type StoreItem } from "@/lib/gameEconomy";
 import { useToast } from "@/hooks/use-toast";
 import { SkinPreviewCard } from "./SkinPreviewCard";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { usePlayerPets } from "@/hooks/usePlayerPets";
+import { PetVisual } from "./PetVisual";
 
 interface RPGStoreProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ interface RPGStoreProps {
   onPurchase: (item: StoreItem) => void;
   equippedSkins?: { [key: string]: string | undefined };
   onEquipSkin?: (itemId: string) => void;
+  studentId?: string;
+  gradeMode?: string;
 }
 
 const categoryIcons: Record<string, typeof ShoppingBag> = {
@@ -24,6 +28,7 @@ const categoryIcons: Record<string, typeof ShoppingBag> = {
   skin: Palette,
   potion: Beaker,
   upgrade: Shield,
+  pet: Heart,
 };
 
 const categoryLabels: Record<string, string> = {
@@ -31,21 +36,27 @@ const categoryLabels: Record<string, string> = {
   skin: 'Skins',
   potion: 'Potions',
   upgrade: 'Upgrades',
+  pet: 'Pets',
 };
 
-export const RPGStore = ({ 
-  isOpen, 
-  onClose, 
-  currentGold, 
-  ownedItems, 
+export const RPGStore = ({
+  isOpen,
+  onClose,
+  currentGold,
+  ownedItems,
   onPurchase,
   equippedSkins = {},
   onEquipSkin,
+  studentId,
+  gradeMode,
 }: RPGStoreProps) => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('power');
   const theme = getStoredTheme();
   const isAgent = theme === 'agent';
+
+  const { getAllPetsWithStatus, purchasePet, equipPet, equippedPet } = usePlayerPets(studentId, gradeMode);
+  const petsWithStatus = studentId ? getAllPetsWithStatus() : [];
 
   // Filter items by theme: show theme-specific + shared (no theme tag = shared)
   const filteredItems = STORE_ITEMS.filter(item => {
@@ -54,7 +65,8 @@ export const RPGStore = ({
     return item.theme === (isAgent ? 'agent' : 'classic');
   });
 
-  const categories = [...new Set(filteredItems.map(item => item.category))];
+  const baseCategories = [...new Set(filteredItems.map(item => item.category))];
+  const categories = studentId ? [...baseCategories, 'pet'] : baseCategories;
 
   const handlePurchase = (item: StoreItem) => {
     if (currentGold < item.price) {
