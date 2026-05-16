@@ -400,6 +400,52 @@ export const RPGBattleArena = ({
   const [poisonDamage, setPoisonDamage] = useState(0);
   const [isDebuffed, setIsDebuffed] = useState(false);
   const [debuffTurns, setDebuffTurns] = useState(0);
+
+  // Purchased-potion buffs (battle-scoped)
+  const [shieldHits, setShieldHits] = useState(0); // Shield Potion: -50% damage taken for N hits
+  const [rageHits, setRageHits] = useState(0); // Rage Potion: +100% outgoing damage for N hits
+  const [speedHits, setSpeedHits] = useState(0); // Speed Potion: bonus speed damage for N hits
+  const [xpMultiplier, setXpMultiplier] = useState(1); // Double XP elixir
+  const [goldMultiplier, setGoldMultiplier] = useState(1); // Lucky Coin
+  const [reviveAvailable, setReviveAvailable] = useState(false); // Set true once revive happens to prevent loop
+  const reviveAvailableRef = useRef(false);
+  const rageHitsRef = useRef(0);
+  useEffect(() => { rageHitsRef.current = rageHits; }, [rageHits]);
+
+  // Apply incoming damage with defense_boost upgrade + active shield potion.
+  // CRITs (crit_boost) for outgoing damage are applied separately in calculateDamage.
+  const takePlayerDamage = useCallback((raw: number) => {
+    if (raw <= 0) return;
+    const defensePct = activeUpgrades.defense_boost || 0;
+    let amount = raw * (1 - defensePct / 100);
+    if (shieldHits > 0) {
+      amount = amount * 0.5;
+      setShieldHits(h => Math.max(0, h - 1));
+    }
+    const final = Math.max(1, Math.floor(amount));
+    setPlayerHp(prev => {
+      const next = Math.max(0, prev - final);
+      // Revive check — if player would die and has revive_feather, consume it.
+      if (next === 0 && !reviveAvailableRef.current) {
+        const reviveQty = playerInventory.getItemQuantity('revive_feather');
+        if (reviveQty > 0) {
+          reviveAvailableRef.current = true;
+          setReviveAvailable(true);
+          playerInventory.usePotion.mutate('revive_feather');
+          const restored = Math.floor(maxHpWithBoost * 0.5);
+          // Apply revive in a microtask so the death-effect doesn't immediately fire
+          setTimeout(() => {
+            setPlayerHp(restored);
+            reviveAvailableRef.current = false;
+            setReviveAvailable(false);
+          }, 0);
+          return next;
+        }
+      }
+      return next;
+    });
+  }, [activeUpgrades.defense_boost, shieldHits, playerInventory, maxHpWithBoost]);
+
   
   // Word reading state
   const [words, setWords] = useState<string[]>([]);
