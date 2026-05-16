@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GameHeader } from "@/components/game/GameHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn, Shield, Search, ArrowLeft, GraduationCap, Zap, Target, Gauge } from "lucide-react";
+import { Swords, BookOpen, Gamepad2, BarChart3, Flame, Star, LogIn, Shield, Search, ArrowLeft, GraduationCap, Zap, Target, Gauge, Castle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,16 @@ const GameDashboard = () => {
       primary: true,
       requiresAuth: true,
       onClick: () => setShowModeSelect(true),
+    },
+    {
+      title: "Castle Swarm Defense",
+      description: "NEW! Defend the castle by reading words and stories aloud. Endless horde mode.",
+      icon: Castle,
+      color: "from-amber-500/20 to-rose-500/20",
+      borderColor: "border-amber-500/40",
+      iconColor: "text-amber-400",
+      requiresAuth: true,
+      onClick: () => isSignedIn ? navigate('/game/castle-swarm') : navigate('/game/auth'),
     },
     {
       title: "Phonics Foundations",

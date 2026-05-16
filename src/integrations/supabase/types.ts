@@ -1385,6 +1385,51 @@ export type Database = {
           },
         ]
       }
+      castle_swarm_runs: {
+        Row: {
+          accuracy: number
+          character_id: string
+          coins_earned: number
+          created_at: string
+          ended_reason: string
+          enemy_castle_hp_dealt: number
+          grade_mode: string
+          id: string
+          knights_summoned: number
+          user_id: string
+          wave_reached: number
+          words_read: number
+        }
+        Insert: {
+          accuracy?: number
+          character_id: string
+          coins_earned?: number
+          created_at?: string
+          ended_reason?: string
+          enemy_castle_hp_dealt?: number
+          grade_mode: string
+          id?: string
+          knights_summoned?: number
+          user_id: string
+          wave_reached?: number
+          words_read?: number
+        }
+        Update: {
+          accuracy?: number
+          character_id?: string
+          coins_earned?: number
+          created_at?: string
+          ended_reason?: string
+          enemy_castle_hp_dealt?: number
+          grade_mode?: string
+          id?: string
+          knights_summoned?: number
+          user_id?: string
+          wave_reached?: number
+          words_read?: number
+        }
+        Relationships: []
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string

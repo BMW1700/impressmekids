@@ -1,56 +1,128 @@
-I audited the live code and database. Brutally honest: no, it does not all work right now.
+# Castle Swarm Defense — Build Plan
 
-Confirmed failures:
-- Skins save/equip in the database, but battle ignores them because `RPGCharacter` receives `skinVariant` and then never passes it into `SirValor`, `Elara`, `PrincessElla`, `AgentX`, `Cipher`, or `Shadow`. That exactly explains why Golden Knight equipped in the shop but Sir Valor stayed generic in battle.
-- Pet purchasing is still fragile. The UI shows buy buttons, but there are no live `player_pets` records after the attempted flow. The hook also hides mutation state and does not surface reliable disabled/loading/error behavior, so the user can click and see nothing useful.
-- `player_inventory` is not grade-mode scoped. K-5 and Agent inventory can bleed together, while gold/progress is grade-mode scoped. That can make store ownership/equipping inconsistent by mode.
-- The inventory unique key is still `(student_id, item_id)`, so the same item cannot exist separately per mode. Potions also depend on this same unscoped table.
-- Powers are purchased and converted into battle spells, but special effects are mostly generic mappings. Some “skip enemy turn / time warp / system override” items currently map to ice-like behavior instead of their described effect.
-- Potions are wired into battle, but their DB mutation is optimistic with weak rollback, and the battle-local `inventory` can drift from real inventory.
-- Store buttons do not expose pending/loading states, so double clicks and silent no-op behavior are possible.
+A new top-level mode alongside Campaign and RPG Battle: a tower-defense / horde-survival hybrid where **reading is the primary weapon**. Enemies rush a castle in waves; reading words and short story passages fires powers, summons knights, and charges supers that can eventually break the enemy castle.
 
-Plan to fix it:
+Shipped in **3 phases**. Phase 1 is a real, playable vertical slice in ~1 build cycle. Phases 2 and 3 only happen after Phase 1 proves the loop is fun.
 
-1. Fix equipped skins appearing in battle
-- Pass `skinVariant` from `RPGCharacter` into all premium hero components.
-- Add `skinVariant` props and color palettes to Agent X, Cipher, and Shadow so Agent skins are visually distinct too.
-- Apply equipped skin to the companion character as well, not just the selected player, so bought/equipped character skins work whenever that character appears.
-- Include Princess Ella in the HUD equipped-skins map so her skins display as equipped in the store.
+---
 
-2. Make inventory mode-scoped and reliable
-- Add `grade_mode` to `player_inventory` via migration, defaulting to `k5`.
-- Replace the unique rule with `(student_id, grade_mode, item_id)` so K-5 and Agent inventories do not collide.
-- Update `usePlayerInventory` query keys and queries to include `gradeMode`.
-- Scope purchase/equip/use/delete operations by `grade_mode`.
-- Invalidate `player-inventory` and `campaign-progress` using the active mode after every purchase/equip/use.
+## Strategic framing (the honest version)
 
-3. Fix store purchase behavior for every category
-- Expose mutation objects from `usePlayerInventory` and `usePlayerPets` instead of only `mutate`, so the UI can use `isPending`.
-- Disable the clicked buy/equip/feed/use buttons while pending.
-- Prevent double-purchase races.
-- Show clear success/failure toasts for pet purchases and item purchases.
-- Refresh the gold count immediately after purchase/feed so the modal does not show stale gold.
+- This is the most defensible product idea in the lineup. Nobody owns "action-arcade reading defense." Worth building.
+- Distribution win comes from **shareable moments**, not from the mode existing. Wave-survived recap card with stats screenshot-ready is built in from day one.
+- Reading must stay the *most powerful action* in the game. Summons and taps are secondary. Story-reading charges screen-clearing supers. If the kid can win by spamming buttons, the design has failed.
+- Ship single-player Endless first. Parent-vs-kid PvP is Phase 3 — it's the marketing clip, but it's the hardest engineering and should not block launch.
 
-4. Make pet buying work as an early advantage path
-- Keep locked/unlocked progression separate from purchase: if the player has enough gold, the store can buy a pet immediately even if it would otherwise unlock later.
-- Ensure purchase inserts `player_pets` with active `grade_mode` and auto-equips the first owned pet in that mode.
-- Keep Pet Companion panel as a collection/equip/feed/rename panel, while the Store pet tab is the direct gold-purchase path.
-- Add a visible “Buy”/“Equip” state and pending state for pets.
+---
 
-5. Make powers actually match their descriptions better
-- Keep purchased powers appearing in the Magic/Tech menu.
-- Add handling for time/override-style powers so they genuinely skip enemy retaliation rather than acting like a generic ice spell.
-- Add healing/shield-style purchased powers to provide their advertised defensive benefit.
-- Make manual purchased power damage update `enemyHpRef` as well as React state to avoid stale HP race bugs.
+## Phase 1 — Vertical slice (ship first)
 
-6. Harden potions and upgrades
-- Rebuild battle inventory directly from the scoped DB inventory whenever it changes.
-- Keep potion consumption scoped and rollback local counts if the DB mutation fails.
-- Confirm battle effects for: health, magic, full heal, full MP, double XP, lucky coin, speed, shield, rage, revive feather.
-- Ensure upgrade bonuses apply to battle stats and reward totals from the same scoped inventory.
+Goal: prove the core loop is fun in 60 seconds of play.
 
-7. Verification steps after implementation
-- Query live DB after migration to confirm `player_inventory.grade_mode` exists and uniqueness is correct.
-- Verify the current Golden Knight row is still present and battle passes `golden` into Sir Valor.
-- Use preview/browser where possible to open store, inspect skin state, buy/equip paths, and confirm battle rendering.
-- If the preview remains blocked by access gates, I will state exactly what was code/database verified and what could not be clicked end-to-end.
+**Game mode**
+- New mode: **Castle Swarm Defense**, accessible from the AURA mode dashboard alongside RPG Battle
+- Single map: classic castle on the right, enemies spawn from the left
+- One enemy type to start: goblin runner (reuse `MiniGoblin.tsx`)
+- 5 hand-tuned waves + start of Endless after Wave 5
+- One playable hero (Sir Valor for K-5, Agent X for 6-12), respects existing grade_mode / theme
+
+**Reading mechanics (the star)**
+- **Word bar** at top: a queue of words from the active story flows by; reading one aloud (Web Speech, reusing existing recognizer) fires the hero's basic attack at the front enemy
+- **Story passages**: every ~20 seconds a 1-2 sentence passage appears. Reading it cleanly charges the **Super Meter**. Full super = screen-clearing AoE.
+- **Power words** (already in `VocabularyTracker`): reading one summons a Mini-Knight ally that walks right and engages enemies (reuse `MiniGoblin.tsx` style, recolor)
+
+**Hero powers** (reuse from RPG)
+- 3 powers mapped from existing spell list: fireball (line damage), ice (slow + damage), lightning (chain). Cooldown-based, no MP.
+
+**Castle state**
+- Castle HP bar. Enemy reaches castle → damage. HP zero → game over with stats recap.
+
+**Shareable moment (distribution lever)**
+- On wave clear AND on game over: **"Wave Survived" card** — final wave, words read, accuracy, knights summoned, longest streak. One-tap "Download / Share" button. PNG export via existing canvas patterns. This is non-negotiable for Phase 1.
+
+**Persistence**
+- Coins earned feed existing `player_inventory` (grade_mode scoped)
+- High score per character in a new `castle_swarm_runs` table
+
+---
+
+## Phase 2 — Depth (after Phase 1 validates)
+
+- 4 more enemy types: skeleton, orc brute (tank), bat (flying, ignores knights), goblin shaman (heals others)
+- Wave variety: boss waves every 5, mixed-comp waves
+- Enemy castle on the left side. Player knights advance and chip its HP; destroying it ends the run with a big bonus (the "win" condition for the leveled campaign track)
+- **Leveled Campaign track**: 20 fixed levels, each its own map + enemy mix + final enemy castle. Three-star rating per level. Unlocks new powers and skins.
+- **Endless mode** unlocked after campaign Level 5. Global leaderboard scoped by grade_mode.
+- Knight upgrades purchasable with coins (HP, damage, summon cap)
+- Daily challenge wave with fixed seed → fair leaderboard
+
+---
+
+## Phase 3 — Multiplayer (the viral hook)
+
+- **Parent-vs-Kid PvP**: parent controls enemy spawns and special abilities, kid defends. Reuse `RPGOnlinePvPBattle` realtime sync infrastructure.
+- **Co-op**: two heroes, one castle. Reuse `RPGOnlineCoopBattle` patterns.
+- Spectator-friendly camera + an auto-generated highlight clip at end of match (the actual social-media asset).
+
+---
+
+## Technical details
+
+**New files (Phase 1)**
+- `src/components/aura/game/castle/CastleSwarmArena.tsx` — main game loop, the new file equivalent to `RPGBattleArena.tsx` but scoped
+- `src/components/aura/game/castle/CastleHero.tsx` — hero sprite at right edge of castle, reuses `RPGCharacter` with `skinVariant`
+- `src/components/aura/game/castle/SwarmEnemy.tsx` — enemy unit with HP, speed, lane position; wraps `MiniGoblin`
+- `src/components/aura/game/castle/MiniKnight.tsx` — friendly summon
+- `src/components/aura/game/castle/WordRiver.tsx` — scrolling word queue at top
+- `src/components/aura/game/castle/StoryPassagePrompt.tsx` — periodic 1-2 sentence prompt that charges super
+- `src/components/aura/game/castle/CastleHUD.tsx` — castle HP, super meter, power cooldowns, wave counter
+- `src/components/aura/game/castle/WaveDirector.ts` — pure module that emits spawn events for a given wave/time
+- `src/components/aura/game/castle/WaveSurvivedCard.tsx` — shareable recap PNG
+- `src/pages/game/CastleSwarmDefense.tsx` — route entry
+- `src/hooks/useCastleSwarmRun.ts` — run state, score, persistence
+
+**Existing pieces reused**
+- Speech recognition: `speechRecognitionManager`, word match rules already used by `RPGWordReader`
+- Powers: spells from `RPGSpellMenu` and effects in `RPGSpellEffects`
+- Currency: `gameEconomy.ts`, `usePlayerInventory` (grade_mode scoped per existing memory)
+- Theming: `useGameTheme` (classic vs agent), grade_mode split logic
+- Vocabulary: `VocabularyTracker` power-word detection
+
+**Routing**
+- New route `/game/castle-swarm` gated by existing auth/profile flow
+- Mode select tile on the AURA dashboard (where RPG Battle lives today)
+
+**Data model (Phase 1 migration)**
+- `castle_swarm_runs`: `user_id`, `grade_mode`, `character_id`, `wave_reached`, `words_read`, `accuracy`, `knights_summoned`, `enemy_castle_hp_dealt`, `coins_earned`, `ended_reason` (win/loss/quit), `created_at`
+- RLS: user can select/insert their own rows; teacher/parent visibility follows existing AURA consent pattern in memory
+- Per-user high-score view computed in SQL, not duplicated
+
+**Tick loop**
+- 30fps `requestAnimationFrame` loop in `CastleSwarmArena`; `useRef` for all volatile counters (enemy positions, HP, cooldowns) per existing ref-based counter memory. Only commit to React state at wave boundaries and for HUD-visible values throttled at ~10hz.
+
+**Anti-cheese rules**
+- Tap-only damage capped at ~15% of total damage budget for any wave; the other 85% must come from reading. If kid stops reading, run dies. Enforced in `WaveDirector` damage budget.
+
+---
+
+## What's out of scope for Phase 1
+
+- Enemy castle, advancing knights
+- Skins / cosmetics specific to this mode (uses existing default hero skins)
+- Leveled campaign — Endless starts after a 5-wave tutorial arc
+- Leaderboards
+- Multiplayer
+- New enemy types beyond the goblin
+- New pets integration (pets ignored in Phase 1 to keep scope)
+
+These come back in Phase 2 / 3.
+
+---
+
+## Decision point before I start building
+
+1. **Approve the 3-phase split**, or do you want me to attempt more in Phase 1?
+2. **Start with classic theme (K-5) only**, or build both classic + agent variants from the jump?
+3. **Endless-first vs leveled-first**: I recommend the 5-wave tutorial then Endless for Phase 1. OK?
+
+Once you confirm, I'll start on Phase 1 — the migration + the new arena component + the shareable recap card.

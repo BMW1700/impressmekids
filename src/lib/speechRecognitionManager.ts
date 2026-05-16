@@ -4,7 +4,7 @@
  * Prevents mic conflicts between main reader and mini-games.
  */
 
-type RecognitionOwner = 'reader' | 'tug_of_war' | 'balloon_battle' | 'shield' | 'spell_combo' | 'rhyme_chain' | 'speed_typist' | 'dodge_words' | 'fireball_defense' | 'beast_swarm' | 'asteroid_barrage' | 'ice_crystal' | 'ghostly_whispers' | 'rolling_boulders' | 'fireball_barrage' | 'quickblock' | 'web_trap' | 'ink_splash' | 'goblin_horde' | 'word_cannon' | 'word_echo' | 'word_ninja' | 'pvp_battle' | 'coop_battle' | null;
+type RecognitionOwner = 'reader' | 'tug_of_war' | 'balloon_battle' | 'shield' | 'spell_combo' | 'rhyme_chain' | 'speed_typist' | 'dodge_words' | 'fireball_defense' | 'beast_swarm' | 'asteroid_barrage' | 'ice_crystal' | 'ghostly_whispers' | 'rolling_boulders' | 'fireball_barrage' | 'quickblock' | 'web_trap' | 'ink_splash' | 'goblin_horde' | 'word_cannon' | 'word_echo' | 'word_ninja' | 'pvp_battle' | 'coop_battle' | 'castle_swarm' | null;
 
 interface RecognitionConfig {
   owner: RecognitionOwner;
