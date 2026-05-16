@@ -8650,6 +8650,10 @@ export type Database = {
         Returns: number
       }
       peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
+      purchase_castle_upgrade: {
+        Args: { p_cost: number; p_grade_mode: string; p_track: string }
+        Returns: Json
+      }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
