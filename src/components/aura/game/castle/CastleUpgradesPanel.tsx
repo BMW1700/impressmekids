@@ -4,6 +4,7 @@ import { useCastleUpgrades, upgradeCost, UpgradeTrack } from "@/hooks/useCastleU
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const TRACK_META: Record<UpgradeTrack, { label: string; description: string; icon: typeof Heart; color: string }> = {
@@ -17,18 +18,29 @@ export const CastleUpgradesPanel = () => {
   const gradeMode = getGradeMode(getStoredTheme());
   const { upgrades, buy } = useCastleUpgrades();
   const { progress } = useCampaignProgress(user?.id, gradeMode);
+  const { toast } = useToast();
   const [busy, setBusy] = useState<UpgradeTrack | null>(null);
   const coins = progress?.total_gold ?? 0;
 
   const handleBuy = async (track: UpgradeTrack) => {
     const cost = upgradeCost(upgrades[track] as number);
-    if (!cost || coins < cost || !user?.id) return;
+    if (!cost || coins < cost || !user?.id || busy) return;
     setBusy(track);
-    // Coin spend is tracked at the campaign-progress level by the existing
-    // economy hook; the upgrade row itself is the persistence target here.
-    // (Future: route through a single atomic spend RPC.)
-    buy(track);
-    setBusy(null);
+    try {
+      const result = await buy({ track, cost });
+      toast({
+        title: "Upgrade purchased!",
+        description: `${TRACK_META[track].label} → Lv ${result.new_level}. ${result.balance} 🪙 left.`,
+      });
+    } catch (e: any) {
+      toast({
+        title: "Purchase failed",
+        description: e?.message || "Try again",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
