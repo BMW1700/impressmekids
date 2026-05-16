@@ -1,62 +1,45 @@
-## What's actually wrong
+## Three fixes, all scoped to Pre-K presentation
 
-The last "fix" in `src/pages/game/GameAuth.tsx` changed `<IdentityInput/>` and `<LoginModeToggle/>` from JSX components to function calls (`{IdentityInput({ idPrefix: "login" })}`). That pattern works *most* of the time but is fragile here for two reasons that combine to break input on the small viewport you're using (622px wide):
+### 1. Kill the red "33 HP" damage indicator on Worlds 102 and 103
 
-1. **Inner-function identity inputs** — `IdentityInput` is redeclared every render of `GameAuth`. Every keystroke triggers a re-render → a brand-new function instance → React still reconciles the DOM `<input>`, but during the same render the freshly-created `onChange` closure captures the *previous* `studentIdInput` value when paired with React 18's automatic batching + the controlled-input + `maxLength={8}` + value-sanitizer combo. On fast typing the sanitizer (`e.target.value.replace(/\D/g, '')`) wins races against the controlled value, which is why one keystroke "sticks" and the next one looks dropped. The robust fix is to stop nesting these as functions and inline the inputs directly in each tab.
-2. **Full-bleed decorative overlay swallows taps** — line 289 has `<div className="absolute inset-0 bg-[url(...)] opacity-20" />` with **no `pointer-events-none`**. The form has `relative z-10` so it *paints* above the overlay, but on Safari/iPad and inside the Lovable preview iframe the overlay still intercepts the first tap on focusable elements that sit inside `backdrop-blur` cards. That matches your "can't even click into it" report.
+In `src/components/aura/game/rpg/RPGOneWordReader.tsx` the friendly creature shows a big red HP number + red HP bar + red shake on every correct word. For Pre-K worlds 102 (Action Time) and 103 (Word + Picture), this distracts from the verb animation.
 
-## The fix (UI-only, no auth or business logic changes)
+Change:
+- Hide the `{HP}` red number and the red HP bar block for worlds 102 and 103 (only World 101 keeps the classic battle UI; or remove for all 3 Pre-K worlds — see Q below if needed; default is suppress on 102 + 103 as requested).
+- Skip the `setEnemyHit(true)` red flash and the `setShake(true)` screen shake on those two worlds. The creature still animates (jump / verb scene) so feedback is preserved.
+- Keep the existing star counter (e.g. `2/3`) at the top — that's the kid-friendly success signal.
 
-Edit only `src/pages/game/GameAuth.tsx`:
+### 2. World 103: present phrases as two real words + an action
 
-### 1. Kill the nested render helpers
+Today World 103 stores `"help me"` as a single phrase, and `RPGWordReader` strips the space (`replace(/[^a-zA-Z']/g, '')`) so the chip shows `"helpme"` and the matcher rejects natural speech. The displayed phrase ("help me") doesn't match the target ("helpme").
 
-Delete the `LoginModeToggle = () => (...)` and `IdentityInput = ({ idPrefix }) => (...)` definitions (lines 227–285).
+Change in `RPGOneWordReader.tsx`:
+- When `content.kind === "phrase"`, expand each phrase into its individual words and feed those to `RPGWordReader` as the real word list. So `"help me"` becomes `["help", "me"]`, `"in the box"` becomes `["in", "the", "box"]`, etc.
+- Track which words belong to which phrase so:
+  - The big word card still shows the full phrase ("help me") while the kid is reading it.
+  - The verb animation (jump, drink, wash, plant, throw…) fires once when the phrase's action word is read correctly (or at phrase completion), not on the filler words.
+  - The `2/3` star counter advances per completed phrase, not per word, matching the existing UX.
+- Update `damagePerWord` / completion logic to count phrases, not words, so progress dots and stars still line up with the level design.
 
-### 2. Inline the toggle + identity input in both tabs
+No change to `preKWordBanks.ts` data — phrases stay authored as-is.
 
-In the **Login** tab `<CardContent>` (around lines 316–318) and the **Sign Up** tab `<CardContent>` (around lines 360–378), paste the toggle JSX and the email-or-student-id input JSX directly. Same markup as today, but written once per tab with stable `id` attributes (`login-email`/`login-student-id` and `signup-email`/`signup-student-id`).
+### 3. Add Pre-K rung to My Reading Journey
 
-This is the React-canonical pattern and the one that actually survives re-render on every keystroke.
+In `src/lib/readingJourneyLevel.ts`, add Pre-K as the first step of the K-5 ladder:
 
-### 3. Make the decorative overlay non-interactive
-
-Line 289 — add `pointer-events-none`:
-```tsx
-<div className="absolute inset-0 bg-[url('...')] opacity-20 pointer-events-none" />
+```text
+Pre-K (0 wpm) → K (20 wpm) → 1st (53) → 2nd (82) → 3rd (104) → 4th (123) → 5th (139)
 ```
 
-### 4. Defensive input hardening for the Student ID field
+That makes `ReadingProgressPanel` render 7 dots and label Pre-K readers correctly. The 6-12 ladder is untouched. `benchmarkGrade` for Pre-K is `-1` (or `0` with a `label: 'Pre-K'`) — used only for display, no downstream benchmark math breaks since existing callers key off `label` / `displayLabel`.
 
-On the `<Input>` for Student ID (both tabs):
-- Add `autoComplete="off"` and `autoCorrect="off"` so iOS/Safari and 1Password don't fight the field.
-- Replace `onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}` with a slightly safer version that reads `e.currentTarget.value` and only updates state if the sanitized value actually changed (prevents an extra render that can re-collide with the next keystroke on slow devices):
-  ```tsx
-  onChange={(e) => {
-    const next = e.currentTarget.value.replace(/\D/g, '').slice(0, 8);
-    setStudentIdInput((prev) => (prev === next ? prev : next));
-  }}
-  ```
+No DB, RLS, or edge-function changes. All edits are presentation-layer.
 
-### 5. Sanity-check the other auth page
+### Files touched
 
-`src/pages/Auth.tsx` already inlines its Student ID input directly in the JSX (lines 1206–1244, 1404–1443) — no nested helper, no overlay. It's fine and doesn't need changes. The "both pages" you experienced are the **Login tab and Sign Up tab of `/game/auth`**, both of which share the same broken `IdentityInput` helper. The single edit above fixes both tabs at once.
+- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — suppress HP UI + shake on worlds 102/103; expand phrases into individual words while keeping phrase display and per-phrase progress.
+- `src/lib/readingJourneyLevel.ts` — prepend Pre-K rung to K-5 ladder.
 
-## Out of scope (intentionally)
+### One quick check before I build
 
-- No DB, auth, edge function, or RLS changes
-- No changes to `src/pages/Auth.tsx`
-- No changes to rate-limit, synthetic email mapping, or sign-up logic
-- No styling redesign — visuals stay identical
-
-## Files touched
-
-- `src/pages/game/GameAuth.tsx` (single file, ~3 small edits)
-
-## Verification after implementation
-
-1. Open `/game/auth` in the preview at 622px wide.
-2. Switch to Student ID, click into the field — focus ring appears on first click.
-3. Type `12345678` at normal speed — all 8 digits appear in one fluid pass, Login button enables.
-4. Switch to Sign Up tab, repeat — same behavior in the Player Name, Student ID, Class Code, and Password fields.
-5. Submit — handler runs (the network call itself was never the bug).
+You said "the same should not be happening on world three" for the red indicator — I'm assuming World 101 (First Words) keeps the HP bar as-is. If you also want it gone there, say so and I'll strip it for all three Pre-K worlds.

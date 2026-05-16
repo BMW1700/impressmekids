@@ -25,7 +25,8 @@ export interface ReadingJourneyLevel {
 
 // ── K-5 ladder ──────────────────────────────────────────────
 const K5_LADDER: { label: string; minWpm: number; benchmarkGrade: number }[] = [
-  { label: 'K',   minWpm: 0,   benchmarkGrade: 0 },
+  { label: 'Pre-K', minWpm: 0,   benchmarkGrade: -1 },
+  { label: 'K',   minWpm: 20,  benchmarkGrade: 0 },
   { label: '1st', minWpm: 53,  benchmarkGrade: 1 },
   { label: '2nd', minWpm: 82,  benchmarkGrade: 2 },
   { label: '3rd', minWpm: 104, benchmarkGrade: 3 },
