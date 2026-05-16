@@ -203,6 +203,11 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
           .eq("id", skin.id);
       }
 
+      // Default skins have no inventory row — unequipping others IS the equip
+      if (skinData.skinVariant === 'default') {
+        return itemId;
+      }
+
       // Equip the new skin
       const targetItem = inventory.find(i => i.item_id === itemId);
       if (targetItem) {
