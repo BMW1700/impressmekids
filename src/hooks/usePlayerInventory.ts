@@ -27,23 +27,31 @@ export interface ActiveUpgrades {
 export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const gm = gradeMode === '6to12' ? '6to12' : 'k5';
 
-  // Fetch inventory
+  // Fetch inventory — scoped by grade mode
   const { data: inventory = [], isLoading } = useQuery({
-    queryKey: ["player-inventory", studentId],
+    queryKey: ["player-inventory", studentId, gm],
     queryFn: async () => {
       if (!studentId) return [];
-      
+
       const { data, error } = await supabase
         .from("player_inventory")
         .select("*")
-        .eq("student_id", studentId);
-      
+        .eq("student_id", studentId)
+        .eq("grade_mode", gm);
+
       if (error) throw error;
       return data as InventoryItem[];
     },
     enabled: !!studentId,
   });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["player-inventory", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId, gm] });
+    queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
+  };
 
   // Get list of owned item IDs
   const ownedItems = inventory.map(item => item.item_id);
