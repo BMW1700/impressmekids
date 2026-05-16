@@ -66,19 +66,40 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     [world.id, level.id]
   );
 
-  const items: string[] = useMemo(() => {
-    if (content.kind === "single") return content.words;
-    return content.phrases;
+  // Phrase mode (World 103): track the original phrases for display + progress,
+  // but expand them into individual words for the speech recognizer.
+  const phrases: string[] = useMemo(() => {
+    if (content.kind === "phrase") return content.phrases;
+    return content.words;
   }, [content]);
+
+  // Flat word list fed to RPGWordReader. In phrase mode each phrase is split
+  // on whitespace; in single mode each item is already one word.
+  const { wordList, wordPhraseIndex } = useMemo(() => {
+    const list: string[] = [];
+    const map: number[] = [];
+    phrases.forEach((p, pIdx) => {
+      const parts = p.split(/\s+/).filter(Boolean);
+      parts.forEach((w) => {
+        list.push(w);
+        map.push(pIdx);
+      });
+    });
+    return { wordList: list, wordPhraseIndex: map };
+  }, [phrases]);
 
   const enemy = enemyForWorld(world.id);
   const meadow = meadowFor(world.id);
+  // Suppress the red HP indicator + shake on Action Time (102) and Word + Picture (103).
+  const showCombatUI = world.id !== 102 && world.id !== 103;
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [correctCount, setCorrectCount] = useState(0);
-  const correctRef = useRef(0);
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+  const [correctPhrases, setCorrectPhrases] = useState(0);
+  const correctPhrasesRef = useRef(0);
+  const phraseWordHitsRef = useRef<Record<number, number>>({});
+  const phraseWordCorrectRef = useRef<Record<number, number>>({});
   const [enemyHp, setEnemyHp] = useState(100);
-  const damagePerWord = items.length > 0 ? 100 / items.length : 100;
+  const damagePerPhrase = phrases.length > 0 ? 100 / phrases.length : 100;
 
   const [heroAttacking, setHeroAttacking] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
@@ -93,21 +114,23 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   // Reset when level changes
   useEffect(() => {
-    setCurrentIndex(0);
-    setCorrectCount(0);
-    correctRef.current = 0;
+    setCurrentPhraseIndex(0);
+    setCorrectPhrases(0);
+    correctPhrasesRef.current = 0;
+    phraseWordHitsRef.current = {};
+    phraseWordCorrectRef.current = {};
     setEnemyHp(100);
     verbActiveRef.current = false;
     pendingCompleteRef.current = null;
     setPrekScene(null);
   }, [world.id, level.id]);
 
-  const currentWord = items[currentIndex] ?? "";
+  const currentPhrase = phrases[currentPhraseIndex] ?? "";
   const verbHint = useMemo(
-    () => resolvePreKVerb(currentWord) ?? resolveVerbAnimation(currentWord),
-    [currentWord]
+    () => resolvePreKVerb(currentPhrase) ?? resolveVerbAnimation(currentPhrase),
+    [currentPhrase]
   );
-  const allDone = correctCount >= items.length;
+  const allDone = correctPhrases >= phrases.length;
 
   // Track verb animation lifecycle so we can defer completion until it finishes
   useEffect(() => {
@@ -125,65 +148,90 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     return () => window.clearTimeout(t);
   }, [verb?.id, prekScene?.id]);
 
-  const triggerHit = useCallback((word: string) => {
+  const triggerHit = useCallback((phrase: string) => {
     setHeroAttacking(true);
     window.setTimeout(() => {
       setHeroAttacking(false);
-      setEnemyHit(true);
-      setShake(true);
-      setEnemyHp((hp) => Math.max(0, hp - damagePerWord));
+      if (showCombatUI) {
+        setEnemyHit(true);
+        setShake(true);
+      }
+      setEnemyHp((hp) => Math.max(0, hp - damagePerPhrase));
       window.setTimeout(() => {
         setEnemyHit(false);
         setShake(false);
       }, 400);
     }, 220);
 
-    // Pre-K signature scene takes priority; fall back to legacy verb library
-    const prek = resolvePreKVerb(word);
+    // Pre-K signature scene takes priority; fall back to legacy verb library.
+    // For phrases, resolvePreKVerb checks the action word inside the phrase.
+    const tokens = phrase.split(/\s+/).filter(Boolean);
+    let prek: CompoundVerbDescriptor | null = resolvePreKVerb(phrase);
+    let legacyWord = phrase;
+    if (!prek) {
+      for (const t of tokens) {
+        const p = resolvePreKVerb(t);
+        if (p) { prek = p; break; }
+        if (resolveVerbAnimation(t)) { legacyWord = t; }
+      }
+    }
     if (prek) {
       nonceRef.current += 1;
       setPrekScene({ id: nonceRef.current, descriptor: prek });
       setVerbTrigger(null);
-    } else if (resolveVerbAnimation(word)) {
+    } else if (resolveVerbAnimation(legacyWord)) {
       nonceRef.current += 1;
       setPrekScene(null);
-      setVerbTrigger({ word, nonce: nonceRef.current });
+      setVerbTrigger({ word: legacyWord, nonce: nonceRef.current });
     }
-  }, [damagePerWord]);
+  }, [damagePerPhrase, showCombatUI]);
 
   const handleResult = useCallback(
     (correct: boolean, _spoken: string, wordIndex: number) => {
-      setCurrentIndex(Math.min(wordIndex + 1, items.length - 1));
+      const pIdx = wordPhraseIndex[wordIndex] ?? 0;
+      const phraseLen = wordPhraseIndex.filter((p) => p === pIdx).length;
+      phraseWordHitsRef.current[pIdx] = (phraseWordHitsRef.current[pIdx] || 0) + 1;
       if (correct) {
-        correctRef.current += 1;
-        setCorrectCount(correctRef.current);
-        const word = items[wordIndex];
-        if (word) triggerHit(word);
+        phraseWordCorrectRef.current[pIdx] = (phraseWordCorrectRef.current[pIdx] || 0) + 1;
+      }
+
+      // When all words of the phrase have been attempted, advance phrase progress.
+      if (phraseWordHitsRef.current[pIdx] >= phraseLen) {
+        const allWordsCorrect = (phraseWordCorrectRef.current[pIdx] || 0) >= phraseLen;
+        if (allWordsCorrect) {
+          correctPhrasesRef.current += 1;
+          setCorrectPhrases(correctPhrasesRef.current);
+          triggerHit(phrases[pIdx]);
+        }
+        setCurrentPhraseIndex(Math.min(pIdx + 1, phrases.length - 1));
       }
     },
-    [items, triggerHit]
+    [phrases, wordPhraseIndex, triggerHit]
   );
 
   const handleBatchComplete = useCallback(
     (results: WordAttempt[]) => {
-      const correct = results.filter((r) => r.result === "correct").length;
-      const accuracy = results.length > 0 ? correct / results.length : 0;
+      // Score by phrase completion (a phrase counts as correct only if every word was correct).
+      const phraseCorrect = Object.keys(phraseWordCorrectRef.current).filter((k) => {
+        const idx = Number(k);
+        const need = wordPhraseIndex.filter((p) => p === idx).length;
+        return (phraseWordCorrectRef.current[idx] || 0) >= need;
+      }).length;
+      const accuracy = phrases.length > 0 ? phraseCorrect / phrases.length : 0;
       const stars = accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : 1;
       const finish = () =>
-        onComplete({ wordsRead: results.length, correctWords: correct, stars });
-      // If a verb animation is still playing, wait for it to finish before ending.
+        onComplete({ wordsRead: results.length, correctWords: phraseCorrect, stars });
       if (verbActiveRef.current) {
         pendingCompleteRef.current = finish;
       } else {
-        // Tiny grace period so the last hit/star can render
         window.setTimeout(finish, 600);
       }
     },
-    [onComplete]
+    [onComplete, phrases.length, wordPhraseIndex]
   );
 
   const handleHearIt = () => {
-    if (currentWord) playCorrectPronunciation(currentWord);
+    if (currentPhrase) playCorrectPronunciation(currentPhrase);
   };
 
   return (
@@ -214,7 +262,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           </div>
           <div className="text-sm sm:text-base font-bold flex items-center gap-1 text-amber-700 bg-white/90 rounded-full px-3 py-1 shadow">
             <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
-            {correctCount}/{items.length}
+            {correctPhrases}/{phrases.length}
           </div>
         </div>
 
@@ -227,16 +275,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow">
                 {enemyName(enemy)}
               </div>
-              <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
-                {Math.max(0, Math.round(enemyHp))} HP
-              </div>
-              <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
-                  animate={{ width: `${enemyHp}%` }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                />
-              </div>
+              {showCombatUI && (
+                <>
+                  <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
+                    {Math.max(0, Math.round(enemyHp))} HP
+                  </div>
+                  <div className="w-full max-w-[160px] h-3 bg-slate-900/30 rounded-full overflow-hidden border border-white/60 shadow-inner">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
+                      animate={{ width: `${enemyHp}%` }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}`}
@@ -305,7 +357,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={`word-${currentIndex}`}
+              key={`word-${currentPhraseIndex}`}
               initial={{ scale: 0.85, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.02, opacity: 0 }}
@@ -313,10 +365,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
               <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
-                {currentWord || (allDone ? "🎉" : "")}
+                {currentPhrase || (allDone ? "🎉" : "")}
               </div>
               <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
-                {syllableHint(currentWord)}
+                {syllableHint(currentPhrase)}
               </div>
               {verbHint && !allDone && (
                 <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
@@ -338,13 +390,13 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
         {/* Progress dots */}
         <div className="flex items-center justify-center gap-2">
-          {items.map((_, i) => (
+          {phrases.map((_, i) => (
             <div
               key={i}
               className={`h-2.5 rounded-full transition-all ${
-                i < correctCount
+                i < correctPhrases
                   ? "w-6 bg-emerald-500"
-                  : i === currentIndex
+                  : i === currentPhraseIndex
                   ? "w-6 bg-slate-700"
                   : "w-2.5 bg-white/70"
               }`}
@@ -356,12 +408,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="rounded-2xl bg-white/85 backdrop-blur-sm p-2 sm:p-3 shadow-inner">
           <RPGWordReader
             key={`prek-${world.id}-${level.id}`}
-            words={items}
+            words={wordList}
             onResult={handleResult}
             onBatchComplete={handleBatchComplete}
             disabled={false}
             streak={0}
-            batchSize={items.length}
+            batchSize={wordList.length}
             enableEchoRetry={true}
             mode="fast"
             compact
