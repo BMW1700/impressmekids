@@ -13,6 +13,94 @@ import { toSyntheticEmail } from "@/lib/studentIdAuth";
 import { redeemClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
 import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
 
+// Module-scope so React keeps a stable component identity across re-renders.
+// (Previously these were nested functions inside GameAuth, which caused the
+// input to "lose" keystrokes on every render.)
+type LoginMode = "email" | "studentId";
+
+const LoginModeToggle = ({
+  loginMode,
+  onChange,
+}: {
+  loginMode: LoginMode;
+  onChange: (mode: LoginMode) => void;
+}) => (
+  <div className="flex rounded-xl bg-white/10 p-1 border border-white/15 mb-4">
+    <button
+      type="button"
+      onClick={() => onChange("email")}
+      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
+        loginMode === "email" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+      }`}
+    >
+      Email
+    </button>
+    <button
+      type="button"
+      onClick={() => onChange("studentId")}
+      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+        loginMode === "studentId" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"
+      }`}
+    >
+      <Hash className="h-3.5 w-3.5" />
+      Student ID
+    </button>
+  </div>
+);
+
+const IdentityInput = ({
+  idPrefix,
+  loginMode,
+  email,
+  onEmailChange,
+  studentIdInput,
+  onStudentIdChange,
+}: {
+  idPrefix: string;
+  loginMode: LoginMode;
+  email: string;
+  onEmailChange: (value: string) => void;
+  studentIdInput: string;
+  onStudentIdChange: (value: string) => void;
+}) =>
+  loginMode === "email" ? (
+    <div className="space-y-2">
+      <Label htmlFor={`${idPrefix}-email`} className="text-white/80">Email</Label>
+      <Input
+        id={`${idPrefix}-email`}
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => onEmailChange(e.currentTarget.value)}
+        placeholder="player@example.com"
+        className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+      />
+    </div>
+  ) : (
+    <div className="space-y-2">
+      <Label htmlFor={`${idPrefix}-student-id`} className="text-white/80">Student ID</Label>
+      <Input
+        id={`${idPrefix}-student-id`}
+        type="text"
+        inputMode="numeric"
+        pattern="\d{8}"
+        maxLength={8}
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        value={studentIdInput}
+        onChange={(e) => {
+          const next = e.currentTarget.value.replace(/\D/g, "").slice(0, 8);
+          if (next !== studentIdInput) onStudentIdChange(next);
+        }}
+        placeholder="12345678"
+        className="bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono tracking-widest text-center"
+      />
+      <p className="text-xs text-white/40">Enter your 8-digit Student ID</p>
+    </div>
+  );
+
 const GameAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -224,69 +312,17 @@ const GameAuth = () => {
     }
   };
 
-  const LoginModeToggle = () => (
-    <div className="flex rounded-xl bg-white/10 p-1 border border-white/15 mb-4">
-      <button
-        type="button"
-        onClick={() => setLoginMode("email")}
-        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-          loginMode === "email"
-            ? "bg-white/20 text-white"
-            : "text-white/50 hover:text-white/70"
-        }`}
-      >
-        Email
-      </button>
-      <button
-        type="button"
-        onClick={() => setLoginMode("studentId")}
-        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
-          loginMode === "studentId"
-            ? "bg-white/20 text-white"
-            : "text-white/50 hover:text-white/70"
-        }`}
-      >
-        <Hash className="h-3.5 w-3.5" />
-        Student ID
-      </button>
-    </div>
-  );
-
-  const IdentityInput = ({ idPrefix }: { idPrefix: string }) => (
-    loginMode === "email" ? (
-      <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-email`} className="text-white/80">Email</Label>
-        <Input
-          id={`${idPrefix}-email`}
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="player@example.com"
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
-        />
-      </div>
-    ) : (
-      <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-student-id`} className="text-white/80">Student ID</Label>
-        <Input
-          id={`${idPrefix}-student-id`}
-          type="text"
-          inputMode="numeric"
-          pattern="\d{8}"
-          maxLength={8}
-          value={studentIdInput}
-          onChange={(e) => setStudentIdInput(e.target.value.replace(/\D/g, ''))}
-          placeholder="12345678"
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/40 font-mono tracking-widest text-center"
-        />
-        <p className="text-xs text-white/40">Enter your 8-digit Student ID</p>
-      </div>
-    )
-  );
+  const identityProps = {
+    loginMode,
+    email,
+    onEmailChange: setEmail,
+    studentIdInput,
+    onStudentIdChange: setStudentIdInput,
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-hero relative overflow-hidden px-4 py-8">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJWMzRoLTJ6bTAgNGgydjJoLTJ2LTJ6bTAtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItaDJWMzRoLTJ6bTAgNGgydjJoLTJ2LTJ6bTAtOGgydjJoLTJ2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20 pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
         <Button
@@ -314,8 +350,8 @@ const GameAuth = () => {
             <TabsContent value="login">
               <form onSubmit={handleLogin}>
                 <CardContent className="space-y-4 pt-6">
-                  {LoginModeToggle()}
-                  {IdentityInput({ idPrefix: "login" })}
+                  <LoginModeToggle loginMode={loginMode} onChange={setLoginMode} />
+                  <IdentityInput idPrefix="login" {...identityProps} />
                   <div className="space-y-2">
                     <Label htmlFor="login-password" className="text-white/80">Password</Label>
                     <div className="relative">
@@ -358,7 +394,7 @@ const GameAuth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp}>
                 <CardContent className="space-y-4 pt-6">
-                  {LoginModeToggle()}
+                  <LoginModeToggle loginMode={loginMode} onChange={setLoginMode} />
                   {loginMode === "studentId" && (
                     <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs text-white/70 leading-relaxed">
                       Student ID accounts use a school-issued ID — not an email.
@@ -375,7 +411,7 @@ const GameAuth = () => {
                       className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                     />
                   </div>
-                  {IdentityInput({ idPrefix: "signup" })}
+                  <IdentityInput idPrefix="signup" {...identityProps} />
                   {loginMode === "studentId" && (
                     <div className="space-y-2">
                       <Label htmlFor="signup-class-code" className="text-white/80">
