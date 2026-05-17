@@ -1,6 +1,6 @@
 /**
- * Castle Swarm Defense — Wave Director (Phase 2)
- * Adds enemy composition, seeded RNG for daily challenge, and campaign-level plans.
+ * Castle Swarm Defense — Wave Director (Phase 3)
+ * Stronger HP scaling, armored_orc tier, boss waves every 5.
  */
 
 import { EnemyType } from "./enemyTypes";
@@ -11,8 +11,10 @@ export interface WavePlan {
   cadenceMs: number;
   baseSpeedPxPerSec: number;
   hpBonus: number;             // added to enemy type baseHp
+  hpMultiplier: number;        // multiplies finalHp (rounded)
   composition: EnemyType[];    // round-robin spawn source
   isEndless: boolean;
+  isBossWave: boolean;
 }
 
 export const TUTORIAL_WAVES = 5;
@@ -38,48 +40,71 @@ export function hashSeed(s: string): number {
   return h >>> 0;
 }
 
-/** Today's daily challenge seed string (UTC). */
 export function dailySeedString(): string {
   const d = new Date();
   return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
 }
 
-/** Endless / tutorial standard plan (no campaign override). */
+/** Compute the actual HP a spawned enemy should have. */
+export function computeEnemyHp(baseHp: number, hpBonus: number, wave: number, hpMultiplier: number): number {
+  const raw = (baseHp + hpBonus) * (1 + wave * 0.12) * hpMultiplier;
+  return Math.max(1, Math.round(raw));
+}
+
 export function planWave(wave: number): WavePlan {
-  if (wave <= TUTORIAL_WAVES) {
-    const ramp: Omit<WavePlan, "wave" | "isEndless">[] = [
+  const isBossWave = wave > 0 && wave % 5 === 0;
+
+  if (wave <= TUTORIAL_WAVES && !isBossWave) {
+    const ramp: Omit<WavePlan, "wave" | "isEndless" | "isBossWave" | "hpMultiplier">[] = [
       { totalEnemies: 4, cadenceMs: 2200, baseSpeedPxPerSec: 35, hpBonus: 0, composition: ["goblin"] },
       { totalEnemies: 6, cadenceMs: 1900, baseSpeedPxPerSec: 40, hpBonus: 0, composition: ["goblin", "goblin", "skeleton"] },
-      { totalEnemies: 8, cadenceMs: 1600, baseSpeedPxPerSec: 45, hpBonus: 0, composition: ["goblin", "skeleton", "bat"] },
+      { totalEnemies: 8, cadenceMs: 1600, baseSpeedPxPerSec: 45, hpBonus: 1, composition: ["goblin", "skeleton", "bat"] },
       { totalEnemies: 10, cadenceMs: 1400, baseSpeedPxPerSec: 50, hpBonus: 1, composition: ["goblin", "skeleton", "shaman", "bat"] },
-      { totalEnemies: 12, cadenceMs: 1200, baseSpeedPxPerSec: 55, hpBonus: 1, composition: ["goblin", "skeleton", "shaman", "orc"] },
     ];
-    return { wave, isEndless: false, ...ramp[wave - 1] };
+    return { wave, isEndless: false, isBossWave: false, hpMultiplier: 1, ...ramp[wave - 1] };
   }
-  // Endless: scale up. Boss waves every 5 inject orcs.
+
+  // Boss waves: one massive boss.
+  if (isBossWave) {
+    // Boss escalates each occurrence
+    const tier = Math.floor(wave / 5);
+    const composition: EnemyType[] = tier >= 2 ? ["armored_orc"] : ["orc"];
+    return {
+      wave,
+      isEndless: wave > TUTORIAL_WAVES,
+      isBossWave: true,
+      totalEnemies: 1,
+      cadenceMs: 1500,
+      baseSpeedPxPerSec: 30 + tier * 4,
+      hpBonus: 4 + wave * 2, // big swell
+      hpMultiplier: 1.4,
+      composition,
+    };
+  }
+
+  // Endless (post-tutorial, non-boss)
   const overflow = wave - TUTORIAL_WAVES;
-  const isBossWave = wave % 5 === 0;
-  const composition: EnemyType[] = isBossWave
-    ? ["goblin", "skeleton", "shaman", "orc", "orc", "bat"]
+  const compositionPool: EnemyType[] = wave >= 10
+    ? ["goblin", "skeleton", "shaman", "bat", "armored_orc"]
     : ["goblin", "skeleton", "shaman", "bat"];
   return {
     wave,
     isEndless: true,
+    isBossWave: false,
     totalEnemies: Math.min(14 + overflow * 2, 60),
     cadenceMs: Math.max(450, 1100 - overflow * 40),
     baseSpeedPxPerSec: Math.min(55 + overflow * 3, 110),
-    hpBonus: Math.min(1 + Math.floor(overflow / 2), 8),
-    composition,
+    hpBonus: Math.min(Math.floor(overflow * 0.8), 20),
+    hpMultiplier: 1,
+    composition: compositionPool,
   };
 }
 
-/** Coins awarded for surviving a wave. */
 export function coinsForWave(wave: number): number {
   if (wave <= TUTORIAL_WAVES) return 25 + wave * 5;
   return 50 + (wave - TUTORIAL_WAVES) * 10;
 }
 
-/** 3-star thresholds: (survived all, accuracy >= 80%, words >= target). */
 export function computeStars(
   thresholds: { needAccuracy: number; needWords: number; mustWin: boolean },
   result: { won: boolean; accuracy: number; wordsRead: number }
