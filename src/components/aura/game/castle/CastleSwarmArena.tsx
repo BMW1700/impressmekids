@@ -413,18 +413,18 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
             target.hitFlashUntil = performance.now() + 120;
             if (target.hp <= 0) target.dying = true;
             k.hp -= 1.2 * dt;
-          } else if (enemyCastleHpRef.current > 0 && k.x <= 60) {
+          } else if (enemyCastleHpRef.current > 0 && k.x >= ARENA_WIDTH - 60) {
             const dmg = knightStats.knightDps * dt;
             enemyCastleHpRef.current = Math.max(0, enemyCastleHpRef.current - dmg);
             enemyCastleDmgRef.current += dmg;
           } else {
-            k.x -= KNIGHT_SPEED * dt;
+            k.x += KNIGHT_SPEED * dt;
           }
         });
 
         // 5. Cleanup
         enemiesRef.current = enemiesRef.current.filter(e => !(e.dying && e.hp <= -3));
-        knightsRef.current = knightsRef.current.filter(k => k.hp > 0 && k.x > -10);
+        knightsRef.current = knightsRef.current.filter(k => k.hp > 0 && k.x < ARENA_WIDTH + 10);
 
         // 6. Wave clear?
         if (!transitioningRef.current &&
