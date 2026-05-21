@@ -286,7 +286,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       if (target.length >= 7 && knightsRef.current.length < knightStats.summonCap) {
         knightsRef.current.push({
           id: knightIdRef.current++,
-          x: ARENA_WIDTH - 60,
+          x: 60,
           hp: knightStats.knightHp,
           maxHp: knightStats.knightHp,
         });
