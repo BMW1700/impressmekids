@@ -250,6 +250,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     setWaveBanner(banner);
     setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 1800);
 
+    // Rotate phoneme target each wave
+    const ph = pickPhonemeForWave(n);
+    phonemeRef.current = ph;
+    setPhonemeOfWave(ph);
+
     (window as any).__cs_wave = { cadenceMs, baseSpeed, hpBonus, hpMultiplier };
   }, [mode]);
 
