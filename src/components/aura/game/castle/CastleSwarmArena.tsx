@@ -742,6 +742,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
       {/* Bottom panel */}
       <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 space-y-2 border-t border-rose-900/40">
+        {/* Resolve shield bar (from sight-word streaks) */}
+        {shieldHud > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-cyan-300 text-xs font-bold" aria-hidden>🛡</span>
+            <div className="flex-1 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+              <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
+            </div>
+            <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
+          </div>
+        )}
         {/* Super bar */}
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-300" />
