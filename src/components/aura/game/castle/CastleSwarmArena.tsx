@@ -112,9 +112,9 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [comboHud, setComboHud] = useState(0);
   const [interstitial, setInterstitial] = useState<{ wave: number; coins: number } | null>(null);
   const [shake, setShake] = useState(0); // increments to retrigger shake
-
-  // ---- Refs ----
-  const enemiesRef = useRef<Enemy[]>([]);
+  const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
+  const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
+  const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
   const knightsRef = useRef<Knight[]>([]);
   const enemyIdRef = useRef(1);
   const knightIdRef = useRef(1);
