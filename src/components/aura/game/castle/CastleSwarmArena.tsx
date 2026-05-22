@@ -469,7 +469,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           const slowed = now < e.slowUntil;
           e.x -= e.speed * dt * (slowed ? 0.4 : 1);
           if (e.x <= 0) {
-            castleHpRef.current = Math.max(0, castleHpRef.current - ENEMY_TYPES[e.type].castleDamage);
+            const raw = ENEMY_TYPES[e.type].castleDamage;
+            // Resolve shield absorbs up to its current value, point-for-point.
+            const absorbed = Math.min(shieldRef.current, raw);
+            shieldRef.current -= absorbed;
+            const dmg = raw - absorbed;
+            if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
             e.dying = true;
             setShake(s => s + 1);
           }
