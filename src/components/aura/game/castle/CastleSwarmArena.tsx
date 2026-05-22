@@ -299,8 +299,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         sightStreak: sightStreakRef.current,
       });
 
-      // Track sight-word streak (simple inline check mirroring scoreWord)
-      const wLower = target.toLowerCase();
+      // Track sight-word streak (mirrors scoreWord's internal sight check)
       const isSightWord = result.shieldCharge > 0;
       sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
 
