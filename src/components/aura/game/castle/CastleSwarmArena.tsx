@@ -463,10 +463,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     const loop = (now: number) => {
       if (endedRef.current) return;
       const inHitStop = now < hitStopUntilRef.current;
-      const dt = (pausedRef.current || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
+      const frozen = pausedRef.current || spellBreakActiveRef.current;
+      const dt = (frozen || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
       last = now;
 
-      if (!pausedRef.current) {
+      if (!frozen) {
         const wp = (window as any).__cs_wave as
           { cadenceMs: number; baseSpeed: number; hpBonus: number; hpMultiplier: number } | undefined;
 
