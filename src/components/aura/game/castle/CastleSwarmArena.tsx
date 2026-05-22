@@ -259,7 +259,43 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     setPhonemeOfWave(ph);
 
     (window as any).__cs_wave = { cadenceMs, baseSpeed, hpBonus, hpMultiplier };
-  }, [mode]);
+
+    // Boss wave → spawn spell-break overlay shortly after the banner.
+    if (isBossWave) {
+      const ph = phonemeRef.current;
+      const usable = wordPool.filter(w => w.length >= 3 && w.length <= 7);
+      const matchingPool = usable.filter(w => ph.match.test(w));
+      const fallbackPool = usable.length ? usable : wordPool;
+      const pick = (pool: string[], rng: () => number) =>
+        pool[Math.floor(rng() * pool.length)];
+      const rng = rngRef.current;
+      const chant: string[] = [];
+      // Try for 2 phoneme-matching words first.
+      const seen = new Set<string>();
+      for (let i = 0; i < 2 && matchingPool.length; i++) {
+        let tries = 0;
+        let w = pick(matchingPool, rng);
+        while (seen.has(w) && tries++ < 8) w = pick(matchingPool, rng);
+        if (!seen.has(w)) { seen.add(w); chant.push(w); }
+      }
+      while (chant.length < 4) {
+        let w = pick(fallbackPool, rng);
+        let tries = 0;
+        while (seen.has(w) && tries++ < 12) w = pick(fallbackPool, rng);
+        seen.add(w); chant.push(w);
+      }
+      // Shuffle order.
+      for (let i = chant.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [chant[i], chant[j]] = [chant[j], chant[i]];
+      }
+      window.setTimeout(() => {
+        if (endedRef.current) return;
+        spellBreakActiveRef.current = true;
+        setSpellBreak({ words: chant.slice(0, 4), wave: n });
+      }, 1600);
+    }
+  }, [mode, wordPool]);
 
   // ---- Initial setup ----
   useEffect(() => {
