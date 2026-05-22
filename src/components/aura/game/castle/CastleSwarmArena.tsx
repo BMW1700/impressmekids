@@ -305,7 +305,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         if (!living.length) return null;
         // If pierces, prefer armored enemies first; else front-most.
         if (result.pierces) {
-          const armored = living.find(e => ENEMY_TYPES[e.type].armorBlocksDirect);
+          const armored = living.find(e => e.type === "armored_orc");
           if (armored) return armored;
         }
         return living.reduce((a, b) => (a.x < b.x ? a : b));
