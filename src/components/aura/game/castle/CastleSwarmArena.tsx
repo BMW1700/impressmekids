@@ -662,30 +662,56 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           {/* Knights */}
           {knights.map(k => {
             const pct = (k.x / ARENA_WIDTH) * 100;
+            const age = performance.now() - k.spawnedAt;
+            const charging = age < 400;
             return (
               <div key={k.id} className="absolute bottom-16 flex flex-col items-center" style={{ left: `${100 - pct}%` }}>
                 <div className="w-10 h-1.5 bg-slate-900/80 rounded-full overflow-hidden mb-1 border border-slate-700">
                   <div className="h-full bg-emerald-500" style={{ width: `${(k.hp / k.maxHp) * 100}%` }} />
                 </div>
-                <svg width="38" height="46" viewBox="0 0 38 46">
-                  {/* knight body */}
-                  <rect x="11" y="22" width="16" height="18" rx="2" fill="#3b82f6" />
-                  <rect x="11" y="22" width="16" height="4" fill="#60a5fa" />
-                  {/* helmet */}
-                  <ellipse cx="19" cy="14" rx="9" ry="10" fill="#94a3b8" />
-                  <rect x="14" y="14" width="10" height="3" fill="#1a1a1a" />
-                  {/* plume */}
-                  <path d="M19 5 Q22 0 25 5 Q22 8 19 6 Z" fill="#dc2626" />
-                  {/* shield */}
-                  <rect x="2" y="24" width="9" height="13" rx="1" fill="#1d4ed8" />
-                  <path d="M5 27 L8 27 M6.5 26 L6.5 32" stroke="#fef3c7" strokeWidth="1" />
-                  {/* sword */}
-                  <rect x="28" y="14" width="2" height="20" fill="#e5e7eb" />
-                  <rect x="26" y="32" width="6" height="2" fill="#92400e" />
-                </svg>
+                <div className="relative">
+                  {charging && (
+                    <div
+                      className="absolute inset-0 -m-2 rounded-full bg-amber-300/60 blur-md animate-pulse pointer-events-none"
+                      aria-hidden
+                    />
+                  )}
+                  <svg width="38" height="46" viewBox="0 0 38 46" className="relative">
+                    {/* knight body */}
+                    <rect x="11" y="22" width="16" height="18" rx="2" fill="#3b82f6" />
+                    <rect x="11" y="22" width="16" height="4" fill="#60a5fa" />
+                    {/* helmet */}
+                    <ellipse cx="19" cy="14" rx="9" ry="10" fill="#94a3b8" />
+                    <rect x="14" y="14" width="10" height="3" fill="#1a1a1a" />
+                    {/* plume */}
+                    <path d="M19 5 Q22 0 25 5 Q22 8 19 6 Z" fill="#dc2626" />
+                    {/* shield */}
+                    <rect x="2" y="24" width="9" height="13" rx="1" fill="#1d4ed8" />
+                    <path d="M5 27 L8 27 M6.5 26 L6.5 32" stroke="#fef3c7" strokeWidth="1" />
+                    {/* sword */}
+                    <rect x="28" y="14" width="2" height="20" fill="#e5e7eb" />
+                    <rect x="26" y="32" width="6" height="2" fill="#92400e" />
+                  </svg>
+                </div>
               </div>
             );
           })}
+
+          {/* Floating damage numbers */}
+          <AnimatePresence>
+            {floatingHits.map(f => (
+              <motion.div
+                key={f.id}
+                initial={{ y: 0, opacity: 1, scale: 0.9 }}
+                animate={{ y: -40, opacity: 0, scale: 1.2 }}
+                transition={{ duration: 0.85, ease: "easeOut" }}
+                className={`absolute bottom-32 font-black text-base drop-shadow-lg pointer-events-none ${f.color}`}
+                style={{ left: `${f.x}%`, transform: "translateX(-50%)" }}
+              >
+                {f.text}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* Feedback float */}
           <AnimatePresence>
