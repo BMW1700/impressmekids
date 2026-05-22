@@ -22,22 +22,22 @@ export const CastleCampaignSelect = ({ onPickEndless, onPickDaily, onPickCampaig
   const levelIds = levels.map(l => l.id);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-emerald-950 text-white p-4">
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-rose-950 text-white p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={onBack} className="text-white">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Button>
-          <h1 className="text-2xl font-black text-amber-300">Castle Swarm Defense</h1>
+          <h1 className="text-2xl font-black text-rose-300">Castle Swarm Defense</h1>
           <div className="w-16" />
         </div>
 
         {/* Mode tiles */}
         <div className="grid sm:grid-cols-2 gap-3">
-          <Card className={`p-4 bg-gradient-to-br from-rose-600/30 to-amber-600/30 border-amber-500/40 ${endlessUnlocked ? "cursor-pointer hover:scale-[1.02]" : "opacity-60"} transition`}
+          <Card className={`p-4 bg-gradient-to-br from-rose-700/30 to-slate-700/30 border-rose-500/40 ${endlessUnlocked ? "cursor-pointer hover:scale-[1.02]" : "opacity-60"} transition`}
             onClick={() => endlessUnlocked && onPickEndless()}>
             <div className="flex items-center gap-3">
-              <InfinityIcon className="w-8 h-8 text-amber-300" />
+              <InfinityIcon className="w-8 h-8 text-rose-300" />
               <div className="flex-1">
                 <div className="font-bold text-lg">Endless</div>
                 <div className="text-xs text-slate-300">Survive as long as you can.</div>
