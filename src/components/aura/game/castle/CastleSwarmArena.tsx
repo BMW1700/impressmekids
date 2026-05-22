@@ -21,6 +21,7 @@ import type { CampaignLevel } from "./campaignLevels";
 import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
 import { RPGWordReader } from "../rpg/RPGWordReader";
+import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
 
 interface Enemy {
   id: number;
@@ -35,7 +36,10 @@ interface Enemy {
   hitFlashUntil: number;
 }
 interface Knight {
-  id: number; x: number; hp: number; maxHp: number;
+  id: number; x: number; hp: number; maxHp: number; spawnedAt: number;
+}
+interface FloatingHit {
+  id: number; x: number; y: number; text: string; color: string; born: number;
 }
 
 export type CastleRunMode =
