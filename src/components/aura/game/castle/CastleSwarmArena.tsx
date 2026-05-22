@@ -22,6 +22,7 @@ import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
 import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
+import { BossSpellBreak } from "./BossSpellBreak";
 
 interface Enemy {
   id: number;
@@ -115,6 +116,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
   const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
   const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
+  const [spellBreak, setSpellBreak] = useState<{ words: string[]; wave: number } | null>(null);
 
   // ---- Refs ----
   const enemiesRef = useRef<Enemy[]>([]);
@@ -146,6 +148,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const pausedRef = useRef(false);
   const transitioningRef = useRef(false);
   const rngRef = useRef<() => number>(Math.random);
+  const spellBreakActiveRef = useRef(false);
 
   // ---- Save run ----
   const persistRun = useCallback((reason: "win" | "loss" | "quit", finalAcc: number, finalCoins: number) => {
@@ -256,7 +259,43 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     setPhonemeOfWave(ph);
 
     (window as any).__cs_wave = { cadenceMs, baseSpeed, hpBonus, hpMultiplier };
-  }, [mode]);
+
+    // Boss wave → spawn spell-break overlay shortly after the banner.
+    if (isBossWave) {
+      const ph = phonemeRef.current;
+      const usable = wordPool.filter(w => w.length >= 3 && w.length <= 7);
+      const matchingPool = usable.filter(w => ph.match.test(w));
+      const fallbackPool = usable.length ? usable : wordPool;
+      const pick = (pool: string[], rng: () => number) =>
+        pool[Math.floor(rng() * pool.length)];
+      const rng = rngRef.current;
+      const chant: string[] = [];
+      // Try for 2 phoneme-matching words first.
+      const seen = new Set<string>();
+      for (let i = 0; i < 2 && matchingPool.length; i++) {
+        let tries = 0;
+        let w = pick(matchingPool, rng);
+        while (seen.has(w) && tries++ < 8) w = pick(matchingPool, rng);
+        if (!seen.has(w)) { seen.add(w); chant.push(w); }
+      }
+      while (chant.length < 4) {
+        let w = pick(fallbackPool, rng);
+        let tries = 0;
+        while (seen.has(w) && tries++ < 12) w = pick(fallbackPool, rng);
+        seen.add(w); chant.push(w);
+      }
+      // Shuffle order.
+      for (let i = chant.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [chant[i], chant[j]] = [chant[j], chant[i]];
+      }
+      window.setTimeout(() => {
+        if (endedRef.current) return;
+        spellBreakActiveRef.current = true;
+        setSpellBreak({ words: chant.slice(0, 4), wave: n });
+      }, 1600);
+    }
+  }, [mode, wordPool]);
 
   // ---- Initial setup ----
   useEffect(() => {
@@ -424,10 +463,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     const loop = (now: number) => {
       if (endedRef.current) return;
       const inHitStop = now < hitStopUntilRef.current;
-      const dt = (pausedRef.current || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
+      const frozen = pausedRef.current || spellBreakActiveRef.current;
+      const dt = (frozen || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
       last = now;
 
-      if (!pausedRef.current) {
+      if (!frozen) {
         const wp = (window as any).__cs_wave as
           { cadenceMs: number; baseSpeed: number; hpBonus: number; hpMultiplier: number } | undefined;
 
@@ -556,6 +596,49 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   }, []);
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  // ---- Boss spell-break resolution ----
+  const handleSpellBreakResult = useCallback((broken: boolean, _wordsRead: number) => {
+    setSpellBreak(null);
+    spellBreakActiveRef.current = false;
+    if (endedRef.current) return;
+
+    if (broken) {
+      // Stun + heavy damage to the boss (front-most living enemy).
+      const living = enemiesRef.current.filter(e => !e.dying);
+      const boss = living.length
+        ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b))
+        : null;
+      if (boss) {
+        const dmg = Math.ceil(boss.maxHp * 0.4);
+        boss.hp -= dmg;
+        boss.hitFlashUntil = performance.now() + 600;
+        boss.slowUntil = performance.now() + 1500; // stun-as-slow
+        if (boss.hp <= 0) boss.dying = true;
+        const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
+        spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
+      }
+      // Bonus coins + super charge for the satisfying payoff.
+      coinsRef.current += 25;
+      superMeterRef.current = Math.min(100, superMeterRef.current + 20);
+      setSuperMeter(superMeterRef.current);
+      hitStopUntilRef.current = performance.now() + 150;
+      setFeedback({ text: "💥 CHANT BROKEN!", good: true, id: Date.now() });
+      setShake(s => s + 1);
+    } else {
+      // Failure → big castle hit (shield absorbs first).
+      const raw = 12;
+      const absorbed = Math.min(shieldRef.current, raw);
+      shieldRef.current -= absorbed;
+      setShieldHud(shieldRef.current);
+      const dmg = raw - absorbed;
+      if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
+      setCastleHpHud(castleHpRef.current);
+      setFeedback({ text: "💀 Chant struck!", good: false, id: Date.now() });
+      setShake(s => s + 1);
+      if (castleHpRef.current <= 0) endRun("loss");
+    }
+  }, [spawnFloatingHit, endRun]);
 
   // ---- Render ----
   const enemies = enemiesRef.current;
@@ -736,6 +819,18 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
           {/* Interstitial */}
           <WaveInterstitial show={!!interstitial} wave={interstitial?.wave ?? 0} coins={interstitial?.coins ?? 0} />
+
+          {/* Boss spell-break minigame */}
+          <AnimatePresence>
+            {spellBreak && (
+              <BossSpellBreak
+                key={`spellbreak-${spellBreak.wave}`}
+                words={spellBreak.words}
+                durationMs={5000}
+                onResult={handleSpellBreakResult}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
