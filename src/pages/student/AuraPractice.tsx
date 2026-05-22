@@ -870,25 +870,25 @@ const AuraPractice = () => {
             )}
           </div>
 
-          <Card className="overflow-hidden border-2 border-amber-500/50 bg-gradient-to-r from-rose-600/20 via-amber-500/20 to-yellow-500/20 shadow-lg shadow-amber-500/10">
+          <Card className="overflow-hidden border-2 border-rose-600/50 bg-gradient-to-r from-slate-900 via-rose-950/40 to-slate-900 shadow-lg shadow-rose-900/30">
             <CardContent className="p-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-rose-600 flex items-center justify-center text-3xl shadow-lg">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-slate-700 to-rose-700 flex items-center justify-center text-3xl shadow-lg border border-slate-500/40">
                     🏰
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold flex items-center gap-2">
-                      <Castle className="h-5 w-5 text-amber-500" />
+                    <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
+                      <Castle className="h-5 w-5 text-rose-400" />
                       Castle Swarm Defense
-                      <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-black text-amber-950">NEW</span>
+                      <span className="rounded-full bg-rose-600 px-2 py-0.5 text-xs font-black text-rose-50">NEW</span>
                     </h2>
-                    <p className="text-sm text-muted-foreground">Defend your castle by reading aloud in Campaign, Endless, and Daily Challenge.</p>
+                    <p className="text-sm text-slate-400">Defend your castle by reading aloud in Campaign, Endless, and Daily Challenge.</p>
                   </div>
                 </div>
                 <Button
                   onClick={() => navigate('/game/castle-swarm')}
-                  className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 font-bold"
+                  className="bg-gradient-to-r from-slate-700 to-rose-700 hover:from-slate-600 hover:to-rose-600 font-bold text-slate-50 border border-rose-500/40"
                 >
                   <Castle className="h-4 w-4 mr-2" />
                   Enter Castle Mode

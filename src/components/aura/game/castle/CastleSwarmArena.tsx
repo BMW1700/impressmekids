@@ -21,6 +21,7 @@ import type { CampaignLevel } from "./campaignLevels";
 import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
 import { RPGWordReader } from "../rpg/RPGWordReader";
+import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
 
 interface Enemy {
   id: number;
@@ -35,7 +36,10 @@ interface Enemy {
   hitFlashUntil: number;
 }
 interface Knight {
-  id: number; x: number; hp: number; maxHp: number;
+  id: number; x: number; hp: number; maxHp: number; spawnedAt: number;
+}
+interface FloatingHit {
+  id: number; x: number; y: number; text: string; color: string; born: number;
 }
 
 export type CastleRunMode =
@@ -108,9 +112,17 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [comboHud, setComboHud] = useState(0);
   const [interstitial, setInterstitial] = useState<{ wave: number; coins: number } | null>(null);
   const [shake, setShake] = useState(0); // increments to retrigger shake
+  const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
+  const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
+  const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
 
   // ---- Refs ----
   const enemiesRef = useRef<Enemy[]>([]);
+  const sightStreakRef = useRef(0);
+  const shieldRef = useRef(0); // 0–100
+  const hitStopUntilRef = useRef(0);
+  const floatingIdRef = useRef(1);
+  const phonemeRef = useRef<PhonemeTarget>(pickPhonemeForWave(1));
   const knightsRef = useRef<Knight[]>([]);
   const enemyIdRef = useRef(1);
   const knightIdRef = useRef(1);
@@ -238,6 +250,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     setWaveBanner(banner);
     setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 1800);
 
+    // Rotate phoneme target each wave
+    const ph = pickPhonemeForWave(n);
+    phonemeRef.current = ph;
+    setPhonemeOfWave(ph);
+
     (window as any).__cs_wave = { cadenceMs, baseSpeed, hpBonus, hpMultiplier };
   }, [mode]);
 
@@ -260,6 +277,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   }, []);
 
   // ---- Word-attack handler from RPGWordReader ----
+  const spawnFloatingHit = useCallback((x: number, text: string, color: string) => {
+    const id = floatingIdRef.current++;
+    setFloatingHits(prev => [...prev, { id, x, y: 0, text, color, born: performance.now() }]);
+    setTimeout(() => setFloatingHits(prev => prev.filter(f => f.id !== id)), 900);
+  }, []);
+
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
     if (endedRef.current || pausedRef.current) return;
     const target = currentBatch[wordIndex] || "";
@@ -271,39 +294,84 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       longestStreakRef.current = Math.max(longestStreakRef.current, streakRef.current);
       setComboHud(streakRef.current);
 
-      // Attack front non-flying enemy first
+      const result = scoreWord(target, {
+        phonemeOfWave: phonemeRef.current,
+        sightStreak: sightStreakRef.current,
+      });
+
+      // Track sight-word streak (mirrors scoreWord's internal sight check)
+      const isSightWord = result.shieldCharge > 0;
+      sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
+
+      // Apply damage
       const living = enemiesRef.current.filter(e => !e.dying);
-      if (living.length) {
-        const front = living.reduce((a, b) => (a.x < b.x ? a : b));
-        // Long words deal more damage
-        const dmg = target.length >= 6 ? 2 : 1;
-        front.hp -= dmg;
-        front.hitFlashUntil = performance.now() + 180;
-        if (front.hp <= 0) front.dying = true;
+      const target_enemy = (() => {
+        if (!living.length) return null;
+        // If pierces, prefer armored enemies first; else front-most.
+        if (result.pierces) {
+          const armored = living.find(e => e.type === "armored_orc");
+          if (armored) return armored;
+        }
+        return living.reduce((a, b) => (a.x < b.x ? a : b));
+      })();
+
+      if (target_enemy) {
+        const dmg = result.crit ? result.dmg * 2 : result.dmg;
+        target_enemy.hp -= dmg;
+        target_enemy.hitFlashUntil = performance.now() + (result.crit ? 260 : 180);
+        if (target_enemy.hp <= 0) target_enemy.dying = true;
+        const xPct = 100 - (target_enemy.x / ARENA_WIDTH) * 100;
+        const color = result.phonemeHit ? "text-amber-300"
+                    : result.crit ? "text-rose-300"
+                    : result.heal > 0 ? "text-emerald-300"
+                    : "text-sky-200";
+        spawnFloatingHit(xPct, `-${dmg}${result.crit ? "!" : ""}`, color);
+        // Hit-stop on crit
+        if (result.crit) hitStopUntilRef.current = performance.now() + 70;
       }
 
-      // Power words summon knights
-      if (target.length >= 7 && knightsRef.current.length < knightStats.summonCap) {
+      // Knight summon
+      if (result.summonsKnight && knightsRef.current.length < knightStats.summonCap) {
         knightsRef.current.push({
           id: knightIdRef.current++,
           x: 60,
           hp: knightStats.knightHp,
           maxHp: knightStats.knightHp,
+          spawnedAt: performance.now(),
         });
         knightsSummonedRef.current += 1;
-        setFeedback({ text: "⚔ Knight summoned!", good: true, id: Date.now() });
-      } else {
-        setFeedback({ text: `+${target}`, good: true, id: Date.now() });
       }
 
-      superMeterRef.current = Math.min(100, superMeterRef.current + SUPER_FILL_PER_WORD);
+      // Resolve shield
+      if (result.shieldCharge > 0) {
+        shieldRef.current = Math.min(100, shieldRef.current + result.shieldCharge);
+        setShieldHud(shieldRef.current);
+      }
+
+      // Heal castle (rare vocab word)
+      if (result.heal > 0) {
+        castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + result.heal);
+      }
+
+      setFeedback({ text: result.flavor, good: true, id: Date.now() });
+
+      superMeterRef.current = Math.min(100, superMeterRef.current + result.superFill);
       setSuperMeter(superMeterRef.current);
     } else {
       streakRef.current = 0;
+      sightStreakRef.current = 0;
       setComboHud(0);
-      setFeedback({ text: "try again", good: false, id: Date.now() });
+      // If shield charged, it absorbs the miss instead of penalty.
+      if (shieldRef.current >= 20) {
+        shieldRef.current = Math.max(0, shieldRef.current - 20);
+        setShieldHud(shieldRef.current);
+        setFeedback({ text: "🛡 blocked", good: true, id: Date.now() });
+      } else {
+        setFeedback({ text: "try again", good: false, id: Date.now() });
+      }
     }
-  }, [currentBatch, knightStats.knightHp, knightStats.summonCap]);
+  }, [currentBatch, knightStats.knightHp, knightStats.summonCap, spawnFloatingHit]);
+
 
   const handleBatchComplete = useCallback(() => {
     // Slide the word window forward
@@ -355,7 +423,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
     const loop = (now: number) => {
       if (endedRef.current) return;
-      const dt = pausedRef.current ? 0 : Math.min(0.1, (now - last) / 1000);
+      const inHitStop = now < hitStopUntilRef.current;
+      const dt = (pausedRef.current || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
       last = now;
 
       if (!pausedRef.current) {
@@ -399,7 +468,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           const slowed = now < e.slowUntil;
           e.x -= e.speed * dt * (slowed ? 0.4 : 1);
           if (e.x <= 0) {
-            castleHpRef.current = Math.max(0, castleHpRef.current - ENEMY_TYPES[e.type].castleDamage);
+            const raw = ENEMY_TYPES[e.type].castleDamage;
+            // Resolve shield absorbs up to its current value, point-for-point.
+            const absorbed = Math.min(shieldRef.current, raw);
+            shieldRef.current -= absorbed;
+            const dmg = raw - absorbed;
+            if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
             e.dying = true;
             setShake(s => s + 1);
           }
@@ -529,9 +603,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         )}
       </AnimatePresence>
 
+      {/* Phoneme-of-wave badge — kids "hunt" for matching words */}
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-slate-900/85 border border-amber-400/60 text-amber-200 text-xs font-bold shadow-lg flex items-center gap-2 mt-12 sm:mt-0">
+        <Sparkles className="w-3.5 h-3.5" />
+        <span className="text-slate-300 font-medium">Hunt:</span>
+        <span className="text-amber-300 font-black tracking-wider">{phonemeOfWave.label}</span>
+      </div>
+
       {/* Combo */}
       {comboHud >= 3 && (
-        <div className="absolute top-16 right-4 z-30 flex items-center gap-1 px-3 py-1 rounded-full bg-orange-600/90 text-white font-bold text-sm shadow-lg border border-amber-400">
+        <div className="absolute top-16 right-4 z-30 flex items-center gap-1 px-3 py-1 rounded-full bg-rose-700/90 text-white font-bold text-sm shadow-lg border border-rose-400">
           <Combo className="w-4 h-4" /> Combo x{comboHud}
         </div>
       )}
@@ -580,30 +661,56 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           {/* Knights */}
           {knights.map(k => {
             const pct = (k.x / ARENA_WIDTH) * 100;
+            const age = performance.now() - k.spawnedAt;
+            const charging = age < 400;
             return (
               <div key={k.id} className="absolute bottom-16 flex flex-col items-center" style={{ left: `${100 - pct}%` }}>
                 <div className="w-10 h-1.5 bg-slate-900/80 rounded-full overflow-hidden mb-1 border border-slate-700">
                   <div className="h-full bg-emerald-500" style={{ width: `${(k.hp / k.maxHp) * 100}%` }} />
                 </div>
-                <svg width="38" height="46" viewBox="0 0 38 46">
-                  {/* knight body */}
-                  <rect x="11" y="22" width="16" height="18" rx="2" fill="#3b82f6" />
-                  <rect x="11" y="22" width="16" height="4" fill="#60a5fa" />
-                  {/* helmet */}
-                  <ellipse cx="19" cy="14" rx="9" ry="10" fill="#94a3b8" />
-                  <rect x="14" y="14" width="10" height="3" fill="#1a1a1a" />
-                  {/* plume */}
-                  <path d="M19 5 Q22 0 25 5 Q22 8 19 6 Z" fill="#dc2626" />
-                  {/* shield */}
-                  <rect x="2" y="24" width="9" height="13" rx="1" fill="#1d4ed8" />
-                  <path d="M5 27 L8 27 M6.5 26 L6.5 32" stroke="#fef3c7" strokeWidth="1" />
-                  {/* sword */}
-                  <rect x="28" y="14" width="2" height="20" fill="#e5e7eb" />
-                  <rect x="26" y="32" width="6" height="2" fill="#92400e" />
-                </svg>
+                <div className="relative">
+                  {charging && (
+                    <div
+                      className="absolute inset-0 -m-2 rounded-full bg-amber-300/60 blur-md animate-pulse pointer-events-none"
+                      aria-hidden
+                    />
+                  )}
+                  <svg width="38" height="46" viewBox="0 0 38 46" className="relative">
+                    {/* knight body */}
+                    <rect x="11" y="22" width="16" height="18" rx="2" fill="#3b82f6" />
+                    <rect x="11" y="22" width="16" height="4" fill="#60a5fa" />
+                    {/* helmet */}
+                    <ellipse cx="19" cy="14" rx="9" ry="10" fill="#94a3b8" />
+                    <rect x="14" y="14" width="10" height="3" fill="#1a1a1a" />
+                    {/* plume */}
+                    <path d="M19 5 Q22 0 25 5 Q22 8 19 6 Z" fill="#dc2626" />
+                    {/* shield */}
+                    <rect x="2" y="24" width="9" height="13" rx="1" fill="#1d4ed8" />
+                    <path d="M5 27 L8 27 M6.5 26 L6.5 32" stroke="#fef3c7" strokeWidth="1" />
+                    {/* sword */}
+                    <rect x="28" y="14" width="2" height="20" fill="#e5e7eb" />
+                    <rect x="26" y="32" width="6" height="2" fill="#92400e" />
+                  </svg>
+                </div>
               </div>
             );
           })}
+
+          {/* Floating damage numbers */}
+          <AnimatePresence>
+            {floatingHits.map(f => (
+              <motion.div
+                key={f.id}
+                initial={{ y: 0, opacity: 1, scale: 0.9 }}
+                animate={{ y: -40, opacity: 0, scale: 1.2 }}
+                transition={{ duration: 0.85, ease: "easeOut" }}
+                className={`absolute bottom-32 font-black text-base drop-shadow-lg pointer-events-none ${f.color}`}
+                style={{ left: `${f.x}%`, transform: "translateX(-50%)" }}
+              >
+                {f.text}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* Feedback float */}
           <AnimatePresence>
@@ -634,6 +741,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
       {/* Bottom panel */}
       <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 space-y-2 border-t border-rose-900/40">
+        {/* Resolve shield bar (from sight-word streaks) */}
+        {shieldHud > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-cyan-300 text-xs font-bold" aria-hidden>🛡</span>
+            <div className="flex-1 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+              <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
+            </div>
+            <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
+          </div>
+        )}
         {/* Super bar */}
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-300" />
