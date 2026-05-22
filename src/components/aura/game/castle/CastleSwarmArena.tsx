@@ -604,9 +604,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         )}
       </AnimatePresence>
 
+      {/* Phoneme-of-wave badge — kids "hunt" for matching words */}
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-slate-900/85 border border-amber-400/60 text-amber-200 text-xs font-bold shadow-lg flex items-center gap-2 mt-12 sm:mt-0">
+        <Sparkles className="w-3.5 h-3.5" />
+        <span className="text-slate-300 font-medium">Hunt:</span>
+        <span className="text-amber-300 font-black tracking-wider">{phonemeOfWave.label}</span>
+      </div>
+
       {/* Combo */}
       {comboHud >= 3 && (
-        <div className="absolute top-16 right-4 z-30 flex items-center gap-1 px-3 py-1 rounded-full bg-orange-600/90 text-white font-bold text-sm shadow-lg border border-amber-400">
+        <div className="absolute top-16 right-4 z-30 flex items-center gap-1 px-3 py-1 rounded-full bg-rose-700/90 text-white font-bold text-sm shadow-lg border border-rose-400">
           <Combo className="w-4 h-4" /> Combo x{comboHud}
         </div>
       )}
