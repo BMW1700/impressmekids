@@ -597,6 +597,49 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
+  // ---- Boss spell-break resolution ----
+  const handleSpellBreakResult = useCallback((broken: boolean, _wordsRead: number) => {
+    setSpellBreak(null);
+    spellBreakActiveRef.current = false;
+    if (endedRef.current) return;
+
+    if (broken) {
+      // Stun + heavy damage to the boss (front-most living enemy).
+      const living = enemiesRef.current.filter(e => !e.dying);
+      const boss = living.length
+        ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b))
+        : null;
+      if (boss) {
+        const dmg = Math.ceil(boss.maxHp * 0.4);
+        boss.hp -= dmg;
+        boss.hitFlashUntil = performance.now() + 600;
+        boss.slowUntil = performance.now() + 1500; // stun-as-slow
+        if (boss.hp <= 0) boss.dying = true;
+        const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
+        spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
+      }
+      // Bonus coins + super charge for the satisfying payoff.
+      coinsRef.current += 25;
+      superMeterRef.current = Math.min(100, superMeterRef.current + 20);
+      setSuperMeter(superMeterRef.current);
+      hitStopUntilRef.current = performance.now() + 150;
+      setFeedback({ text: "💥 CHANT BROKEN!", good: true, id: Date.now() });
+      setShake(s => s + 1);
+    } else {
+      // Failure → big castle hit (shield absorbs first).
+      const raw = 12;
+      const absorbed = Math.min(shieldRef.current, raw);
+      shieldRef.current -= absorbed;
+      setShieldHud(shieldRef.current);
+      const dmg = raw - absorbed;
+      if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
+      setCastleHpHud(castleHpRef.current);
+      setFeedback({ text: "💀 Chant struck!", good: false, id: Date.now() });
+      setShake(s => s + 1);
+      if (castleHpRef.current <= 0) endRun("loss");
+    }
+  }, [spawnFloatingHit, endRun]);
+
   // ---- Render ----
   const enemies = enemiesRef.current;
   const knights = knightsRef.current;
