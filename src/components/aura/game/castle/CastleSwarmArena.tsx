@@ -116,6 +116,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
   const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
   const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
+  const [spellBreak, setSpellBreak] = useState<{ words: string[]; wave: number } | null>(null);
 
   // ---- Refs ----
   const enemiesRef = useRef<Enemy[]>([]);
