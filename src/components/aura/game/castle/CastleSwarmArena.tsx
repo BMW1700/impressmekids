@@ -819,6 +819,18 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
           {/* Interstitial */}
           <WaveInterstitial show={!!interstitial} wave={interstitial?.wave ?? 0} coins={interstitial?.coins ?? 0} />
+
+          {/* Boss spell-break minigame */}
+          <AnimatePresence>
+            {spellBreak && (
+              <BossSpellBreak
+                key={`spellbreak-${spellBreak.wave}`}
+                words={spellBreak.words}
+                durationMs={5000}
+                onResult={handleSpellBreakResult}
+              />
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
