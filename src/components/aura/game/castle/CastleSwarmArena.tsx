@@ -424,7 +424,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
     const loop = (now: number) => {
       if (endedRef.current) return;
-      const dt = pausedRef.current ? 0 : Math.min(0.1, (now - last) / 1000);
+      const inHitStop = now < hitStopUntilRef.current;
+      const dt = (pausedRef.current || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
       last = now;
 
       if (!pausedRef.current) {
