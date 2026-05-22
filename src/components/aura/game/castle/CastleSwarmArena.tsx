@@ -272,6 +272,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   }, []);
 
   // ---- Word-attack handler from RPGWordReader ----
+  const spawnFloatingHit = useCallback((x: number, text: string, color: string) => {
+    const id = floatingIdRef.current++;
+    setFloatingHits(prev => [...prev, { id, x, y: 0, text, color, born: performance.now() }]);
+    setTimeout(() => setFloatingHits(prev => prev.filter(f => f.id !== id)), 900);
+  }, []);
+
   const handleWordResult = useCallback((correct: boolean, spokenWord: string, wordIndex: number) => {
     if (endedRef.current || pausedRef.current) return;
     const target = currentBatch[wordIndex] || "";
@@ -283,39 +289,85 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       longestStreakRef.current = Math.max(longestStreakRef.current, streakRef.current);
       setComboHud(streakRef.current);
 
-      // Attack front non-flying enemy first
+      const result = scoreWord(target, {
+        phonemeOfWave: phonemeRef.current,
+        sightStreak: sightStreakRef.current,
+      });
+
+      // Track sight-word streak (simple inline check mirroring scoreWord)
+      const wLower = target.toLowerCase();
+      const isSightWord = result.shieldCharge > 0;
+      sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
+
+      // Apply damage
       const living = enemiesRef.current.filter(e => !e.dying);
-      if (living.length) {
-        const front = living.reduce((a, b) => (a.x < b.x ? a : b));
-        // Long words deal more damage
-        const dmg = target.length >= 6 ? 2 : 1;
-        front.hp -= dmg;
-        front.hitFlashUntil = performance.now() + 180;
-        if (front.hp <= 0) front.dying = true;
+      const target_enemy = (() => {
+        if (!living.length) return null;
+        // If pierces, prefer armored enemies first; else front-most.
+        if (result.pierces) {
+          const armored = living.find(e => ENEMY_TYPES[e.type].armorBlocksDirect);
+          if (armored) return armored;
+        }
+        return living.reduce((a, b) => (a.x < b.x ? a : b));
+      })();
+
+      if (target_enemy) {
+        const dmg = result.crit ? result.dmg * 2 : result.dmg;
+        target_enemy.hp -= dmg;
+        target_enemy.hitFlashUntil = performance.now() + (result.crit ? 260 : 180);
+        if (target_enemy.hp <= 0) target_enemy.dying = true;
+        const xPct = 100 - (target_enemy.x / ARENA_WIDTH) * 100;
+        const color = result.phonemeHit ? "text-amber-300"
+                    : result.crit ? "text-rose-300"
+                    : result.heal > 0 ? "text-emerald-300"
+                    : "text-sky-200";
+        spawnFloatingHit(xPct, `-${dmg}${result.crit ? "!" : ""}`, color);
+        // Hit-stop on crit
+        if (result.crit) hitStopUntilRef.current = performance.now() + 70;
       }
 
-      // Power words summon knights
-      if (target.length >= 7 && knightsRef.current.length < knightStats.summonCap) {
+      // Knight summon
+      if (result.summonsKnight && knightsRef.current.length < knightStats.summonCap) {
         knightsRef.current.push({
           id: knightIdRef.current++,
           x: 60,
           hp: knightStats.knightHp,
           maxHp: knightStats.knightHp,
+          spawnedAt: performance.now(),
         });
         knightsSummonedRef.current += 1;
-        setFeedback({ text: "⚔ Knight summoned!", good: true, id: Date.now() });
-      } else {
-        setFeedback({ text: `+${target}`, good: true, id: Date.now() });
       }
 
-      superMeterRef.current = Math.min(100, superMeterRef.current + SUPER_FILL_PER_WORD);
+      // Resolve shield
+      if (result.shieldCharge > 0) {
+        shieldRef.current = Math.min(100, shieldRef.current + result.shieldCharge);
+        setShieldHud(shieldRef.current);
+      }
+
+      // Heal castle (rare vocab word)
+      if (result.heal > 0) {
+        castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + result.heal);
+      }
+
+      setFeedback({ text: result.flavor, good: true, id: Date.now() });
+
+      superMeterRef.current = Math.min(100, superMeterRef.current + result.superFill);
       setSuperMeter(superMeterRef.current);
     } else {
       streakRef.current = 0;
+      sightStreakRef.current = 0;
       setComboHud(0);
-      setFeedback({ text: "try again", good: false, id: Date.now() });
+      // If shield charged, it absorbs the miss instead of penalty.
+      if (shieldRef.current >= 20) {
+        shieldRef.current = Math.max(0, shieldRef.current - 20);
+        setShieldHud(shieldRef.current);
+        setFeedback({ text: "🛡 blocked", good: true, id: Date.now() });
+      } else {
+        setFeedback({ text: "try again", good: false, id: Date.now() });
+      }
     }
-  }, [currentBatch, knightStats.knightHp, knightStats.summonCap]);
+  }, [currentBatch, knightStats.knightHp, knightStats.summonCap, spawnFloatingHit]);
+
 
   const handleBatchComplete = useCallback(() => {
     // Slide the word window forward
