@@ -267,7 +267,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     if (isBossWave) {
       const ph = phonemeRef.current;
       const usable = wordPool.filter(w => w.length >= 3 && w.length <= 7);
-      const matchingPool = usable.filter(w => ph.match.test(w));
+      const matchingPool = usable.filter(w => wordContainsPhoneme(w, ph.key));
       const fallbackPool = usable.length ? usable : wordPool;
       const pick = (pool: string[], rng: () => number) =>
         pool[Math.floor(rng() * pool.length)];
