@@ -24,6 +24,7 @@ import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
 import { BossSpellBreak, SpellBreakGradeBand } from "./BossSpellBreak";
 import { playCrit, playPhonemeHit, playKnightSummon, playShieldUp } from "./sfx";
+import { wordContainsPhoneme } from "./phonemeMatcher";
 
 interface Enemy {
   id: number;
