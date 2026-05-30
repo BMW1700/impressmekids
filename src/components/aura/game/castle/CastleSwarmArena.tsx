@@ -614,47 +614,70 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  // ---- Boss spell-break resolution ----
-  const handleSpellBreakResult = useCallback((broken: boolean, _wordsRead: number) => {
+  // ---- Boss spell-break resolution (partial-success scaled) ----
+  const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
     setSpellBreak(null);
     spellBreakActiveRef.current = false;
     if (endedRef.current) return;
 
-    if (broken) {
-      // Stun + heavy damage to the boss (front-most living enemy).
-      const living = enemiesRef.current.filter(e => !e.dying);
-      const boss = living.length
-        ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b))
-        : null;
-      if (boss) {
-        const dmg = Math.ceil(boss.maxHp * 0.4);
-        boss.hp -= dmg;
-        boss.hitFlashUntil = performance.now() + 600;
-        boss.slowUntil = performance.now() + 1500; // stun-as-slow
-        if (boss.hp <= 0) boss.dying = true;
-        const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
-        spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
-      }
-      // Bonus coins + super charge for the satisfying payoff.
-      coinsRef.current += 25;
-      superMeterRef.current = Math.min(100, superMeterRef.current + 20);
-      setSuperMeter(superMeterRef.current);
-      hitStopUntilRef.current = performance.now() + 150;
-      setFeedback({ text: "💥 CHANT BROKEN!", good: true, id: Date.now() });
-      setShake(s => s + 1);
+    const living = enemiesRef.current.filter(e => !e.dying);
+    const boss = living.length ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b)) : null;
+
+    // Partial-success tiers: reward effort even on failure.
+    //   4 words  → full chant break (40% boss HP + stun + bonuses)
+    //   3 words  → partial (15% boss HP + light castle hit)
+    //   1-2 words → small boss tickle + medium castle hit
+    //   0 words  → full castle hit
+    let bossPct = 0;
+    let castleDmg = 0;
+    let coins = 0;
+    let superFill = 0;
+    let stun = 0;
+    let banner = "";
+
+    if (broken || wordsRead >= 4) {
+      bossPct = 0.40; coins = 25; superFill = 20; stun = 1500;
+      banner = "💥 CHANT BROKEN!";
+    } else if (wordsRead === 3) {
+      bossPct = 0.15; castleDmg = 2; coins = 20; superFill = 10; stun = 600;
+      banner = "✨ Almost! Chant cracked!";
+    } else if (wordsRead >= 1) {
+      bossPct = 0.05; castleDmg = 6; coins = 10;
+      banner = "⚠ Chant grazed";
     } else {
-      // Failure → big castle hit (shield absorbs first).
-      const raw = 12;
-      const absorbed = Math.min(shieldRef.current, raw);
+      castleDmg = 12;
+      banner = "💀 Chant struck!";
+    }
+
+    if (boss && bossPct > 0) {
+      const dmg = Math.max(1, Math.ceil(boss.maxHp * bossPct));
+      boss.hp -= dmg;
+      boss.hitFlashUntil = performance.now() + 600;
+      if (stun > 0) boss.slowUntil = performance.now() + stun;
+      if (boss.hp <= 0) boss.dying = true;
+      const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
+      spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
+    }
+
+    if (coins > 0) coinsRef.current += coins;
+    if (superFill > 0) {
+      superMeterRef.current = Math.min(100, superMeterRef.current + superFill);
+      setSuperMeter(superMeterRef.current);
+    }
+
+    if (castleDmg > 0) {
+      const absorbed = Math.min(shieldRef.current, castleDmg);
       shieldRef.current -= absorbed;
       setShieldHud(shieldRef.current);
-      const dmg = raw - absorbed;
+      const dmg = castleDmg - absorbed;
       if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
       setCastleHpHud(castleHpRef.current);
-      setFeedback({ text: "💀 Chant struck!", good: false, id: Date.now() });
-      setShake(s => s + 1);
-      if (castleHpRef.current <= 0) endRun("loss");
     }
+
+    hitStopUntilRef.current = performance.now() + 150;
+    setFeedback({ text: banner, good: bossPct > 0, id: Date.now() });
+    setShake(s => s + 1);
+    if (castleHpRef.current <= 0) endRun("loss");
   }, [spawnFloatingHit, endRun]);
 
   // ---- Render ----
