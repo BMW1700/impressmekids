@@ -343,9 +343,10 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       const result = scoreWord(target, {
         phonemeOfWave: phonemeRef.current,
         sightStreak: sightStreakRef.current,
+        waveNumber: waveRef.current,
       });
 
-      // Track sight-word streak (mirrors scoreWord's internal sight check)
+      // Track sight-word streak: a word counts as sight whenever it added charge.
       const isSightWord = result.shieldCharge > 0;
       sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
 
