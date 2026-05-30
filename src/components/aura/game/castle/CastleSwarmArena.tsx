@@ -302,7 +302,10 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
   // ---- Initial setup ----
   useEffect(() => {
-    if (mode.kind === "daily") rngRef.current = makeSeededRng(hashSeed(mode.seed));
+    if (mode.kind === "daily") {
+      dailySeedRef.current = hashSeed(mode.seed);
+      rngRef.current = makeSeededRng(dailySeedRef.current);
+    }
 
     if (mode.kind === "campaign") {
       enemyCastleHpRef.current = mode.level.enemyCastleHp;
