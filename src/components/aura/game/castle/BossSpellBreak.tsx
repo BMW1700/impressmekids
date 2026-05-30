@@ -13,14 +13,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { RPGWordReader } from "../rpg/RPGWordReader";
+import { playChantBroken, playBossLaugh } from "./sfx";
+
+export type SpellBreakGradeBand = "K-2" | "3-5" | "6-12";
 
 interface Props {
   words: string[];                                       // exactly 4 short words
-  durationMs?: number;                                   // default 5000
+  durationMs?: number;                                   // overrides gradeBand default
+  gradeBand?: SpellBreakGradeBand;
+  phonemeLabel?: string;                                 // e.g. "/sh/"
   onResult: (broken: boolean, wordsRead: number) => void;
 }
 
-export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) => {
+const DURATION_BY_BAND: Record<SpellBreakGradeBand, number> = {
+  "K-2": 7000,
+  "3-5": 6000,
+  "6-12": 5000,
+};
+
+export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLabel, onResult }: Props) => {
+  const effectiveDuration = durationMs ?? DURATION_BY_BAND[gradeBand];
   const [readCount, setReadCount] = useState(0);
   const [revealCount, setRevealCount] = useState(0);
   const [now, setNow] = useState(() => performance.now());
@@ -43,8 +55,9 @@ export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) =>
       const t = performance.now();
       setNow(t);
       if (settledRef.current) return;
-      if (t - startedAtRef.current >= durationMs) {
+      if (t - startedAtRef.current >= effectiveDuration) {
         settledRef.current = true;
+        playBossLaugh();
         onResult(false, readCountRef.current);
         return;
       }
@@ -52,10 +65,10 @@ export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) =>
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [durationMs, onResult]);
+  }, [effectiveDuration, onResult]);
 
-  const remainingMs = Math.max(0, durationMs - (now - startedAtRef.current));
-  const remainingPct = Math.max(0, Math.min(1, remainingMs / durationMs));
+  const remainingMs = Math.max(0, effectiveDuration - (now - startedAtRef.current));
+  const remainingPct = Math.max(0, Math.min(1, remainingMs / effectiveDuration));
   const ringColor =
     remainingPct > 0.5 ? "stroke-cyan-300"
     : remainingPct > 0.2 ? "stroke-amber-300"
@@ -69,6 +82,7 @@ export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) =>
     setReadCount(readCountRef.current);
     if (readCountRef.current >= words.length) {
       settledRef.current = true;
+      playChantBroken();
       // Small celebratory delay so the user sees the last card shatter.
       setTimeout(() => onResult(true, readCountRef.current), 350);
     }
@@ -96,13 +110,19 @@ export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) =>
         transition={{ duration: 1.2, repeat: Infinity }}
       />
 
-      <div className="relative flex items-center gap-3 mb-3">
+      <div className="relative flex items-center gap-3 mb-2">
         <Sparkles className="w-5 h-5 text-rose-300 animate-pulse" />
         <h2 className="text-rose-100 font-black text-lg sm:text-2xl tracking-widest drop-shadow uppercase">
           Break the Chant!
         </h2>
         <Sparkles className="w-5 h-5 text-rose-300 animate-pulse" />
       </div>
+
+      {phonemeLabel && (
+        <div className="relative mb-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-300/70 text-amber-100 text-xs sm:text-sm font-bold tracking-wider">
+          Hunt for <span className="text-amber-300 font-black">{phonemeLabel}</span>
+        </div>
+      )}
 
       {/* Timer ring */}
       <div className="relative mb-3">

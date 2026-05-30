@@ -1,23 +1,24 @@
 /**
- * Castle Swarm — Word Economy
- *
- * Every correctly read word resolves to a typed combat effect based on its
- * literacy properties. This is the heart of what makes the mode addictive +
- * pedagogically valuable: kids learn to *hunt* for word patterns because
- * the patterns themselves cause distinct, satisfying game effects.
+ * Castle Swarm — Word Economy (v2, Truth Pass)
  *
  * Pure function — no React, no DOM, no side effects.
+ *
+ * v2 changes:
+ *  - Phoneme hit now uses CMU-dict-backed phonemeMatcher, not a spelling regex.
+ *  - Crit is now *rare* (rarity-tier rule), not the default for any digraph.
+ *  - Resolve banner fires exactly once per streak (at the 3rd sight word),
+ *    not on every subsequent word.
+ *  - Damage scales with wave so per-word DPS keeps pace with enemy HP curve.
+ *  - Per-wave phoneme rotation can fold in a daily seed to defeat memorization.
  */
 
 import { SIGHT_WORDS } from "@/data/sightWords";
+import { wordContainsPhoneme } from "./phonemeMatcher";
 
-// Flat sight-word set for O(1) lookup.
 const SIGHT_SET = new Set<string>(
   Object.values(SIGHT_WORDS).flat().map(w => w.toLowerCase())
 );
 
-// Common digraphs / phonics patterns. Used both for crit detection and to
-// pick a per-wave "phoneme of the wave" target.
 export const PHONEME_TARGETS: { key: string; label: string; match: RegExp }[] = [
   { key: "sh",  label: "/sh/",  match: /sh/ },
   { key: "ch",  label: "/ch/",  match: /ch/ },
@@ -35,36 +36,37 @@ export const PHONEME_TARGETS: { key: string; label: string; match: RegExp }[] = 
 
 export type PhonemeTarget = (typeof PHONEME_TARGETS)[number];
 
-/** Pick a phoneme target for a given wave (deterministic per wave number). */
-export function pickPhonemeForWave(waveNumber: number): PhonemeTarget {
-  return PHONEME_TARGETS[waveNumber % PHONEME_TARGETS.length];
+/**
+ * Pick a phoneme target for a given wave. Optional `seed` (e.g. daily seed
+ * hashed to a number) prevents memorization across runs.
+ */
+export function pickPhonemeForWave(waveNumber: number, seed = 0): PhonemeTarget {
+  const idx = Math.abs(waveNumber * 7 + seed) % PHONEME_TARGETS.length;
+  return PHONEME_TARGETS[idx];
 }
 
 // CVCe pattern: consonant-vowel-consonant-e (e.g. "cake", "bike", "hope").
 const CVCE = /^[^aeiou][aeiou][^aeiou]e$/i;
 
-// Common digraphs anywhere in word (cheap proxy for "decodable phonics hit").
-const DIGRAPH = /sh|ch|th|wh|ph|ck|qu|ng/;
-
 export interface WordScore {
-  dmg: number;           // damage to front enemy
-  crit: boolean;         // visual + audio crit, also pierces armor
-  pierces: boolean;      // ignores armor (armored_orc etc.)
+  dmg: number;
+  crit: boolean;
+  pierces: boolean;
   summonsKnight: boolean;
-  shieldCharge: number;  // 0–100 contribution to Resolve shield meter
-  heal: number;          // HP returned to player castle
-  phonemeHit: boolean;   // matched the phoneme of the wave (golden hit)
-  superFill: number;     // points to add to super meter (0–100 scale)
-  flavor: string;        // short feedback text for HUD
+  shieldCharge: number;
+  heal: number;
+  phonemeHit: boolean;
+  superFill: number;
+  flavor: string;
+  /** True only the moment the sight-word streak ticks to the threshold (3). */
+  resolveTriggered: boolean;
 }
 
 export interface ScoreCtx {
   phonemeOfWave: PhonemeTarget;
-  /**
-   * Rolling streak of sight words the player has read in a row (the caller
-   * maintains this counter and resets it whenever a non-sight word is read).
-   */
   sightStreak: number;
+  /** Current wave (>=1). Damage scales with this. */
+  waveNumber?: number;
 }
 
 const isSight = (w: string) => SIGHT_SET.has(w);
@@ -72,6 +74,7 @@ const isSight = (w: string) => SIGHT_SET.has(w);
 export function scoreWord(rawWord: string, ctx: ScoreCtx): WordScore {
   const word = (rawWord || "").toLowerCase().replace(/[^a-z']/g, "");
   const len = word.length;
+  const wave = Math.max(1, ctx.waveNumber ?? 1);
 
   let dmg = 1;
   let crit = false;
@@ -82,48 +85,46 @@ export function scoreWord(rawWord: string, ctx: ScoreCtx): WordScore {
   let phonemeHit = false;
   let superFill = 4;
   let flavor = `+${word}`;
+  let resolveTriggered = false;
 
-  // Short words = fast jab
-  if (len <= 4) {
-    dmg = 1;
-    superFill = 3;
-  } else if (len <= 6) {
-    dmg = 2;
-  } else {
-    dmg = 3;
-    superFill = 6;
-  }
+  // Base damage by length
+  if (len <= 4) { dmg = 1; superFill = 3; }
+  else if (len <= 6) { dmg = 2; }
+  else { dmg = 3; superFill = 6; }
 
-  // Long word — summon a knight (existing rule preserved)
+  // Long word → summon a knight
   if (len >= 7) {
     summonsKnight = true;
     flavor = "⚔ Knight!";
   }
 
-  // Sight-word streak charges the Resolve shield. Every sight word adds a
-  // little; hitting 3 in a row gives a big chunk + a banner.
-  if (isSight(word)) {
-    shieldCharge = 6;
-    if (ctx.sightStreak + 1 >= 3) {
-      shieldCharge = 25;
-      flavor = "🛡 Resolve!";
-    }
-  }
-
-  // Decodable phonics pattern → crit + armor pierce
-  if (CVCE.test(word) || DIGRAPH.test(word)) {
-    crit = true;
-    pierces = true;
-    dmg = Math.max(dmg, 3);
-    flavor = "💥 Crit!";
-  }
-
-  // Phoneme of the wave bonus — overrides flavor because this is the hunt.
-  if (ctx.phonemeOfWave.match.test(word)) {
+  // Phoneme of the wave (CMU-dict-backed). This is the hunt.
+  if (wordContainsPhoneme(word, ctx.phonemeOfWave.key)) {
     phonemeHit = true;
     dmg = Math.round(dmg * 1.5);
     superFill += 4;
     flavor = `✨ ${ctx.phonemeOfWave.label}!`;
+  }
+
+  // Rarity-tier crit: only phoneme hit, CVCe, or 7+ letter words crit.
+  // This drops crit rate from ~60% to ~20% and makes it feel earned.
+  if (phonemeHit || CVCE.test(word) || len >= 7) {
+    crit = true;
+    pierces = true;
+    dmg = Math.max(dmg, 3);
+    if (!phonemeHit) flavor = "💥 Crit!";
+  }
+
+  // Sight-word streak charges Resolve. Banner fires *only* at the threshold.
+  if (isSight(word)) {
+    const newStreak = ctx.sightStreak + 1;
+    if (newStreak === 3) {
+      shieldCharge = 25;
+      resolveTriggered = true;
+      flavor = "🛡 Resolve!";
+    } else {
+      shieldCharge = 6; // small per-word charge, no banner
+    }
   }
 
   // Rare vocabulary heal — long + not a sight word
@@ -131,5 +132,12 @@ export function scoreWord(rawWord: string, ctx: ScoreCtx): WordScore {
     heal = 1;
   }
 
-  return { dmg, crit, pierces, summonsKnight, shieldCharge, heal, phonemeHit, superFill, flavor };
+  // Wave damage scaling so per-word damage keeps pace with HP curve.
+  const scale = 1 + Math.floor(wave / 4) * 0.5;
+  dmg = Math.max(1, Math.round(dmg * scale));
+
+  return {
+    dmg, crit, pierces, summonsKnight, shieldCharge,
+    heal, phonemeHit, superFill, flavor, resolveTriggered,
+  };
 }

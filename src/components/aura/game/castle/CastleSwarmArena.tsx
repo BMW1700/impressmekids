@@ -22,7 +22,9 @@ import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
 import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
-import { BossSpellBreak } from "./BossSpellBreak";
+import { BossSpellBreak, SpellBreakGradeBand } from "./BossSpellBreak";
+import { playCrit, playPhonemeHit, playKnightSummon, playShieldUp } from "./sfx";
+import { wordContainsPhoneme } from "./phonemeMatcher";
 
 interface Enemy {
   id: number;
@@ -114,6 +116,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [interstitial, setInterstitial] = useState<{ wave: number; coins: number } | null>(null);
   const [shake, setShake] = useState(0); // increments to retrigger shake
   const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
+  const dailySeedRef = useRef(0);
+  const gradeBand: SpellBreakGradeBand = gradeMode === "6to12" ? "6-12" : "K-2";
   const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
   const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
   const [spellBreak, setSpellBreak] = useState<{ words: string[]; wave: number } | null>(null);
@@ -149,6 +153,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const transitioningRef = useRef(false);
   const rngRef = useRef<() => number>(Math.random);
   const spellBreakActiveRef = useRef(false);
+  const knightStatsRef = useRef(knightStats);
+  useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
   // ---- Save run ----
   const persistRun = useCallback((reason: "win" | "loss" | "quit", finalAcc: number, finalCoins: number) => {
@@ -253,8 +259,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     setWaveBanner(banner);
     setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 1800);
 
-    // Rotate phoneme target each wave
-    const ph = pickPhonemeForWave(n);
+    // Rotate phoneme target each wave (folds in daily seed when present)
+    const ph = pickPhonemeForWave(n, dailySeedRef.current);
     phonemeRef.current = ph;
     setPhonemeOfWave(ph);
 
@@ -264,7 +270,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     if (isBossWave) {
       const ph = phonemeRef.current;
       const usable = wordPool.filter(w => w.length >= 3 && w.length <= 7);
-      const matchingPool = usable.filter(w => ph.match.test(w));
+      const matchingPool = usable.filter(w => wordContainsPhoneme(w, ph.key));
       const fallbackPool = usable.length ? usable : wordPool;
       const pick = (pool: string[], rng: () => number) =>
         pool[Math.floor(rng() * pool.length)];
@@ -299,7 +305,10 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
   // ---- Initial setup ----
   useEffect(() => {
-    if (mode.kind === "daily") rngRef.current = makeSeededRng(hashSeed(mode.seed));
+    if (mode.kind === "daily") {
+      dailySeedRef.current = hashSeed(mode.seed);
+      rngRef.current = makeSeededRng(dailySeedRef.current);
+    }
 
     if (mode.kind === "campaign") {
       enemyCastleHpRef.current = mode.level.enemyCastleHp;
@@ -336,9 +345,10 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       const result = scoreWord(target, {
         phonemeOfWave: phonemeRef.current,
         sightStreak: sightStreakRef.current,
+        waveNumber: waveRef.current,
       });
 
-      // Track sight-word streak (mirrors scoreWord's internal sight check)
+      // Track sight-word streak: a word counts as sight whenever it added charge.
       const isSightWord = result.shieldCharge > 0;
       sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
 
@@ -365,8 +375,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
                     : result.heal > 0 ? "text-emerald-300"
                     : "text-sky-200";
         spawnFloatingHit(xPct, `-${dmg}${result.crit ? "!" : ""}`, color);
-        // Hit-stop on crit
-        if (result.crit) hitStopUntilRef.current = performance.now() + 70;
+        // Hit-stop + sfx on crit / phoneme hit
+        if (result.crit) {
+          hitStopUntilRef.current = performance.now() + 70;
+          playCrit();
+        }
+        if (result.phonemeHit) playPhonemeHit();
       }
 
       // Knight summon
@@ -379,12 +393,14 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           spawnedAt: performance.now(),
         });
         knightsSummonedRef.current += 1;
+        playKnightSummon();
       }
 
       // Resolve shield
       if (result.shieldCharge > 0) {
         shieldRef.current = Math.min(100, shieldRef.current + result.shieldCharge);
         setShieldHud(shieldRef.current);
+        if (result.resolveTriggered) playShieldUp();
       }
 
       // Heal castle (rare vocab word)
@@ -512,6 +528,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
             // Resolve shield absorbs up to its current value, point-for-point.
             const absorbed = Math.min(shieldRef.current, raw);
             shieldRef.current -= absorbed;
+            if (absorbed > 0) setShieldHud(shieldRef.current);
             const dmg = raw - absorbed;
             if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
             e.dying = true;
@@ -523,12 +540,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         knightsRef.current.forEach(k => {
           const target = enemiesRef.current.find(e => !e.dying && !e.flying && Math.abs(e.x - k.x) < 25);
           if (target) {
-            target.hp -= knightStats.knightDps * dt;
+            target.hp -= knightStatsRef.current.knightDps * dt;
             target.hitFlashUntil = performance.now() + 120;
             if (target.hp <= 0) target.dying = true;
             k.hp -= 1.2 * dt;
           } else if (enemyCastleHpRef.current > 0 && k.x >= ARENA_WIDTH - 60) {
-            const dmg = knightStats.knightDps * dt;
+            const dmg = knightStatsRef.current.knightDps * dt;
             enemyCastleHpRef.current = Math.max(0, enemyCastleHpRef.current - dmg);
             enemyCastleDmgRef.current += dmg;
           } else {
@@ -597,47 +614,70 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  // ---- Boss spell-break resolution ----
-  const handleSpellBreakResult = useCallback((broken: boolean, _wordsRead: number) => {
+  // ---- Boss spell-break resolution (partial-success scaled) ----
+  const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
     setSpellBreak(null);
     spellBreakActiveRef.current = false;
     if (endedRef.current) return;
 
-    if (broken) {
-      // Stun + heavy damage to the boss (front-most living enemy).
-      const living = enemiesRef.current.filter(e => !e.dying);
-      const boss = living.length
-        ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b))
-        : null;
-      if (boss) {
-        const dmg = Math.ceil(boss.maxHp * 0.4);
-        boss.hp -= dmg;
-        boss.hitFlashUntil = performance.now() + 600;
-        boss.slowUntil = performance.now() + 1500; // stun-as-slow
-        if (boss.hp <= 0) boss.dying = true;
-        const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
-        spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
-      }
-      // Bonus coins + super charge for the satisfying payoff.
-      coinsRef.current += 25;
-      superMeterRef.current = Math.min(100, superMeterRef.current + 20);
-      setSuperMeter(superMeterRef.current);
-      hitStopUntilRef.current = performance.now() + 150;
-      setFeedback({ text: "💥 CHANT BROKEN!", good: true, id: Date.now() });
-      setShake(s => s + 1);
+    const living = enemiesRef.current.filter(e => !e.dying);
+    const boss = living.length ? living.reduce((a, b) => (a.maxHp > b.maxHp ? a : b)) : null;
+
+    // Partial-success tiers: reward effort even on failure.
+    //   4 words  → full chant break (40% boss HP + stun + bonuses)
+    //   3 words  → partial (15% boss HP + light castle hit)
+    //   1-2 words → small boss tickle + medium castle hit
+    //   0 words  → full castle hit
+    let bossPct = 0;
+    let castleDmg = 0;
+    let coins = 0;
+    let superFill = 0;
+    let stun = 0;
+    let banner = "";
+
+    if (broken || wordsRead >= 4) {
+      bossPct = 0.40; coins = 25; superFill = 20; stun = 1500;
+      banner = "💥 CHANT BROKEN!";
+    } else if (wordsRead === 3) {
+      bossPct = 0.15; castleDmg = 2; coins = 20; superFill = 10; stun = 600;
+      banner = "✨ Almost! Chant cracked!";
+    } else if (wordsRead >= 1) {
+      bossPct = 0.05; castleDmg = 6; coins = 10;
+      banner = "⚠ Chant grazed";
     } else {
-      // Failure → big castle hit (shield absorbs first).
-      const raw = 12;
-      const absorbed = Math.min(shieldRef.current, raw);
+      castleDmg = 12;
+      banner = "💀 Chant struck!";
+    }
+
+    if (boss && bossPct > 0) {
+      const dmg = Math.max(1, Math.ceil(boss.maxHp * bossPct));
+      boss.hp -= dmg;
+      boss.hitFlashUntil = performance.now() + 600;
+      if (stun > 0) boss.slowUntil = performance.now() + stun;
+      if (boss.hp <= 0) boss.dying = true;
+      const xPct = 100 - (boss.x / ARENA_WIDTH) * 100;
+      spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
+    }
+
+    if (coins > 0) coinsRef.current += coins;
+    if (superFill > 0) {
+      superMeterRef.current = Math.min(100, superMeterRef.current + superFill);
+      setSuperMeter(superMeterRef.current);
+    }
+
+    if (castleDmg > 0) {
+      const absorbed = Math.min(shieldRef.current, castleDmg);
       shieldRef.current -= absorbed;
       setShieldHud(shieldRef.current);
-      const dmg = raw - absorbed;
+      const dmg = castleDmg - absorbed;
       if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
       setCastleHpHud(castleHpRef.current);
-      setFeedback({ text: "💀 Chant struck!", good: false, id: Date.now() });
-      setShake(s => s + 1);
-      if (castleHpRef.current <= 0) endRun("loss");
     }
+
+    hitStopUntilRef.current = performance.now() + 150;
+    setFeedback({ text: banner, good: bossPct > 0, id: Date.now() });
+    setShake(s => s + 1);
+    if (castleHpRef.current <= 0) endRun("loss");
   }, [spawnFloatingHit, endRun]);
 
   // ---- Render ----
@@ -826,9 +866,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
               <BossSpellBreak
                 key={`spellbreak-${spellBreak.wave}`}
                 words={spellBreak.words}
-                durationMs={5000}
+                gradeBand={gradeBand}
+                phonemeLabel={phonemeRef.current.label}
                 onResult={handleSpellBreakResult}
               />
+
             )}
           </AnimatePresence>
         </div>
