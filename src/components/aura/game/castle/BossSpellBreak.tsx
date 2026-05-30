@@ -55,8 +55,9 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
       const t = performance.now();
       setNow(t);
       if (settledRef.current) return;
-      if (t - startedAtRef.current >= durationMs) {
+      if (t - startedAtRef.current >= effectiveDuration) {
         settledRef.current = true;
+        playBossLaugh();
         onResult(false, readCountRef.current);
         return;
       }
@@ -64,10 +65,10 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [durationMs, onResult]);
+  }, [effectiveDuration, onResult]);
 
-  const remainingMs = Math.max(0, durationMs - (now - startedAtRef.current));
-  const remainingPct = Math.max(0, Math.min(1, remainingMs / durationMs));
+  const remainingMs = Math.max(0, effectiveDuration - (now - startedAtRef.current));
+  const remainingPct = Math.max(0, Math.min(1, remainingMs / effectiveDuration));
   const ringColor =
     remainingPct > 0.5 ? "stroke-cyan-300"
     : remainingPct > 0.2 ? "stroke-amber-300"
@@ -81,6 +82,7 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
     setReadCount(readCountRef.current);
     if (readCountRef.current >= words.length) {
       settledRef.current = true;
+      playChantBroken();
       // Small celebratory delay so the user sees the last card shatter.
       setTimeout(() => onResult(true, readCountRef.current), 350);
     }
