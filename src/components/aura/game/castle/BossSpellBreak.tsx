@@ -13,14 +13,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { RPGWordReader } from "../rpg/RPGWordReader";
+import { playChantBroken, playBossLaugh } from "./sfx";
+
+export type SpellBreakGradeBand = "K-2" | "3-5" | "6-12";
 
 interface Props {
   words: string[];                                       // exactly 4 short words
-  durationMs?: number;                                   // default 5000
+  durationMs?: number;                                   // overrides gradeBand default
+  gradeBand?: SpellBreakGradeBand;
+  phonemeLabel?: string;                                 // e.g. "/sh/"
   onResult: (broken: boolean, wordsRead: number) => void;
 }
 
-export const BossSpellBreak = ({ words, durationMs = 5000, onResult }: Props) => {
+const DURATION_BY_BAND: Record<SpellBreakGradeBand, number> = {
+  "K-2": 7000,
+  "3-5": 6000,
+  "6-12": 5000,
+};
+
+export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLabel, onResult }: Props) => {
+  const effectiveDuration = durationMs ?? DURATION_BY_BAND[gradeBand];
   const [readCount, setReadCount] = useState(0);
   const [revealCount, setRevealCount] = useState(0);
   const [now, setNow] = useState(() => performance.now());
