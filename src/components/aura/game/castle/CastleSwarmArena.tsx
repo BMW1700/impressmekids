@@ -373,8 +373,12 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
                     : result.heal > 0 ? "text-emerald-300"
                     : "text-sky-200";
         spawnFloatingHit(xPct, `-${dmg}${result.crit ? "!" : ""}`, color);
-        // Hit-stop on crit
-        if (result.crit) hitStopUntilRef.current = performance.now() + 70;
+        // Hit-stop + sfx on crit / phoneme hit
+        if (result.crit) {
+          hitStopUntilRef.current = performance.now() + 70;
+          playCrit();
+        }
+        if (result.phonemeHit) playPhonemeHit();
       }
 
       // Knight summon
@@ -387,12 +391,14 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           spawnedAt: performance.now(),
         });
         knightsSummonedRef.current += 1;
+        playKnightSummon();
       }
 
       // Resolve shield
       if (result.shieldCharge > 0) {
         shieldRef.current = Math.min(100, shieldRef.current + result.shieldCharge);
         setShieldHud(shieldRef.current);
+        if (result.resolveTriggered) playShieldUp();
       }
 
       // Heal castle (rare vocab word)
