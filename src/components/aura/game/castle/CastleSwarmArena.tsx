@@ -115,6 +115,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const [interstitial, setInterstitial] = useState<{ wave: number; coins: number } | null>(null);
   const [shake, setShake] = useState(0); // increments to retrigger shake
   const [phonemeOfWave, setPhonemeOfWave] = useState<PhonemeTarget>(() => pickPhonemeForWave(1));
+  const dailySeedRef = useRef(0);
+  const gradeBand: SpellBreakGradeBand = gradeMode === "6to12" ? "6-12" : "K-2";
   const [shieldHud, setShieldHud] = useState(0); // Resolve shield 0–100
   const [floatingHits, setFloatingHits] = useState<FloatingHit[]>([]);
   const [spellBreak, setSpellBreak] = useState<{ words: string[]; wave: number } | null>(null);
