@@ -22,7 +22,8 @@ import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
 import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
-import { BossSpellBreak } from "./BossSpellBreak";
+import { BossSpellBreak, SpellBreakGradeBand } from "./BossSpellBreak";
+import { playCrit, playPhonemeHit, playKnightSummon, playShieldUp } from "./sfx";
 
 interface Enemy {
   id: number;
