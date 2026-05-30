@@ -866,9 +866,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
               <BossSpellBreak
                 key={`spellbreak-${spellBreak.wave}`}
                 words={spellBreak.words}
-                durationMs={5000}
+                gradeBand={gradeBand}
+                phonemeLabel={phonemeRef.current.label}
                 onResult={handleSpellBreakResult}
               />
+
             )}
           </AnimatePresence>
         </div>
