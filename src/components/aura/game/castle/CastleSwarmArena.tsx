@@ -153,6 +153,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const transitioningRef = useRef(false);
   const rngRef = useRef<() => number>(Math.random);
   const spellBreakActiveRef = useRef(false);
+  const knightStatsRef = useRef(knightStats);
+  useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
   // ---- Save run ----
   const persistRun = useCallback((reason: "win" | "loss" | "quit", finalAcc: number, finalCoins: number) => {
