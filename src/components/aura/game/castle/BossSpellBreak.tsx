@@ -110,13 +110,19 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
         transition={{ duration: 1.2, repeat: Infinity }}
       />
 
-      <div className="relative flex items-center gap-3 mb-3">
+      <div className="relative flex items-center gap-3 mb-2">
         <Sparkles className="w-5 h-5 text-rose-300 animate-pulse" />
         <h2 className="text-rose-100 font-black text-lg sm:text-2xl tracking-widest drop-shadow uppercase">
           Break the Chant!
         </h2>
         <Sparkles className="w-5 h-5 text-rose-300 animate-pulse" />
       </div>
+
+      {phonemeLabel && (
+        <div className="relative mb-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-300/70 text-amber-100 text-xs sm:text-sm font-bold tracking-wider">
+          Hunt for <span className="text-amber-300 font-black">{phonemeLabel}</span>
+        </div>
+      )}
 
       {/* Timer ring */}
       <div className="relative mb-3">
