@@ -292,8 +292,10 @@ export const RPGFireballDefense = ({
       gameActiveRef.current = false;
       if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
+      if (safetyTimerRef.current) { clearTimeout(safetyTimerRef.current); safetyTimerRef.current = null; }
     };
   }, []);
+
 
   const getFireballSize = (size: 'small' | 'medium' | 'large') => {
     // Bigger boxes so the word inside is always legible to a parent reading at a distance.
