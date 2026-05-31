@@ -607,12 +607,15 @@ export const RPGWordReader = ({
     isProcessingRef.current = true;
     
     // Track as missed (RED) - can become 'retried' (YELLOW) if they try again
-    setWordResults(prev => new Map(prev).set(wordIndex, {
+    const missedAttempt: WordAttempt = {
       word: expectedWord,
       result: 'missed',
       spokenAs: spokenWord,
-      attempts: 1
-    }));
+      attempts: 1,
+    };
+    wordResultsRef.current = new Map(wordResultsRef.current).set(wordIndex, missedAttempt);
+    setWordResults(prev => new Map(prev).set(wordIndex, missedAttempt));
+
     
     setFeedback('incorrect');
     setSpokenText(spokenWord);
