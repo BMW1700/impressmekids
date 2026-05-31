@@ -939,7 +939,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
               enableEchoRetry={true}
               mode="fast"
               compact
-              disabled={paused}
+              disabled={paused || !!spellBreak}
               streak={comboHud}
             />
           </div>
