@@ -674,16 +674,18 @@ export const RPGWordReader = ({
     setWordResults(prev => {
       const updated = new Map(prev);
       const existing = updated.get(wordIndex);
-      const newEntry = {
+      const newEntry: WordAttempt = {
         word: targetWord,
         result: 'retried' as const,
         spokenAs: spokenWord,
-        attempts: (existing?.attempts || 1) + 1
+        attempts: (existing?.attempts || 1) + 1,
       };
       updated.set(wordIndex, newEntry);
+      wordResultsRef.current = new Map(updated);
       console.log('[RPGWordReader] SET RETRIED (YELLOW):', { wordIndex, targetWord, newEntry });
       return updated;
     });
+
     
     setFeedback('correct');
     setSpokenText(spokenWord);
