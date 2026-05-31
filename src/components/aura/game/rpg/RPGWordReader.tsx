@@ -1216,7 +1216,7 @@ export const RPGWordReader = ({
         scheduleRestart(500);
       }
     }
-  }, [disabled, mode, getTargetWord, handleRetrySuccess, handleCorrect, processResult]);
+  }, [disabled, mode, getTargetWord, handleRetrySuccess, handleCorrect, processResult, applyFastBurst]);
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
