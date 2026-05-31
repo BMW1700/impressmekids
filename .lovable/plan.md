@@ -1,32 +1,47 @@
-# Fast-Mode Multi-Word Chaining Fix (Elara / Cypher)
+# Fast-Mode Multi-Word Chaining — Final-Result Path
 
-## Goal
-Restore the 5-words-in-one-breath behavior for fast-mode characters. Today the interim handler matches the first spoken word, then `return`s and marks the result index as consumed — so words 2–5 of the same breath are dropped.
+## What's actually broken
+
+Last fix only patched the **interim** result branch (line ~965). But when a kid reads "cat dog sun moon star" in one breath without pausing, Web Speech often skips interim entirely and delivers the whole utterance as a single **final** result.
+
+The final path goes through `processResult` (lines 772–853). It:
+1. Splits the transcript into words.
+2. Finds the **first** word that matches the current target.
+3. Fires `handleCorrect` for that one word.
+4. Returns.
+
+The other 4 spoken words are thrown away. That's why Elara/Cypher still feel slow — chaining only works if interim fires word-by-word, which it often doesn't.
 
 ## File
-`src/components/aura/game/rpg/RPGWordReader.tsx` — only the fast-mode interim block (current lines 959–981). No other file touched.
+`src/components/aura/game/rpg/RPGWordReader.tsx` — only `processResult` (lines 772–853). No other changes.
 
-## Change (surgical)
-Inside `recognition.onresult`, fast-mode interim branch:
-1. Split the transcript into `wordsSpoken` (already done).
-2. Walk it against a *virtual* advancing target: after each match, bump `virtualIdx` and refresh `virtualTarget = getTargetWord(virtualIdx)`.
-3. **First match** fires synchronously via `handleCorrectRef` / `handleRetrySuccessRef` (unchanged behavior).
-4. **Subsequent matches** are scheduled with `setTimeout(..., n * 170ms)` — just past the fast-mode 150ms `feedbackDelay`, so each fires after `isProcessingRef` clears.
-5. Each queued callback re-validates at fire time: same session, `currentIndexRef.current === queuedIdx`, live target still matches queued target, and re-runs `isWordMatchLenient`. Any mismatch → no-op (safe).
-6. Track `(resultIndex, consumedSpokenCount)` on the recognition instance so a growing interim transcript only consumes newly-spoken words, never the same word twice.
-7. `processedFinalsRef.add(i)` only after at least one match fired (preserves duplicate suppression).
+## Change (surgical, fast-mode only)
+
+In `processResult`, after the existing first-word match succeeds **and** `mode === 'fast'` **and** it routed to `handleCorrect` (not retry), continue walking the remaining transcript words against the *advancing* virtual target — same pattern as the interim branch:
+
+1. Find the index `s` of the matched spoken word in `wordsSpoken`.
+2. Set `virtualIdx = wordIndex + 1`, `virtualTarget = getTargetWord(virtualIdx)`.
+3. Loop `wordsSpoken[s+1..]`:
+   - If `isWordMatchLenient(word, virtualTarget)` → queue with `setTimeout(..., firedFollowups * 170ms)`.
+   - Each queued callback re-validates session, `currentIndexRef.current === queuedIdx`, live target still equals queued target, and re-runs `isWordMatchLenient` — any mismatch → no-op.
+   - Increment `virtualIdx`, refresh `virtualTarget`.
+4. Stop at first non-match (don't skip words — kid must read in order).
+5. Normal characters: behavior unchanged (gated by `mode === 'fast'`).
 
 ## Why this is safe
-- Synchronous first match is byte-identical to today's behavior — Elara users who only say one word at a time see no change.
-- Queued matches go through the exact same handlers and ref guards (`isProcessingRef`, `isWordTransitioningRef`, `canRetryRef`, `isRetryAttemptRef`, session check).
-- Re-validation at fire time means if the kid stops mid-chain, hits pause, or a batch transition happens, queued matches abort cleanly.
-- `(resultIndex, consumedCount)` cursor prevents double-firing as the same interim result grows across multiple `onresult` events.
-- Retry state is honored: queued matches respect `isRetryAttemptRef` / `canRetryRef` just like the synchronous path.
+
+- Synchronous first-word path is byte-identical to today.
+- Queued follow-ups use the exact same `handleCorrect` and the same ref guards used by the interim chaining branch.
+- Re-validation at fire time means a pause, batch swap, or retry state aborts queued matches cleanly.
+- Retry attempts (`isRetryAttemptRef`/`!canRetryRef`) skip chaining entirely — they only get one word per attempt, same as today.
+- Alternatives path (lines 801–810): if the match came from an alternative rather than the main transcript, skip chaining (we don't have a reliable spoken-word index in the alternatives stream). This keeps the change conservative; main transcript matches are the common case.
+- Echo retry, incorrect-word handling, and final-result dedup (`processedFinalsRef`) are untouched.
 
 ## Verification
+
 - `tsc --noEmit` clean.
-- Pick Elara (fast mode) in LexiQuest. Read 5 words in one breath → all 5 register within ~700ms.
-- Pick a normal character → no change.
-- Read 1 word at a time → identical to today.
-- Read 5 words but say word 3 wrong → words 1–2 register, word 3 fails, words 4–5 don't auto-register (target didn't advance), reader stays armed on word 3. Correct.
-- Switch batches mid-chain → queued matches abort via session/index re-validation. Correct.
+- Elara: speak "cat dog sun moon star" in one breath without pausing → all 5 register within ~700ms.
+- Elara: speak one word at a time → identical to today.
+- Elara: speak "cat dog WRONG moon star" → cat + dog register, then reader stays armed on word 3.
+- Normal character (Wizard, etc.): zero change — final path still matches one word at a time.
+- Retry attempt: still single word, no chaining.
