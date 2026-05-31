@@ -1,61 +1,46 @@
-## Plan
+# Honest recommendation + Missile Minigame Fix
 
-### 1. Fix Elara/Cypher 5-word burst registration for real
-The current fast-mode path still behaves like five tiny single-word reads. Worse, the queued follow-up words can fire while the next target is still in its 260ms transition lock, so the queued word silently gets ignored. That explains the screenshot where the fifth word is recognized but remains stuck at 4/5.
+## Honest call on reading (Elara/Cypher fast-burst)
 
-I will change `RPGWordReader` so fast mode does not depend on chained `setTimeout` callbacks for a clean 5-word breath.
+**Leave it as-is. Don't add a Fast vs Normal toggle.**
 
-Implementation:
-- Add a dedicated fast-burst matcher for `mode="fast"`.
-- Prefer the main transcript first, not alternatives first, so the code knows the spoken word order.
-- Starting from the current target, walk the spoken transcript in order and collect every consecutive correct target word.
-- Apply the collected run as one burst:
-  - mark all matched words completed,
-  - call `onResult(true, spokenWord, wordIndex, responseTimeMs)` for each word,
-  - update the visible word queue/results immediately,
-  - advance to the next unread word or complete the batch.
-- Remove/stop relying on the fragile 60ms follow-up timers for fast mode.
-- Keep normal characters unchanged.
-- Keep miss behavior strict: if word 3 is wrong, words 4–5 do not auto-register.
-- Keep retry behavior single-word only.
+- The new `applyFastBurst` already handles 1, 2, 3, 4, or 5-word bursts identically — saying one word at a time works the same as ripping 5 in one breath.
+- AURA scoring, phoneme tracking, miscue analysis, and fluency leveling are unaffected. Every word still fires its own `onResult`.
+- A toggle adds a decision point for a 7-year-old, two code paths to maintain, two QA surfaces, and dilutes the whole point of Elara/Cypher ("fast-flow reader" characters).
+- Only intra-burst per-word response-time precision is slightly fuzzier — a fluency-chart cosmetic, not a scoring issue. Skip the optional refinement for now; it's noise.
 
-Expected result:
-- If the reader says all 5 words correctly in one breath, all 5 register without stopping and without repeating word 5.
-- If only 4 words are correct, it stops cleanly on word 5.
-- If the browser final transcript arrives after interims, it will not double-count words.
+**Verdict: ship the reading as it is.**
 
-### 2. Fix stale batch-complete data
-`RPGWordReader` currently builds batch-complete results from React state, which can lag behind rapid fast-mode updates.
+## Real bug: Agent-mode missile minigame doesn't exit
 
-Implementation:
-- Add a ref-backed latest results map.
-- Update that ref synchronously whenever a word is marked correct/missed/retried.
-- Use the ref, not stale state, when calling `onBatchComplete`.
+**Root cause (`RPGFireballDefense.tsx`):**
 
-Expected result:
-- The last word in a 5-word burst is included reliably.
-- Batch completion does not depend on React state timing.
+- Missiles spawn at `x = -10 - (index * 15)` → missile #8 starts at **x = -115%** off-screen.
+- With speed `0.05–0.09` per frame, the last missiles take 20–30+ seconds to even enter the play field.
+- Player destroys every visible missile by speech, then... waits. The completion gate `allDone = updated.every(f => f.isDestroyed)` is never satisfied because the off-screen missiles are still slowly crawling in. Screen sits frozen, reading never resumes.
 
-### 3. Make the victory arena stop looking like a placeholder
-The current post-boss arena is basically a huge empty gradient, skyline bars, and two placeholder rectangle fighters. I will replace the presentation layer with a polished reward arena while keeping the same bonus battle mechanics.
+## Fix plan
 
-Implementation:
-- Rebuild `RPGVictoryArena` layout so the fighters are centered in an actual arena scene instead of floating at the bottom of a mostly empty screen.
-- Add a real stage: floor plane, crowd silhouettes, spotlights, banners, world-completion header, compact HP bars, and responsive safe-area spacing.
-- Replace the placeholder rectangle fighters by either:
-  - using existing RPG character styling/components where practical, or
-  - upgrading `RPGArenaFighter` into a much more polished stylized fighter with limbs, stance, shadows, hit/block/special states, and better scale.
-- Keep controls large and iPad-friendly.
-- Keep the existing reward flow: fight, victory/defeat, claim/continue.
+Single file: `src/components/aura/game/rpg/RPGFireballDefense.tsx`
 
-Expected result:
-- The post-boss arena looks like an intentional reward mode, not unfinished test UI.
-- It works on desktop and iPad-sized screens without giant empty space.
+1. **Tighten spawn spread.** Change initial `x` so all missiles enter the screen within ~6 seconds:
+   - `x: -10 - (index * 6)` (max start ≈ -52% instead of -115%), AND
+   - bump base speed floor from `0.05` to `0.08` so even the rear missiles arrive in reasonable time.
 
-### 4. Verify the exact failure cases
-After implementation I will verify:
-- `lightning_storm` remains non-launchable.
-- Elara/Cypher can register a clean 5-word transcript as 5/5 in one burst.
-- The fifth word no longer requires repetition.
-- Normal mode reading and retries still behave the same.
-- Victory Arena renders with a filled, polished composition and no placeholder fighters.
+2. **Add a safety completion timer.** When the component mounts, start a hard 25-second timeout. If the game is still active when it fires, mark every remaining missile destroyed, set `gameActive=false`, and let the existing completion effect trigger `onComplete(blocked, hit, totalDamage)`. This guarantees the screen always returns to the battle/reading view even if a weird state slips through.
+
+3. **Clear the safety timer** in the unmount cleanup and when `gameActive` flips to false.
+
+4. **No changes** to scoring, damage math, speech recognition, or UI/copy. Stats reported to AURA stay identical.
+
+## Out of scope
+
+- No Fast/Normal toggle for Elara/Cypher.
+- No changes to `RPGWordReader`, victory arena, castle swarm, or world data.
+- No new files.
+
+## Verification
+
+- Open Agent mode → reach a battle that triggers Fireball/Missile Defense.
+- Destroy all visible missiles by speech as fast as possible → game-over overlay appears within ~1s and battle resumes.
+- Let missiles through without speaking → damage applied, game still ends within 25s max via safety timer.

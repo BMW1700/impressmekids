@@ -66,15 +66,16 @@ export const RPGFireballDefense = ({
   const recognitionRef = useRef<any>(null);
   const completionTriggeredRef = useRef(false);
   const gameActiveRef = useRef(true);
+  const safetyTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize fireballs from words
   useEffect(() => {
     const initialFireballs: Fireball[] = words.slice(0, 8).map((word, index) => ({
       id: index,
       word,
-      x: -10 - (index * 15),
+      x: -10 - (index * 6), // Tighter spread so all missiles enter screen within ~6s
       y: 20 + Math.random() * 60,
-      speed: 0.05 + Math.random() * 0.04, // Even slower so parents can read AND speak the word
+      speed: 0.08 + Math.random() * 0.04, // Higher floor so off-screen ones don't stall
       size: word.length > 6 ? 'large' : word.length > 3 ? 'medium' : 'small',
       isDestroyed: false,
       isSelected: false,
@@ -82,6 +83,21 @@ export const RPGFireballDefense = ({
     setFireballs(initialFireballs);
     battleSounds.fireWhoosh();
   }, [words]);
+
+  // Safety timer: force completion after 25s no matter what so reading always resumes
+  useEffect(() => {
+    safetyTimerRef.current = setTimeout(() => {
+      if (gameActiveRef.current) {
+        setFireballs(prev => prev.map(f => f.isDestroyed ? f : { ...f, isDestroyed: true }));
+        setGameActive(false);
+        gameActiveRef.current = false;
+      }
+    }, 25000);
+    return () => {
+      if (safetyTimerRef.current) { clearTimeout(safetyTimerRef.current); safetyTimerRef.current = null; }
+    };
+  }, []);
+
 
   // Animation loop - move fireballs right
   useEffect(() => {
