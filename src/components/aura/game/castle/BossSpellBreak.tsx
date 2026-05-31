@@ -48,6 +48,10 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
     return () => clearInterval(id);
   }, [words.length]);
 
+  // Keep latest onResult in a ref so parent re-renders never restart the RAF.
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+
   // Ticking timer + auto-fail on timeout.
   useEffect(() => {
     let raf = 0;
@@ -58,14 +62,14 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
       if (t - startedAtRef.current >= effectiveDuration) {
         settledRef.current = true;
         playBossLaugh();
-        onResult(false, readCountRef.current);
+        onResultRef.current(false, readCountRef.current);
         return;
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [effectiveDuration, onResult]);
+  }, [effectiveDuration]);
 
   const remainingMs = Math.max(0, effectiveDuration - (now - startedAtRef.current));
   const remainingPct = Math.max(0, Math.min(1, remainingMs / effectiveDuration));
@@ -84,7 +88,7 @@ export const BossSpellBreak = ({ words, durationMs, gradeBand = "3-5", phonemeLa
       settledRef.current = true;
       playChantBroken();
       // Small celebratory delay so the user sees the last card shatter.
-      setTimeout(() => onResult(true, readCountRef.current), 350);
+      setTimeout(() => onResultRef.current(true, readCountRef.current), 350);
     }
   };
 

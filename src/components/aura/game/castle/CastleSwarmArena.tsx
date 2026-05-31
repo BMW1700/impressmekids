@@ -53,6 +53,7 @@ export type CastleRunMode =
 interface Props {
   mode: CastleRunMode;
   onExit: () => void;
+  onPlayAgain?: () => void;
 }
 
 const ARENA_WIDTH = 900;
@@ -71,7 +72,7 @@ const POWERS: { id: PowerId; label: string; icon: typeof Flame; color: string }[
 
 const normalize = (s: string) => s.toLowerCase().replace(/[^a-z']/g, "");
 
-export const CastleSwarmArena = ({ mode, onExit }: Props) => {
+export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const { user } = useAuth();
   const gradeMode = getGradeMode(getStoredTheme());
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
@@ -154,6 +155,11 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const rngRef = useRef<() => number>(Math.random);
   const spellBreakActiveRef = useRef(false);
   const spellBreakLaunchTimerRef = useRef<number | null>(null);
+  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const trackTimeout = useCallback((id: ReturnType<typeof setTimeout>) => {
+    pendingTimeoutsRef.current.add(id);
+    return id;
+  }, []);
   const knightStatsRef = useRef(knightStats);
   useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
@@ -179,6 +185,13 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const endRun = useCallback((reason: "win" | "loss" | "quit") => {
     if (endedRef.current) return;
     endedRef.current = true;
+    // Cancel any pending wave/interstitial timeouts so they can't ghost-fire
+    pendingTimeoutsRef.current.forEach(id => clearTimeout(id));
+    pendingTimeoutsRef.current.clear();
+    if (spellBreakLaunchTimerRef.current) {
+      clearTimeout(spellBreakLaunchTimerRef.current);
+      spellBreakLaunchTimerRef.current = null;
+    }
     const acc = wordsAttemptedRef.current === 0
       ? 100
       : Math.round((wordsReadRef.current / wordsAttemptedRef.current) * 100);
@@ -258,7 +271,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     waveRef.current = n;
     setWaveHud(n);
     setWaveBanner(banner);
-    setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 1800);
+    trackTimeout(setTimeout(() => setWaveBanner(null), isBossWave ? 2600 : 1800));
 
     // Rotate phoneme target each wave (folds in daily seed when present)
     const ph = pickPhonemeForWave(n, dailySeedRef.current);
@@ -308,12 +321,16 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
     }
   }, [mode, wordPool]);
 
-  // Cleanup deferred spell-break launch on unmount
+  // Cleanup deferred spell-break launch + any in-flight wave timers on unmount
   useEffect(() => () => {
     if (spellBreakLaunchTimerRef.current) {
       clearTimeout(spellBreakLaunchTimerRef.current);
       spellBreakLaunchTimerRef.current = null;
     }
+    pendingTimeoutsRef.current.forEach(id => clearTimeout(id));
+    pendingTimeoutsRef.current.clear();
+    // Clear arena-wide global so a fresh run never inherits old wave params
+    delete (window as any).__cs_wave;
   }, []);
 
 
@@ -494,7 +511,8 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       if (endedRef.current) return;
       const inHitStop = now < hitStopUntilRef.current;
       const frozen = pausedRef.current || spellBreakActiveRef.current;
-      const dt = (frozen || inHitStop) ? 0 : Math.min(0.1, (now - last) / 1000);
+      const elapsed = Math.min(0.1, (now - last) / 1000);
+      const dt = (frozen || inHitStop) ? 0 : elapsed;
       last = now;
 
       if (!frozen) {
@@ -568,7 +586,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         });
 
         // 5. Cleanup
-        enemiesRef.current = enemiesRef.current.filter(e => !(e.dying && e.hp <= -3));
+        enemiesRef.current = enemiesRef.current.filter(e => !(e.dying && e.hp <= 0));
         knightsRef.current = knightsRef.current.filter(k => k.hp > 0 && k.x < ARENA_WIDTH + 10);
 
         // 6. Wave clear?
@@ -585,23 +603,24 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
 
           if (completedWave >= totalWaves) {
             if (isCampaign && enemyCastleHpRef.current <= 0) {
-              setTimeout(() => endRun("win"), 600);
+              trackTimeout(setTimeout(() => endRun("win"), 600));
             } else if (isCampaign) {
-              setTimeout(() => endRun(enemyCastleHpRef.current <= 0 ? "win" : "loss"), 600);
+              trackTimeout(setTimeout(() => endRun(enemyCastleHpRef.current <= 0 ? "win" : "loss"), 600));
             }
           } else {
             setInterstitial({ wave: completedWave, coins: earned });
-            setTimeout(() => {
+            trackTimeout(setTimeout(() => {
               setInterstitial(null);
+              if (endedRef.current) return;
               startWave(completedWave + 1);
-            }, 1600);
+            }, 1600));
           }
         }
 
         // 7. Enemy castle defeated mid-wave (campaign instant win)
         if (mode.kind === "campaign" && enemyCastleHpRef.current <= 0 && enemyCastleHpRef.current !== -1) {
           enemyCastleHpRef.current = -1;
-          setTimeout(() => endRun("win"), 500);
+          trackTimeout(setTimeout(() => endRun("win"), 500));
         }
 
         // 8. Game over
@@ -611,7 +630,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       }
 
       // HUD throttle ~10hz
-      hudTick += (now - last + dt * 1000) / 1000;
+      hudTick += elapsed;
       if (hudTick > 0.08) {
         hudTick = 0;
         setCastleHpHud(castleHpRef.current);
@@ -627,6 +646,15 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   }, []);
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  // Auto-pause when tab/app backgrounds (iPad split-screen, app switch).
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden && !endedRef.current) setPaused(true);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
 
   // ---- Boss spell-break resolution (partial-success scaled) ----
   const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
@@ -891,7 +919,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
       </motion.div>
 
       {/* Bottom panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 space-y-2 border-t border-rose-900/40">
+      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] space-y-2 border-t border-rose-900/40">
         {/* Resolve shield bar (from sight-word streaks) */}
         {shieldHud > 0 && (
           <div className="flex items-center gap-2">
@@ -965,7 +993,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
           summary={summary}
           stars={summary.stars}
           showStars={mode.kind === "campaign"}
-          onPlayAgain={() => { window.location.reload(); }}
+          onPlayAgain={() => { onPlayAgain ? onPlayAgain() : window.location.reload(); }}
           onExit={onExit}
         />
       )}
