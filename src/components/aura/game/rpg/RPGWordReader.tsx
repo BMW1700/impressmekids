@@ -956,26 +956,69 @@ export const RPGWordReader = ({
               setSpokenText(transcript.toLowerCase());
             }
 
-            // FAST MODE: Process interim results for quicker matching (Elara only)
-            // CRITICAL FIX: Must respect retry state - route through proper handlers
+            // FAST MODE: Process interim results for quicker matching (Elara/Cypher)
+            // MULTI-WORD CHAINING: if the user reads "cat dog sun moon star" in one
+            // breath, walk the entire transcript and queue each successive match
+            // against the *advancing* target, so all 5 land — not just the first.
+            // Follow-ups are scheduled after the isProcessing/feedback lock clears
+            // (~170ms apart) so handleCorrect's line-402 guard doesn't reject them.
             if (mode === 'fast' && !isProcessingRef.current && targetIsArmed) {
               if (targetWord) {
                 const wordsSpoken = transcript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-                for (const word of wordsSpoken) {
-                  if (isWordMatchLenient(word, targetWord)) {
-                    // Match found in interim - process immediately, but respect retry state!
-                    processedFinalsRef.current.add(i);
+                let virtualIdx = wordIdx;
+                let virtualTarget = targetWord;
+                let firedCount = 0;
+                const FEEDBACK_GAP_MS = 170; // fast feedbackDelay (150) + margin
+                const cursor = (recognition as any).__fastConsumedKey || { i: -1, count: 0 };
+                (recognition as any).__fastConsumedKey = cursor;
+                // Skip spoken words we already consumed from this growing interim.
+                const startAt = cursor.i === i ? cursor.count : 0;
 
-                    // Always invoke through refs so we hit the handlers that
-                    // close over the *current* batch's words.
+                for (let s = startAt; s < wordsSpoken.length; s++) {
+                  const word = wordsSpoken[s];
+                  if (!virtualTarget) break;
+                  if (!isWordMatchLenient(word, virtualTarget)) continue;
+
+                  if (firedCount === 0) {
+                    // First match fires synchronously (byte-identical to old path).
                     if (isRetryAttemptRef.current || !canRetryRef.current) {
                       console.log('[RPGWordReader] FAST MODE: Routing to handleRetrySuccess (retry attempt)');
-                      handleRetrySuccessRef.current?.(word, wordIdx);
+                      handleRetrySuccessRef.current?.(word, virtualIdx);
                     } else {
-                      handleCorrectRef.current?.(word, wordIdx);
+                      handleCorrectRef.current?.(word, virtualIdx);
                     }
-                    return;
+                  } else {
+                    // Queue follow-ups behind the processing lock with full re-validation.
+                    const queuedWord = word;
+                    const queuedIdx = virtualIdx;
+                    const queuedTarget = virtualTarget;
+                    setTimeout(() => {
+                      if (!isCurrentSession()) return;
+                      if (isProcessingRef.current) return;
+                      if (isWordTransitioningRef.current) return;
+                      const liveIdx = currentIndexRef.current;
+                      if (liveIdx !== queuedIdx) return;
+                      const liveTarget = getTargetWord(liveIdx);
+                      if (!liveTarget || liveTarget !== queuedTarget) return;
+                      if (!isWordMatchLenient(queuedWord, liveTarget)) return;
+                      if (isRetryAttemptRef.current || !canRetryRef.current) {
+                        handleRetrySuccessRef.current?.(queuedWord, queuedIdx);
+                      } else {
+                        handleCorrectRef.current?.(queuedWord, queuedIdx);
+                      }
+                    }, firedCount * FEEDBACK_GAP_MS);
                   }
+
+                  firedCount += 1;
+                  virtualIdx += 1;
+                  virtualTarget = getTargetWord(virtualIdx);
+                  cursor.i = i;
+                  cursor.count = s + 1;
+                }
+
+                if (firedCount > 0) {
+                  processedFinalsRef.current.add(i);
+                  return;
                 }
               }
             }
