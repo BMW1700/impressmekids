@@ -419,12 +419,15 @@ export const RPGWordReader = ({
     isProcessingRef.current = true;
     
     // Track as correct (GREEN) - only reaches here on genuine first-try success
-    setWordResults(prev => new Map(prev).set(wordIndex, {
+    const correctAttempt: WordAttempt = {
       word: targetWord,
       result: 'correct',
       spokenAs: spokenWord,
-      attempts: 1
-    }));
+      attempts: 1,
+    };
+    wordResultsRef.current = new Map(wordResultsRef.current).set(wordIndex, correctAttempt);
+    setWordResults(prev => new Map(prev).set(wordIndex, correctAttempt));
+
     
     setFeedback('correct');
     setSpokenText(spokenWord);
