@@ -1,110 +1,103 @@
-# Brutally Honest Audit: RPG + Castle Swarm + App Store Readiness
+# Brutally Honest App Store Readiness Audit
 
-## Short answer
-
-**No — not ready to pivot fully to distribution yet.** The fast-mode reading "fix" we just shipped is *partially* right but still has a timing race that drops word 5 in certain transcripts, and Castle Swarm has several real bugs that will bite on iPad in front of a superintendent. None are catastrophic, all are fixable in one focused pass. Then App Store is mostly paperwork + a few native config changes.
-
----
-
-## Part 1 — RPG reading (Elara/Cypher fast mode): real bugs still present
-
-Two independent deep audits agree on the same root cause:
-
-1. **`WORD_TRANSITION_ARM_MS = 260ms` outlasts the chain gap.** When the browser delivers all 5 words as one FINAL transcript (fast confident readers), the chained `setTimeout`s for words 2–5 fire *inside* the 260ms arm-blackout from word 4's index advance and are silently dropped by the `isWordTransitioningRef` guard at `RPGWordReader.tsx:862` and `:1041`. This is exactly the "have to repeat the 5th word twice" symptom you keep hitting.
-2. **`wordResults` stale-closure in `onBatchComplete`** (`:504-507`, `:640-643`) — when all 5 words land in one render cycle, the parent gets an incomplete results array. Means AURA's per-burst stats can under-count.
-3. **`enableEchoRetry={true}` is still on for Elara/Cypher** (`RPGBattleArena.tsx:3157`). Echo retry pauses the mic 1.5s — directly fights fast-mode.
-4. **`continue` vs `break` inconsistency** at `:1023` (interim) vs `:857` (final). Interim path can phantom-match a later spoken word against the current target.
-5. **`__fastConsumedKey` cursor lives on the recognition object** (`:1015`) and can leak across batches if the mic instance survives.
-6. **`isProcessingRef` guard in `scheduleRestart`** (`:943`) creates a ~150ms dead zone where Chrome's `no-speech` can kill the mic permanently mid-breath.
-
-**Verdict: the "applyFastBurst" change helped but didn't fully close the race.** Bugs 1+3 are the ones a fluent kid will actually hit. Must fix before pilot.
+## TL;DR
+**Code is ~90% ready. You are NOT ready to submit today.** Every remaining blocker is *outside* the React/Supabase codebase — it lives in Xcode, in App Store Connect, and in unshipped marketing assets. Don't let anyone tell you "just hit submit" — you would get rejected in <24h on at least 3 separate guidelines.
 
 ---
 
-## Part 2 — Castle Swarm Defense: real bugs
+## ✅ What's actually done (verified in the repo)
 
-1. **`window.__cs_wave` global never cleaned up on unmount** (`CastleSwarmArena.tsx:267`) — exit mid-run, re-enter, and wave 1 can spawn at late-game speed/HP. Reproducible.
-2. **Uncancelled `setTimeout` ghost-fires `startWave` after Exit** (`:580`, `:574`, `:298`) — calls `setWaveHud` on a dead component, throws in React 18 StrictMode.
-3. **`hudTick` formula has a dead term** (`:483-484, :600`) — `last = now` runs before the diff, so `now - last` is always 0. Works by accident; will silently break HUD if anyone touches that block.
-4. **Dying-enemy filter `hp <= -3`** (`:557`) — a boss hit by `castPower` for exactly 3 damage can linger forever, stalling wave clear.
-5. **`window.location.reload()` for Play Again** (`:954`) — white-screen flash on Capacitor/iPad, drops mic permission session.
-6. **No iOS safe-area padding on the bottom word-reader panel** (`:880`) — on iPhone/iPad with home indicator, the *primary gameplay control* clips under the system bar.
-7. **`BossSpellBreak` RAF restarts on `onResult` ref change** (`BossSpellBreak.tsx:52-68`) — visible countdown glitch mid-encounter.
-8. **No `visibilitychange` auto-pause** — iPad split-screen / app switch keeps enemies advancing silently. Teacher horror story.
-
----
-
-## Part 3 — App Store readiness (Apple guidelines)
-
-Status today:
-
-| Area | State | Action |
+| Area | Status | Evidence |
 |---|---|---|
-| **`capacitor.config.ts` `server.url`** | ❌ Points at Lovable sandbox with `cleartext: true` | Must remove the `server` block for any TestFlight/App Store build — Apple will reject cleartext + remote-loaded HTML for a kids app |
-| **`NSMicrophoneUsageDescription`** | ❌ Not in repo Info.plist | Required — kid-friendly copy: "NabuLearn listens while you read so AURA can give you instant feedback." |
-| **`NSSpeechRecognitionUsageDescription`** | ❌ Missing | Required for Web Speech / on-device recognition |
-| **Kids Category compliance (Guideline 1.3 + 5.1.4)** | ⚠ Partial | No third-party analytics/ads sending kid data; verify Sentry is scrubbing PII; no external links out of app without gate |
-| **Parental gate for paid/external actions** | ⚠ Need audit | Any "Contact teacher", "Buy", "Open browser" outside child UI must be behind a math-gate when child is signed in |
-| **Account deletion in-app (5.1.1(v))** | ✅ Have parent portal | Must also expose it inside the app's settings (not just web) |
-| **Sign in with Apple (4.8)** | ❌ Not implemented | Required if any other 3rd-party SSO (Google/Clever) is offered to end-users on iOS |
-| **Privacy nutrition label (App Privacy)** | ⚠ Not drafted | Need explicit disclosure of audio recordings, child data, COPPA flow |
-| **COPPA consent flow** | ✅ Implemented | Verify it triggers *before* first mic use on iOS, not just at signup |
-| **Splash / icons / launch storyboard** | ⚠ Default Capacitor | Need branded 1024×1024 icon + adaptive set |
-| **Hot-reload removal verification** | ❌ | Build with `server` block stripped, confirm app loads from `dist/` |
-| **Background audio / mic** | ⚠ | Confirm mic stops when app backgrounds (visibility hook above also fixes this) |
-| **Network usage transparency** | ✅ | Already over HTTPS Supabase |
-| **Encryption export compliance** | ⚠ | Add `ITSAppUsesNonExemptEncryption = false` to Info.plist (uses only standard HTTPS) |
+| `capacitor.config.ts` clean (no `server.url`) | DONE | `webDir: 'dist'`, ATS-safe |
+| Self-service account deletion ≤3 taps | DONE | `/account/delete` route + SettingsMenu link + `self-delete-account` edge fn |
+| Sign in with Apple wired | DONE | Lovable Cloud managed OAuth, button on signin + signup |
+| Info.plist required-keys documented | DONE | `docs/ios-info-plist-additions.md` |
+| Submission docs (nutrition label, reviewer notes, screenshots) | DONE | `docs/app-store-submission.md` |
+| Privacy Policy covers COPPA + audio | DONE | `src/pages/PrivacyPolicy.tsx` |
+| No third-party ad SDKs | DONE | Only Sentry (declarable as Crash/Performance) |
+| RPG + Castle Swarm gameplay | SHIPPABLE | Closed in earlier Phase A/B |
 
 ---
 
-## Proposed plan (build mode work, in this order)
+## 🔴 Hard blockers — will get rejected if you submit without these
 
-### Phase A — Finish RPG reading correctness (one file, ~30 min)
-`src/components/aura/game/rpg/RPGWordReader.tsx`:
-- Make `WORD_TRANSITION_ARM_MS` mode-aware (80ms in fast mode, 260ms normal).
-- Bump fast-mode `FEEDBACK_GAP_MS` to ~250ms so chained words land after both feedback + arm clear.
-- Mirror `wordResults` into a `wordResultsRef` and read from ref in `onBatchComplete` (fixes incomplete burst stats).
-- Change interim `continue` → `break` at `:1023`.
-- Clear `(recognition as any).__fastConsumedKey = null` in `recognition.onstart`.
-- Remove `isProcessingRef.current` guard from `scheduleRestart`.
+### 1. Native iOS project doesn't exist yet
+- `ios/` folder is missing. You have never run `npx cap add ios`.
+- Until it exists, none of the Info.plist keys, Sign in with Apple entitlement, or icon assets can be installed.
+- **Owner: you, on a Mac with Xcode 15+.**
 
-`src/components/aura/game/rpg/RPGBattleArena.tsx`:
-- `enableEchoRetry={selectedCharacter !== 'elara' && selectedCharacter !== 'cipher'}`.
+### 2. App icon + splash are still default Capacitor purple
+- `resources/icon.png` and `resources/splash.png` don't exist.
+- Default-looking icon is a documented Guideline 4.0 rejection ("Design — Minimum Functionality / incomplete appearance").
+- Need: 1024×1024 branded icon (no alpha, no rounded corners — Apple masks), 2732×2732 splash.
 
-### Phase B — Castle Swarm hardening (one file + one component)
-`CastleSwarmArena.tsx`:
-- Delete `window.__cs_wave` in game-loop cleanup; init inside `startWave`.
-- Store all wave/interstitial/spell-break `setTimeout` IDs in refs, cancel on unmount and `endRun`.
-- Fix `hudTick` formula (compute elapsed before overwriting `last`).
-- Change dying filter to `hp <= 0`.
-- Replace `window.location.reload()` with parent-driven remount.
-- Add `pb-[env(safe-area-inset-bottom,0px)]` to bottom word-reader panel.
-- Add `visibilitychange` auto-pause hook.
+### 3. Demo accounts in reviewer notes don't exist in the DB
+- `docs/app-store-submission.md` promises `demo-student@nabulearn.com` etc. — these are placeholder strings, no rows in `auth.users`.
+- Reviewers WILL try them and reject within hours when login fails.
 
-`BossSpellBreak.tsx`:
-- Use `useRef` for `onResult` so RAF doesn't restart on parent re-render.
+### 4. App Privacy nutrition label not filled in App Store Connect
+- Doc exists; the actual form in App Store Connect is empty until you fill it. Sentry presence means you must declare **Crash Data** and **Performance Data** as collected-but-not-linked.
 
-### Phase C — App Store native config
-- Strip `server` block from `capacitor.config.ts` (or fork to `capacitor.config.production.ts`).
-- Add `NSMicrophoneUsageDescription`, `NSSpeechRecognitionUsageDescription`, `ITSAppUsesNonExemptEncryption=false` documented in repo + setup guide.
-- Add an in-app Account Deletion entry under settings linking to the parent portal flow.
-- Verify Sign in with Apple is wired alongside Google (already in setup guide) — required by guideline 4.8 since Google SSO is offered.
-- Draft App Privacy nutrition label content (markdown doc in repo).
-- Replace default Capacitor splash/icons with branded set.
-- Add a runtime guard: child accounts must complete parental-consent gate before mic is initialized on iOS.
-
-### Out of scope for this pass
-- No new minigames, no world content changes, no UI redesigns, no AURA scoring math changes.
-- No removal of the existing applyFastBurst code — Phase A refines it, doesn't replace it.
+### 5. Screenshots don't exist
+- Zero screenshots in the repo. Required sizes: 6.7" iPhone, 6.5" iPhone, 13" iPad. Apple rejects submissions with missing or low-quality screenshots.
 
 ---
 
-## Verification checklist
-- Fluent reader saying 5 words in one breath registers 5/5 with Elara — no repeats — across 10 consecutive trials.
-- Slow reader saying words 1-at-a-time with Elara still scores identically to normal mode.
-- Castle Swarm: exit mid-wave 3, re-enter, wave 1 spawns at wave-1 difficulty.
-- Boss spell break countdown is smooth (no jumps) across full duration.
-- iPad Safari + Capacitor: bottom reader panel never clipped by home indicator in portrait or landscape.
-- App backgrounded mid-battle → enemies pause; foregrounded → resume.
-- iOS production build with `server` block removed launches from `dist/` and asks for mic + speech permission with our copy on first use.
-- Account deletion reachable in ≤3 taps from any signed-in screen.
+## 🟡 Soft blockers — high rejection risk, fixable in 1–2h of code
+
+### 6. Sentry data collection isn't disclosed to the user pre-init
+- We init Sentry before any consent prompt. For Kids-adjacent apps and COPPA users, Apple reviewers increasingly flag this.
+- Fix: gate `Sentry.init` behind a "send anonymous crash reports" toggle defaulted ON for adults / OFF for under-13 accounts, OR scrub user_id from Sentry context for under-13.
+
+### 7. Microphone prompt copy isn't user-tested on a real device
+- The string in `NSMicrophoneUsageDescription` is good, but you've never actually seen it render in iOS. Apple sometimes rejects for vague mic copy. Verify on TestFlight before final submit.
+
+### 8. Sign in with Apple — Apple Developer console domain config
+- The Lovable-managed flow generates a Supabase callback URL. You still need to register `nabulearn.com` + the Supabase callback URL in Apple Developer Console → Services ID → Sign in with Apple → Configure, or first-tap will 404.
+
+### 9. Push notifications declared in plugins but no APNs key uploaded
+- `@capacitor/push-notifications` is installed and `PushNotifications` is in `capacitor.config.ts`. If you ship with push code but no APNs key in Apple Developer Console + Supabase, first push will silently fail and reviewers who notice will flag it.
+
+### 10. Sign in with Clever button still rendered
+- Reviewer testing without a Clever account will tap it and hit a CSRF state error. Either hide on iOS native build or make it gracefully no-op with explanatory toast.
+
+---
+
+## 🟢 Nice-to-have polish (not blockers, but recommended)
+
+- Add a visible "Parents" link on the landing page (Kids Category alignment, even though we're NOT in Kids Category).
+- Add a "What's new" / version notes string before each TestFlight build.
+- Add a TestFlight beta cycle of ≥5 real users for ≥3 days before production submission. Skipping this is the single biggest predictor of rejection.
+- Run `npx cap doctor` after `cap add ios` to catch missing platform pieces.
+
+---
+
+## Brutally honest verdict
+
+**Earliest realistic submission date: 5–7 days from today**, assuming a Mac is available.
+
+Why not today:
+- Items 1, 2, 3, 5 are *physical artifacts* (Xcode project, icon files, DB rows, PNGs). No amount of code shipping fixes them.
+- Items 6–10 are 1-day of code work but they touch native behavior, so you need a real device to verify.
+
+Anyone who tells you "we can ship tomorrow" is either lying or hasn't been through App Review. The codebase is genuinely ready; the *submission package* is not.
+
+---
+
+## Proposed Phase D (what I'd do in build mode, in priority order)
+
+1. **Seed demo accounts** via a one-shot edge function or migration so reviewer credentials actually work.
+2. **Wrap Sentry init** in a consent gate + scrub PII for under-13 sessions.
+3. **iOS-aware feature flags** — hide Clever button on Capacitor native to remove a known failure path.
+4. **Generate branded `resources/icon.png` + `resources/splash.png`** (via imagegen) so they're ready for `npx capacitor-assets generate` the moment you have a Mac.
+5. **Write `docs/PRE_SUBMISSION_RUNBOOK.md`** — exact ordered checklist of every Xcode click + App Store Connect field + Apple Developer Console step, with screenshots.
+
+What I CANNOT do for you, ever:
+- Run Xcode
+- Upload an APNs key
+- Fill out the App Privacy form
+- Capture screenshots on a real iPhone
+- Pay the $99 Apple Developer fee
+
+**Approve Phase D and I'll execute items 1–5 in one pass. Items requiring a Mac are yours.**
