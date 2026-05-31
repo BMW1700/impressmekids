@@ -511,7 +511,7 @@ export const RPGWordReader = ({
         // Batch complete - report results (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
-          const results = Array.from(wordResults.values());
+          const results = Array.from(wordResultsRef.current.values());
           onBatchComplete?.(results);
         }
         setCurrentIndex(0);
@@ -519,7 +519,82 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
       }
     }, feedbackDelay);
-  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, wordResults, abortActiveRecognitionForBatchTransition]);
+  }, [streak, onResult, onBatchComplete, words, batchSize, stopRecognitionSession, mode, currentBatch, abortActiveRecognitionForBatchTransition]);
+
+  // FAST BURST: apply a run of in-order correct matches atomically.
+  // Used for Elara/Cipher when the browser delivers a multi-word breath.
+  // Bypasses the per-word feedback lock and the 260ms transition arm so a
+  // clean 5/5 read registers as a single fluid burst — no timeouts, no gaps.
+  const applyFastBurst = useCallback((matches: Array<{ word: string; idx: number }>) => {
+    if (matches.length === 0) return;
+    if (isRetryAttemptRef.current || !canRetryRef.current) return; // retries are single-word
+
+    const batch = wordsRef.current?.slice(0, Math.min(batchSizeRef.current, wordsRef.current?.length || 0)) || [];
+    const responseTimeMs = wordDisplayTimestampRef.current > 0
+      ? Date.now() - wordDisplayTimestampRef.current
+      : undefined;
+
+    // Update ref + state with all matches at once
+    const nextResults = new Map(wordResultsRef.current);
+    const nextCompleted = new Set(completedWords);
+    for (const m of matches) {
+      const targetWord = batch[m.idx]?.replace(/[^a-zA-Z']/g, '') || '';
+      nextResults.set(m.idx, {
+        word: targetWord,
+        result: 'correct',
+        spokenAs: m.word,
+        attempts: 1,
+      });
+      nextCompleted.add(m.idx);
+    }
+    wordResultsRef.current = nextResults;
+    setWordResults(nextResults);
+    setCompletedWords(nextCompleted);
+
+    soundEffects.correctWord();
+
+    // Fire parent callbacks in order (parent handles damage/streak/charging)
+    for (const m of matches) {
+      onResult(true, m.word, m.idx, responseTimeMs);
+    }
+
+    const last = matches[matches.length - 1];
+    setFeedback('correct');
+    setSpokenText(last.word);
+
+    const nextIndex = last.idx + 1;
+    const hasMoreWords = nextIndex < batch.length;
+
+    if (hasMoreWords) {
+      setCurrentIndex(nextIndex);
+      currentIndexRef.current = nextIndex;
+      setCanRetry(true);
+    } else {
+      isWordTransitioningRef.current = true;
+      abortActiveRecognitionForBatchTransition();
+    }
+
+    isProcessingRef.current = true;
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setFeedback(null);
+      setSpokenText("");
+      isProcessingRef.current = false;
+      if (hasMoreWords) {
+        setRecognitionState('listening');
+      } else {
+        if (!batchCompletedRef.current) {
+          batchCompletedRef.current = true;
+          const results = Array.from(wordResultsRef.current.values());
+          onBatchComplete?.(results);
+        }
+        setCurrentIndex(0);
+        currentIndexRef.current = 0;
+        setRecognitionState('listening');
+      }
+    }, 80);
+  }, [onResult, onBatchComplete, completedWords, abortActiveRecognitionForBatchTransition]);
+
 
   // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
   const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
