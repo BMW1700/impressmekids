@@ -647,6 +647,15 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
+  // Auto-pause when tab/app backgrounds (iPad split-screen, app switch).
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden && !endedRef.current) setPaused(true);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   // ---- Boss spell-break resolution (partial-success scaled) ----
   const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
     setSpellBreak(null);
