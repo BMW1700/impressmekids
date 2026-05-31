@@ -882,8 +882,11 @@ export const RPGWordReader = ({
     
     if (!targetWord) return;
     
+    const mainWordsSpoken = cleanTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+
     // FAST MODE multi-word burst: prefer main transcript ordering so we can
     // chain in-order matches as a single atomic burst.
+
     if (mode === 'fast' && !isRetryAttemptRef.current && canRetryRef.current) {
       const burst: Array<{ word: string; idx: number }> = [];
       let virtualIdx = wordIndex;
