@@ -867,11 +867,19 @@ export const WordByWordReader = ({
                         if (updated.get(wordIdx) === 'pending-incorrect') {
                           updated.set(wordIdx, 'incorrect');
                           realtimeWordStatusRef.current = updated;
-                          
+
                           // Reset streak on definitive incorrect
                           setCorrectStreak(0);
                           correctStreakRef.current = 0;
-                          
+
+                          // ACCURACY PARITY (Elara/Cypher fast mode): play correct
+                          // pronunciation exactly like single-word characters do, so kids
+                          // hear the model word even in 5-word batch flow. De-duped via ref.
+                          if (!spokenIncorrectWordsRef.current.has(wordIdx) && !isStrictMode) {
+                            spokenIncorrectWordsRef.current.add(wordIdx);
+                            try { playCorrectPronunciation(words[wordIdx]); } catch {}
+                          }
+
                           // BATTLE MODE: Fire callback for incorrect word
                           if (onWordResult) {
                             onWordResult({
@@ -906,11 +914,17 @@ export const WordByWordReader = ({
                     if (updated.get(wordIdx) === 'pending-incorrect') {
                       updated.set(wordIdx, 'incorrect');
                       realtimeWordStatusRef.current = updated;
-                      
+
                       // Reset streak on definitive incorrect
                       setCorrectStreak(0);
                       correctStreakRef.current = 0;
-                      
+
+                      // ACCURACY PARITY: play correct pronunciation in batch mode
+                      if (!spokenIncorrectWordsRef.current.has(wordIdx) && !isStrictMode) {
+                        spokenIncorrectWordsRef.current.add(wordIdx);
+                        try { playCorrectPronunciation(words[wordIdx]); } catch {}
+                      }
+
                       // BATTLE MODE: Fire callback for incorrect word
                       if (onWordResult) {
                         onWordResult({

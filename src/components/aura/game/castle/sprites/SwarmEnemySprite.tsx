@@ -166,7 +166,92 @@ export const SwarmEnemySprite = memo(({ type, size = 56, takingDamage }: Props) 
           <rect x="46" y="18" width="11" height="10" rx="1" fill="#5a626c" />
         </svg>
       )}
+
+      {type === "necromancer" && (
+        <svg {...baseProps}>
+          {/* dark robe */}
+          <path d="M14 60 L20 28 Q32 22 44 28 L50 60 Z" fill="#2a1838" />
+          <path d="M20 28 Q32 22 44 28 L42 34 Q32 30 22 34 Z" fill="#5a3a78" />
+          {/* hood */}
+          <path d="M18 28 Q32 6 46 28 L42 26 Q32 18 22 26 Z" fill="#1a0e26" />
+          {/* glowing face */}
+          <ellipse cx="32" cy="24" rx="7" ry="6" fill="#0a0612" />
+          <circle cx="29" cy="24" r="1.4" fill="#a855f7" />
+          <circle cx="35" cy="24" r="1.4" fill="#a855f7" />
+          {/* staff with orb */}
+          <rect x="50" y="20" width="2.5" height="40" fill="#3a2a1a" />
+          <circle cx="51.25" cy="18" r="4" fill="#a855f7" opacity="0.85" />
+          <circle cx="51.25" cy="18" r="2" fill="#fff" opacity="0.7" />
+        </svg>
+      )}
+
+      {type === "wyvern" && (
+        <svg {...baseProps}>
+          {/* body */}
+          <ellipse cx="32" cy="36" rx="14" ry="8" fill="#7a1f3a" />
+          {/* tail */}
+          <path d="M44 36 Q56 32 60 28 L58 36 Q50 40 44 40 Z" fill="#5a1428" />
+          {/* head */}
+          <path d="M16 36 L4 32 L8 40 L18 42 Z" fill="#7a1f3a" />
+          <circle cx="9" cy="36" r="1.2" fill="#ffeb3b" />
+          {/* fangs */}
+          <path d="M6 38 L4 42 L8 40 Z" fill="#fff" />
+          {/* wings */}
+          <path d="M28 30 Q22 8 14 18 Q24 26 30 32 Z" fill="#4a0e1f" />
+          <path d="M36 30 Q42 8 50 18 Q40 26 34 32 Z" fill="#4a0e1f" />
+          {/* legs */}
+          <rect x="28" y="42" width="3" height="8" fill="#3a0a18" />
+          <rect x="34" y="42" width="3" height="8" fill="#3a0a18" />
+        </svg>
+      )}
+
+      {type === "berserker" && (
+        <svg {...baseProps}>
+          {/* body */}
+          <ellipse cx="32" cy="44" rx="16" ry="12" fill="#a0421a" />
+          {/* head */}
+          <circle cx="32" cy="22" r="14" fill="#c45a26" />
+          {/* wild hair */}
+          <path d="M18 16 L12 4 L22 12 L20 6 L26 14 Z" fill="#3a1a0e" />
+          <path d="M46 16 L52 4 L42 12 L44 6 L38 14 Z" fill="#3a1a0e" />
+          {/* angry eyes */}
+          <path d="M24 22 L30 24" stroke="#ff3a3a" strokeWidth="2" fill="none" />
+          <path d="M40 22 L34 24" stroke="#ff3a3a" strokeWidth="2" fill="none" />
+          {/* fangs */}
+          <path d="M28 30 L30 34 L32 30 Z" fill="#fff" />
+          <path d="M32 30 L34 34 L36 30 Z" fill="#fff" />
+          {/* two axes */}
+          <rect x="6" y="34" width="3" height="20" fill="#3a2a1a" />
+          <path d="M2 32 L14 32 L12 40 L4 40 Z" fill="#7a8088" />
+          <rect x="55" y="34" width="3" height="20" fill="#3a2a1a" />
+          <path d="M50 32 L62 32 L60 40 L52 40 Z" fill="#7a8088" />
+        </svg>
+      )}
+
+      {type === "lich" && (
+        <svg {...baseProps}>
+          {/* tattered robe */}
+          <path d="M10 64 L18 26 Q32 18 46 26 L54 64 L48 60 L42 64 L36 60 L32 64 L28 60 L22 64 L16 60 Z" fill="#0a1428" />
+          <path d="M18 26 Q32 18 46 26 L42 36 Q32 30 22 36 Z" fill="#1e3a5f" />
+          {/* skull face */}
+          <ellipse cx="32" cy="22" rx="10" ry="11" fill="#e8e6d8" />
+          <ellipse cx="27" cy="22" rx="2.5" ry="3" fill="#0a0612" />
+          <ellipse cx="37" cy="22" rx="2.5" ry="3" fill="#0a0612" />
+          <circle cx="27" cy="22" r="1.2" fill="#22d3ee" />
+          <circle cx="37" cy="22" r="1.2" fill="#22d3ee" />
+          <path d="M28 28 L30 32 L32 28 L34 32 L36 28" stroke="#0a0612" strokeWidth="1" fill="none" />
+          {/* floating crown */}
+          <path d="M22 10 L24 4 L28 8 L32 2 L36 8 L40 4 L42 10 Z" fill="#d4af37" />
+          <circle cx="32" cy="6" r="1.5" fill="#22d3ee" />
+          {/* skeletal hand + scythe */}
+          <rect x="52" y="14" width="2" height="50" fill="#1a1a22" />
+          <path d="M52 14 Q40 4 36 14 Q48 12 52 18 Z" fill="#9aa0a8" />
+          {/* aura glow */}
+          <circle cx="32" cy="32" r="30" fill="#22d3ee" opacity="0.08" />
+        </svg>
+      )}
     </motion.div>
+
   );
 });
 SwarmEnemySprite.displayName = "SwarmEnemySprite";
