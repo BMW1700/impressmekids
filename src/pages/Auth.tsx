@@ -1082,6 +1082,17 @@ const Auth = () => {
               </Tooltip>
             </TooltipProvider>
 
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-14 bg-black hover:bg-neutral-900 text-white border-0 rounded-xl font-medium text-base shadow-lg"
+              onClick={handleAppleSignIn}
+              disabled={isLoading}
+            >
+              <Apple className="mr-3 h-5 w-5 fill-white" />
+              Sign in with Apple
+            </Button>
+
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
