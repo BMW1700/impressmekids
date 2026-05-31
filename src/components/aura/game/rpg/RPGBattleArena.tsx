@@ -3142,7 +3142,7 @@ export const RPGBattleArena = ({
                           disabled={!isPlayerTurn}
                           streak={streak}
                           batchSize={5}
-                          enableEchoRetry={true}
+                          enableEchoRetry={selectedCharacter !== 'elara' && selectedCharacter !== 'cipher'}
                           mode={selectedCharacter === 'elara' || selectedCharacter === 'cipher' ? 'fast' : 'normal'}
                         />
                         
