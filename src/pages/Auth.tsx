@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash, Apple } from "lucide-react";
 import { lovable } from "@/integrations/lovable";
+import { Capacitor } from "@capacitor/core";
 import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
 import { redeemClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
 import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
@@ -1093,25 +1094,27 @@ const Auth = () => {
               Sign in with Apple
             </Button>
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
-                    onClick={handleCleverSignIn}
-                    disabled={isLoading}
-                  >
-                    <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
-                    Continue with Clever
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p>Clever is a single sign-on platform used by many schools. If your school uses Clever, sign in here with your school credentials.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {!Capacitor.isNativePlatform() && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
+                      onClick={handleCleverSignIn}
+                      disabled={isLoading}
+                    >
+                      <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
+                      Continue with Clever
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>Clever is a single sign-on platform used by many schools. If your school uses Clever, sign in here with your school credentials.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
             {/* Substitute Teacher Button */}
             <TooltipProvider delayDuration={300}>
