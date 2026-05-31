@@ -727,7 +727,7 @@ export const RPGWordReader = ({
         // Batch complete (deduped); next batch will restart the mic after render
         if (!batchCompletedRef.current) {
           batchCompletedRef.current = true;
-          const results = Array.from(wordResults.values());
+          const results = Array.from(wordResultsRef.current.values());
           onBatchComplete?.(results);
         }
         setCurrentIndex(0);
@@ -735,7 +735,8 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, wordResults, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
+
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
