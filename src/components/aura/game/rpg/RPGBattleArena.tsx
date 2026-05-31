@@ -49,7 +49,7 @@ import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
 import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
-import { RPGLightningStorm } from "./RPGLightningStorm";
+// RPGLightningStorm retired — caused tab/computer freeze. Trigger path is defensively remapped.
 import { RPGVoidPull } from "./RPGVoidPull";
 import { RPGGroundRipple } from "./RPGGroundRipple";
 import { RPGWebTrap } from "./RPGWebTrap";
@@ -2791,22 +2791,7 @@ export const RPGBattleArena = ({
             onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
-        {phase === 'lightning_storm' && (
-          <RPGLightningStorm
-            words={barrageWords}
-            onComplete={(struck, missed) => {
-              const newHp = Math.max(0, enemyHpRef.current - struck * 12);
-              enemyHpRef.current = newHp;
-              setCorrectWords(prev => prev + struck);
-              setWordsRead(prev => prev + struck + missed);
-              setTotalDamage(prev => prev + struck * 12);
-              setEnemyHp(newHp);
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => takePlayerDamage(damage)}
-          />
-        )}
+        {/* phase === 'lightning_storm' retired — defensive trigger remap routes to 'word_shield' */}
         {phase === 'void_pull' && (
           <RPGVoidPull
             words={barrageWords}
