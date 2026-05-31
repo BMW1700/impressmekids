@@ -147,82 +147,114 @@ export const RPGVictoryArena = ({
   const bonusXp = phase === 'victory' ? 100 + worldNumber * 20 : 20;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] overflow-hidden select-none">
-      {/* Arena Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-amber-900 via-orange-950 to-slate-950">
-        <div className="absolute top-0 left-0 right-0 h-32 flex items-end justify-center gap-1 overflow-hidden">
-          {Array.from({ length: 40 }).map((_, i) => (
-            <motion.div key={i} animate={{ y: [0, -3, 0] }}
-              transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.5, delay: Math.random() * 2 }}
-              className="w-4 bg-slate-800 rounded-t-full" style={{ height: 15 + Math.random() * 25 }} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-[100] overflow-hidden select-none flex flex-col">
+      {/* Arena Background — layered stadium */}
+      <div className="absolute inset-0">
+        {/* Sky gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-indigo-950 via-purple-950 to-amber-950" />
+        {/* Spotlights */}
+        <div className="absolute top-0 left-1/4 w-[40%] h-[60%] bg-gradient-radial from-amber-300/15 via-transparent to-transparent blur-2xl" />
+        <div className="absolute top-0 right-1/4 w-[40%] h-[60%] bg-gradient-radial from-orange-300/15 via-transparent to-transparent blur-2xl" />
+        {/* Crowd silhouettes (back) */}
+        <div className="absolute top-[18%] left-0 right-0 h-24 flex items-end justify-center gap-0.5 overflow-hidden opacity-60">
+          {Array.from({ length: 80 }).map((_, i) => (
+            <motion.div key={`b${i}`} animate={{ y: [0, -2, 0] }}
+              transition={{ repeat: Infinity, duration: 0.6 + Math.random() * 0.7, delay: Math.random() * 2 }}
+              className="w-2 bg-slate-950/80 rounded-t-full" style={{ height: 10 + Math.random() * 18 }} />
           ))}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-amber-800/50 to-transparent" />
-        <div className="absolute bottom-28 left-0 right-0 h-1 bg-amber-600/50" />
+        {/* Crowd silhouettes (front, larger) */}
+        <div className="absolute top-[26%] left-0 right-0 h-28 flex items-end justify-center gap-1 overflow-hidden">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <motion.div key={`f${i}`} animate={{ y: [0, -3, 0] }}
+              transition={{ repeat: Infinity, duration: 0.5 + Math.random() * 0.6, delay: Math.random() * 2 }}
+              className="w-3 bg-slate-950 rounded-t-full" style={{ height: 18 + Math.random() * 26 }} />
+          ))}
+        </div>
+        {/* Arena floor */}
+        <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-gradient-to-t from-amber-900 via-amber-800/80 to-orange-900/60" />
+        {/* Floor ring */}
+        <div className="absolute bottom-[12%] left-1/2 -translate-x-1/2 w-[70%] max-w-3xl h-32 rounded-[50%] bg-amber-700/50 blur-sm" />
+        <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 w-[60%] max-w-2xl h-24 rounded-[50%] border-2 border-amber-400/40" />
+        {/* Banners */}
+        <div className="absolute top-2 left-6 w-12 h-20 bg-gradient-to-b from-red-600 to-red-800 rounded-b-lg shadow-lg" />
+        <div className="absolute top-2 right-6 w-12 h-20 bg-gradient-to-b from-blue-600 to-blue-800 rounded-b-lg shadow-lg" />
       </div>
 
       {/* HUD */}
-      <div className="absolute top-4 left-0 right-0 z-[110] px-4">
-        <div className="flex items-center justify-between max-w-lg mx-auto">
-          <Button variant="ghost" size="sm" onClick={onSkip} className="text-white">
+      <div className="relative z-[110] px-4 pt-4">
+        <div className="flex items-center justify-between max-w-2xl mx-auto">
+          <Button variant="ghost" size="sm" onClick={onSkip} className="text-white hover:bg-white/10">
             <ArrowLeft className="h-4 w-4 mr-1" /> Skip
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-amber-500/40">
             <Sword className="h-5 w-5 text-amber-400" />
-            <span className="text-amber-300 font-black text-sm">VICTORY ARENA</span>
+            <span className="text-amber-300 font-black text-sm tracking-wider">VICTORY ARENA</span>
+            <Trophy className="h-4 w-4 text-amber-400" />
           </div>
-          <div className="text-amber-400 text-sm font-bold">{combo > 0 ? `${combo}x` : ''}</div>
+          <div className="text-amber-300 text-sm font-bold w-16 text-right">{combo > 0 ? `${combo}× COMBO` : ''}</div>
         </div>
-        <div className="flex gap-4 max-w-lg mx-auto mt-2">
+        <div className="flex gap-4 max-w-2xl mx-auto mt-3">
           <div className="flex-1">
-            <span className="text-xs text-green-300 font-bold">{playerName}</span>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden mt-0.5">
-              <motion.div className="h-full bg-green-500" animate={{ width: `${playerHp}%` }} />
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-green-300 font-bold">{playerName}</span>
+              <span className="text-green-200 font-mono">{playerHp}/100</span>
+            </div>
+            <div className="h-3 bg-slate-900/70 rounded-full overflow-hidden border border-green-500/30">
+              <motion.div className="h-full bg-gradient-to-r from-green-500 to-emerald-400" animate={{ width: `${playerHp}%` }} />
             </div>
           </div>
           <div className="flex-1">
-            <span className="text-xs text-red-300 font-bold text-right block">Enemy</span>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden mt-0.5">
-              <motion.div className="h-full bg-red-500" animate={{ width: `${(enemyHp / enemyMaxHp) * 100}%` }} />
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-red-200 font-mono">{enemyHp}/{enemyMaxHp}</span>
+              <span className="text-red-300 font-bold">Challenger</span>
+            </div>
+            <div className="h-3 bg-slate-900/70 rounded-full overflow-hidden border border-red-500/30">
+              <motion.div className="h-full bg-gradient-to-r from-rose-400 to-red-500 ml-auto" animate={{ width: `${(enemyHp / enemyMaxHp) * 100}%` }} />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Comic text */}
-      <AnimatePresence>
-        {showComicText && (
-          <motion.div key={showComicText} initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1.5, rotate: 10 }} exit={{ scale: 0, opacity: 0 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[120]">
-            <span className="text-5xl font-black text-yellow-400"
-              style={{ textShadow: '3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}>
-              {showComicText}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Stage area — fills the middle */}
+      <div className="relative z-[105] flex-1 flex items-center justify-center px-6">
+        {/* Comic text */}
+        <AnimatePresence>
+          {showComicText && (
+            <motion.div key={showComicText} initial={{ scale: 0, rotate: -20 }} animate={{ scale: 1.6, rotate: 8 }} exit={{ scale: 0, opacity: 0 }}
+              className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] pointer-events-none">
+              <span className="text-6xl md:text-7xl font-black text-yellow-400"
+                style={{ textShadow: '4px 4px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000' }}>
+                {showComicText}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Fighters */}
-      <div className="absolute bottom-32 left-[25%] z-[105]">
-        <RPGArenaFighter name={playerName} hp={playerHp} maxHp={100} action={playerAction} position="left" isPlayer color="#3b82f6" />
-      </div>
-      <div className="absolute bottom-32 right-[25%] z-[105]">
-        <RPGArenaFighter name="Challenger" hp={enemyHp} maxHp={enemyMaxHp} action={enemyAction} position="right" color="#ef4444" />
+        {/* Fighters anchored on the arena ring */}
+        <div className="relative w-full max-w-3xl h-full flex items-end justify-between pb-12 md:pb-16">
+          <div className="ml-4 md:ml-16 scale-150 md:scale-[1.8] origin-bottom">
+            <RPGArenaFighter name={playerName} hp={playerHp} maxHp={100} action={playerAction} position="left" isPlayer color="#3b82f6" />
+          </div>
+          <div className="mr-4 md:mr-16 scale-150 md:scale-[1.8] origin-bottom">
+            <RPGArenaFighter name="Challenger" hp={enemyHp} maxHp={enemyMaxHp} action={enemyAction} position="right" color="#ef4444" />
+          </div>
+        </div>
       </div>
 
       {/* Intro */}
       {phase === 'intro' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[130] flex items-center justify-center bg-black/70">
-          <motion.div initial={{ scale: 0.8, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring" }} className="text-center max-w-md mx-4">
-            <Trophy className="h-16 w-16 text-amber-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-amber-400 mb-2">VICTORY ARENA!</h2>
-            <p className="text-white text-lg mb-1">You've conquered {worldName}!</p>
-            <p className="text-slate-400 mb-6">Enter the arena for a bonus battle!</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="absolute inset-0 z-[130] flex items-center justify-center bg-black/75 backdrop-blur-sm">
+          <motion.div initial={{ scale: 0.8, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: "spring" }} className="text-center max-w-md mx-4 p-8 rounded-2xl bg-gradient-to-b from-amber-950/90 to-slate-950/90 border-2 border-amber-500/40 shadow-2xl">
+            <Trophy className="h-20 w-20 text-amber-400 mx-auto mb-4 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
+            <h2 className="text-4xl font-black text-amber-400 mb-2 tracking-wider">VICTORY ARENA</h2>
+            <p className="text-white text-lg mb-1">You conquered <span className="text-amber-300 font-bold">{worldName}</span>!</p>
+            <p className="text-slate-300 mb-6">Step into the arena for a bonus brawl.</p>
             <div className="flex gap-3 justify-center">
-              <Button onClick={handleStart} className="bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold px-8">
+              <Button onClick={handleStart} className="bg-gradient-to-r from-amber-600 to-orange-500 hover:from-amber-500 hover:to-orange-400 text-white font-bold px-8 text-base">
                 ⚔️ FIGHT!
               </Button>
-              <Button variant="outline" onClick={onSkip} className="border-slate-600 text-slate-300">Skip</Button>
+              <Button variant="outline" onClick={onSkip} className="border-slate-500 text-slate-200 hover:bg-white/10">Skip</Button>
             </div>
           </motion.div>
         </motion.div>
@@ -230,18 +262,19 @@ export const RPGVictoryArena = ({
 
       {/* Battle Controls */}
       {phase === 'battle' && (
-        <div className="absolute bottom-0 left-0 right-0 z-[110] p-4 bg-gradient-to-t from-black/80 to-transparent">
-          <div className="grid grid-cols-4 gap-2 max-w-md mx-auto">
-            <Button onClick={() => performAction('punch')} disabled={!canAct} className="bg-red-600 hover:bg-red-500 text-white font-bold disabled:opacity-50">👊 Punch</Button>
-            <Button onClick={() => performAction('kick')} disabled={!canAct} className="bg-orange-600 hover:bg-orange-500 text-white font-bold disabled:opacity-50">🦶 Kick</Button>
-            <Button onClick={() => performAction('block')} disabled={!canAct} className="bg-blue-600 hover:bg-blue-500 text-white font-bold disabled:opacity-50">🛡️ Block</Button>
-            <Button onClick={() => performAction('special')} disabled={!canAct || combo < 3} className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold disabled:opacity-50">⚡ Special</Button>
+        <div className="relative z-[110] p-4 pb-6 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+          <div className="grid grid-cols-4 gap-2 max-w-xl mx-auto">
+            <Button onClick={() => performAction('punch')} disabled={!canAct} className="h-14 bg-gradient-to-b from-red-500 to-red-700 hover:from-red-400 hover:to-red-600 text-white font-bold disabled:opacity-50 shadow-lg shadow-red-900/50 border border-red-400/30">👊 Punch</Button>
+            <Button onClick={() => performAction('kick')} disabled={!canAct} className="h-14 bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-400 hover:to-orange-600 text-white font-bold disabled:opacity-50 shadow-lg shadow-orange-900/50 border border-orange-400/30">🦶 Kick</Button>
+            <Button onClick={() => performAction('block')} disabled={!canAct} className="h-14 bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 text-white font-bold disabled:opacity-50 shadow-lg shadow-blue-900/50 border border-blue-400/30">🛡️ Block</Button>
+            <Button onClick={() => performAction('special')} disabled={!canAct || combo < 3} className="h-14 bg-gradient-to-b from-yellow-500 to-amber-700 hover:from-yellow-400 hover:to-amber-600 text-white font-bold disabled:opacity-50 shadow-lg shadow-yellow-900/50 border border-yellow-400/40">⚡ Special</Button>
           </div>
-          <p className="text-center text-slate-400 text-xs mt-2">
-            {combo >= 3 ? '⚡ Special Ready!' : `Build ${3 - combo} more combo hits for Special!`}
+          <p className="text-center text-amber-200/80 text-xs mt-2 font-medium">
+            {combo >= 3 ? '⚡ Special Ready — unleash it!' : `Build ${3 - combo} more combo hits for Special`}
           </p>
         </div>
       )}
+
 
       {/* Victory/Defeat */}
       {(phase === 'victory' || phase === 'defeat') && (
