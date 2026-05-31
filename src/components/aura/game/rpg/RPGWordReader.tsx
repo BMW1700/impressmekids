@@ -160,7 +160,7 @@ export const RPGWordReader = ({
     generation: 0,
     index: 0,
     word: '',
-    armedAt: Date.now() + WORD_TRANSITION_ARM_MS,
+    armedAt: Date.now() + WORD_TRANSITION_ARM_MS_NORMAL,
   });
   const startRecognitionRef = useRef<(() => void) | null>(null);
   
@@ -256,7 +256,7 @@ export const RPGWordReader = ({
           if (shouldBeListeningRef.current && !recognitionRef.current && !isRecognitionRunningRef.current && !isRecognitionStartingRef.current) {
             startRecognitionRef.current?.();
           }
-        }, WORD_TRANSITION_ARM_MS + 120);
+        }, WORD_TRANSITION_ARM_MS_NORMAL + 120);
       }
     }
   }, [wordsKey]);
