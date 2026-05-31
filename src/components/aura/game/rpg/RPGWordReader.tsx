@@ -893,7 +893,7 @@ export const RPGWordReader = ({
         handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       }
     }
-  }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry]);
+  }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry, mode]);
 
   // Keep refs to the latest handlers so the long-lived recognition.onresult
   // closure (created once when the mic starts) always invokes the current
