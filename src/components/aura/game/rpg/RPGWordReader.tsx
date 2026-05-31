@@ -214,9 +214,11 @@ export const RPGWordReader = ({
       setFeedback(null);
       setCompletedWords(new Set());
       setWordResults(new Map());
+      wordResultsRef.current = new Map();
       setCanRetry(true);
       setShowFeedbackOverlay(false);
       setPendingIncorrectWord(null);
+
       isRetryAttemptRef.current = false;
       isProcessingRef.current = false;
       isWordTransitioningRef.current = true;
