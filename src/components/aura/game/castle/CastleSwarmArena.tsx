@@ -185,6 +185,13 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const endRun = useCallback((reason: "win" | "loss" | "quit") => {
     if (endedRef.current) return;
     endedRef.current = true;
+    // Cancel any pending wave/interstitial timeouts so they can't ghost-fire
+    pendingTimeoutsRef.current.forEach(id => clearTimeout(id));
+    pendingTimeoutsRef.current.clear();
+    if (spellBreakLaunchTimerRef.current) {
+      clearTimeout(spellBreakLaunchTimerRef.current);
+      spellBreakLaunchTimerRef.current = null;
+    }
     const acc = wordsAttemptedRef.current === 0
       ? 100
       : Math.round((wordsReadRef.current / wordsAttemptedRef.current) * 100);
