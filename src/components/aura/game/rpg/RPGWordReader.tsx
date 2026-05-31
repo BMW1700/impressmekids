@@ -882,12 +882,32 @@ export const RPGWordReader = ({
     
     if (!targetWord) return;
     
+    // FAST MODE multi-word burst: prefer main transcript ordering so we can
+    // chain in-order matches as a single atomic burst.
+    if (mode === 'fast' && !isRetryAttemptRef.current && canRetryRef.current) {
+      const burst: Array<{ word: string; idx: number }> = [];
+      let virtualIdx = wordIndex;
+      let virtualTarget = targetWord;
+      for (let s = 0; s < mainWordsSpoken.length && virtualTarget; s++) {
+        const word = mainWordsSpoken[s];
+        if (!isWordMatchLenient(word, virtualTarget)) {
+          if (burst.length > 0) break; // stop on first miss after starting
+          continue; // allow leading filler/silence words before the run starts
+        }
+        burst.push({ word, idx: virtualIdx });
+        virtualIdx += 1;
+        virtualTarget = getTargetWord(virtualIdx);
+      }
+      if (burst.length >= 2) {
+        console.log('[RPGWordReader] FAST BURST applying', burst.length, 'matches in one atomic step');
+        applyFastBurst(burst);
+        return;
+      }
+    }
+
     // Check all alternatives for a match
     let matched = false;
     let bestSpoken = cleanTranscript;
-    let matchedFromMainTranscript = false;
-    let matchedSpokenIndex = -1;
-    const mainWordsSpoken = cleanTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
 
     // Check alternatives first
     for (const alt of alternatives) {
@@ -901,7 +921,7 @@ export const RPGWordReader = ({
       }
       if (matched) break;
     }
-    
+
     // Check main transcript words
     if (!matched) {
       for (let s = 0; s < mainWordsSpoken.length; s++) {
@@ -909,15 +929,13 @@ export const RPGWordReader = ({
         if (isWordMatchLenient(word, targetWord)) {
           matched = true;
           bestSpoken = word;
-          matchedFromMainTranscript = true;
-          matchedSpokenIndex = s;
           break;
         }
       }
     }
-    
+
     console.log('[RPGWordReader] Match result:', { matched, bestSpoken, targetWord });
-    
+
     if (matched) {
       // Check if this is a retry attempt (canRetry was set to false when Try Again was clicked)
       if (isRetryAttemptRef.current || !canRetryRef.current) {
@@ -926,49 +944,11 @@ export const RPGWordReader = ({
       } else {
         // Normal first-try success (GREEN, deals damage, gives coins)
         handleCorrect(bestSpoken, wordIndex);
-
-        // FAST MODE: chain remaining spoken words against the advancing target.
-        // Web Speech often delivers a full 5-word breath as a single FINAL result;
-        // without this, only word 1 would register and Elara/Cypher feel slow.
-        // Mirrors the interim-branch chaining (line ~965). Conservative: only when
-        // the match came from the main transcript (alternatives don't give us a
-        // reliable spoken-word index to chain from).
-        if (mode === 'fast' && matchedFromMainTranscript && matchedSpokenIndex >= 0) {
-          let virtualIdx = wordIndex + 1;
-          let virtualTarget = getTargetWord(virtualIdx);
-          let firedCount = 0;
-          const FEEDBACK_GAP_MS = 60; // fast feedbackDelay (50) + tiny margin — 5 words land in ~300ms
-
-          for (let s = matchedSpokenIndex + 1; s < mainWordsSpoken.length; s++) {
-            const word = mainWordsSpoken[s];
-            if (!virtualTarget) break;
-            if (!isWordMatchLenient(word, virtualTarget)) break; // in-order only
-
-            const queuedWord = word;
-            const queuedIdx = virtualIdx;
-            const queuedTarget = virtualTarget;
-            setTimeout(() => {
-              if (isWordTransitioningRef.current) return;
-              if (isProcessingRef.current) return;
-              const liveIdx = currentIndexRef.current;
-              if (liveIdx !== queuedIdx) return;
-              const liveTarget = getTargetWord(liveIdx);
-              if (!liveTarget || liveTarget !== queuedTarget) return;
-              if (!isWordMatchLenient(queuedWord, liveTarget)) return;
-              if (isRetryAttemptRef.current || !canRetryRef.current) return; // chain skips retries
-              handleCorrect(queuedWord, queuedIdx);
-            }, (firedCount + 1) * FEEDBACK_GAP_MS);
-
-            firedCount += 1;
-            virtualIdx += 1;
-            virtualTarget = getTargetWord(virtualIdx);
-          }
-        }
       }
     } else {
       // Check if we should do echo retry - use ref to avoid stale state
       const currentRecState = recognitionStateRef.current;
-      
+
       // If this is a retry attempt and they got it wrong again, show overlay
       if (isRetryAttemptRef.current || !canRetryRef.current) {
         // Failed retry - go straight to continue (they already had their chance)
@@ -982,7 +962,8 @@ export const RPGWordReader = ({
         handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
       }
     }
-  }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry, mode]);
+  }, [getTargetWord, enableEchoRetry, handleCorrect, handleRetrySuccess, handleIncorrectFinal, startEchoRetry, mode, applyFastBurst]);
+
 
   // Keep refs to the latest handlers so the long-lived recognition.onresult
   // closure (created once when the mic starts) always invokes the current
