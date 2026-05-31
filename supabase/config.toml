@@ -86,6 +86,8 @@ project_id = "sjigkjwkgovculkovcjy"
     verify_jwt = false
   [functions.submit-answer]
     verify_jwt = false
+  [functions.seed-demo-accounts]
+    verify_jwt = false
   [functions.train-ml-models]
     verify_jwt = false
   [functions.update-q-learning]
