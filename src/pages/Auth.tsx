@@ -1376,25 +1376,27 @@ const Auth = () => {
             </Button>
 
 
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
-                    onClick={handleCleverSignIn}
-                    disabled={isLoading}
-                  >
-                    <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
-                    Continue with Clever
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p>Clever is a single sign-on platform used by many schools. If your school uses Clever, sign up here with your school credentials.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            {!Capacitor.isNativePlatform() && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-14 bg-white/15 hover:bg-white/20 text-white border-white/20 rounded-xl font-medium text-base backdrop-blur"
+                      onClick={handleCleverSignIn}
+                      disabled={isLoading}
+                    >
+                      <BookOpen className="mr-3 h-5 w-5 text-blue-300" />
+                      Continue with Clever
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>Clever is a single sign-on platform used by many schools. If your school uses Clever, sign up here with your school credentials.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
             {/* Divider */}
             <div className="relative py-4">
