@@ -1,67 +1,61 @@
-## Brutally honest audit summary
-
-No, RPG mode is not perfect right now.
-
-The biggest confirmed issue is Lightning Storm: it has its own separate speech-recognition loop instead of using the safer shared `RPGWordReader`, and its cleanup/restart logic can leave old recognition instances trying to restart while new ones are created. That matches your “breaks the entire computer” report closely enough that it should be removed immediately, not patched.
-
-The second issue is the fast-reader stiffness: the current fast-mode fix still relies on chained `setTimeout` callbacks spaced around the feedback lock. That is safer than before, but it still creates an artificial 150–170ms step between each word. For Elara/Cypher, that means a 5-word breath can still feel like five separate slow confirmations instead of one fluid burst.
-
-Castle Swarm is promising, but not perfect: it uses the same `RPGWordReader` in fast mode, has a solid requestAnimationFrame loop, and avoids the dangerous Lightning Storm component. The main risk I found is the boss Spell-Break overlay: it runs fast-mode reading while the main Castle reader remains mounted underneath. Disabled/frozen game logic helps, but I would harden it so only one reader is actively listening during boss chants.
-
 ## Plan
 
-### 1. Scrap Lightning Storm completely
+### 1. Fix Elara/Cypher 5-word burst registration for real
+The current fast-mode path still behaves like five tiny single-word reads. Worse, the queued follow-up words can fire while the next target is still in its 260ms transition lock, so the queued word silently gets ignored. That explains the screenshot where the fifth word is recognized but remains stuck at 4/5.
 
-- Remove `lightning_storm` from the RPG minigame type list.
-- Remove the `RPGLightningStorm` import and render branch from `RPGBattleArena`.
-- Remove the `lightning_storm` battle phase, announcement, and phase mapping.
-- Delete or fully orphan the `RPGLightningStorm.tsx` component so it cannot launch anywhere.
-- Replace every enemy assignment that currently includes Lightning Storm with safer existing minigames:
-  - World 6 Storm Harpy: replace with `wind_chase` / `word_shield` style rotation.
-  - World 6 Cloud Giant signature: change from `lightning_storm` to `word_shield` or `rolling_boulders`.
-  - World 6 Zephyr: keep `wind_chase` signature and remove Lightning Storm from random pool.
-  - Later-world enemies: replace Lightning Storm with safer already-used minigames like `speed_typist`, `word_shield`, `wind_chase`, `asteroid_barrage`, or `spell_combo` depending on theme.
+I will change `RPGWordReader` so fast mode does not depend on chained `setTimeout` callbacks for a clean 5-word breath.
 
-### 2. Add a safety fallback so it can never launch
-
-Even after data cleanup, I will add a defensive guard in the minigame trigger path:
-
-```text
-if a retired/unsafe minigame is requested -> substitute a safe minigame before setting phase
-```
-
-This prevents old saved data, stale constants, or future accidental references from launching a retired minigame.
-
-### 3. Make Elara/Cypher fast reading actually feel fast
-
-Replace the current queued 170ms-per-word chaining with a dedicated fast-burst path:
-
+Implementation:
+- Add a dedicated fast-burst matcher for `mode="fast"`.
+- Prefer the main transcript first, not alternatives first, so the code knows the spoken word order.
+- Starting from the current target, walk the spoken transcript in order and collect every consecutive correct target word.
+- Apply the collected run as one burst:
+  - mark all matched words completed,
+  - call `onResult(true, spokenWord, wordIndex, responseTimeMs)` for each word,
+  - update the visible word queue/results immediately,
+  - advance to the next unread word or complete the batch.
+- Remove/stop relying on the fragile 60ms follow-up timers for fast mode.
 - Keep normal characters unchanged.
-- For `mode="fast"`, when one speech result contains multiple correct words in order, collect the whole in-order run first.
-- Apply those matches as a burst instead of waiting through the normal feedback lock for every word.
-- Reduce the fast-mode target arming delay so the next target is ready almost immediately.
-- Clear/abort queued fast callbacks cleanly on batch change, pause, disabled state, and unmount.
-- Preserve safety checks: wrong word 3 still stops the chain; retries still remain single-word practice; normal mode remains strict.
+- Keep miss behavior strict: if word 3 is wrong, words 4–5 do not auto-register.
+- Keep retry behavior single-word only.
 
-Expected behavior: Elara/Cypher reading 5 words in one breath should feel like one smooth 5-word burst, not five slow mini-pauses.
+Expected result:
+- If the reader says all 5 words correctly in one breath, all 5 register without stopping and without repeating word 5.
+- If only 4 words are correct, it stops cleanly on word 5.
+- If the browser final transcript arrives after interims, it will not double-count words.
 
-### 4. Fix a likely batch-complete timing issue
+### 2. Fix stale batch-complete data
+`RPGWordReader` currently builds batch-complete results from React state, which can lag behind rapid fast-mode updates.
 
-The reader currently reports batch results from React state that may lag behind rapid chained/burst matches. I will make batch completion use a ref-backed latest results map so fast bursts do not lose the last word’s result or trigger stale batch behavior.
+Implementation:
+- Add a ref-backed latest results map.
+- Update that ref synchronously whenever a word is marked correct/missed/retried.
+- Use the ref, not stale state, when calling `onBatchComplete`.
 
-### 5. Harden Castle Swarm Defense
+Expected result:
+- The last word in a 5-word burst is included reliably.
+- Batch completion does not depend on React state timing.
 
-- Disable the main Castle `RPGWordReader` while Boss Spell-Break is active so there is only one active mic reader at a time.
-- Add cleanup for delayed boss-spell launch timers so leaving the game or ending a run cannot fire a late overlay.
-- Keep Castle’s main loop and gameplay intact; this is a stability hardening pass, not a redesign.
+### 3. Make the victory arena stop looking like a placeholder
+The current post-boss arena is basically a huge empty gradient, skyline bars, and two placeholder rectangle fighters. I will replace the presentation layer with a polished reward arena while keeping the same bonus battle mechanics.
 
-### 6. Verification
+Implementation:
+- Rebuild `RPGVictoryArena` layout so the fighters are centered in an actual arena scene instead of floating at the bottom of a mostly empty screen.
+- Add a real stage: floor plane, crowd silhouettes, spotlights, banners, world-completion header, compact HP bars, and responsive safe-area spacing.
+- Replace the placeholder rectangle fighters by either:
+  - using existing RPG character styling/components where practical, or
+  - upgrading `RPGArenaFighter` into a much more polished stylized fighter with limbs, stance, shadows, hit/block/special states, and better scale.
+- Keep controls large and iPad-friendly.
+- Keep the existing reward flow: fight, victory/defeat, claim/continue.
 
+Expected result:
+- The post-boss arena looks like an intentional reward mode, not unfinished test UI.
+- It works on desktop and iPad-sized screens without giant empty space.
+
+### 4. Verify the exact failure cases
 After implementation I will verify:
-
-- No `lightning_storm` launch path remains.
-- World 6 no longer has Lightning Storm in random or signature minigames.
-- Later worlds no longer reference Lightning Storm.
-- Elara/Cypher fast mode supports a 5-word spoken burst without artificial slow stepping.
-- Normal characters, retry behavior, and misses remain unchanged.
-- Castle Swarm still launches, reads, pauses, and resolves boss Spell-Break without dual active readers.
+- `lightning_storm` remains non-launchable.
+- Elara/Cypher can register a clean 5-word transcript as 5/5 in one burst.
+- The fifth word no longer requires repetition.
+- Normal mode reading and retries still behave the same.
+- Victory Arena renders with a filled, polished composition and no placeholder fighters.
