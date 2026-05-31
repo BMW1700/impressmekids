@@ -181,6 +181,9 @@ export const RPGWordReader = ({
   const prevWordsKeyRef = useRef(wordsKey);
   // Guard against duplicate onBatchComplete from late-arriving final transcripts
   const batchCompletedRef = useRef(false);
+  // Ref mirror of wordResults so fast bursts never read stale React state
+  const wordResultsRef = useRef<Map<number, WordAttempt>>(new Map());
+
 
   // CRITICAL: Refs to current props so the long-lived recognition.onresult
   // closure always reads the *current* batch, not the batch that existed
