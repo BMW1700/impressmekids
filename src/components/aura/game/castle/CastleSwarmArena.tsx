@@ -155,6 +155,11 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const rngRef = useRef<() => number>(Math.random);
   const spellBreakActiveRef = useRef(false);
   const spellBreakLaunchTimerRef = useRef<number | null>(null);
+  const pendingTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const trackTimeout = useCallback((id: ReturnType<typeof setTimeout>) => {
+    pendingTimeoutsRef.current.add(id);
+    return id;
+  }, []);
   const knightStatsRef = useRef(knightStats);
   useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
