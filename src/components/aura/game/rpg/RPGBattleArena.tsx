@@ -49,7 +49,7 @@ import { RPGWordEcho } from "./RPGWordEcho";
 import { RPGWindChase } from "./RPGWindChase";
 import { RPGInkSplash } from "./RPGInkSplash";
 import { RPGCrystalPrison } from "./RPGCrystalPrison";
-import { RPGLightningStorm } from "./RPGLightningStorm";
+// RPGLightningStorm retired — caused tab/computer freeze. Trigger path is defensively remapped.
 import { RPGVoidPull } from "./RPGVoidPull";
 import { RPGGroundRipple } from "./RPGGroundRipple";
 import { RPGWebTrap } from "./RPGWebTrap";
@@ -688,9 +688,12 @@ export const RPGBattleArena = ({
   // 1. HP-based mini-game triggers at 50% and 25% enemy HP (anticipation moments)
   // 2. Random enemy attacks every 4 words (40% chance) - player must quick block
   // This creates exciting rhythm: READ -> ATTACK -> BLOCK -> MINI-GAME -> READ...
-  const triggerRandomMiniGame = useCallback((gameType: MiniGameType) => {
-    const wordCount = gameType === 'speed_typist' ? 12 : 
-                      gameType === 'tug_of_war' ? 15 : 
+  const triggerRandomMiniGame = useCallback((rawGameType: MiniGameType) => {
+    // SAFETY: Lightning Storm has been retired (caused tab freeze).
+    // Any stale data or saved progress that still requests it gets routed to Word Shield.
+    const gameType: MiniGameType = (rawGameType === 'lightning_storm' ? 'word_shield' : rawGameType);
+    const wordCount = gameType === 'speed_typist' ? 12 :
+                      gameType === 'tug_of_war' ? 15 :
                       gameType === 'goblin_horde' ? 6 :
                       gameType === 'rhyme_chain' ? 6 : 5;
     const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
@@ -2791,22 +2794,7 @@ export const RPGBattleArena = ({
             onWordHit={(damage) => takePlayerDamage(damage)}
           />
         )}
-        {phase === 'lightning_storm' && (
-          <RPGLightningStorm
-            words={barrageWords}
-            onComplete={(struck, missed) => {
-              const newHp = Math.max(0, enemyHpRef.current - struck * 12);
-              enemyHpRef.current = newHp;
-              setCorrectWords(prev => prev + struck);
-              setWordsRead(prev => prev + struck + missed);
-              setTotalDamage(prev => prev + struck * 12);
-              setEnemyHp(newHp);
-              setBatchStartIndex(prev => prev + barrageWords.length);
-              returnToReading();
-            }}
-            onWordHit={(damage) => takePlayerDamage(damage)}
-          />
-        )}
+        {/* phase === 'lightning_storm' retired — defensive trigger remap routes to 'word_shield' */}
         {phase === 'void_pull' && (
           <RPGVoidPull
             words={barrageWords}

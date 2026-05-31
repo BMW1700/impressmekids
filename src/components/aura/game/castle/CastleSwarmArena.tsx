@@ -153,6 +153,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
   const transitioningRef = useRef(false);
   const rngRef = useRef<() => number>(Math.random);
   const spellBreakActiveRef = useRef(false);
+  const spellBreakLaunchTimerRef = useRef<number | null>(null);
   const knightStatsRef = useRef(knightStats);
   useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
@@ -295,13 +296,26 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
         const j = Math.floor(rng() * (i + 1));
         [chant[i], chant[j]] = [chant[j], chant[i]];
       }
-      window.setTimeout(() => {
-        if (endedRef.current) return;
+      if (spellBreakLaunchTimerRef.current) {
+        clearTimeout(spellBreakLaunchTimerRef.current);
+      }
+      spellBreakLaunchTimerRef.current = window.setTimeout(() => {
+        spellBreakLaunchTimerRef.current = null;
+        if (endedRef.current || pausedRef.current) return;
         spellBreakActiveRef.current = true;
         setSpellBreak({ words: chant.slice(0, 4), wave: n });
       }, 1600);
     }
   }, [mode, wordPool]);
+
+  // Cleanup deferred spell-break launch on unmount
+  useEffect(() => () => {
+    if (spellBreakLaunchTimerRef.current) {
+      clearTimeout(spellBreakLaunchTimerRef.current);
+      spellBreakLaunchTimerRef.current = null;
+    }
+  }, []);
+
 
   // ---- Initial setup ----
   useEffect(() => {
@@ -939,7 +953,7 @@ export const CastleSwarmArena = ({ mode, onExit }: Props) => {
               enableEchoRetry={true}
               mode="fast"
               compact
-              disabled={paused}
+              disabled={paused || !!spellBreak}
               streak={comboHud}
             />
           </div>

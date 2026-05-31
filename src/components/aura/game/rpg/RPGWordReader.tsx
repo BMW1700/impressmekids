@@ -491,7 +491,7 @@ export const RPGWordReader = ({
     
     // Brief pause to show feedback, then clear UI
     // FAST MODE: shorter delays for Elara
-    const feedbackDelay = mode === 'fast' ? 150 : 300;
+    const feedbackDelay = mode === 'fast' ? 50 : 300;
     feedbackTimeoutRef.current = setTimeout(() => {
       setFeedback(null);
       setSpokenText("");
@@ -848,7 +848,7 @@ export const RPGWordReader = ({
           let virtualIdx = wordIndex + 1;
           let virtualTarget = getTargetWord(virtualIdx);
           let firedCount = 0;
-          const FEEDBACK_GAP_MS = 170; // fast feedbackDelay (150) + margin
+          const FEEDBACK_GAP_MS = 60; // fast feedbackDelay (50) + tiny margin — 5 words land in ~300ms
 
           for (let s = matchedSpokenIndex + 1; s < mainWordsSpoken.length; s++) {
             const word = mainWordsSpoken[s];
@@ -1011,7 +1011,7 @@ export const RPGWordReader = ({
                 let virtualIdx = wordIdx;
                 let virtualTarget = targetWord;
                 let firedCount = 0;
-                const FEEDBACK_GAP_MS = 170; // fast feedbackDelay (150) + margin
+                const FEEDBACK_GAP_MS = 60; // fast feedbackDelay (50) + tiny margin — 5 words land in ~300ms
                 const cursor = (recognition as any).__fastConsumedKey || { i: -1, count: 0 };
                 (recognition as any).__fastConsumedKey = cursor;
                 // Skip spoken words we already consumed from this growing interim.

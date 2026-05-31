@@ -638,7 +638,7 @@ export const stormHarpy: RPGEnemy = {
   ],
   barrageWordCount: 5,
   // 120 HP = 3 triggers
-  miniGames: ['dodge_words', 'goblin_horde', 'word_shield', 'wind_chase', 'lightning_storm'],
+  miniGames: ['dodge_words', 'goblin_horde', 'word_shield', 'wind_chase'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -672,8 +672,8 @@ export const cloudGiant: RPGEnemy = {
   ],
   barrageWordCount: 6,
   // 320 HP = 6 triggers
-  miniGames: ['goblin_horde', 'speed_typist', 'rolling_boulders', 'lightning_storm', 'asteroid_barrage', 'word_shield', 'spell_combo'],
-  signatureMiniGame: 'lightning_storm', // Signature LIGHTNING STORM at 50%
+  miniGames: ['goblin_horde', 'speed_typist', 'rolling_boulders', 'wind_chase', 'asteroid_barrage', 'word_shield', 'spell_combo'],
+  signatureMiniGame: 'word_shield', // Signature at 50% (Lightning Storm retired)
 };
 
 // Zephyr the Wind Lord - Boss of World 6
@@ -709,7 +709,7 @@ export const zephyr: RPGEnemy = {
   ],
   barrageWordCount: 9,
   // 350 HP = 6 triggers - Zephyr boss
-  miniGames: ['speed_typist', 'goblin_horde', 'dodge_words', 'fireball_defense', 'wind_chase', 'lightning_storm', 'rhyme_chain'],
+  miniGames: ['speed_typist', 'goblin_horde', 'dodge_words', 'fireball_defense', 'wind_chase', 'rhyme_chain'],
   signatureMiniGame: 'wind_chase', // Signature WIND CHASE at 50%
 };
 
@@ -888,7 +888,7 @@ export const realityShifter: RPGEnemy = {
   ],
   barrageWordCount: 7,
   // 220 HP = 4 triggers
-  miniGames: ['speed_typist', 'rhyme_chain', 'goblin_horde', 'asteroid_barrage', 'void_pull', 'lightning_storm'],
+  miniGames: ['speed_typist', 'rhyme_chain', 'goblin_horde', 'asteroid_barrage', 'void_pull'],
   signatureMiniGame: 'asteroid_barrage', // Signature WORD PRISON at 50%
 };
 
@@ -931,7 +931,7 @@ export const wordEater: RPGEnemy = {
   ],
   barrageWordCount: 12,
   // 600 HP = 7 triggers - THE ULTIMATE FINAL BOSS (NO TUG OF WAR in Classic)
-  miniGames: ['asteroid_barrage', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'lightning_storm', 'ground_ripple'],
+  miniGames: ['asteroid_barrage', 'speed_typist', 'ghostly_whispers', 'fireball_defense', 'void_pull', 'ink_splash', 'ground_ripple'],
   signatureMiniGame: 'void_pull', // THE ULTIMATE SIGNATURE - VOID PULL at 50%
 };
 
@@ -982,7 +982,7 @@ export const prismMage: RPGEnemy = {
   dialogueIntro: ['*light refracts wildly*', 'My crystals see all!'],
   dialogueAttack: ['*prismatic beam fires*', 'Light BENDS to my will!'], dialogueDefeat: ['The prism... fades...'],
   specialAbilities: [{ id: 'prism_beam', name: 'Prism Beam', damage: 20, effect: 'earthquake', description: 'Focused light beam', icon: '🔮' }],
-  barrageWordCount: 6, miniGames: ['crystal_prison', 'lightning_storm', 'speed_typist', 'spell_combo'], signatureMiniGame: 'crystal_prison',
+  barrageWordCount: 6, miniGames: ['crystal_prison', 'speed_typist', 'spell_combo'], signatureMiniGame: 'crystal_prison',
 };
 
 export const crystalQueen: RPGEnemy = {
@@ -994,7 +994,7 @@ export const crystalQueen: RPGEnemy = {
     { id: 'crystal_storm', name: 'Crystal Storm', damage: 28, effect: 'asteroid_barrage', description: 'Raining crystal shards', icon: '👸' },
     { id: 'diamond_shield', name: 'Diamond Shield', damage: 0, effect: 'debuff', description: 'Impervious barrier', icon: '🛡️' },
   ],
-  barrageWordCount: 9, miniGames: ['crystal_prison', 'lightning_storm', 'speed_typist', 'spell_combo', 'asteroid_barrage', 'ink_splash'], signatureMiniGame: 'crystal_prison',
+  barrageWordCount: 9, miniGames: ['crystal_prison', 'speed_typist', 'spell_combo', 'asteroid_barrage', 'ink_splash'], signatureMiniGame: 'crystal_prison',
 };
 
 // World 11 - Starfall Peaks enemies
@@ -1004,7 +1004,7 @@ export const starSprite: RPGEnemy = {
   dialogueIntro: ['*twinkles brightly*', 'A shooting star approaches!'],
   dialogueAttack: ['*zips and zaps*'], dialogueDefeat: ['*fades to stardust*'],
   specialAbilities: [{ id: 'star_bolt', name: 'Star Bolt', damage: 14, effect: 'debuff', description: 'Starlight zap', icon: '⭐' }],
-  barrageWordCount: 4, miniGames: ['wind_chase', 'lightning_storm', 'speed_typist'], signatureMiniGame: 'wind_chase',
+  barrageWordCount: 4, miniGames: ['wind_chase', 'speed_typist'], signatureMiniGame: 'wind_chase',
 };
 
 export const cometWolf: RPGEnemy = {
@@ -1025,7 +1025,7 @@ export const novaTitan: RPGEnemy = {
     { id: 'nova_blast', name: 'Nova Blast', damage: 35, effect: 'earthquake', description: 'Supernova explosion', icon: '💫' },
     { id: 'gravity_well', name: 'Gravity Well', damage: 0, effect: 'debuff', description: 'Crushes with gravity', icon: '🌑' },
   ],
-  barrageWordCount: 10, miniGames: ['asteroid_barrage', 'lightning_storm', 'speed_typist', 'wind_chase', 'void_pull', 'fireball_defense'], signatureMiniGame: 'asteroid_barrage',
+  barrageWordCount: 10, miniGames: ['asteroid_barrage', 'speed_typist', 'wind_chase', 'void_pull', 'fireball_defense'], signatureMiniGame: 'asteroid_barrage',
 };
 
 // World 12 - Eternal Archive enemies
@@ -1058,7 +1058,7 @@ export const theLibrarian: RPGEnemy = {
     { id: 'silence_spell', name: 'Silence Spell', damage: 0, effect: 'silence', description: 'Silences all abilities', icon: '🔇' },
     { id: 'archive_crush', name: 'Archive Crush', damage: 40, effect: 'asteroid_barrage', description: 'The weight of all books', icon: '📚' },
   ],
-  barrageWordCount: 12, miniGames: ['ink_splash', 'ghostly_whispers', 'speed_typist', 'word_echo', 'void_pull', 'crystal_prison', 'ground_ripple', 'lightning_storm'], signatureMiniGame: 'ink_splash',
+  barrageWordCount: 12, miniGames: ['ink_splash', 'ghostly_whispers', 'speed_typist', 'word_echo', 'void_pull', 'crystal_prison', 'ground_ripple'], signatureMiniGame: 'ink_splash',
 };
 
 // Get enemy by type for battle - UPDATED with all new enemies
