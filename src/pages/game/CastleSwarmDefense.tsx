@@ -7,6 +7,7 @@ import { CastleCampaignSelect } from "@/components/aura/game/castle/CastleCampai
 const CastleSwarmDefense = () => {
   const navigate = useNavigate();
   const [run, setRun] = useState<CastleRunMode | null>(null);
+  const [runKey, setRunKey] = useState(0);
   return (
     <>
       <Helmet>
@@ -15,8 +16,10 @@ const CastleSwarmDefense = () => {
       </Helmet>
       {run ? (
         <CastleSwarmArena
+          key={runKey}
           mode={run}
           onExit={() => setRun(null)}
+          onPlayAgain={() => setRunKey(k => k + 1)}
         />
       ) : (
         <CastleCampaignSelect
