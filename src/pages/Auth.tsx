@@ -11,7 +11,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash } from "lucide-react";
+import { Loader2, Chrome, Building2, BookOpen, Eye, EyeOff, UserCheck, ArrowLeft, Info, Hash, Apple } from "lucide-react";
+import { lovable } from "@/integrations/lovable";
 import { toSyntheticEmail, isStudentId, isSyntheticStudentEmail } from "@/lib/studentIdAuth";
 import { redeemClassJoinCode, peekClassJoinCode, type PeekResult } from "@/lib/classJoinCode";
 import { checkStudentIdSigninRate, recordStudentIdSigninSuccess } from "@/lib/studentIdRateLimit";
@@ -249,6 +250,31 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin + "/auth",
+      });
+      if (result.error) {
+        toast({
+          title: "Apple sign-in failed",
+          description: result.error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
+      // If result.redirected, the browser is navigating away — nothing else to do.
+    } catch (error: any) {
+      toast({
+        title: "Apple sign-in failed",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
     } finally {
