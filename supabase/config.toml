@@ -28,6 +28,8 @@ project_id = "sjigkjwkgovculkovcjy"
     verify_jwt = false
   [functions.delete-user-account]
     verify_jwt = false
+  [functions.self-delete-account]
+    verify_jwt = false
   [functions.end-round-and-compute-winners]
     verify_jwt = false
   [functions.escalation-engine]

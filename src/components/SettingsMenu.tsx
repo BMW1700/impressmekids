@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "next-themes";
 import { useLanguage, Language } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, Monitor, Globe, Check } from "lucide-react";
+import { Settings, Sun, Moon, Monitor, Globe, Check, Trash2 } from "lucide-react";
 
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
@@ -21,6 +23,8 @@ const languages: { code: Language; label: string; flag: string }[] = [
 export const SettingsMenu = () => {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const themeOptions = [
@@ -77,6 +81,22 @@ export const SettingsMenu = () => {
             {language === lang.code && <Check className="h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         ))}
+
+        {user && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                setOpen(false);
+                navigate("/account/delete");
+              }}
+              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete my account
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
