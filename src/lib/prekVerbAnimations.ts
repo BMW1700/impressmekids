@@ -48,12 +48,16 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
   },
   run: {
     kind: "compound",
-    duration: 1.6,
+    duration: 2.4,
     label: { text: "RUN!", color: "#ef4444" },
-    // forward lean + leg-pump rocking + slide forward then back
+    // Character actually traverses to the right with a forward lean and leg-pump bob.
     transform: tx(
-      { rotate: [0, -12, -10, -12, -10, -8, 0], x: [0, -10, -25, -10, -25, -10, 0], y: [0, -4, 0, -4, 0, -2, 0] },
-      1.5
+      {
+        x: [0, 50, 100, 150, 200, 240, 200, 150, 100, 50, 0],
+        rotate: [0, -8, -10, -12, -10, -12, -10, -10, -8, -5, 0],
+        y: [0, -5, 0, -5, 0, -5, 0, -5, 0, -3, 0],
+      },
+      2.3
     ),
     props: [],
   },
@@ -81,58 +85,52 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
   },
   clap: {
     kind: "compound",
-    duration: 1.5,
+    duration: 1.8,
     label: { text: "CLAP!", color: "#f59e0b" },
-    // squishes side-to-side like hands meeting
-    transform: tx(
-      { scaleX: [1, 0.7, 1.15, 0.75, 1.15, 0.8, 1], scaleY: [1, 1.1, 0.95, 1.1, 0.95, 1.05, 1] },
-      1.4
-    ),
+    // Subtle body bob — arms do the actual clapping inside the sprite.
+    transform: tx({ y: [0, -3, 0, -3, 0, -3, 0], scale: [1, 1.02, 1, 1.02, 1, 1.02, 1] }, 1.7),
     props: [],
   },
   wave: {
     kind: "compound",
-    duration: 1.6,
+    duration: 1.8,
     label: { text: "HI!", color: "#3b82f6" },
-    // friendly side-to-side tip like a hand waving
-    transform: tx({ rotate: [0, -18, 18, -18, 18, -10, 0], y: [0, -4, -4, -4, -4, -2, 0] }, 1.5),
+    // Body stays still; one arm waves overhead inside the sprite.
+    transform: tx({ y: [0, -3, 0, -3, 0] }, 1.7),
     props: [],
   },
   dance: {
     kind: "compound",
-    duration: 1.9,
+    duration: 2.4,
     label: { text: "DANCE!", color: "#ec4899" },
     transform: tx(
-      { rotate: [0, -15, 15, -15, 15, 0], y: [0, -10, 0, -10, 0, -10, 0], scaleY: [1, 0.95, 1.05, 0.95, 1.05, 1] },
-      1.8
+      { rotate: [0, -12, 12, -12, 12, -12, 12, 0], y: [0, -8, 0, -8, 0, -8, 0, 0] },
+      2.3
     ),
     props: [],
   },
   eat: {
     kind: "compound",
-    duration: 1.6,
+    duration: 2.6,
     label: { text: "EAT!", color: "#f59e0b" },
-    // mouth-chewing rhythm + happy bob
-    transform: tx({ scaleY: [1, 1.15, 0.9, 1.15, 0.9, 1.1, 1], y: [0, -4, 0, -4, 0, -2, 0] }, 1.5),
+    // Small chew bob — apple prop inside the sprite shows three bites.
+    transform: tx({ scaleY: [1, 1.06, 0.96, 1.06, 0.96, 1.06, 1], y: [0, -2, 0, -2, 0, -2, 0] }, 2.5),
     props: [],
   },
   drink: {
     kind: "compound",
-    duration: 1.6,
+    duration: 3.2,
     label: { text: "GULP!", color: "#0ea5e9" },
-    // tilts head WAY back and holds — like drinking from a cup
-    transform: tx({ rotate: [0, -30, -30, -30, 0], y: [0, -5, -5, -5, 0] }, 1.5),
+    // Hold head back during the 3s drink — glass prop empties inside the sprite.
+    transform: tx({ rotate: [0, -12, -18, -18, -18, -10, 0], y: [0, -3, -4, -4, -4, -2, 0] }, 3.1),
     props: [],
   },
   sleep: {
     kind: "compound",
-    duration: 1.9,
+    duration: 2.4,
     label: { text: "ZZZ", color: "#6366f1" },
-    // slow lean to one side, eyes-shut feel (scale down + tilt + soft breathing)
-    transform: tx(
-      { rotate: [0, 8, 18, 22, 22, 18, 0], scale: [1, 0.98, 0.95, 0.95, 0.95, 0.97, 1], y: [0, 5, 10, 10, 10, 5, 0] },
-      1.8
-    ),
+    // Settle into the bed — bed/blanket/Z's are inside the sprite.
+    transform: tx({ y: [0, 6, 14, 18, 18, 18], scale: [1, 0.98, 0.93, 0.9, 0.9, 0.9] }, 2.3),
     props: [],
   },
   sing: {
