@@ -114,7 +114,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [shake, setShake] = useState(false);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
-  const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor } | null>(null);
+  const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor; phrase: string } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
   const verbActiveRef = useRef(false);
@@ -245,7 +245,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     }
     if (prek) {
       nonceRef.current += 1;
-      setPrekScene({ id: nonceRef.current, descriptor: prek });
+      setPrekScene({ id: nonceRef.current, descriptor: prek, phrase });
       setVerbTrigger(null);
     } else if (resolveVerbAnimation(legacyWord)) {
       nonceRef.current += 1;
@@ -400,7 +400,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       : helperVisible
                       ? "comforted"
                       : prekScene
-                      ? currentPhrase
+                      ? prekScene.phrase
                       : null
                   }
                   actionNonce={
