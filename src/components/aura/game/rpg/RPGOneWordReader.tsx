@@ -114,7 +114,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [shake, setShake] = useState(false);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
-  const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor } | null>(null);
+  const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor; phrase: string } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
   const verbActiveRef = useRef(false);
