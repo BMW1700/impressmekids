@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Star, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RPGCharacterSprite } from "./RPGCharacterSprite";
+import {
+  SadMood,
+  HappyMood,
+  BasketballProp,
+  PumpProp,
+  BrokenBatProp,
+  DuctTapeProp,
+} from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
 import { useVerbAnimation } from "@/hooks/useVerbAnimation";
