@@ -9,6 +9,10 @@ interface RPGCharacterSpriteProps {
   isTakingDamage?: boolean;
   isDefending?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  /** Verb/phrase currently being acted out (Pre-K). Drives arm + leg motion. */
+  action?: string | null;
+  /** Bump on each new verb trigger so identical actions replay. */
+  actionNonce?: number;
 }
 
 export const RPGCharacterSprite = ({
@@ -18,6 +22,8 @@ export const RPGCharacterSprite = ({
   isTakingDamage = false,
   isDefending = false,
   size = 'md',
+  action = null,
+  actionNonce = 0,
 }: RPGCharacterSpriteProps) => {
   const sizeClasses = {
     sm: 'w-20 h-24',
