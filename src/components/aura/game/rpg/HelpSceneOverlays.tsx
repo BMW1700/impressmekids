@@ -209,7 +209,7 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
   return (
     <div
       className="absolute pointer-events-none z-30"
-      style={{ right: "-8%", bottom: "6%", width: "70%", height: "30%" }}
+      style={{ right: "-40%", bottom: "10%", width: "140%", height: "55%" }}
     >
       <div className="relative w-full h-full" style={{ transform: "rotate(-12deg)" }}>
         {/* Handle half (left) */}

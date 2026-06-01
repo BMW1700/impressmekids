@@ -233,9 +233,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       window.setTimeout(() => setLeadHelping(true), 350);
       helpTimersRef.current.push(
         window.setTimeout(() => setHelpPhase("approach"), 250),
-        window.setTimeout(() => setHelpPhase("fix"), 2000),
-        window.setTimeout(() => setHelpPhase("happy"), 3500),
-        window.setTimeout(() => setHelpStage(null), 4600),
+        // Wait for blue to finish walking across before applying tape
+        window.setTimeout(() => setHelpPhase("fix"), 3200),
+        window.setTimeout(() => setHelpPhase("happy"), 4800),
+        window.setTimeout(() => setHelpStage(null), 6000),
       );
     }
 
@@ -369,23 +370,23 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
-                prekScene?.descriptor.transform
+                leadHelping
+                  ? { x: [0, 40, 90, 140, 180, 210, 220, 220], y: [0, -3, 0, -3, 0, -2, 0, 0] }
+                  : prekScene?.descriptor.transform
                   ? prekScene.descriptor.transform.animate
                   : allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
-                  : leadHelping
-                  ? { x: [0, 18, 36, 54, 70, 80, 80, 80], y: [0, -4, 0, -4, 0, -2, 0, 0], rotate: [0, 4, 8, 6, 10, 8, 8, 8] }
                   : verb?.descriptor.kind === "transform"
                   ? verb.descriptor.animate
                   : { y: [0, -8, 0] }
               }
               transition={
-                prekScene?.descriptor.transform
+                leadHelping
+                  ? { duration: 2.8, ease: "easeInOut" }
+                  : prekScene?.descriptor.transform
                   ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
                   : allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
-                  : leadHelping
-                  ? { duration: 2.4, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
@@ -449,12 +450,18 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                     key="helper-companion"
                     className="absolute bottom-0 -right-[55%] sm:-right-[60%] h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] z-20 pointer-events-none"
                     initial={{ x: 260, opacity: 0 }}
-                    animate={{ x: helperOffsetX, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }}
+                    animate={
+                      helpStage === "you"
+                        ? { x: helperOffsetX, opacity: 1, y: 0 }
+                        : { x: helperOffsetX, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }
+                    }
                     exit={{ x: 260, opacity: 0 }}
                     transition={{
                       x: { duration: 1.2, ease: "easeInOut" },
                       opacity: { duration: 0.5 },
-                      y: { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
+                      y: helpStage === "you"
+                        ? { duration: 0.2 }
+                        : { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
                     }}
                   >
                     <RPGCharacterSprite
