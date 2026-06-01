@@ -131,6 +131,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // - 'you' scene: yellow is sad with a broken bat; blue tapes it back together.
   const [helpStage, setHelpStage] = useState<null | "me" | "you">(null);
   const [helpPhase, setHelpPhase] = useState<"setup" | "approach" | "fix" | "happy">("setup");
+  // Horizontal offset for the yellow helper. After the "help me" scene ends,
+  // the helper slides further right to make room — and stays there for the
+  // "help you" scene, where the blue lead walks over to him.
+  const [helperOffsetX, setHelperOffsetX] = useState(0);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
@@ -153,6 +157,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     clearHelpTimers();
     setHelpStage(null);
     setHelpPhase("setup");
+    setHelperOffsetX(0);
   }, [world.id, level.id]);
   useEffect(() => () => clearHelpTimers(), []);
 
@@ -214,6 +219,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setHelpPhase("approach"), 250),
         window.setTimeout(() => setHelpPhase("fix"), 1800),
         window.setTimeout(() => setHelpPhase("happy"), 3400),
+        // Slide the yellow helper further right so he's clearly separated
+        // from blue, ready as the target for the "help you" scene.
+        window.setTimeout(() => setHelperOffsetX(110), 4200),
         window.setTimeout(() => setHelpStage(null), 4600),
       );
     } else if (lower === "help you") {
@@ -441,10 +449,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                     key="helper-companion"
                     className="absolute bottom-0 -right-[55%] sm:-right-[60%] h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] z-20 pointer-events-none"
                     initial={{ x: 260, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }}
+                    animate={{ x: helperOffsetX, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }}
                     exit={{ x: 260, opacity: 0 }}
                     transition={{
-                      x: { duration: 1.6, ease: "easeOut" },
+                      x: { duration: 1.2, ease: "easeInOut" },
                       opacity: { duration: 0.5 },
                       y: { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
                     }}
