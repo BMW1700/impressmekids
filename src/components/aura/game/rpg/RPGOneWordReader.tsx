@@ -3,6 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Star, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RPGCharacterSprite } from "./RPGCharacterSprite";
+import {
+  SadMood,
+  HappyMood,
+  BasketballProp,
+  PumpProp,
+  BrokenBatProp,
+  DuctTapeProp,
+} from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
 import { useVerbAnimation } from "@/hooks/useVerbAnimation";
@@ -118,6 +126,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // Becomes true after the user finishes "help you" — the blue lead then
   // walks across to reach the yellow helper with empathetic gestures.
   const [leadHelping, setLeadHelping] = useState(false);
+  // Help-scene narrative state: which scene + which sub-phase is playing.
+  // - 'me' scene: blue is sad with a deflated basketball; yellow pumps it up.
+  // - 'you' scene: yellow is sad with a broken bat; blue tapes it back together.
+  const [helpStage, setHelpStage] = useState<null | "me" | "you">(null);
+  const [helpPhase, setHelpPhase] = useState<"setup" | "approach" | "fix" | "happy">("setup");
+  const helpTimersRef = useRef<number[]>([]);
+  const clearHelpTimers = () => {
+    helpTimersRef.current.forEach((id) => window.clearTimeout(id));
+    helpTimersRef.current = [];
+  };
 
   // Reset when level changes
   useEffect(() => {
@@ -132,7 +150,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     setPrekScene(null);
     setHelperVisible(false);
     setLeadHelping(false);
+    clearHelpTimers();
+    setHelpStage(null);
+    setHelpPhase("setup");
   }, [world.id, level.id]);
+  useEffect(() => () => clearHelpTimers(), []);
+
 
   const currentPhrase = phrases[currentPhraseIndex] ?? "";
   const verbHint = useMemo(
@@ -178,14 +201,34 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       }, 400);
     }, 220);
 
-    // Help-scene staging: only trigger after the user has finished the phrase.
+    // Help-scene staging — narrative props + mood, played out over ~4.5s.
     const lower = phrase.toLowerCase().trim();
     if (lower === "help me") {
-      // Yellow walks onto the scene from off-screen right.
+      // Blue is sad holding a deflated basketball; yellow walks in with a
+      // pump and inflates it; blue becomes happy.
+      clearHelpTimers();
+      setHelpStage("me");
+      setHelpPhase("setup");
       window.setTimeout(() => setHelperVisible(true), 250);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setHelpPhase("approach"), 250),
+        window.setTimeout(() => setHelpPhase("fix"), 1800),
+        window.setTimeout(() => setHelpPhase("happy"), 3400),
+        window.setTimeout(() => setHelpStage(null), 4600),
+      );
     } else if (lower === "help you") {
-      // Blue lead walks across to the yellow helper.
-      window.setTimeout(() => setLeadHelping(true), 250);
+      // Yellow is sad with a broken bat; blue walks over carrying duct tape,
+      // wraps the bat back together; yellow becomes happy.
+      clearHelpTimers();
+      setHelpStage("you");
+      setHelpPhase("setup");
+      window.setTimeout(() => setLeadHelping(true), 350);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setHelpPhase("approach"), 250),
+        window.setTimeout(() => setHelpPhase("fix"), 2000),
+        window.setTimeout(() => setHelpPhase("happy"), 3500),
+        window.setTimeout(() => setHelpStage(null), 4600),
+      );
     }
 
     // Pre-K signature scene takes priority; fall back to legacy verb library.
@@ -369,6 +412,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   }
                 />
               </div>
+
+              {/* Help-ME scene overlays on the LEAD (blue) */}
+              {helpStage === "me" && (
+                <>
+                  <SadMood visible={helpPhase !== "happy"} topPx={-110} />
+                  <HappyMood visible={helpPhase === "happy"} topPx={-114} />
+                  <BasketballProp phase={helpPhase} />
+                </>
+              )}
+              {/* Help-YOU scene: blue carries duct tape as he walks to yellow */}
+              {helpStage === "you" && leadHelping && (
+                <DuctTapeProp phase={helpPhase} />
+              )}
+
               <VerbAnimationLayer
                 descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
                 compound={prekScene?.descriptor ?? null}
