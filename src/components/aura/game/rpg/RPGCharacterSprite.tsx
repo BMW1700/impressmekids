@@ -1243,6 +1243,82 @@ export const RPGCharacterSprite = ({
               <div className="absolute right-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
             </>
           )}
+
+          {isClapping && (
+            <>
+              {/* Impact burst between the hands on each clap (4 claps over 1.6s) */}
+              <motion.div
+                key={`clap-burst-${limbKey}`}
+                className="absolute"
+                style={{ left: '50%', top: '58%', width: '32%', height: '32%', transform: 'translate(-50%, -50%)' }}
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{
+                  opacity: [0, 1, 0, 1, 0, 1, 0, 1, 0],
+                  scale: [0.4, 1.2, 0.4, 1.2, 0.4, 1.2, 0.4, 1.2, 0.4],
+                }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', times: [0, 0.08, 0.2, 0.32, 0.45, 0.57, 0.7, 0.82, 1] }}
+              >
+                <div className="absolute inset-0 rounded-full bg-yellow-300/70 blur-md" />
+                <div className="absolute inset-[28%] rounded-full bg-white" />
+                {[0, 60, 120, 180, 240, 300].map((deg) => (
+                  <div
+                    key={`ray-${deg}`}
+                    className="absolute left-1/2 top-1/2 w-[6%] h-[55%] bg-amber-400 rounded-full origin-top"
+                    style={{ transform: `translate(-50%, 0) rotate(${deg}deg)` }}
+                  />
+                ))}
+              </motion.div>
+            </>
+          )}
+
+          {isDancing && (
+            <>
+              {/* Disco ball above the head */}
+              <motion.div
+                key={`disco-${limbKey}`}
+                className="absolute"
+                style={{ left: '50%', top: '-12%', width: '26%', height: '26%', transform: 'translateX(-50%)' }}
+                animate={{ rotate: [0, 360], y: [0, -3, 0, -3, 0] }}
+                transition={{
+                  rotate: { repeat: Infinity, duration: 3, ease: 'linear' },
+                  y: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' },
+                }}
+              >
+                {/* String to ceiling */}
+                <div className="absolute left-1/2 -top-3 w-px h-3 bg-slate-400" />
+                {/* Ball */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_0_18px_rgba(192,132,252,0.7)]">
+                  {/* Mirror facets */}
+                  <div className="absolute inset-[10%] grid grid-cols-4 grid-rows-4 gap-[1px] rounded-full overflow-hidden opacity-80">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <div key={i} className={i % 3 === 0 ? 'bg-fuchsia-300' : i % 3 === 1 ? 'bg-cyan-200' : 'bg-amber-200'} />
+                    ))}
+                  </div>
+                  {/* Highlight */}
+                  <div className="absolute top-[15%] left-[18%] w-[26%] h-[20%] rounded-full bg-white/80 blur-[1px]" />
+                </div>
+              </motion.div>
+
+              {/* Floating music notes */}
+              {[
+                { left: '8%', top: '18%', delay: 0, note: '♪', color: 'text-fuchsia-500' },
+                { left: '78%', top: '24%', delay: 0.5, note: '♫', color: 'text-cyan-500' },
+                { left: '20%', top: '40%', delay: 1.0, note: '♬', color: 'text-amber-500' },
+                { left: '70%', top: '46%', delay: 0.3, note: '♩', color: 'text-emerald-500' },
+              ].map((n, i) => (
+                <motion.div
+                  key={`note-${i}-${limbKey}`}
+                  className={`absolute font-extrabold ${n.color} text-2xl sm:text-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none`}
+                  style={{ left: n.left, top: n.top }}
+                  initial={{ opacity: 0, y: 10, rotate: -10 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [10, -10, -28, -48], rotate: [-10, 8, -6, 10] }}
+                  transition={{ repeat: Infinity, duration: 2.2, delay: n.delay, ease: 'easeOut' }}
+                >
+                  {n.note}
+                </motion.div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
