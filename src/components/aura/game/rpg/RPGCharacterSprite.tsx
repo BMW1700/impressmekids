@@ -1179,7 +1179,7 @@ export const RPGCharacterSprite = ({
         className={`relative w-full h-full ${isEnemy ? 'scale-x-[-1]' : ''}`}
         style={
           isSleeping
-            ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(90deg)`, transformOrigin: 'center' }
+            ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}translateX(-22%) rotate(90deg)`, transformOrigin: 'center' }
             : isRunning
               ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(-20deg) rotate(-6deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
               : undefined
