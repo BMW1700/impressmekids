@@ -598,7 +598,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             waveSpawnedRef.current >= waveTotalRef.current &&
             enemiesRef.current.filter(e => !e.dying).length === 0) {
           transitioningRef.current = true;
-          const earned = coinsForWave(waveRef.current);
+          const earned = Math.round(coinsForWave(waveRef.current) * knightStatsRef.current.goldFindMul);
           coinsRef.current += earned;
           const completedWave = waveRef.current;
 
