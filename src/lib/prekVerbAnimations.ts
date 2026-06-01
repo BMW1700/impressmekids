@@ -189,9 +189,9 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "ME!", color: "#ef4444" },
-    // character pulls IN toward itself, pulses bigger ("me, me, look at me!")
+    // character pulls IN toward itself, pulses bigger ("me, me, look at me!") — no rotation
     transform: tx(
-      { scale: [1, 1.15, 1.25, 1.15, 1.25, 1.1, 1], rotate: [0, -8, 0, -8, 0, -4, 0], x: [0, -8, -4, -8, -4, -2, 0] },
+      { scale: [1, 1.15, 1.25, 1.15, 1.25, 1.1, 1], x: [0, -8, -4, -8, -4, -2, 0] },
       1.9
     ),
     props: [],
@@ -200,9 +200,9 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "YOU!", color: "#3b82f6" },
-    // character LEANS RIGHT and reaches OUT (toward "you")
+    // character leans/reaches RIGHT (toward "you") — no rotation
     transform: tx(
-      { rotate: [0, 15, 25, 15, 25, 10, 0], x: [0, 15, 30, 20, 30, 15, 0], scaleX: [1, 1.05, 1.1, 1.05, 1.1, 1, 1] },
+      { x: [0, 15, 30, 20, 30, 15, 0], scaleX: [1, 1.05, 1.1, 1.05, 1.1, 1, 1] },
       1.9
     ),
     props: [],
