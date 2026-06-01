@@ -187,14 +187,18 @@ const AuraPractice = () => {
   });
 
   // Auto-select grade mode from profile default on page load
+  // Only applies to the Reading Stories library (non-game routes).
+  // In RPG/game mode, the user must explicitly pick a mode via ThemeSelector,
+  // so we never preselect a gameTheme from the profile default here.
   useEffect(() => {
+    if (isGameMode) return;
     if (!hasLoadedDefault && profile?.default_grade_mode) {
       const defaultTheme = getThemeFromGradeMode(profile.default_grade_mode as GradeMode);
       setGameTheme(defaultTheme);
       setStoredTheme(defaultTheme);
       setHasLoadedDefault(true);
     }
-  }, [profile, hasLoadedDefault]);
+  }, [profile, hasLoadedDefault, isGameMode]);
 
   const { data: activeScreening } = useActiveScreeningPassage(user?.id);
 
