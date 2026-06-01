@@ -833,19 +833,21 @@ export const RPGCharacterSprite = ({
   };
 
   const ARM_L_FOR: Record<string, LimbAnim> = {
-    // Clap — left hand swings sharply across body to meet right hand
-    clap:        { animate: { rotate: [-10, 75, -10, 75, -10, 75, -10, 75, -10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Clap — left arm swings inward to meet right hand at center-front, 4 claps.
+    clap:        { animate: { rotate: [-10, 55, -10, 55, -10, 55, -10, 55, -10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Wave — left arm stays at side (right arm does the waving)
-    wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.8 } },
     // Run — arms pump forward/back as character moves
-    run:         { animate: { rotate: [-70, 70, -70, 70, -70, 70, -70, 70] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:         { animate: { rotate: [-70, 70, -70, 70, -70, 70, -70, 70] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:         { animate: { rotate: [-10, -50, -10, -50, -10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [-10, -120, -100, -10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — both arms up overhead, swaying side to side
-    dance:       { animate: { rotate: [-150, -120, -150, -120, -150, -120, -150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance:       { animate: { rotate: [-150, -120, -150, -120, -150, -120, -150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [-30, -30, -30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.6 } },
+    // Eat — left arm steady at side; right hand brings apple to mouth.
     eat:         { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    // Drink — left arm slightly out to brace the glass.
     drink:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
     sleep:       { animate: { rotate: [25, 25, 25] }, transition: { duration: 1.8 } },
     'help me':   { animate: { rotate: [-10, 40, -10, 40, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
@@ -861,26 +863,26 @@ export const RPGCharacterSprite = ({
     spin:        { animate: { rotate: [-10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
     twirl:       { animate: { rotate: [-10, -180, -360, -540] }, transition: { duration: 1.6, ease: 'linear' } },
     fly:         { animate: { rotate: [-60, -40, -60, -40, -60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
-    // Reaching out to the left — both arms extend leftward to comfort/help someone.
     reach_left:  { animate: { rotate: [-95, -115, -95, -115, -95] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    // Receiving help — gentle inward pulse, like accepting a hug.
     comforted:   { animate: { rotate: [-5, 25, -5, 25, -5] }, transition: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } },
   };
   const ARM_R_FOR: Record<string, LimbAnim> = {
-    // Clap — right hand swings sharply across body to meet left hand
-    clap:        { animate: { rotate: [10, -75, 10, -75, 10, -75, 10, -75, 10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Clap — right arm swings inward to meet left hand at center-front, 4 claps.
+    clap:        { animate: { rotate: [10, -55, 10, -55, 10, -55, 10, -55, 10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Wave — right arm raised overhead, hand rocks back and forth like a greeting
-    wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Run — arms pump opposite to left arm
-    run:         { animate: { rotate: [70, -70, 70, -70, 70, -70, 70, -70] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:         { animate: { rotate: [70, -70, 70, -70, 70, -70, 70, -70] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:         { animate: { rotate: [10, 50, 10, 50, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — right arm overhead swaying with left
-    dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
-    eat:         { animate: { rotate: [10, -110, -120, -110, -120, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
-    drink:       { animate: { rotate: [10, -120, -130, -130, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    // Eat — right arm brings apple from front to mouth three times.
+    eat:         { animate: { rotate: [10, -110, -120, -110, -120, -110, -120, -100, 10] }, transition: { duration: 2.5, ease: 'easeInOut' } },
+    // Drink — right arm holds glass at mouth for entire 3s drink.
+    drink:       { animate: { rotate: [10, -120, -130, -130, -130, -130, -110, 10] }, transition: { duration: 3, ease: 'easeInOut' } },
     sleep:       { animate: { rotate: [-25, -25, -25] }, transition: { duration: 1.8 } },
     'help me':   { animate: { rotate: [10, -40, 10, -40, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
     'help you':  { animate: { rotate: [10, 100, 110, 100, 110, 60, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
@@ -895,22 +897,20 @@ export const RPGCharacterSprite = ({
     spin:        { animate: { rotate: [10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
     twirl:       { animate: { rotate: [10, 180, 360, 540] }, transition: { duration: 1.6, ease: 'linear' } },
     fly:         { animate: { rotate: [60, 40, 60, 40, 60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
-    // Reaching to the left — right arm crosses body to the left (negative rotation).
     reach_left:  { animate: { rotate: [-85, -110, -85, -110, -85] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    // Receiving help — gentle inward pulse mirrored.
     comforted:   { animate: { rotate: [5, -25, 5, -25, 5] }, transition: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } },
   };
   const LEG_L_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [0, -12, 0, -12, 0, -12, 0, -12], rotate: [0, -30, 0, -30, 0, -30, 0, -30] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:   { animate: { y: [0, -12, 0, -12, 0, -12, 0, -12], rotate: [0, -30, 0, -30, 0, -30, 0, -30] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -14, 0, 14, 0, -14, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -14, 0, 14, 0, -14, 0] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
   };
   const LEG_R_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [-12, 0, -12, 0, -12, 0, -12, 0], rotate: [30, 0, 30, 0, 30, 0, 30, 0] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:   { animate: { y: [-12, 0, -12, 0, -12, 0, -12, 0], rotate: [30, 0, 30, 0, 30, 0, 30, 0] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [14, 0, -14, 0, 14, 0, -14] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [14, 0, -14, 0, 14, 0, -14] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
   };
 
   // Lookup with first-word fallback so phrases like "clap your hands" still match "clap".
