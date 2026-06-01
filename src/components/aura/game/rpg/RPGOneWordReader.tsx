@@ -131,6 +131,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // - 'you' scene: yellow is sad with a broken bat; blue tapes it back together.
   const [helpStage, setHelpStage] = useState<null | "me" | "you">(null);
   const [helpPhase, setHelpPhase] = useState<"setup" | "approach" | "fix" | "happy">("setup");
+  // Horizontal offset for the yellow helper. After the "help me" scene ends,
+  // the helper slides further right to make room — and stays there for the
+  // "help you" scene, where the blue lead walks over to him.
+  const [helperOffsetX, setHelperOffsetX] = useState(0);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
