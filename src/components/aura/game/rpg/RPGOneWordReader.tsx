@@ -412,6 +412,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   }
                 />
               </div>
+
+              {/* Help-ME scene overlays on the LEAD (blue) */}
+              {helpStage === "me" && (
+                <>
+                  <SadMood visible={helpPhase !== "happy"} topPx={-110} />
+                  <HappyMood visible={helpPhase === "happy"} topPx={-114} />
+                  <BasketballProp phase={helpPhase} />
+                </>
+              )}
+              {/* Help-YOU scene: blue carries duct tape as he walks to yellow */}
+              {helpStage === "you" && leadHelping && (
+                <DuctTapeProp phase={helpPhase} />
+              )}
+
               <VerbAnimationLayer
                 descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
                 compound={prekScene?.descriptor ?? null}
