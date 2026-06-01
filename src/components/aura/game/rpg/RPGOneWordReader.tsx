@@ -319,6 +319,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   isEnemy
                   size="lg"
                   isTakingDamage={enemyHit}
+                  action={prekScene ? currentPhrase : null}
+                  actionNonce={prekScene?.id ?? 0}
                 />
               </div>
               <VerbAnimationLayer
