@@ -833,12 +833,16 @@ export const RPGCharacterSprite = ({
   };
 
   const ARM_L_FOR: Record<string, LimbAnim> = {
-    clap:        { animate: { rotate: [-10, 60, -10, 60, -10, 40, -10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
+    // Clap — left hand swings sharply across body to meet right hand
+    clap:        { animate: { rotate: [-10, 75, -10, 75, -10, 75, -10, 75, -10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Wave — left arm stays at side (right arm does the waving)
     wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
-    run:         { animate: { rotate: [-60, 60, -60, 60, -60, 60, -60] }, transition: { duration: 1.5, ease: 'linear' } },
+    // Run — arms pump forward/back as character moves
+    run:         { animate: { rotate: [-70, 70, -70, 70, -70, 70, -70, 70] }, transition: { duration: 1.4, ease: 'linear' } },
     hop:         { animate: { rotate: [-10, -50, -10, -50, -10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [-10, -120, -100, -10] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance:       { animate: { rotate: [-10, -90, -10, -90, -10, -90, -10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    // Dance — both arms up overhead, swaying side to side
+    dance:       { animate: { rotate: [-150, -120, -150, -120, -150, -120, -150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [-30, -30, -30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.6 } },
     eat:         { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
@@ -859,12 +863,16 @@ export const RPGCharacterSprite = ({
     fly:         { animate: { rotate: [-60, -40, -60, -40, -60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
   };
   const ARM_R_FOR: Record<string, LimbAnim> = {
-    clap:        { animate: { rotate: [10, -60, 10, -60, 10, -40, 10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
-    wave:        { animate: { rotate: [10, -90, 10, -90, 10, -90, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
-    run:         { animate: { rotate: [60, -60, 60, -60, 60, -60, 60] }, transition: { duration: 1.5, ease: 'linear' } },
+    // Clap — right hand swings sharply across body to meet left hand
+    clap:        { animate: { rotate: [10, -75, 10, -75, 10, -75, 10, -75, 10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Wave — right arm raised overhead, hand rocks back and forth like a greeting
+    wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    // Run — arms pump opposite to left arm
+    run:         { animate: { rotate: [70, -70, 70, -70, 70, -70, 70, -70] }, transition: { duration: 1.4, ease: 'linear' } },
     hop:         { animate: { rotate: [10, 50, 10, 50, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance:       { animate: { rotate: [10, 90, 10, 90, 10, 90, 10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    // Dance — right arm overhead swaying with left
+    dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     eat:         { animate: { rotate: [10, -110, -120, -110, -120, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
@@ -885,23 +893,27 @@ export const RPGCharacterSprite = ({
     fly:         { animate: { rotate: [60, 40, 60, 40, 60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
   };
   const LEG_L_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [0, -10, 0, -10, 0, -10, 0], rotate: [0, -25, 0, -25, 0, -25, 0] }, transition: { duration: 1.5, ease: 'linear' } },
+    run:   { animate: { y: [0, -12, 0, -12, 0, -12, 0, -12], rotate: [0, -30, 0, -30, 0, -30, 0, -30] }, transition: { duration: 1.4, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -10, 0, 10, 0] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -14, 0, 14, 0, -14, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
   };
   const LEG_R_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [-10, 0, -10, 0, -10, 0, -10], rotate: [25, 0, 25, 0, 25, 0, 25] }, transition: { duration: 1.5, ease: 'linear' } },
+    run:   { animate: { y: [-12, 0, -12, 0, -12, 0, -12, 0], rotate: [30, 0, 30, 0, 30, 0, 30, 0] }, transition: { duration: 1.4, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [10, 0, -10, 0, 10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [14, 0, -14, 0, 14, 0, -14] }, transition: { duration: 1.6, ease: 'easeInOut' } },
   };
 
-  const actKey = (action ?? '').toLowerCase().trim();
+  // Lookup with first-word fallback so phrases like "clap your hands" still match "clap".
+  const rawAct = (action ?? '').toLowerCase().trim();
+  const hasExact = !!(ARM_L_FOR[rawAct] || ARM_R_FOR[rawAct] || LEG_L_FOR[rawAct] || LEG_R_FOR[rawAct]);
+  const actKey = hasExact ? rawAct : (rawAct.split(/\s+/)[0] || '');
   const armL = ARM_L_FOR[actKey] ?? IDLE_ARM_L;
   const armR = ARM_R_FOR[actKey] ?? IDLE_ARM_R;
   const legL = LEG_L_FOR[actKey] ?? IDLE_LEG;
   const legR = LEG_R_FOR[actKey] ?? IDLE_LEG;
+  const isRunning = actKey === 'run';
   // Re-key on actionNonce so the same action replays cleanly
   const limbKey = `${actKey}-${actionNonce}`;
 
@@ -1062,21 +1074,48 @@ export const RPGCharacterSprite = ({
     }
   };
 
+  // For running: move character horizontally to the right (visually).
+  // When isEnemy, the wrapper is mirrored via scale-x-[-1], so local +x becomes
+  // visual -x. Flip the sign so the character always runs to the screen-right.
+  const runX = isRunning ? (isEnemy ? [0, -30, -60, -90, -60, -30, 0] : [0, 30, 60, 90, 60, 30, 0]) : 0;
+
   return (
     <motion.div
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
-        x: isAttacking ? (isEnemy ? 30 : -30) : 0,
+        x: isAttacking ? (isEnemy ? 30 : -30) : runX,
         scale: isTakingDamage ? 0.95 : 1,
         y: isTakingDamage ? [0, -5, 0] : [0, -3, 0],
       }}
       transition={{
         y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
-        x: { type: 'spring', stiffness: 400, damping: 15 },
+        x: isRunning
+          ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
+          : { type: 'spring', stiffness: 400, damping: 15 },
         scale: { duration: 0.2 },
       }}
       style={{ perspective: '200px' }}
     >
+      {/* Wind streaks behind a running character */}
+      {isRunning && (
+        <div className="pointer-events-none absolute inset-y-0 -left-8 w-16 z-0 flex flex-col justify-center gap-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <motion.div
+              key={`wind-${i}-${limbKey}`}
+              className="h-1 rounded-full bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.7)]"
+              initial={{ x: 30, opacity: 0, width: '40%' }}
+              animate={{ x: [30, -40], opacity: [0, 0.9, 0], width: ['30%', '95%', '40%'] }}
+              transition={{
+                repeat: Infinity,
+                duration: 0.55,
+                ease: 'easeOut',
+                delay: i * 0.12,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Shadow */}
       <motion.div
         className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[80%] h-4 
