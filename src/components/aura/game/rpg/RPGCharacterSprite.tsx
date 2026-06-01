@@ -1229,7 +1229,7 @@ export const RPGCharacterSprite = ({
             <div
               key={`glass-${limbKey}`}
               className="absolute"
-              style={{ right: '16%', top: '42%', width: '20%', height: '30%' }}
+              style={{ left: '36%', top: '38%', width: '18%', height: '28%' }}
             >
               <div className="absolute inset-0 rounded-b-xl rounded-t-sm border-[3px] border-white/90 bg-white/10 overflow-hidden shadow-md">
                 <motion.div
