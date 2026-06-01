@@ -1,42 +1,26 @@
 // Pre-K signature verb animations.
-// Each Pre-K word/phrase gets a unique, instantly-recognizable mini-scene built from
-// multiple emoji props + a matching character body transform + an optional action label.
-// Shared verbAnimations.ts stays lean for grades 6–12 battle mode; this layer only runs
-// inside RPGOneWordReader (Pre-K worlds 102 / 103).
+// The CHARACTER itself performs every action — no floating emoji props.
+// Meaning is conveyed through body motion (jump, tilt, shrink, lean, hop, spin)
+// plus a bold text label that names the action/word being practiced.
+//
+// Visual conventions for Pre-K clarity:
+//   • "ME / MY / I"   → character pulses in place, bounces toward viewer (scale up)
+//   • "YOU / YOUR"    → character LEANS or moves to the RIGHT (toward where "you" stands)
+//   • "IN"            → character shrinks DOWN + fades (going inside)
+//   • "ON"            → character hops UP and stays elevated (on top)
+//   • "HELP"          → character leans in / reaches with a tilt
+// Labels are large colored text — they ARE the literacy reinforcement.
 
 import type {
   CompoundVerbDescriptor,
-  EmojiPropDescriptor,
   TransformVerbDescriptor,
 } from "./verbAnimations";
 import type { TargetAndTransition } from "framer-motion";
 
-const tx = (animate: TargetAndTransition, duration = 1.2): TransformVerbDescriptor => ({
+const tx = (animate: TargetAndTransition, duration = 1.4): TransformVerbDescriptor => ({
   kind: "transform",
   animate: { ...animate, transition: { duration, ease: "easeInOut" } },
 });
-
-const prop = (
-  emoji: string,
-  from: { x: number; y: number },
-  to: { x: number; y: number },
-  opts: Partial<EmojiPropDescriptor> = {}
-): EmojiPropDescriptor => ({
-  kind: "emoji",
-  emoji,
-  from,
-  to,
-  duration: 1.4,
-  startScale: 0.6,
-  endScale: 1,
-  ...opts,
-});
-
-// Visual conventions for Pre-K clarity:
-//   🧒  = "me / I / my"   (always placed AT or NEAR the character anchor)
-//   🧑  = "you / your"     (always placed AWAY, off to the right)
-//   👉  = directional arrow showing WHICH person is being talked about
-//   Bold colored label calls out the key word ("ME!", "YOU!", "IN", "ON")
 
 const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
   // ─── World 102 verbs ────────────────────────────────────────────
@@ -44,340 +28,283 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 1.8,
     label: { text: "JUMP!", color: "#f59e0b" },
-    transform: tx({ y: [0, -80, 0, -30, 0], scaleY: [1, 1, 0.7, 1, 1] }, 1.6),
-    props: [
-      prop("⬆️", { x: 0, y: -10 }, { x: 0, y: -90 }, { duration: 0.6, delay: 0.0, endScale: 1.4 }),
-      prop("💨", { x: -25, y: 50 }, { x: -55, y: 60 }, { duration: 0.8, delay: 1.0, endScale: 1.3 }),
-      prop("💨", { x: 25, y: 50 }, { x: 55, y: 60 }, { duration: 0.8, delay: 1.0, endScale: 1.3 }),
-    ],
+    // crouch → explode up → land → small rebound
+    transform: tx(
+      { y: [0, 15, -90, 0, -25, 0], scaleY: [1, 0.7, 1.05, 0.8, 1, 1], scaleX: [1, 1.2, 0.95, 1.15, 1, 1] },
+      1.7
+    ),
+    props: [],
   },
   hop: {
     kind: "compound",
     duration: 1.7,
     label: { text: "HOP!", color: "#10b981" },
-    transform: tx({ y: [0, -35, 0, -30, 0, -25, 0], x: [0, 5, 10, 15, 20, 25, 30] }, 1.5),
-    props: [
-      prop("🐰", { x: -50, y: 20 }, { x: 50, y: 20 }, { duration: 1.5, endScale: 1.3 }),
-    ],
+    // little bunny-hops across the spot
+    transform: tx(
+      { y: [0, -30, 0, -25, 0, -20, 0], x: [0, 10, 10, 20, 20, 30, 30], scaleY: [1, 0.85, 1, 0.85, 1, 0.9, 1] },
+      1.6
+    ),
+    props: [],
   },
   run: {
     kind: "compound",
     duration: 1.6,
     label: { text: "RUN!", color: "#ef4444" },
-    transform: tx({ x: [0, -8, -4, -8, -4, 0], rotate: [0, -5, -8, -5, 0] }, 1.4),
-    props: [
-      prop("🏃", { x: 0, y: 0 }, { x: -100, y: 0 }, { duration: 1.4, endScale: 1.4 }),
-      prop("💨", { x: 20, y: 10 }, { x: -90, y: 10 }, { duration: 0.8, delay: 0.2 }),
-      prop("💨", { x: 20, y: -5 }, { x: -90, y: -5 }, { duration: 0.8, delay: 0.5, endScale: 0.8 }),
-    ],
+    // forward lean + leg-pump rocking + slide forward then back
+    transform: tx(
+      { rotate: [0, -12, -10, -12, -10, -8, 0], x: [0, -10, -25, -10, -25, -10, 0], y: [0, -4, 0, -4, 0, -2, 0] },
+      1.5
+    ),
+    props: [],
   },
   spin: {
     kind: "compound",
     duration: 1.5,
     label: { text: "SPIN!", color: "#8b5cf6" },
-    transform: tx({ rotate: [0, 720] }, 1.3),
-    props: [
-      prop("🌀", { x: 0, y: 0 }, { x: 0, y: 0 }, { duration: 1.4, startScale: 0.4, endScale: 1.8 }),
-    ],
+    transform: tx({ rotate: [0, 360, 720], scale: [1, 1.05, 1] }, 1.4),
+    props: [],
   },
   flip: {
     kind: "compound",
     duration: 1.6,
     label: { text: "FLIP!", color: "#06b6d4" },
-    transform: tx({ rotateX: [0, 360], y: [0, -40, 0] }, 1.4),
-    props: [
-      prop("🤸", { x: -60, y: 0 }, { x: 60, y: 0 }, { duration: 1.4, rotate: 360, endScale: 1.4 }),
-    ],
+    // pops up and rotates head-over-heels
+    transform: tx({ rotateX: [0, 180, 360], y: [0, -50, -50, -25, 0], scale: [1, 1.05, 1] }, 1.5),
+    props: [],
   },
   twirl: {
     kind: "compound",
     duration: 1.7,
     label: { text: "TWIRL!", color: "#ec4899" },
-    transform: tx({ rotate: [0, 540], scaleX: [1, 0.95, 1, 0.95, 1] }, 1.5),
-    props: [
-      prop("💃", { x: 0, y: 0 }, { x: 0, y: 0 }, { duration: 1.5, rotate: 360, endScale: 1.5 }),
-      prop("✨", { x: -30, y: -10 }, { x: 30, y: -10 }, { duration: 1.4, delay: 0.2, endScale: 1.2 }),
-    ],
+    transform: tx({ rotate: [0, 540, 720], scaleX: [1, 0.92, 1, 0.92, 1] }, 1.6),
+    props: [],
   },
   clap: {
     kind: "compound",
     duration: 1.5,
     label: { text: "CLAP!", color: "#f59e0b" },
-    transform: tx({ scaleX: [1, 0.85, 1.05, 0.9, 1] }, 1.3),
-    props: [
-      prop("👏", { x: -70, y: 10 }, { x: -10, y: 10 }, { duration: 0.4, delay: 0.0, endScale: 1.4 }),
-      prop("👏", { x: 70, y: 10 }, { x: 10, y: 10 }, { duration: 0.4, delay: 0.0, endScale: 1.4 }),
-      prop("👏", { x: -70, y: 10 }, { x: -10, y: 10 }, { duration: 0.4, delay: 0.6, endScale: 1.4 }),
-      prop("👏", { x: 70, y: 10 }, { x: 10, y: 10 }, { duration: 0.4, delay: 0.6, endScale: 1.4 }),
-      prop("👏", { x: -70, y: 10 }, { x: -10, y: 10 }, { duration: 0.4, delay: 1.1, endScale: 1.4 }),
-      prop("👏", { x: 70, y: 10 }, { x: 10, y: 10 }, { duration: 0.4, delay: 1.1, endScale: 1.4 }),
-    ],
+    // squishes side-to-side like hands meeting
+    transform: tx(
+      { scaleX: [1, 0.7, 1.15, 0.75, 1.15, 0.8, 1], scaleY: [1, 1.1, 0.95, 1.1, 0.95, 1.05, 1] },
+      1.4
+    ),
+    props: [],
   },
   wave: {
     kind: "compound",
     duration: 1.6,
     label: { text: "HI!", color: "#3b82f6" },
-    transform: tx({ rotate: [0, -8, 8, -8, 8, 0] }, 1.4),
-    props: [
-      prop("👋", { x: 50, y: -30 }, { x: 50, y: -30 }, { duration: 1.5, rotate: 30, endScale: 1.6 }),
-    ],
+    // friendly side-to-side tip like a hand waving
+    transform: tx({ rotate: [0, -18, 18, -18, 18, -10, 0], y: [0, -4, -4, -4, -4, -2, 0] }, 1.5),
+    props: [],
   },
   dance: {
     kind: "compound",
-    duration: 1.8,
+    duration: 1.9,
     label: { text: "DANCE!", color: "#ec4899" },
-    transform: tx({ rotate: [0, -12, 12, -12, 12, 0], y: [0, -8, 0, -8, 0, -8, 0] }, 1.6),
-    props: [
-      prop("💃", { x: -50, y: 10 }, { x: -50, y: 10 }, { duration: 1.6, endScale: 1.4 }),
-      prop("🕺", { x: 50, y: 10 }, { x: 50, y: 10 }, { duration: 1.6, endScale: 1.4 }),
-      prop("🎵", { x: 0, y: -10 }, { x: -40, y: -60 }, { duration: 1.4, delay: 0.3, rotate: -30 }),
-      prop("🎶", { x: 0, y: -10 }, { x: 40, y: -60 }, { duration: 1.4, delay: 0.5, rotate: 30 }),
-    ],
+    transform: tx(
+      { rotate: [0, -15, 15, -15, 15, 0], y: [0, -10, 0, -10, 0, -10, 0], scaleY: [1, 0.95, 1.05, 0.95, 1.05, 1] },
+      1.8
+    ),
+    props: [],
   },
   eat: {
     kind: "compound",
     duration: 1.6,
-    label: { text: "YUM!", color: "#f59e0b" },
-    transform: tx({ scale: [1, 1.05, 0.95, 1.05, 1] }, 1.4),
-    props: [
-      prop("🍎", { x: 60, y: 0 }, { x: 0, y: -10 }, { duration: 0.7, delay: 0.0, endScale: 0.6 }),
-      prop("👄", { x: 0, y: -10 }, { x: 0, y: -10 }, { duration: 0.5, delay: 0.7, endScale: 1.2 }),
-      prop("😋", { x: 0, y: -30 }, { x: 0, y: -55 }, { duration: 0.8, delay: 0.9, endScale: 1.4 }),
-    ],
+    label: { text: "EAT!", color: "#f59e0b" },
+    // mouth-chewing rhythm + happy bob
+    transform: tx({ scaleY: [1, 1.15, 0.9, 1.15, 0.9, 1.1, 1], y: [0, -4, 0, -4, 0, -2, 0] }, 1.5),
+    props: [],
   },
   drink: {
     kind: "compound",
     duration: 1.6,
     label: { text: "GULP!", color: "#0ea5e9" },
-    transform: tx({ rotate: [0, -12, -12, 0] }, 1.4),
-    props: [
-      prop("🥤", { x: 60, y: 30 }, { x: 5, y: -10 }, { duration: 0.8, delay: 0.0, rotate: -45, endScale: 1.1 }),
-      prop("💧", { x: 5, y: -10 }, { x: 5, y: 20 }, { duration: 0.5, delay: 0.9 }),
-      prop("💧", { x: 10, y: -10 }, { x: 10, y: 25 }, { duration: 0.5, delay: 1.1 }),
-    ],
+    // tilts head WAY back and holds — like drinking from a cup
+    transform: tx({ rotate: [0, -30, -30, -30, 0], y: [0, -5, -5, -5, 0] }, 1.5),
+    props: [],
   },
   sleep: {
     kind: "compound",
     duration: 1.9,
     label: { text: "ZZZ", color: "#6366f1" },
-    transform: tx({ rotate: [0, 18, 18, 18, 0], scale: [1, 0.98, 0.98, 0.98, 1] }, 1.7),
-    props: [
-      prop("🛏️", { x: 0, y: 50 }, { x: 0, y: 50 }, { duration: 1.8, startScale: 1.2, endScale: 1.4 }),
-      prop("💤", { x: 20, y: -10 }, { x: 35, y: -60 }, { duration: 1.0, delay: 0.3, startScale: 0.4, endScale: 1.0 }),
-      prop("💤", { x: 20, y: -10 }, { x: 45, y: -75 }, { duration: 1.0, delay: 0.8, startScale: 0.4, endScale: 1.2 }),
-      prop("💤", { x: 20, y: -10 }, { x: 55, y: -90 }, { duration: 1.0, delay: 1.3, startScale: 0.4, endScale: 1.4 }),
-    ],
+    // slow lean to one side, eyes-shut feel (scale down + tilt + soft breathing)
+    transform: tx(
+      { rotate: [0, 8, 18, 22, 22, 18, 0], scale: [1, 0.98, 0.95, 0.95, 0.95, 0.97, 1], y: [0, 5, 10, 10, 10, 5, 0] },
+      1.8
+    ),
+    props: [],
   },
   sing: {
     kind: "compound",
     duration: 1.9,
     label: { text: "LA LA!", color: "#a855f7" },
-    transform: tx({ scaleY: [1, 1.1, 0.95, 1.1, 0.95, 1], y: [0, -5, 0, -5, 0] }, 1.7),
-    props: [
-      prop("🎤", { x: 30, y: -10 }, { x: 5, y: -15 }, { duration: 0.6, delay: 0.0, endScale: 1.2 }),
-      prop("🎵", { x: 0, y: 0 }, { x: -50, y: -70 }, { duration: 1.3, delay: 0.4, rotate: -45 }),
-      prop("🎶", { x: 0, y: 0 }, { x: 50, y: -70 }, { duration: 1.3, delay: 0.7, rotate: 45 }),
-    ],
+    // mouth-open scale pulse on each note + happy bob
+    transform: tx(
+      { scaleY: [1, 1.15, 0.95, 1.15, 0.95, 1.15, 1], y: [0, -8, 0, -8, 0, -8, 0] },
+      1.8
+    ),
+    props: [],
   },
   fly: {
     kind: "compound",
     duration: 1.9,
     label: { text: "FLY!", color: "#06b6d4" },
-    transform: tx({ x: [0, 30, -30, 30, 0], y: [0, -40, -60, -40, -20], rotate: [0, -8, 8, -8, 0] }, 1.7),
-    props: [
-      prop("🪽", { x: -40, y: 0 }, { x: -40, y: 0 }, { duration: 1.7, endScale: 1.4 }),
-      prop("🪽", { x: 40, y: 0 }, { x: 40, y: 0 }, { duration: 1.7, endScale: 1.4 }),
-      prop("☁️", { x: 60, y: -40 }, { x: -80, y: -40 }, { duration: 1.6, delay: 0.2 }),
-    ],
+    // floats up, drifts side-to-side, glides back down
+    transform: tx(
+      { y: [0, -40, -60, -55, -40, -20, 0], x: [0, 20, -10, 25, -15, 10, 0], rotate: [0, -6, 6, -6, 6, 0] },
+      1.8
+    ),
+    props: [],
   },
   grow: {
     kind: "compound",
     duration: 1.9,
     label: { text: "GROW!", color: "#22c55e" },
-    transform: tx({ scale: [1, 1.15, 1.3, 1.5, 1.7] }, 1.7),
-    props: [
-      prop("⬆️", { x: -50, y: -20 }, { x: -50, y: -60 }, { duration: 1.6, endScale: 1.4 }),
-      prop("⬆️", { x: 50, y: -20 }, { x: 50, y: -60 }, { duration: 1.6, endScale: 1.4 }),
-      prop("🌱", { x: 0, y: 60 }, { x: 0, y: 60 }, { duration: 0.5, delay: 0.0, startScale: 0.3, endScale: 0.8 }),
-      prop("🌳", { x: 0, y: 40 }, { x: 0, y: 40 }, { duration: 0.6, delay: 1.0, startScale: 0.7, endScale: 1.6 }),
-    ],
+    // starts tiny, steadily grows huge
+    transform: tx({ scale: [0.5, 0.7, 1, 1.3, 1.6, 1.8], y: [20, 15, 5, -5, -15, -20] }, 1.8),
+    props: [],
   },
   shrink: {
     kind: "compound",
-    duration: 1.5,
+    duration: 1.6,
     label: { text: "SMALL!", color: "#64748b" },
-    transform: tx({ scale: [1, 0.7, 0.3] }, 1.4),
-    props: [
-      prop("⬇️", { x: -50, y: 0 }, { x: -50, y: 30 }, { duration: 1.3, endScale: 1.4 }),
-      prop("⬇️", { x: 50, y: 0 }, { x: 50, y: 30 }, { duration: 1.3, endScale: 1.4 }),
-    ],
+    // starts big, shrinks down small
+    transform: tx({ scale: [1.4, 1.1, 0.8, 0.5, 0.3], y: [-10, -5, 0, 10, 20] }, 1.5),
+    props: [],
   },
   wiggle: {
     kind: "compound",
     duration: 1.5,
     label: { text: "WIGGLE!", color: "#a855f7" },
-    transform: tx({ rotate: [0, -15, 15, -15, 15, -10, 10, 0], x: [0, -5, 5, -5, 5, 0] }, 1.3),
-    props: [
-      prop("🪱", { x: -60, y: 20 }, { x: -60, y: 20 }, { duration: 1.4, rotate: 30, endScale: 1.4 }),
-      prop("🪱", { x: 60, y: 20 }, { x: 60, y: 20 }, { duration: 1.4, rotate: -30, endScale: 1.4 }),
-    ],
+    transform: tx(
+      { rotate: [0, -18, 18, -18, 18, -12, 12, 0], x: [0, -8, 8, -8, 8, -4, 4, 0], scaleX: [1, 0.95, 1.05, 0.95, 1.05, 1, 1, 1] },
+      1.4
+    ),
+    props: [],
   },
 
   // ─── World 103 phrases — CONTRASTIVE CLARITY ──────────────────────
-  // "ME / MY" → action centers ON the character (anchor). Self-marker 🧒 stays close.
-  // "YOU / YOUR" → action targets the OTHER person 🧑 placed off to the right.
+  // "ME / MY" → character moves/bounces TOWARD itself (pulses in place, leans LEFT/back-to-self)
+  // "YOU / YOUR" → character leans/moves RIGHT (toward where "you" would stand, off-screen)
 
   "help me": {
     kind: "compound",
     duration: 2.0,
     label: { text: "ME!", color: "#ef4444" },
-    transform: tx({ rotate: [0, -8, 0, -8, 0] }, 1.8),
-    props: [
-      // self-marker right at the character
-      prop("🧒", { x: 0, y: 0 }, { x: 0, y: 0 }, { duration: 1.9, endScale: 1.6 }),
-      // helping hand reaches IN toward me
-      prop("🤝", { x: 90, y: 10 }, { x: 20, y: 10 }, { duration: 1.0, delay: 0.2, endScale: 1.4 }),
-      // arrow points AT me
-      prop("👉", { x: 80, y: -30 }, { x: 25, y: -10 }, { duration: 0.9, delay: 1.0, endScale: 1.5 }),
-    ],
+    // character pulls IN toward itself, pulses bigger ("me, me, look at me!")
+    transform: tx(
+      { scale: [1, 1.15, 1.25, 1.15, 1.25, 1.1, 1], rotate: [0, -8, 0, -8, 0, -4, 0], x: [0, -8, -4, -8, -4, -2, 0] },
+      1.9
+    ),
+    props: [],
   },
   "help you": {
     kind: "compound",
     duration: 2.0,
     label: { text: "YOU!", color: "#3b82f6" },
-    transform: tx({ rotate: [0, 8, 0, 8, 0] }, 1.8),
-    props: [
-      // OTHER person placed far to the right
-      prop("🧑", { x: 90, y: 0 }, { x: 90, y: 0 }, { duration: 1.9, endScale: 1.6 }),
-      // helping hand reaches OUT from me toward them
-      prop("🤝", { x: 10, y: 10 }, { x: 70, y: 10 }, { duration: 1.0, delay: 0.2, endScale: 1.4 }),
-      // arrow points AT them
-      prop("👉", { x: 0, y: -30 }, { x: 70, y: -10 }, { duration: 0.9, delay: 1.0, endScale: 1.5 }),
-    ],
+    // character LEANS RIGHT and reaches OUT (toward "you")
+    transform: tx(
+      { rotate: [0, 15, 25, 15, 25, 10, 0], x: [0, 15, 30, 20, 30, 15, 0], scaleX: [1, 1.05, 1.1, 1.05, 1.1, 1, 1] },
+      1.9
+    ),
+    props: [],
   },
   "my dog": {
     kind: "compound",
     duration: 2.0,
     label: { text: "MINE!", color: "#ef4444" },
-    transform: tx({ y: [0, -5, 0, -5, 0] }, 1.8),
-    props: [
-      // self-marker close
-      prop("🧒", { x: -30, y: 0 }, { x: -30, y: 0 }, { duration: 1.9, endScale: 1.4 }),
-      // dog comes TO me
-      prop("🐶", { x: 100, y: 20 }, { x: 20, y: 20 }, { duration: 1.0, delay: 0.2, endScale: 1.4 }),
-      // hearts connect me + dog
-      prop("❤️", { x: -5, y: -20 }, { x: -5, y: -55 }, { duration: 0.8, delay: 1.1, endScale: 1.4 }),
-      prop("❤️", { x: 10, y: -10 }, { x: 10, y: -45 }, { duration: 0.8, delay: 1.3, endScale: 1.2 }),
-    ],
+    // pulses in place + small happy hop (self-focused, "this is mine")
+    transform: tx(
+      { scale: [1, 1.2, 1.1, 1.2, 1.1, 1.15, 1], y: [0, -10, 0, -10, 0, -5, 0], rotate: [0, -5, 5, -5, 5, 0] },
+      1.9
+    ),
+    props: [],
   },
   "your dog": {
     kind: "compound",
     duration: 2.0,
     label: { text: "YOURS!", color: "#3b82f6" },
-    transform: tx({ rotate: [0, 5, 0] }, 1.8),
-    props: [
-      // me on the left
-      prop("🧒", { x: -50, y: 0 }, { x: -50, y: 0 }, { duration: 1.9, endScale: 1.3 }),
-      // arrow from me pointing OUT to the other side
-      prop("👉", { x: -25, y: 0 }, { x: 40, y: 0 }, { duration: 0.9, delay: 0.2, endScale: 1.5 }),
-      // OTHER person on the right
-      prop("🧑", { x: 90, y: 0 }, { x: 90, y: 0 }, { duration: 1.9, endScale: 1.3 }),
-      // their dog right next to them
-      prop("🐶", { x: 70, y: 30 }, { x: 70, y: 30 }, { duration: 1.0, delay: 0.9, endScale: 1.3 }),
-    ],
+    // leans RIGHT (toward "you"), as if gesturing across
+    transform: tx(
+      { rotate: [0, 20, 25, 20, 25, 10, 0], x: [0, 20, 35, 25, 35, 15, 0] },
+      1.9
+    ),
+    props: [],
   },
   "in the box": {
     kind: "compound",
     duration: 2.0,
     label: { text: "IN", color: "#8b5cf6" },
-    // character ducks down and disappears INTO the box
-    transform: tx({ y: [0, 10, 40, 50], scale: [1, 1, 0.5, 0.3], opacity: [1, 1, 0.4, 0.1] }, 1.8),
-    props: [
-      // big open box
-      prop("📦", { x: 0, y: 30 }, { x: 0, y: 30 }, { duration: 1.9, startScale: 1.6, endScale: 1.9 }),
-      // arrow pointing DOWN into the box
-      prop("⬇️", { x: 0, y: -50 }, { x: 0, y: 10 }, { duration: 0.9, delay: 0.4, endScale: 1.6 }),
-    ],
+    // character SHRINKS DOWN and FADES — going inside something
+    transform: tx(
+      { y: [0, 5, 25, 45, 60], scale: [1, 0.85, 0.55, 0.3, 0.15], opacity: [1, 0.95, 0.7, 0.4, 0.1] },
+      1.9
+    ),
+    props: [],
   },
   "on the box": {
     kind: "compound",
     duration: 2.0,
     label: { text: "ON TOP", color: "#22c55e" },
-    // character hops UP and rests on top of the box
-    transform: tx({ y: [0, -50, -45, -40, -40] }, 1.8),
-    props: [
-      // box below
-      prop("📦", { x: 0, y: 50 }, { x: 0, y: 50 }, { duration: 1.9, startScale: 1.4, endScale: 1.6 }),
-      // arrow pointing UP / on top
-      prop("⬆️", { x: 0, y: 10 }, { x: 0, y: -60 }, { duration: 0.9, delay: 0.4, endScale: 1.6 }),
-      // sparkle on top of head to mark "standing on"
-      prop("✨", { x: 0, y: -70 }, { x: 0, y: -70 }, { duration: 1.0, delay: 1.0, endScale: 1.4 }),
-    ],
+    // character HOPS UP and STAYS ELEVATED (on top of something)
+    transform: tx(
+      { y: [0, -30, -55, -50, -50, -50, -50], scaleY: [1, 0.9, 1, 1, 1, 1, 1] },
+      1.9
+    ),
+    props: [],
   },
   "drink water": {
     kind: "compound",
     duration: 1.8,
     label: { text: "DRINK!", color: "#0ea5e9" },
-    transform: tx({ rotate: [0, -15, -15, 0] }, 1.6),
-    props: [
-      prop("🥤", { x: 60, y: 30 }, { x: 5, y: -5 }, { duration: 0.8, delay: 0.0, rotate: -45, endScale: 1.1 }),
-      prop("💧", { x: 5, y: -10 }, { x: 5, y: 20 }, { duration: 0.5, delay: 0.9 }),
-      prop("💧", { x: 10, y: -10 }, { x: 10, y: 25 }, { duration: 0.5, delay: 1.1 }),
-      prop("💧", { x: 0, y: -10 }, { x: 0, y: 22 }, { duration: 0.5, delay: 1.3 }),
-    ],
+    // big head-tilt back + hold (drinking from a cup), then return
+    transform: tx({ rotate: [0, -35, -35, -35, -10, 0], y: [0, -5, -5, -5, -2, 0] }, 1.7),
+    props: [],
   },
   "eat apple": {
     kind: "compound",
     duration: 1.8,
     label: { text: "EAT!", color: "#ef4444" },
-    transform: tx({ scale: [1, 1.05, 0.95, 1.1, 1] }, 1.6),
-    props: [
-      prop("🍎", { x: 60, y: 30 }, { x: 0, y: -5 }, { duration: 0.7, delay: 0.0, endScale: 0.5 }),
-      prop("👄", { x: 0, y: -5 }, { x: 0, y: -5 }, { duration: 0.4, delay: 0.7, endScale: 1.2 }),
-      prop("😋", { x: 0, y: -30 }, { x: 0, y: -60 }, { duration: 0.8, delay: 0.9, endScale: 1.4 }),
-      prop("🍎", { x: 0, y: 0 }, { x: 0, y: 0 }, { duration: 0.4, delay: 1.0, startScale: 0.4, endScale: 0 }),
-    ],
+    // chew-chew rhythm + bigger each bite
+    transform: tx(
+      { scaleY: [1, 1.15, 0.9, 1.2, 0.9, 1.25, 1], scaleX: [1, 0.95, 1.1, 0.95, 1.1, 0.95, 1], y: [0, -3, 0, -3, 0, -3, 0] },
+      1.7
+    ),
+    props: [],
   },
   "wash hands": {
     kind: "compound",
     duration: 2.0,
     label: { text: "WASH!", color: "#0ea5e9" },
-    transform: tx({ rotate: [0, -5, 5, -5, 5, 0] }, 1.8),
-    props: [
-      prop("🤲", { x: 0, y: 20 }, { x: 0, y: 20 }, { duration: 1.9, endScale: 1.5 }),
-      prop("💧", { x: 0, y: -50 }, { x: 0, y: 10 }, { duration: 0.8, delay: 0.0, endScale: 1.2 }),
-      prop("🫧", { x: -30, y: 20 }, { x: 30, y: 0 }, { duration: 1.2, delay: 0.5, endScale: 1.3 }),
-      prop("🫧", { x: 30, y: 20 }, { x: -30, y: 0 }, { duration: 1.2, delay: 0.7, endScale: 1.3 }),
-      prop("✨", { x: 0, y: 30 }, { x: 0, y: -10 }, { duration: 0.8, delay: 1.3, endScale: 1.3 }),
-    ],
+    // scrubbing side-to-side wiggle with little bounces (like rubbing hands together)
+    transform: tx(
+      { rotate: [0, -12, 12, -12, 12, -8, 8, 0], x: [0, -6, 6, -6, 6, -4, 4, 0], y: [0, -3, 0, -3, 0, -3, 0, 0] },
+      1.9
+    ),
+    props: [],
   },
   "plant seed": {
     kind: "compound",
     duration: 2.0,
     label: { text: "PLANT!", color: "#22c55e" },
-    transform: tx({ y: [0, 10, 0] }, 1.8),
-    props: [
-      // hand drops the seed
-      prop("🤲", { x: 0, y: -30 }, { x: 0, y: -30 }, { duration: 0.6, endScale: 1.3 }),
-      prop("🌰", { x: 0, y: -20 }, { x: 0, y: 50 }, { duration: 0.8, delay: 0.2, endScale: 1.1 }),
-      // dirt
-      prop("🟫", { x: 0, y: 60 }, { x: 0, y: 60 }, { duration: 1.9, startScale: 1.4, endScale: 1.6 }),
-      // sprout grows up
-      prop("🌱", { x: 0, y: 50 }, { x: 0, y: 30 }, { duration: 0.8, delay: 1.1, startScale: 0.3, endScale: 1.3 }),
-    ],
+    // bend down (squat to plant), then GROW UP big
+    transform: tx(
+      { y: [0, 25, 25, 5, -10, -20], scale: [1, 0.85, 0.85, 1, 1.2, 1.4], scaleY: [1, 0.7, 0.7, 0.95, 1.1, 1.2] },
+      1.9
+    ),
+    props: [],
   },
   "throw ball": {
     kind: "compound",
     duration: 1.7,
     label: { text: "THROW!", color: "#f59e0b" },
-    transform: tx({ rotate: [0, -20, 10, 0], x: [0, 15, 0, 0] }, 1.5),
-    props: [
-      // arm motion line
-      prop("💪", { x: 30, y: 0 }, { x: 30, y: 0 }, { duration: 0.5, endScale: 1.4 }),
-      // ball flies far away in an arc
-      prop("⚾", { x: 20, y: 0 }, { x: -140, y: -40 }, { duration: 1.2, delay: 0.3, rotate: 720, endScale: 0.7 }),
-      prop("💨", { x: 0, y: 0 }, { x: -100, y: -20 }, { duration: 0.8, delay: 0.5 }),
-    ],
+    // wind-up backward (rotate +), then big forward snap (rotate −) + lunge forward
+    transform: tx(
+      { rotate: [0, 20, 25, -20, -10, 0], x: [0, 10, 15, -25, -10, 0], scaleX: [1, 0.95, 0.95, 1.1, 1.05, 1] },
+      1.6
+    ),
+    props: [],
   },
 };
 
