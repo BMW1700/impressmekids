@@ -369,23 +369,23 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
-                allDone
+                prekScene?.descriptor.transform
+                  ? prekScene.descriptor.transform.animate
+                  : allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
                   : leadHelping
                   ? { x: [0, 18, 36, 54, 70, 80, 80, 80], y: [0, -4, 0, -4, 0, -2, 0, 0], rotate: [0, 4, 8, 6, 10, 8, 8, 8] }
-                  : prekScene?.descriptor.transform
-                  ? prekScene.descriptor.transform.animate
                   : verb?.descriptor.kind === "transform"
                   ? verb.descriptor.animate
                   : { y: [0, -8, 0] }
               }
               transition={
-                allDone
+                prekScene?.descriptor.transform
+                  ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
+                  : allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                   : leadHelping
                   ? { duration: 2.4, ease: "easeInOut" }
-                  : prekScene?.descriptor.transform
-                  ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
                   ? { duration: 0.9, ease: "easeInOut" }
                   : { duration: 2, repeat: Infinity, ease: "easeInOut" }
