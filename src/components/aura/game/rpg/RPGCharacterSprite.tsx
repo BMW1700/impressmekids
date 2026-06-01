@@ -1074,21 +1074,48 @@ export const RPGCharacterSprite = ({
     }
   };
 
+  // For running: move character horizontally to the right (visually).
+  // When isEnemy, the wrapper is mirrored via scale-x-[-1], so local +x becomes
+  // visual -x. Flip the sign so the character always runs to the screen-right.
+  const runX = isRunning ? (isEnemy ? [0, -30, -60, -90, -60, -30, 0] : [0, 30, 60, 90, 60, 30, 0]) : 0;
+
   return (
     <motion.div
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
-        x: isAttacking ? (isEnemy ? 30 : -30) : 0,
+        x: isAttacking ? (isEnemy ? 30 : -30) : runX,
         scale: isTakingDamage ? 0.95 : 1,
         y: isTakingDamage ? [0, -5, 0] : [0, -3, 0],
       }}
       transition={{
         y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
-        x: { type: 'spring', stiffness: 400, damping: 15 },
+        x: isRunning
+          ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
+          : { type: 'spring', stiffness: 400, damping: 15 },
         scale: { duration: 0.2 },
       }}
       style={{ perspective: '200px' }}
     >
+      {/* Wind streaks behind a running character */}
+      {isRunning && (
+        <div className="pointer-events-none absolute inset-y-0 -left-8 w-16 z-0 flex flex-col justify-center gap-1.5">
+          {[0, 1, 2, 3].map((i) => (
+            <motion.div
+              key={`wind-${i}-${limbKey}`}
+              className="h-1 rounded-full bg-white/80 shadow-[0_0_6px_rgba(255,255,255,0.7)]"
+              initial={{ x: 30, opacity: 0, width: '40%' }}
+              animate={{ x: [30, -40], opacity: [0, 0.9, 0], width: ['30%', '95%', '40%'] }}
+              transition={{
+                repeat: Infinity,
+                duration: 0.55,
+                ease: 'easeOut',
+                delay: i * 0.12,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Shadow */}
       <motion.div
         className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[80%] h-4 
