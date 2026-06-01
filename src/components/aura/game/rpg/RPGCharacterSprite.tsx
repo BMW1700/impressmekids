@@ -922,6 +922,7 @@ export const RPGCharacterSprite = ({
   const legL = LEG_L_FOR[actKey] ?? IDLE_LEG;
   const legR = LEG_R_FOR[actKey] ?? IDLE_LEG;
   const isRunning = actKey === 'run';
+  const isFlying = actKey === 'fly';
   // Re-key on actionNonce so the same action replays cleanly
   const limbKey = `${actKey}-${actionNonce}`;
 
@@ -1095,6 +1096,9 @@ export const RPGCharacterSprite = ({
   // When isEnemy, the wrapper is mirrored via scale-x-[-1], so local +x becomes
   // visual -x. Flip the sign so the character always runs to the screen-right.
   const runX = isRunning ? (isEnemy ? [0, -30, -60, -90, -60, -30, 0] : [0, 30, 60, 90, 60, 30, 0]) : 0;
+  // Flying: start in place, swoop UP, then drift to the RIGHT across the screen.
+  const flyX = isFlying ? (isEnemy ? [0, -10, -40, -90, -150, -200] : [0, 10, 40, 90, 150, 200]) : 0;
+  const flyY = isFlying ? [0, -30, -60, -80, -90, -90] : 0;
   const isSleeping = actKey === 'sleep';
   const isEating = actKey === 'eat';
   const isDrinking = actKey === 'drink';
@@ -1109,23 +1113,27 @@ export const RPGCharacterSprite = ({
     <motion.div
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
-        x: isAttacking ? (isEnemy ? 30 : -30) : runX,
+        x: isAttacking ? (isEnemy ? 30 : -30) : (isFlying ? flyX : runX),
         scale: isTakingDamage ? 0.95 : (isSleeping ? 0.85 : 1),
-        y: restY,
+        y: isFlying ? flyY : restY,
       }}
       transition={{
-        y: isSleeping
+        y: isFlying
+          ? { duration: 2.4, ease: 'easeOut' }
+          : isSleeping
           ? { duration: 1.2, ease: 'easeOut' }
           : { repeat: Infinity, duration: 2.5, ease: 'easeInOut' },
         x: isRunning
           ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
+          : isFlying
+          ? { duration: 2.4, ease: 'easeOut' }
           : { type: 'spring', stiffness: 400, damping: 15 },
         scale: { duration: 0.4 },
       }}
       style={{ perspective: '200px' }}
     >
-      {/* Wind streaks behind a running character */}
-      {isRunning && (
+      {/* Wind streaks behind a running OR flying character */}
+      {(isRunning || isFlying) && (
         <div className="pointer-events-none absolute inset-y-0 -left-8 w-16 z-0 flex flex-col justify-center gap-1.5">
           {[0, 1, 2, 3].map((i) => (
             <motion.div
@@ -1180,13 +1188,37 @@ export const RPGCharacterSprite = ({
         style={
           isSleeping
             ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}translateX(-22%) rotate(90deg)`, transformOrigin: 'center' }
-            : isRunning
-              ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(-20deg) rotate(-6deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
-              : undefined
+            : isFlying
+              ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(-20deg)`, transformOrigin: 'center' }
+              : isRunning
+                ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(-20deg) rotate(-6deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
+                : undefined
         }
       >
         {renderCharacter()}
+
+        {/* Flapping wings — appear behind body while flying */}
+        {isFlying && (
+          <>
+            <motion.div
+              key={`wing-l-${limbKey}`}
+              className="pointer-events-none absolute top-[28%] left-[-18%] w-[42%] h-[34%] rounded-[50%] bg-gradient-to-br from-white to-slate-200 shadow-md z-0"
+              style={{ transformOrigin: '90% 50%' }}
+              animate={{ rotate: [-10, -55, -10, -55, -10, -55, -10] }}
+              transition={{ repeat: Infinity, duration: 0.45, ease: 'easeInOut' }}
+            />
+            <motion.div
+              key={`wing-r-${limbKey}`}
+              className="pointer-events-none absolute top-[28%] right-[-18%] w-[42%] h-[34%] rounded-[50%] bg-gradient-to-bl from-white to-slate-200 shadow-md z-0"
+              style={{ transformOrigin: '10% 50%' }}
+              animate={{ rotate: [10, 55, 10, 55, 10, 55, 10] }}
+              transition={{ repeat: Infinity, duration: 0.45, ease: 'easeInOut' }}
+            />
+          </>
+        )}
       </div>
+
+
 
 
       {/* Blanket drapes OVER the body (in front of character, behind head) */}
