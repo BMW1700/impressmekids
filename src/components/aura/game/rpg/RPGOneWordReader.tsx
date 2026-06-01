@@ -157,6 +157,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     clearHelpTimers();
     setHelpStage(null);
     setHelpPhase("setup");
+    setHelperOffsetX(0);
   }, [world.id, level.id]);
   useEffect(() => () => clearHelpTimers(), []);
 
