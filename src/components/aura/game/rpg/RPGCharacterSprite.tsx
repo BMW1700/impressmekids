@@ -868,7 +868,7 @@ export const RPGCharacterSprite = ({
   };
   const ARM_R_FOR: Record<string, LimbAnim> = {
     // Clap — right arm swings inward to meet left hand at center-front, 4 claps.
-    clap:        { animate: { rotate: [10, -55, 10, -55, 10, -55, 10, -55, 10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
+    clap:        { animate: { rotate: [10, -90, 10, -90, 10, -90, 10, -90, 10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Wave — right arm raised overhead, hand rocks back and forth like a greeting
     wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Run — arms pump opposite to left arm
