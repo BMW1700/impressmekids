@@ -449,12 +449,18 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                     key="helper-companion"
                     className="absolute bottom-0 -right-[55%] sm:-right-[60%] h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] z-20 pointer-events-none"
                     initial={{ x: 260, opacity: 0 }}
-                    animate={{ x: helperOffsetX, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }}
+                    animate={
+                      helpStage === "you"
+                        ? { x: helperOffsetX, opacity: 1, y: 0 }
+                        : { x: helperOffsetX, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }
+                    }
                     exit={{ x: 260, opacity: 0 }}
                     transition={{
                       x: { duration: 1.2, ease: "easeInOut" },
                       opacity: { duration: 0.5 },
-                      y: { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
+                      y: helpStage === "you"
+                        ? { duration: 0.2 }
+                        : { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
                     }}
                   >
                     <RPGCharacterSprite
