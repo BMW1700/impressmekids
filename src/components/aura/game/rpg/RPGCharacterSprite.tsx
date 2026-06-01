@@ -814,6 +814,97 @@ export const RPGCharacterSprite = ({
     </div>
   );
 
+  // ────────────────────────────────────────────────────────────
+  // Pre-K limb animation tables: per-verb arm + leg motion.
+  // Applied INSIDE Bouncer/Echo on top of the body transform.
+  // ────────────────────────────────────────────────────────────
+  type LimbAnim = { animate: any; transition: any };
+  const IDLE_ARM_L: LimbAnim = {
+    animate: { rotate: [0, 8, 0, -4, 0] },
+    transition: { repeat: Infinity, duration: 2.6, ease: 'easeInOut' },
+  };
+  const IDLE_ARM_R: LimbAnim = {
+    animate: { rotate: [0, -8, 0, 4, 0] },
+    transition: { repeat: Infinity, duration: 2.6, ease: 'easeInOut' },
+  };
+  const IDLE_LEG: LimbAnim = {
+    animate: { y: [0, 0] },
+    transition: { duration: 0.4 },
+  };
+
+  const ARM_L_FOR: Record<string, LimbAnim> = {
+    clap:        { animate: { rotate: [-10, 60, -10, 60, -10, 40, -10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
+    wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    run:         { animate: { rotate: [-60, 60, -60, 60, -60, 60, -60] }, transition: { duration: 1.5, ease: 'linear' } },
+    hop:         { animate: { rotate: [-10, -50, -10, -50, -10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    jump:        { animate: { rotate: [-10, -120, -100, -10] }, transition: { duration: 1.7, ease: 'easeOut' } },
+    dance:       { animate: { rotate: [-10, -90, -10, -90, -10, -90, -10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    sing:        { animate: { rotate: [-30, -30, -30] }, transition: { duration: 1.8 } },
+    throw:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.6 } },
+    eat:         { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    drink:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    sleep:       { animate: { rotate: [25, 25, 25] }, transition: { duration: 1.8 } },
+    'help me':   { animate: { rotate: [-10, 40, -10, 40, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'help you':  { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.9 } },
+    wash:        { animate: { rotate: [-30, 30, -30, 30, -30, 20, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'wash hands':{ animate: { rotate: [-30, 30, -30, 30, -30, 20, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    plant:       { animate: { rotate: [-10, 80, 80, 40, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'plant seed':{ animate: { rotate: [-10, 80, 80, 40, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    grow:        { animate: { rotate: [-10, -90, -120, -110, -100] }, transition: { duration: 1.8, ease: 'easeOut' } },
+    shrink:      { animate: { rotate: [-10, 20, 30, 30, 30] }, transition: { duration: 1.5, ease: 'easeIn' } },
+    wiggle:      { animate: { rotate: [-30, 30, -30, 30, -30, 20, -10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
+    flip:        { animate: { rotate: [-10, -360, -370] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    spin:        { animate: { rotate: [-10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
+    twirl:       { animate: { rotate: [-10, -180, -360, -540] }, transition: { duration: 1.6, ease: 'linear' } },
+    fly:         { animate: { rotate: [-60, -40, -60, -40, -60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+  };
+  const ARM_R_FOR: Record<string, LimbAnim> = {
+    clap:        { animate: { rotate: [10, -60, 10, -60, 10, -40, 10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
+    wave:        { animate: { rotate: [10, -90, 10, -90, 10, -90, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    run:         { animate: { rotate: [60, -60, 60, -60, 60, -60, 60] }, transition: { duration: 1.5, ease: 'linear' } },
+    hop:         { animate: { rotate: [10, 50, 10, 50, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
+    dance:       { animate: { rotate: [10, 90, 10, 90, 10, 90, 10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
+    throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    eat:         { animate: { rotate: [10, -110, -120, -110, -120, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    drink:       { animate: { rotate: [10, -120, -130, -130, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    sleep:       { animate: { rotate: [-25, -25, -25] }, transition: { duration: 1.8 } },
+    'help me':   { animate: { rotate: [10, -40, 10, -40, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'help you':  { animate: { rotate: [10, 100, 110, 100, 110, 60, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    wash:        { animate: { rotate: [30, -30, 30, -30, 30, -20, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'wash hands':{ animate: { rotate: [30, -30, 30, -30, 30, -20, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    plant:       { animate: { rotate: [10, -80, -80, -40, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    'plant seed':{ animate: { rotate: [10, -80, -80, -40, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
+    grow:        { animate: { rotate: [10, 90, 120, 110, 100] }, transition: { duration: 1.8, ease: 'easeOut' } },
+    shrink:      { animate: { rotate: [10, -20, -30, -30, -30] }, transition: { duration: 1.5, ease: 'easeIn' } },
+    wiggle:      { animate: { rotate: [30, -30, 30, -30, 30, -20, 10] }, transition: { duration: 1.4, ease: 'easeInOut' } },
+    flip:        { animate: { rotate: [10, 360, 370] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    spin:        { animate: { rotate: [10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
+    twirl:       { animate: { rotate: [10, 180, 360, 540] }, transition: { duration: 1.6, ease: 'linear' } },
+    fly:         { animate: { rotate: [60, 40, 60, 40, 60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+  };
+  const LEG_L_FOR: Record<string, LimbAnim> = {
+    run:   { animate: { y: [0, -10, 0, -10, 0, -10, 0], rotate: [0, -25, 0, -25, 0, -25, 0] }, transition: { duration: 1.5, ease: 'linear' } },
+    hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
+    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -10, 0, 10, 0] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+  };
+  const LEG_R_FOR: Record<string, LimbAnim> = {
+    run:   { animate: { y: [-10, 0, -10, 0, -10, 0, -10], rotate: [25, 0, 25, 0, 25, 0, 25] }, transition: { duration: 1.5, ease: 'linear' } },
+    hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
+    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [10, 0, -10, 0, 10] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+  };
+
+  const actKey = (action ?? '').toLowerCase().trim();
+  const armL = ARM_L_FOR[actKey] ?? IDLE_ARM_L;
+  const armR = ARM_R_FOR[actKey] ?? IDLE_ARM_R;
+  const legL = LEG_L_FOR[actKey] ?? IDLE_LEG;
+  const legR = LEG_R_FOR[actKey] ?? IDLE_LEG;
+  // Re-key on actionNonce so the same action replays cleanly
+  const limbKey = `${actKey}-${actionNonce}`;
+
   const renderBouncer = () => (
     <div className="relative w-full h-full flex items-center justify-center">
       {/* Round bouncy body */}
@@ -827,6 +918,38 @@ export const RPGCharacterSprite = ({
         {/* Highlight gleam */}
         <div className="absolute top-[12%] left-[18%] w-[28%] h-[20%] bg-white/60 rounded-full blur-sm" />
       </motion.div>
+
+      {/* LEFT ARM — shoulder at top of arm, swings from there */}
+      <motion.div
+        key={`armL-${limbKey}`}
+        className="absolute top-[44%] left-[10%] w-[12%] h-[26%] rounded-full
+          bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500
+          shadow-[inset_-2px_-2px_5px_rgba(0,0,0,0.25),inset_2px_2px_4px_rgba(255,255,255,0.5)] z-20"
+        style={{ transformOrigin: 'top center' }}
+        animate={armL.animate}
+        transition={armL.transition}
+      >
+        {/* Hand */}
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
+          rounded-full bg-gradient-to-br from-amber-400 to-orange-600
+          shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3)]" />
+      </motion.div>
+
+      {/* RIGHT ARM */}
+      <motion.div
+        key={`armR-${limbKey}`}
+        className="absolute top-[44%] right-[10%] w-[12%] h-[26%] rounded-full
+          bg-gradient-to-bl from-amber-300 via-amber-400 to-orange-500
+          shadow-[inset_2px_-2px_5px_rgba(0,0,0,0.25),inset_-2px_2px_4px_rgba(255,255,255,0.5)] z-20"
+        style={{ transformOrigin: 'top center' }}
+        animate={armR.animate}
+        transition={armR.transition}
+      >
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
+          rounded-full bg-gradient-to-bl from-amber-400 to-orange-600
+          shadow-[inset_2px_-2px_4px_rgba(0,0,0,0.3)]" />
+      </motion.div>
+
       {/* Eyes */}
       <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
         <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
@@ -837,9 +960,22 @@ export const RPGCharacterSprite = ({
       {/* Big grin */}
       <div className="absolute top-[52%] left-[35%] right-[35%] h-[12%] bg-rose-700 rounded-b-full z-10
         border-t-2 border-rose-800" />
-      {/* Tiny feet */}
-      <div className="absolute bottom-[10%] left-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full" />
-      <div className="absolute bottom-[10%] right-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full" />
+
+      {/* Feet (animatable legs) */}
+      <motion.div
+        key={`legL-${limbKey}`}
+        className="absolute bottom-[10%] left-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full z-10"
+        style={{ transformOrigin: 'top center' }}
+        animate={legL.animate}
+        transition={legL.transition}
+      />
+      <motion.div
+        key={`legR-${limbKey}`}
+        className="absolute bottom-[10%] right-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full z-10"
+        style={{ transformOrigin: 'top center' }}
+        animate={legR.animate}
+        transition={legR.transition}
+      />
     </div>
   );
 
@@ -864,6 +1000,34 @@ export const RPGCharacterSprite = ({
         animate={{ borderRadius: ["42% 42% 42% 42%", "50% 38% 45% 40%", "42% 42% 42% 42%"] }}
         transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
       />
+
+      {/* LEFT ARM */}
+      <motion.div
+        key={`echo-armL-${limbKey}`}
+        className="absolute top-[48%] left-[14%] w-[11%] h-[24%] rounded-full
+          bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-500
+          shadow-[inset_-2px_-2px_5px_rgba(0,0,0,0.2),inset_2px_2px_4px_rgba(255,255,255,0.5)] z-20"
+        style={{ transformOrigin: 'top center' }}
+        animate={armL.animate}
+        transition={armL.transition}
+      >
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
+          rounded-full bg-gradient-to-br from-sky-400 to-blue-600" />
+      </motion.div>
+      {/* RIGHT ARM */}
+      <motion.div
+        key={`echo-armR-${limbKey}`}
+        className="absolute top-[48%] right-[14%] w-[11%] h-[24%] rounded-full
+          bg-gradient-to-bl from-cyan-200 via-sky-400 to-blue-500
+          shadow-[inset_2px_-2px_5px_rgba(0,0,0,0.2),inset_-2px_2px_4px_rgba(255,255,255,0.5)] z-20"
+        style={{ transformOrigin: 'top center' }}
+        animate={armR.animate}
+        transition={armR.transition}
+      >
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
+          rounded-full bg-gradient-to-bl from-sky-400 to-blue-600" />
+      </motion.div>
+
       {/* Eyes */}
       <div className="absolute top-[40%] left-[34%] w-[10%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
         <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
@@ -875,6 +1039,7 @@ export const RPGCharacterSprite = ({
       <div className="absolute top-[55%] left-[42%] right-[42%] aspect-square bg-slate-900 rounded-full z-10" />
     </div>
   );
+
 
   const renderCharacter = () => {
     switch (type) {
