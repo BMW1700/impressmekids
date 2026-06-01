@@ -233,9 +233,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       window.setTimeout(() => setLeadHelping(true), 350);
       helpTimersRef.current.push(
         window.setTimeout(() => setHelpPhase("approach"), 250),
-        window.setTimeout(() => setHelpPhase("fix"), 2000),
-        window.setTimeout(() => setHelpPhase("happy"), 3500),
-        window.setTimeout(() => setHelpStage(null), 4600),
+        // Wait for blue to finish walking across before applying tape
+        window.setTimeout(() => setHelpPhase("fix"), 3200),
+        window.setTimeout(() => setHelpPhase("happy"), 4800),
+        window.setTimeout(() => setHelpStage(null), 6000),
       );
     }
 
