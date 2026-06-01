@@ -971,12 +971,21 @@ export const RPGCharacterSprite = ({
       </motion.div>
 
       {/* Eyes */}
-      <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
-      </div>
-      <div className="absolute top-[35%] right-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
-      </div>
+      {isSleeping ? (
+        <>
+          <div className="absolute top-[38%] left-[29%] w-[14%] h-[4%] bg-slate-900 rounded-full z-30" />
+          <div className="absolute top-[38%] right-[29%] w-[14%] h-[4%] bg-slate-900 rounded-full z-30" />
+        </>
+      ) : (
+        <>
+          <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+            <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+          </div>
+          <div className="absolute top-[35%] right-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
+            <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+          </div>
+        </>
+      )}
       {/* Big grin */}
       <div className="absolute top-[52%] left-[35%] right-[35%] h-[12%] bg-rose-700 rounded-b-full z-10
         border-t-2 border-rose-800" />
@@ -1184,7 +1193,7 @@ export const RPGCharacterSprite = ({
       {isSleeping && (
         <div
           key={`blanket-${limbKey}`}
-          className="pointer-events-none absolute right-[-2%] left-[34%] bottom-[2%] h-[55%] z-20 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 shadow-lg"
+          className="pointer-events-none absolute right-[-8%] left-[18%] bottom-[-2%] h-[78%] z-40 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 shadow-lg"
         />
       )}
 
