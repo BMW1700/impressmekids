@@ -877,7 +877,7 @@ export const RPGCharacterSprite = ({
     jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — right arm overhead swaying with left
     dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
+    sing:        { animate: { rotate: [-115, -120, -115, -120, -115] }, transition: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' } },
     throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     // Eat — right arm brings apple from front to mouth three times.
     eat:         { animate: { rotate: [10, -110, -120, -110, -120, -110, -120, -100, 10] }, transition: { duration: 2.5, ease: 'easeInOut' } },
