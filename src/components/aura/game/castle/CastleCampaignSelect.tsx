@@ -111,7 +111,6 @@ export const CastleCampaignSelect = ({ onPickEndless, onPickDaily, onPickCampaig
         </div>
 
         {/* Upgrades */}
-        {/* Upgrades */}
         <CastleUpgradesPanel />
 
         {/* Leaderboard */}
