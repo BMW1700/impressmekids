@@ -50,12 +50,12 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.4,
     label: { text: "RUN!", color: "#ef4444" },
-    // Character actually traverses to the right with a forward lean and leg-pump bob.
+    // Faces right (scaleX:-1 flips the default left-facing sprite) and runs straight to the right with a leg-pump bob — no swaying back and forth.
     transform: tx(
       {
-        x: [0, 50, 100, 150, 200, 240, 200, 150, 100, 50, 0],
-        rotate: [0, -8, -10, -12, -10, -12, -10, -10, -8, -5, 0],
-        y: [0, -5, 0, -5, 0, -5, 0, -5, 0, -3, 0],
+        x: [0, 40, 80, 120, 160, 200, 240, 280],
+        y: [0, -6, 0, -6, 0, -6, 0, -4],
+        scaleX: [-1, -1, -1, -1, -1, -1, -1, -1],
       },
       2.3
     ),
