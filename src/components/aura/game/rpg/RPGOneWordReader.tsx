@@ -400,7 +400,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       : helperVisible
                       ? "comforted"
                       : prekScene
-                      ? currentPhrase
+                      ? prekScene.phrase
                       : null
                   }
                   actionNonce={
