@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Coins, Heart, Sword, Users, Lock } from "lucide-react";
+import { Coins, Heart, Sword, Users, Lock, Coins as CoinsIcon, Zap } from "lucide-react";
 import { useCastleUpgrades, upgradeCost, UpgradeTrack } from "@/hooks/useCastleUpgrades";
 import { useCampaignProgress } from "@/hooks/useCampaignProgress";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,9 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const TRACK_META: Record<UpgradeTrack, { label: string; description: string; icon: typeof Heart; color: string }> = {
-  hp_level:     { label: "Knight HP",      description: "+1 HP per knight per level", icon: Heart, color: "text-rose-400" },
-  damage_level: { label: "Knight Damage",  description: "+0.6 DPS per level",         icon: Sword, color: "text-amber-400" },
-  cap_level:    { label: "Summon Cap",     description: "+1 max active knight",       icon: Users, color: "text-cyan-400" },
+  hp_level:         { label: "Knight HP",      description: "+1 HP per knight per level",   icon: Heart,     color: "text-rose-400" },
+  damage_level:     { label: "Knight Damage",  description: "+0.6 DPS per level",           icon: Sword,     color: "text-amber-400" },
+  cap_level:        { label: "Summon Cap",     description: "+1 max active knight",         icon: Users,     color: "text-cyan-400" },
+  gold_find_level:  { label: "Gold Find",      description: "+10% coins from waves & words", icon: CoinsIcon, color: "text-yellow-300" },
+  crit_level:       { label: "Critical Strike", description: "+5% chance to double knight hits", icon: Zap,   color: "text-fuchsia-400" },
 };
 
 export const CastleUpgradesPanel = () => {

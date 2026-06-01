@@ -7,6 +7,7 @@ import { getCampaignLevels, CampaignLevel, CASTLE_ARCS, CastleArcId } from "./ca
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
 import { dailySeedString } from "./WaveDirector";
 import { CastleUpgradesPanel } from "./CastleUpgradesPanel";
+import { CastleLeaderboardPanel } from "./CastleLeaderboardPanel";
 
 interface Props {
   onPickEndless: () => void;
@@ -111,6 +112,9 @@ export const CastleCampaignSelect = ({ onPickEndless, onPickDaily, onPickCampaig
 
         {/* Upgrades */}
         <CastleUpgradesPanel />
+
+        {/* Leaderboard */}
+        <CastleLeaderboardPanel />
 
         {/* Legacy campaign */}
         {legacyLevels.length > 0 && (

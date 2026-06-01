@@ -1479,7 +1479,9 @@ export type Database = {
         Row: {
           cap_level: number
           created_at: string
+          crit_level: number
           damage_level: number
+          gold_find_level: number
           grade_mode: string
           hp_level: number
           id: string
@@ -1489,7 +1491,9 @@ export type Database = {
         Insert: {
           cap_level?: number
           created_at?: string
+          crit_level?: number
           damage_level?: number
+          gold_find_level?: number
           grade_mode: string
           hp_level?: number
           id?: string
@@ -1499,7 +1503,9 @@ export type Database = {
         Update: {
           cap_level?: number
           created_at?: string
+          crit_level?: number
           damage_level?: number
+          gold_find_level?: number
           grade_mode?: string
           hp_level?: number
           id?: string
@@ -8240,6 +8246,17 @@ export type Database = {
           status: string
           timer_minutes: number
           title: string
+        }[]
+      }
+      get_castle_endless_leaderboard: {
+        Args: { p_grade_mode: string; p_limit?: number; p_scope?: string }
+        Returns: {
+          achieved_at: string
+          best_accuracy: number
+          best_wave: number
+          best_words: number
+          display_name: string
+          user_id: string
         }[]
       }
       get_classroom_detail: {

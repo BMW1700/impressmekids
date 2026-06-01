@@ -572,12 +572,16 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         knightsRef.current.forEach(k => {
           const target = enemiesRef.current.find(e => !e.dying && !e.flying && Math.abs(e.x - k.x) < 25);
           if (target) {
-            target.hp -= knightStatsRef.current.knightDps * dt;
-            target.hitFlashUntil = performance.now() + 120;
+            const crit = knightStatsRef.current.critChance > 0 && Math.random() < knightStatsRef.current.critChance;
+            const dmgMul = crit ? knightStatsRef.current.critMultiplier : 1;
+            target.hp -= knightStatsRef.current.knightDps * dmgMul * dt;
+            target.hitFlashUntil = performance.now() + (crit ? 220 : 120);
             if (target.hp <= 0) target.dying = true;
             k.hp -= 1.2 * dt;
           } else if (enemyCastleHpRef.current > 0 && k.x >= ARENA_WIDTH - 60) {
-            const dmg = knightStatsRef.current.knightDps * dt;
+            const crit = knightStatsRef.current.critChance > 0 && Math.random() < knightStatsRef.current.critChance;
+            const dmgMul = crit ? knightStatsRef.current.critMultiplier : 1;
+            const dmg = knightStatsRef.current.knightDps * dmgMul * dt;
             enemyCastleHpRef.current = Math.max(0, enemyCastleHpRef.current - dmg);
             enemyCastleDmgRef.current += dmg;
           } else {
@@ -594,7 +598,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             waveSpawnedRef.current >= waveTotalRef.current &&
             enemiesRef.current.filter(e => !e.dying).length === 0) {
           transitioningRef.current = true;
-          const earned = coinsForWave(waveRef.current);
+          const earned = Math.round(coinsForWave(waveRef.current) * knightStatsRef.current.goldFindMul);
           coinsRef.current += earned;
           const completedWave = waveRef.current;
 
@@ -701,7 +705,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
     }
 
-    if (coins > 0) coinsRef.current += coins;
+    if (coins > 0) coinsRef.current += Math.round(coins * knightStatsRef.current.goldFindMul);
     if (superFill > 0) {
       superMeterRef.current = Math.min(100, superMeterRef.current + superFill);
       setSuperMeter(superMeterRef.current);
