@@ -112,9 +112,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const verbActiveRef = useRef(false);
   const pendingCompleteRef = useRef<null | (() => void)>(null);
 
-  // Helper character (e.g. yellow Bouncer) that appears during help me/help you
-  // scenes and stays visible across both phrases of the help pair.
+  // Helper character (e.g. yellow Bouncer) that walks onto the scene after the
+  // user finishes saying "help me", and remains visible through "help you".
   const [helperVisible, setHelperVisible] = useState(false);
+  // Becomes true after the user finishes "help you" — the blue lead then
+  // walks across to reach the yellow helper with empathetic gestures.
+  const [leadHelping, setLeadHelping] = useState(false);
 
   // Reset when level changes
   useEffect(() => {
@@ -128,6 +131,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     pendingCompleteRef.current = null;
     setPrekScene(null);
     setHelperVisible(false);
+    setLeadHelping(false);
   }, [world.id, level.id]);
 
   const currentPhrase = phrases[currentPhraseIndex] ?? "";
@@ -139,13 +143,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   // Detect "help me" / "help you" so we can summon a helper companion.
   const phraseLower = currentPhrase.toLowerCase().trim();
-  const isHelpPhrase = phraseLower === "help me" || phraseLower === "help you";
   // The helper is the OPPOSITE friendly creature (yellow Bouncer helps blue
   // Echo, and vice versa). Picked once based on which character is the lead.
   const helperType: FriendlyEnemy = enemy === "echo_blob" ? "bouncer" : "echo_blob";
-  useEffect(() => {
-    if (isHelpPhrase) setHelperVisible(true);
-  }, [isHelpPhrase]);
 
   // Track verb animation lifecycle so we can defer completion until it finishes
   useEffect(() => {
