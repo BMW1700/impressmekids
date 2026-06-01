@@ -344,8 +344,38 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 id={prekScene?.id ?? verb?.id ?? null}
                 anchor={{ x: 60, y: 40 }}
               />
+
+              {/* Helper companion — slides in for "help me" and stays through "help you". */}
+              <AnimatePresence>
+                {helperVisible && (
+                  <motion.div
+                    key="helper-companion"
+                    className="absolute bottom-0 -right-[55%] sm:-right-[60%] h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] z-20 pointer-events-none"
+                    initial={{ x: 220, opacity: 0, scale: 0.6 }}
+                    animate={{ x: 0, opacity: 1, scale: 1, y: [0, -6, 0] }}
+                    exit={{ x: 220, opacity: 0, scale: 0.6 }}
+                    transition={{
+                      x: { type: "spring", stiffness: 140, damping: 18 },
+                      opacity: { duration: 0.4 },
+                      scale: { duration: 0.5, ease: "easeOut" },
+                      y: { repeat: Infinity, duration: 2.2, ease: "easeInOut" },
+                    }}
+                  >
+                    <RPGCharacterSprite
+                      type={helperType}
+                      size="md"
+                      // Helper faces LEFT toward the lead character (isEnemy mirrors the sprite).
+                      isEnemy
+                      // Reach out during "help me"; gentle accepting pulse during "help you".
+                      action={phraseLower === "help me" ? "reach_left" : phraseLower === "help you" ? "comforted" : "reach_left"}
+                      actionNonce={currentPhraseIndex}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           </div>
+
 
           {/* Knight */}
           <div className="relative flex flex-col items-center w-[44%]">
