@@ -1078,21 +1078,30 @@ export const RPGCharacterSprite = ({
   // When isEnemy, the wrapper is mirrored via scale-x-[-1], so local +x becomes
   // visual -x. Flip the sign so the character always runs to the screen-right.
   const runX = isRunning ? (isEnemy ? [0, -30, -60, -90, -60, -30, 0] : [0, 30, 60, 90, 60, 30, 0]) : 0;
+  const isSleeping = actKey === 'sleep';
+  const isEating = actKey === 'eat';
+  const isDrinking = actKey === 'drink';
+  const showPrekProps = isSleeping || isEating || isDrinking;
+
+  // Sleep posture: settle the character down into the bed.
+  const restY = isSleeping ? [0, 18, 22, 22] : (isTakingDamage ? [0, -5, 0] : [0, -3, 0]);
 
   return (
     <motion.div
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
         x: isAttacking ? (isEnemy ? 30 : -30) : runX,
-        scale: isTakingDamage ? 0.95 : 1,
-        y: isTakingDamage ? [0, -5, 0] : [0, -3, 0],
+        scale: isTakingDamage ? 0.95 : (isSleeping ? 0.85 : 1),
+        y: restY,
       }}
       transition={{
-        y: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
+        y: isSleeping
+          ? { duration: 1.2, ease: 'easeOut' }
+          : { repeat: Infinity, duration: 2.5, ease: 'easeInOut' },
         x: isRunning
           ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
           : { type: 'spring', stiffness: 400, damping: 15 },
-        scale: { duration: 0.2 },
+        scale: { duration: 0.4 },
       }}
       style={{ perspective: '200px' }}
     >
@@ -1116,23 +1125,116 @@ export const RPGCharacterSprite = ({
         </div>
       )}
 
-      {/* Shadow */}
-      <motion.div
-        className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[80%] h-4 
-          bg-black/40 rounded-[100%] blur-md"
-        animate={{
-          scale: isAttacking ? 0.5 : [1, 1.05, 1],
-          opacity: isAttacking ? 0.3 : 0.5,
-        }}
-        transition={{
-          scale: { repeat: isAttacking ? 0 : Infinity, duration: 2.5 },
-        }}
-      />
+      {/* Bed (behind character) for sleep */}
+      {isSleeping && (
+        <div
+          key={`bed-${limbKey}`}
+          className={`pointer-events-none absolute left-[-8%] right-[-8%] bottom-[-6%] h-[42%] z-0 ${isEnemy ? 'scale-x-[-1]' : ''}`}
+        >
+          <div className="absolute inset-x-0 bottom-0 h-[55%] rounded-md bg-gradient-to-b from-amber-700 to-amber-900 shadow-md" />
+          <div className="absolute inset-x-[4%] bottom-[40%] h-[28%] rounded-sm bg-white shadow-inner" />
+          <div className="absolute left-[32%] right-[4%] bottom-[40%] h-[34%] rounded-sm bg-gradient-to-b from-sky-400 to-blue-600 shadow" />
+          <div className="absolute left-[6%] bottom-[60%] w-[28%] h-[20%] rounded-md bg-white shadow" />
+        </div>
+      )}
+
+      {/* Shadow (hidden while sleeping in bed) */}
+      {!isSleeping && (
+        <motion.div
+          className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-[80%] h-4 
+            bg-black/40 rounded-[100%] blur-md"
+          animate={{
+            scale: isAttacking ? 0.5 : [1, 1.05, 1],
+            opacity: isAttacking ? 0.3 : 0.5,
+          }}
+          transition={{
+            scale: { repeat: isAttacking ? 0 : Infinity, duration: 2.5 },
+          }}
+        />
+      )}
 
       {/* Character Container */}
       <div className={`relative w-full h-full ${isEnemy ? 'scale-x-[-1]' : ''}`}>
         {renderCharacter()}
       </div>
+
+      {/* Pre-K prop overlays */}
+      {showPrekProps && (
+        <div className={`pointer-events-none absolute inset-0 z-30 ${isEnemy ? 'scale-x-[-1]' : ''}`}>
+          {isEating && (
+            <motion.div
+              key={`apple-${limbKey}`}
+              className="absolute"
+              style={{ right: '14%', top: '46%', width: '20%', height: '22%' }}
+              initial={{ opacity: 1, scale: 1 }}
+              animate={{
+                scale: [1, 1, 0.72, 0.72, 0.42, 0.42, 0],
+                opacity: [1, 1, 1, 1, 1, 1, 0],
+              }}
+              transition={{
+                duration: 2.4,
+                times: [0, 0.18, 0.22, 0.52, 0.56, 0.85, 1],
+                ease: 'easeInOut',
+              }}
+            >
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 via-red-500 to-red-700 shadow-md" />
+              <div className="absolute top-[15%] left-[18%] w-[26%] h-[22%] rounded-full bg-white/60 blur-[1px]" />
+              <div className="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[6%] h-[20%] rounded-sm bg-amber-900" />
+              <div
+                className="absolute -top-[8%] left-[58%] w-[28%] h-[18%] rounded-full bg-green-500"
+                style={{ transform: 'rotate(35deg)' }}
+              />
+            </motion.div>
+          )}
+
+          {isDrinking && (
+            <div
+              key={`glass-${limbKey}`}
+              className="absolute"
+              style={{ right: '16%', top: '42%', width: '20%', height: '30%' }}
+            >
+              <div className="absolute inset-0 rounded-b-xl rounded-t-sm border-[3px] border-white/90 bg-white/10 overflow-hidden shadow-md">
+                <motion.div
+                  className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-sky-500 via-sky-400 to-cyan-300"
+                  initial={{ height: '88%' }}
+                  animate={{ height: ['88%', '60%', '32%', '6%', '0%'] }}
+                  transition={{ duration: 3, times: [0, 0.3, 0.6, 0.9, 1], ease: 'easeInOut' }}
+                />
+              </div>
+              <div className="absolute top-[10%] left-[14%] w-[14%] h-[60%] rounded-full bg-white/40 blur-[1px]" />
+            </div>
+          )}
+
+          {isSleeping && (
+            <>
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={`z-${i}-${limbKey}`}
+                  className="absolute font-extrabold text-white select-none"
+                  style={{
+                    top: '12%',
+                    left: `${52 + i * 9}%`,
+                    fontSize: `${18 + i * 4}px`,
+                    textShadow: '0 2px 6px rgba(0,0,0,0.6)',
+                  }}
+                  initial={{ opacity: 0, y: 10, scale: 0.7 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [10, -10, -30, -50], scale: [0.7, 1, 1.2, 1.3] }}
+                  transition={{
+                    duration: 2.4,
+                    repeat: Infinity,
+                    delay: i * 0.7,
+                    ease: 'easeOut',
+                  }}
+                >
+                  Z
+                </motion.div>
+              ))}
+              <div className="absolute left-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
+              <div className="absolute right-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Damage Flash */}
       {isTakingDamage && (
