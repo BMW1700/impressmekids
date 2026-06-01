@@ -245,7 +245,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     }
     if (prek) {
       nonceRef.current += 1;
-      setPrekScene({ id: nonceRef.current, descriptor: prek });
+      setPrekScene({ id: nonceRef.current, descriptor: prek, phrase });
       setVerbTrigger(null);
     } else if (resolveVerbAnimation(legacyWord)) {
       nonceRef.current += 1;
