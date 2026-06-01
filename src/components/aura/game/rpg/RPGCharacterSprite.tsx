@@ -1096,6 +1096,9 @@ export const RPGCharacterSprite = ({
   // When isEnemy, the wrapper is mirrored via scale-x-[-1], so local +x becomes
   // visual -x. Flip the sign so the character always runs to the screen-right.
   const runX = isRunning ? (isEnemy ? [0, -30, -60, -90, -60, -30, 0] : [0, 30, 60, 90, 60, 30, 0]) : 0;
+  // Flying: start in place, swoop UP, then drift to the RIGHT across the screen.
+  const flyX = isFlying ? (isEnemy ? [0, -10, -40, -90, -150, -200] : [0, 10, 40, 90, 150, 200]) : 0;
+  const flyY = isFlying ? [0, -30, -60, -80, -90, -90] : 0;
   const isSleeping = actKey === 'sleep';
   const isEating = actKey === 'eat';
   const isDrinking = actKey === 'drink';
