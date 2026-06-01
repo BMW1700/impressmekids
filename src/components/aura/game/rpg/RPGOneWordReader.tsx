@@ -178,6 +178,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       }, 400);
     }, 220);
 
+    // Help-scene staging: only trigger after the user has finished the phrase.
+    const lower = phrase.toLowerCase().trim();
+    if (lower === "help me") {
+      // Yellow walks onto the scene from off-screen right.
+      window.setTimeout(() => setHelperVisible(true), 250);
+    } else if (lower === "help you") {
+      // Blue lead walks across to the yellow helper.
+      window.setTimeout(() => setLeadHelping(true), 250);
+    }
+
     // Pre-K signature scene takes priority; fall back to legacy verb library.
     // For phrases, resolvePreKVerb checks the action word inside the phrase.
     const tokens = phrase.split(/\s+/).filter(Boolean);
