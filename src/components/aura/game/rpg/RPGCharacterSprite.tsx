@@ -861,6 +861,10 @@ export const RPGCharacterSprite = ({
     spin:        { animate: { rotate: [-10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
     twirl:       { animate: { rotate: [-10, -180, -360, -540] }, transition: { duration: 1.6, ease: 'linear' } },
     fly:         { animate: { rotate: [-60, -40, -60, -40, -60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
+    // Reaching out to the left — both arms extend leftward to comfort/help someone.
+    reach_left:  { animate: { rotate: [-95, -115, -95, -115, -95] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
+    // Receiving help — gentle inward pulse, like accepting a hug.
+    comforted:   { animate: { rotate: [-5, 25, -5, 25, -5] }, transition: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } },
   };
   const ARM_R_FOR: Record<string, LimbAnim> = {
     // Clap — right hand swings sharply across body to meet left hand
