@@ -877,7 +877,7 @@ export const RPGCharacterSprite = ({
     jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — right arm overhead swaying with left
     dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
+    sing:        { animate: { rotate: [-115, -120, -115, -120, -115] }, transition: { repeat: Infinity, duration: 1.4, ease: 'easeInOut' } },
     throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     // Eat — right arm brings apple from front to mouth three times.
     eat:         { animate: { rotate: [10, -110, -120, -110, -120, -110, -120, -100, 10] }, transition: { duration: 2.5, ease: 'easeInOut' } },
@@ -923,6 +923,7 @@ export const RPGCharacterSprite = ({
   const legR = LEG_R_FOR[actKey] ?? IDLE_LEG;
   const isRunning = actKey === 'run';
   const isFlying = actKey === 'fly';
+  const isSinging = actKey === 'sing';
   // Re-key on actionNonce so the same action replays cleanly
   const limbKey = `${actKey}-${actionNonce}`;
 
@@ -1006,6 +1007,47 @@ export const RPGCharacterSprite = ({
         animate={legR.animate}
         transition={legR.transition}
       />
+
+      {/* Singing: microphone at mouth + sound waves */}
+      {isSinging && (
+        <>
+          {/* Microphone head (round mesh) just in front of mouth */}
+          <div className="absolute top-[50%] left-[58%] w-[14%] aspect-square rounded-full
+            bg-gradient-to-br from-slate-500 via-slate-700 to-slate-900
+            shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.5),inset_2px_2px_3px_rgba(255,255,255,0.4)] z-30">
+            <div className="absolute inset-[18%] rounded-full border border-slate-400/60" />
+          </div>
+          {/* Microphone handle extending down to the hand */}
+          <div className="absolute top-[60%] left-[62%] w-[5%] h-[18%] rounded-full
+            bg-gradient-to-b from-slate-700 to-slate-900 z-30" />
+
+          {/* Sound wave lines coming out of the mouth (to the right) */}
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={`sw-${limbKey}-${i}`}
+              className="absolute top-[56%] left-[72%] z-30"
+              animate={{ opacity: [0, 1, 0], x: [0, 18, 36], scale: [0.6, 1, 1.2] }}
+              transition={{ repeat: Infinity, duration: 1.2, ease: 'easeOut', delay: i * 0.35 }}
+            >
+              <svg width="34" height="22" viewBox="0 0 34 22" fill="none">
+                <path d="M2 11 Q 8 2, 14 11 T 26 11" stroke="hsl(45 95% 55%)" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                <path d="M2 11 Q 8 20, 14 11 T 26 11" stroke="hsl(45 95% 55%)" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.7" />
+              </svg>
+            </motion.div>
+          ))}
+          {/* Musical notes drifting up */}
+          {[0, 1].map((i) => (
+            <motion.div
+              key={`note-${limbKey}-${i}`}
+              className="absolute top-[40%] left-[78%] text-amber-400 font-bold text-lg z-30"
+              animate={{ opacity: [0, 1, 0], y: [0, -30, -60], x: [0, 6, 12] }}
+              transition={{ repeat: Infinity, duration: 1.8, ease: 'easeOut', delay: i * 0.6 }}
+            >
+              ♪
+            </motion.div>
+          ))}
+        </>
+      )}
     </div>
   );
 
