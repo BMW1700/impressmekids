@@ -1113,23 +1113,27 @@ export const RPGCharacterSprite = ({
     <motion.div
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
-        x: isAttacking ? (isEnemy ? 30 : -30) : runX,
+        x: isAttacking ? (isEnemy ? 30 : -30) : (isFlying ? flyX : runX),
         scale: isTakingDamage ? 0.95 : (isSleeping ? 0.85 : 1),
-        y: restY,
+        y: isFlying ? flyY : restY,
       }}
       transition={{
-        y: isSleeping
+        y: isFlying
+          ? { duration: 2.4, ease: 'easeOut' }
+          : isSleeping
           ? { duration: 1.2, ease: 'easeOut' }
           : { repeat: Infinity, duration: 2.5, ease: 'easeInOut' },
         x: isRunning
           ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
+          : isFlying
+          ? { duration: 2.4, ease: 'easeOut' }
           : { type: 'spring', stiffness: 400, damping: 15 },
         scale: { duration: 0.4 },
       }}
       style={{ perspective: '200px' }}
     >
-      {/* Wind streaks behind a running character */}
-      {isRunning && (
+      {/* Wind streaks behind a running OR flying character */}
+      {(isRunning || isFlying) && (
         <div className="pointer-events-none absolute inset-y-0 -left-8 w-16 z-0 flex flex-col justify-center gap-1.5">
           {[0, 1, 2, 3].map((i) => (
             <motion.div
