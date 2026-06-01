@@ -833,19 +833,21 @@ export const RPGCharacterSprite = ({
   };
 
   const ARM_L_FOR: Record<string, LimbAnim> = {
-    // Clap — left hand swings sharply across body to meet right hand
-    clap:        { animate: { rotate: [-10, 75, -10, 75, -10, 75, -10, 75, -10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Clap — left arm swings inward to meet right hand at center-front, 4 claps.
+    clap:        { animate: { rotate: [-10, 55, -10, 55, -10, 55, -10, 55, -10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Wave — left arm stays at side (right arm does the waving)
-    wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    wave:        { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.8 } },
     // Run — arms pump forward/back as character moves
-    run:         { animate: { rotate: [-70, 70, -70, 70, -70, 70, -70, 70] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:         { animate: { rotate: [-70, 70, -70, 70, -70, 70, -70, 70] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:         { animate: { rotate: [-10, -50, -10, -50, -10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [-10, -120, -100, -10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — both arms up overhead, swaying side to side
-    dance:       { animate: { rotate: [-150, -120, -150, -120, -150, -120, -150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance:       { animate: { rotate: [-150, -120, -150, -120, -150, -120, -150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [-30, -30, -30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.6 } },
+    // Eat — left arm steady at side; right hand brings apple to mouth.
     eat:         { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
+    // Drink — left arm slightly out to brace the glass.
     drink:       { animate: { rotate: [-10, -10, -10] }, transition: { duration: 1.5 } },
     sleep:       { animate: { rotate: [25, 25, 25] }, transition: { duration: 1.8 } },
     'help me':   { animate: { rotate: [-10, 40, -10, 40, -10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
@@ -861,26 +863,26 @@ export const RPGCharacterSprite = ({
     spin:        { animate: { rotate: [-10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
     twirl:       { animate: { rotate: [-10, -180, -360, -540] }, transition: { duration: 1.6, ease: 'linear' } },
     fly:         { animate: { rotate: [-60, -40, -60, -40, -60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
-    // Reaching out to the left — both arms extend leftward to comfort/help someone.
     reach_left:  { animate: { rotate: [-95, -115, -95, -115, -95] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    // Receiving help — gentle inward pulse, like accepting a hug.
     comforted:   { animate: { rotate: [-5, 25, -5, 25, -5] }, transition: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } },
   };
   const ARM_R_FOR: Record<string, LimbAnim> = {
-    // Clap — right hand swings sharply across body to meet left hand
-    clap:        { animate: { rotate: [10, -75, 10, -75, 10, -75, 10, -75, 10] }, transition: { duration: 1.3, ease: 'easeInOut' } },
+    // Clap — right arm swings inward to meet left hand at center-front, 4 claps.
+    clap:        { animate: { rotate: [10, -55, 10, -55, 10, -55, 10, -55, 10] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Wave — right arm raised overhead, hand rocks back and forth like a greeting
-    wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    wave:        { animate: { rotate: [10, -150, -170, -130, -170, -130, -170, -130] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     // Run — arms pump opposite to left arm
-    run:         { animate: { rotate: [70, -70, 70, -70, 70, -70, 70, -70] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:         { animate: { rotate: [70, -70, 70, -70, 70, -70, 70, -70] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:         { animate: { rotate: [10, 50, 10, 50, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:        { animate: { rotate: [10, 120, 100, 10] }, transition: { duration: 1.7, ease: 'easeOut' } },
     // Dance — right arm overhead swaying with left
-    dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance:       { animate: { rotate: [150, 120, 150, 120, 150, 120, 150] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
     sing:        { animate: { rotate: [30, 30, 30] }, transition: { duration: 1.8 } },
     throw:       { animate: { rotate: [10, 120, 130, -120, -60, 10] }, transition: { duration: 1.6, ease: 'easeInOut' } },
-    eat:         { animate: { rotate: [10, -110, -120, -110, -120, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
-    drink:       { animate: { rotate: [10, -120, -130, -130, -100, 10] }, transition: { duration: 1.5, ease: 'easeInOut' } },
+    // Eat — right arm brings apple from front to mouth three times.
+    eat:         { animate: { rotate: [10, -110, -120, -110, -120, -110, -120, -100, 10] }, transition: { duration: 2.5, ease: 'easeInOut' } },
+    // Drink — right arm holds glass at mouth for entire 3s drink.
+    drink:       { animate: { rotate: [10, -120, -130, -130, -130, -130, -110, 10] }, transition: { duration: 3, ease: 'easeInOut' } },
     sleep:       { animate: { rotate: [-25, -25, -25] }, transition: { duration: 1.8 } },
     'help me':   { animate: { rotate: [10, -40, 10, -40, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
     'help you':  { animate: { rotate: [10, 100, 110, 100, 110, 60, 10] }, transition: { duration: 1.9, ease: 'easeInOut' } },
@@ -895,22 +897,20 @@ export const RPGCharacterSprite = ({
     spin:        { animate: { rotate: [10, 350, 710] }, transition: { duration: 1.4, ease: 'linear' } },
     twirl:       { animate: { rotate: [10, 180, 360, 540] }, transition: { duration: 1.6, ease: 'linear' } },
     fly:         { animate: { rotate: [60, 40, 60, 40, 60] }, transition: { duration: 1.8, ease: 'easeInOut' } },
-    // Reaching to the left — right arm crosses body to the left (negative rotation).
     reach_left:  { animate: { rotate: [-85, -110, -85, -110, -85] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
-    // Receiving help — gentle inward pulse mirrored.
     comforted:   { animate: { rotate: [5, -25, 5, -25, 5] }, transition: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } },
   };
   const LEG_L_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [0, -12, 0, -12, 0, -12, 0, -12], rotate: [0, -30, 0, -30, 0, -30, 0, -30] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:   { animate: { y: [0, -12, 0, -12, 0, -12, 0, -12], rotate: [0, -30, 0, -30, 0, -30, 0, -30] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -14, 0, 14, 0, -14, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance: { animate: { y: [0, -6, 0, -6, 0], rotate: [0, -14, 0, 14, 0, -14, 0] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
   };
   const LEG_R_FOR: Record<string, LimbAnim> = {
-    run:   { animate: { y: [-12, 0, -12, 0, -12, 0, -12, 0], rotate: [30, 0, 30, 0, 30, 0, 30, 0] }, transition: { duration: 1.4, ease: 'linear' } },
+    run:   { animate: { y: [-12, 0, -12, 0, -12, 0, -12, 0], rotate: [30, 0, 30, 0, 30, 0, 30, 0] }, transition: { repeat: Infinity, duration: 0.5, ease: 'linear' } },
     hop:   { animate: { y: [0, -8, 0, -8, 0] }, transition: { duration: 1.6, ease: 'easeInOut' } },
     jump:  { animate: { y: [0, 8, -12, 0] }, transition: { duration: 1.7, ease: 'easeOut' } },
-    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [14, 0, -14, 0, 14, 0, -14] }, transition: { duration: 1.6, ease: 'easeInOut' } },
+    dance: { animate: { y: [-6, 0, -6, 0, -6], rotate: [14, 0, -14, 0, 14, 0, -14] }, transition: { repeat: Infinity, duration: 1.6, ease: 'easeInOut' } },
   };
 
   // Lookup with first-word fallback so phrases like "clap your hands" still match "clap".
@@ -1089,7 +1089,9 @@ export const RPGCharacterSprite = ({
   const isSleeping = actKey === 'sleep';
   const isEating = actKey === 'eat';
   const isDrinking = actKey === 'drink';
-  const showPrekProps = isSleeping || isEating || isDrinking;
+  const isClapping = actKey === 'clap';
+  const isDancing = actKey === 'dance';
+  const showPrekProps = isSleeping || isEating || isDrinking || isClapping || isDancing;
 
   // Sleep posture: settle the character down into the bed.
   const restY = isSleeping ? [0, 18, 22, 22] : (isTakingDamage ? [0, -5, 0] : [0, -3, 0]);
@@ -1239,6 +1241,82 @@ export const RPGCharacterSprite = ({
               ))}
               <div className="absolute left-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
               <div className="absolute right-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
+            </>
+          )}
+
+          {isClapping && (
+            <>
+              {/* Impact burst between the hands on each clap (4 claps over 1.6s) */}
+              <motion.div
+                key={`clap-burst-${limbKey}`}
+                className="absolute"
+                style={{ left: '50%', top: '58%', width: '32%', height: '32%', transform: 'translate(-50%, -50%)' }}
+                initial={{ opacity: 0, scale: 0.4 }}
+                animate={{
+                  opacity: [0, 1, 0, 1, 0, 1, 0, 1, 0],
+                  scale: [0.4, 1.2, 0.4, 1.2, 0.4, 1.2, 0.4, 1.2, 0.4],
+                }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', times: [0, 0.08, 0.2, 0.32, 0.45, 0.57, 0.7, 0.82, 1] }}
+              >
+                <div className="absolute inset-0 rounded-full bg-yellow-300/70 blur-md" />
+                <div className="absolute inset-[28%] rounded-full bg-white" />
+                {[0, 60, 120, 180, 240, 300].map((deg) => (
+                  <div
+                    key={`ray-${deg}`}
+                    className="absolute left-1/2 top-1/2 w-[6%] h-[55%] bg-amber-400 rounded-full origin-top"
+                    style={{ transform: `translate(-50%, 0) rotate(${deg}deg)` }}
+                  />
+                ))}
+              </motion.div>
+            </>
+          )}
+
+          {isDancing && (
+            <>
+              {/* Disco ball above the head */}
+              <motion.div
+                key={`disco-${limbKey}`}
+                className="absolute"
+                style={{ left: '50%', top: '-12%', width: '26%', height: '26%', transform: 'translateX(-50%)' }}
+                animate={{ rotate: [0, 360], y: [0, -3, 0, -3, 0] }}
+                transition={{
+                  rotate: { repeat: Infinity, duration: 3, ease: 'linear' },
+                  y: { repeat: Infinity, duration: 1.2, ease: 'easeInOut' },
+                }}
+              >
+                {/* String to ceiling */}
+                <div className="absolute left-1/2 -top-3 w-px h-3 bg-slate-400" />
+                {/* Ball */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-200 via-slate-400 to-slate-700 shadow-[0_0_18px_rgba(192,132,252,0.7)]">
+                  {/* Mirror facets */}
+                  <div className="absolute inset-[10%] grid grid-cols-4 grid-rows-4 gap-[1px] rounded-full overflow-hidden opacity-80">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <div key={i} className={i % 3 === 0 ? 'bg-fuchsia-300' : i % 3 === 1 ? 'bg-cyan-200' : 'bg-amber-200'} />
+                    ))}
+                  </div>
+                  {/* Highlight */}
+                  <div className="absolute top-[15%] left-[18%] w-[26%] h-[20%] rounded-full bg-white/80 blur-[1px]" />
+                </div>
+              </motion.div>
+
+              {/* Floating music notes */}
+              {[
+                { left: '8%', top: '18%', delay: 0, note: '♪', color: 'text-fuchsia-500' },
+                { left: '78%', top: '24%', delay: 0.5, note: '♫', color: 'text-cyan-500' },
+                { left: '20%', top: '40%', delay: 1.0, note: '♬', color: 'text-amber-500' },
+                { left: '70%', top: '46%', delay: 0.3, note: '♩', color: 'text-emerald-500' },
+              ].map((n, i) => (
+                <motion.div
+                  key={`note-${i}-${limbKey}`}
+                  className={`absolute font-extrabold ${n.color} text-2xl sm:text-3xl drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)] select-none`}
+                  style={{ left: n.left, top: n.top }}
+                  initial={{ opacity: 0, y: 10, rotate: -10 }}
+                  animate={{ opacity: [0, 1, 1, 0], y: [10, -10, -28, -48], rotate: [-10, 8, -6, 10] }}
+                  transition={{ repeat: Infinity, duration: 2.2, delay: n.delay, ease: 'easeOut' }}
+                >
+                  {n.note}
+                </motion.div>
+              ))}
             </>
           )}
         </div>
