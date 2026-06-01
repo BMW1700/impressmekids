@@ -1089,7 +1089,9 @@ export const RPGCharacterSprite = ({
   const isSleeping = actKey === 'sleep';
   const isEating = actKey === 'eat';
   const isDrinking = actKey === 'drink';
-  const showPrekProps = isSleeping || isEating || isDrinking;
+  const isClapping = actKey === 'clap';
+  const isDancing = actKey === 'dance';
+  const showPrekProps = isSleeping || isEating || isDrinking || isClapping || isDancing;
 
   // Sleep posture: settle the character down into the bed.
   const restY = isSleeping ? [0, 18, 22, 22] : (isTakingDamage ? [0, -5, 0] : [0, -3, 0]);
