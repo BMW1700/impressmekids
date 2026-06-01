@@ -1184,7 +1184,7 @@ export const RPGCharacterSprite = ({
       {isSleeping && (
         <div
           key={`blanket-${limbKey}`}
-          className="pointer-events-none absolute left-[-2%] right-[34%] bottom-[2%] h-[26%] z-20 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 shadow-lg"
+          className="pointer-events-none absolute right-[-2%] left-[34%] bottom-[2%] h-[55%] z-20 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 shadow-lg"
         />
       )}
 
