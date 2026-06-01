@@ -201,14 +201,34 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       }, 400);
     }, 220);
 
-    // Help-scene staging: only trigger after the user has finished the phrase.
+    // Help-scene staging — narrative props + mood, played out over ~4.5s.
     const lower = phrase.toLowerCase().trim();
     if (lower === "help me") {
-      // Yellow walks onto the scene from off-screen right.
+      // Blue is sad holding a deflated basketball; yellow walks in with a
+      // pump and inflates it; blue becomes happy.
+      clearHelpTimers();
+      setHelpStage("me");
+      setHelpPhase("setup");
       window.setTimeout(() => setHelperVisible(true), 250);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setHelpPhase("approach"), 250),
+        window.setTimeout(() => setHelpPhase("fix"), 1800),
+        window.setTimeout(() => setHelpPhase("happy"), 3400),
+        window.setTimeout(() => setHelpStage(null), 4600),
+      );
     } else if (lower === "help you") {
-      // Blue lead walks across to the yellow helper.
-      window.setTimeout(() => setLeadHelping(true), 250);
+      // Yellow is sad with a broken bat; blue walks over carrying duct tape,
+      // wraps the bat back together; yellow becomes happy.
+      clearHelpTimers();
+      setHelpStage("you");
+      setHelpPhase("setup");
+      window.setTimeout(() => setLeadHelping(true), 350);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setHelpPhase("approach"), 250),
+        window.setTimeout(() => setHelpPhase("fix"), 2000),
+        window.setTimeout(() => setHelpPhase("happy"), 3500),
+        window.setTimeout(() => setHelpStage(null), 4600),
+      );
     }
 
     // Pre-K signature scene takes priority; fall back to legacy verb library.
