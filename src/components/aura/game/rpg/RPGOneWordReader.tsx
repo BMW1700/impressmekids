@@ -219,6 +219,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setHelpPhase("approach"), 250),
         window.setTimeout(() => setHelpPhase("fix"), 1800),
         window.setTimeout(() => setHelpPhase("happy"), 3400),
+        // Slide the yellow helper further right so he's clearly separated
+        // from blue, ready as the target for the "help you" scene.
+        window.setTimeout(() => setHelperOffsetX(110), 4200),
         window.setTimeout(() => setHelpStage(null), 4600),
       );
     } else if (lower === "help you") {
