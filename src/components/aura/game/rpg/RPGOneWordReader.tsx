@@ -137,6 +137,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   );
   const allDone = correctPhrases >= phrases.length;
 
+  // Detect "help me" / "help you" so we can summon a helper companion.
+  const phraseLower = currentPhrase.toLowerCase().trim();
+  const isHelpPhrase = phraseLower === "help me" || phraseLower === "help you";
+  // The helper is the OPPOSITE friendly creature (yellow Bouncer helps blue
+  // Echo, and vice versa). Picked once based on which character is the lead.
+  const helperType: FriendlyEnemy = enemy === "echo_blob" ? "bouncer" : "echo_blob";
+  useEffect(() => {
+    if (isHelpPhrase) setHelperVisible(true);
+  }, [isHelpPhrase]);
+
   // Track verb animation lifecycle so we can defer completion until it finishes
   useEffect(() => {
     if (!verb && !prekScene) return;
