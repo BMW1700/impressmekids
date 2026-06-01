@@ -316,10 +316,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               )}
             </div>
             <motion.div
-              key={`enemy-${prekScene?.id ?? verb?.id ?? 0}`}
+              key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
                 allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
+                  : leadHelping
+                  ? { x: [0, 18, 36, 54, 70, 80, 80, 80], y: [0, -4, 0, -4, 0, -2, 0, 0], rotate: [0, 4, 8, 6, 10, 8, 8, 8] }
                   : prekScene?.descriptor.transform
                   ? prekScene.descriptor.transform.animate
                   : verb?.descriptor.kind === "transform"
@@ -329,6 +331,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               transition={
                 allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+                  : leadHelping
+                  ? { duration: 2.4, ease: "easeInOut" }
                   : prekScene?.descriptor.transform
                   ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
@@ -344,8 +348,25 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   isEnemy
                   size="lg"
                   isTakingDamage={enemyHit}
-                  action={prekScene ? currentPhrase : null}
-                  actionNonce={prekScene?.id ?? 0}
+                  // During the help-scene: lead is "comforted" while helper is reaching out,
+                  // and "reach_left" (visually right toward helper, since lead is mirrored)
+                  // once the user has finished "help you".
+                  action={
+                    leadHelping
+                      ? "reach_left"
+                      : helperVisible
+                      ? "comforted"
+                      : prekScene
+                      ? currentPhrase
+                      : null
+                  }
+                  actionNonce={
+                    leadHelping
+                      ? 9000 + currentPhraseIndex
+                      : helperVisible
+                      ? 8000 + currentPhraseIndex
+                      : prekScene?.id ?? 0
+                  }
                 />
               </div>
               <VerbAnimationLayer
@@ -355,20 +376,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 anchor={{ x: 60, y: 40 }}
               />
 
-              {/* Helper companion — slides in for "help me" and stays through "help you". */}
+              {/* Helper companion — walks in after the user finishes "help me" and
+                  remains through "help you", receiving the lead's empathy in turn. */}
               <AnimatePresence>
                 {helperVisible && (
                   <motion.div
                     key="helper-companion"
                     className="absolute bottom-0 -right-[55%] sm:-right-[60%] h-[88px] w-[88px] sm:h-[104px] sm:w-[104px] z-20 pointer-events-none"
-                    initial={{ x: 220, opacity: 0, scale: 0.6 }}
-                    animate={{ x: 0, opacity: 1, scale: 1, y: [0, -6, 0] }}
-                    exit={{ x: 220, opacity: 0, scale: 0.6 }}
+                    initial={{ x: 260, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1, y: [0, -5, 0, -5, 0, -3, 0] }}
+                    exit={{ x: 260, opacity: 0 }}
                     transition={{
-                      x: { type: "spring", stiffness: 140, damping: 18 },
-                      opacity: { duration: 0.4 },
-                      scale: { duration: 0.5, ease: "easeOut" },
-                      y: { repeat: Infinity, duration: 2.2, ease: "easeInOut" },
+                      x: { duration: 1.6, ease: "easeOut" },
+                      opacity: { duration: 0.5 },
+                      y: { repeat: Infinity, duration: 1.4, ease: "easeInOut" },
                     }}
                   >
                     <RPGCharacterSprite
@@ -376,15 +397,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       size="md"
                       // Helper stays unmirrored so "reach_left" arms point toward
                       // the lead character on its visual left.
-                      action={phraseLower === "help me" ? "reach_left" : phraseLower === "help you" ? "comforted" : "reach_left"}
-                      actionNonce={currentPhraseIndex}
+                      action={leadHelping ? "comforted" : "reach_left"}
+                      actionNonce={leadHelping ? 7000 : 6000 + currentPhraseIndex}
                     />
-
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
           </div>
+
 
 
           {/* Knight */}
