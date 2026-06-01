@@ -1280,8 +1280,9 @@ export const RPGCharacterSprite = ({
                   Z
                 </motion.div>
               ))}
-              <div className="absolute left-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
-              <div className="absolute right-[28%] top-[37%] w-[16%] h-[2px] bg-slate-900 rounded-full" />
+              {/* Closed eyes — vertical pair on the right side (where the rotated head is) */}
+              <div className="absolute right-[12%] top-[36%] w-[2px] h-[14%] bg-slate-900 rounded-full z-30" />
+              <div className="absolute right-[12%] top-[54%] w-[2px] h-[14%] bg-slate-900 rounded-full z-30" />
             </>
           )}
 
