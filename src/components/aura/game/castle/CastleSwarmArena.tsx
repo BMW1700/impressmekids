@@ -705,7 +705,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
     }
 
-    if (coins > 0) coinsRef.current += coins;
+    if (coins > 0) coinsRef.current += Math.round(coins * knightStatsRef.current.goldFindMul);
     if (superFill > 0) {
       superMeterRef.current = Math.min(100, superMeterRef.current + superFill);
       setSuperMeter(superMeterRef.current);
