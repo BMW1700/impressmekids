@@ -1188,13 +1188,37 @@ export const RPGCharacterSprite = ({
         style={
           isSleeping
             ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}translateX(-22%) rotate(90deg)`, transformOrigin: 'center' }
-            : isRunning
-              ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(-20deg) rotate(-6deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
-              : undefined
+            : isFlying
+              ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(-20deg)`, transformOrigin: 'center' }
+              : isRunning
+                ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(-20deg) rotate(-6deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
+                : undefined
         }
       >
         {renderCharacter()}
+
+        {/* Flapping wings — appear behind body while flying */}
+        {isFlying && (
+          <>
+            <motion.div
+              key={`wing-l-${limbKey}`}
+              className="pointer-events-none absolute top-[28%] left-[-18%] w-[42%] h-[34%] rounded-[50%] bg-gradient-to-br from-white to-slate-200 shadow-md z-0"
+              style={{ transformOrigin: '90% 50%' }}
+              animate={{ rotate: [-10, -55, -10, -55, -10, -55, -10] }}
+              transition={{ repeat: Infinity, duration: 0.45, ease: 'easeInOut' }}
+            />
+            <motion.div
+              key={`wing-r-${limbKey}`}
+              className="pointer-events-none absolute top-[28%] right-[-18%] w-[42%] h-[34%] rounded-[50%] bg-gradient-to-bl from-white to-slate-200 shadow-md z-0"
+              style={{ transformOrigin: '10% 50%' }}
+              animate={{ rotate: [10, 55, 10, 55, 10, 55, 10] }}
+              transition={{ repeat: Infinity, duration: 0.45, ease: 'easeInOut' }}
+            />
+          </>
+        )}
       </div>
+
+
 
 
       {/* Blanket drapes OVER the body (in front of character, behind head) */}
