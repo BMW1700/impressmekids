@@ -457,6 +457,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       action={leadHelping ? "comforted" : "reach_left"}
                       actionNonce={leadHelping ? 7000 : 6000 + currentPhraseIndex}
                     />
+                    {/* Help-ME: yellow helper carries a pump to inflate blue's basketball */}
+                    {helpStage === "me" && <PumpProp phase={helpPhase} />}
+                    {/* Help-YOU: yellow helper is sad with a broken bat until blue tapes it */}
+                    {helpStage === "you" && (
+                      <>
+                        <SadMood visible={helpPhase !== "happy"} topPx={-86} />
+                        <HappyMood visible={helpPhase === "happy"} topPx={-90} />
+                        <BrokenBatProp phase={helpPhase} />
+                      </>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
