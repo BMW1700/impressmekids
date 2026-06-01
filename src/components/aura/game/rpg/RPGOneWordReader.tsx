@@ -118,6 +118,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // Becomes true after the user finishes "help you" — the blue lead then
   // walks across to reach the yellow helper with empathetic gestures.
   const [leadHelping, setLeadHelping] = useState(false);
+  // Help-scene narrative state: which scene + which sub-phase is playing.
+  // - 'me' scene: blue is sad with a deflated basketball; yellow pumps it up.
+  // - 'you' scene: yellow is sad with a broken bat; blue tapes it back together.
+  const [helpStage, setHelpStage] = useState<null | "me" | "you">(null);
+  const [helpPhase, setHelpPhase] = useState<"setup" | "approach" | "fix" | "happy">("setup");
+  const helpTimersRef = useRef<number[]>([]);
+  const clearHelpTimers = () => {
+    helpTimersRef.current.forEach((id) => window.clearTimeout(id));
+    helpTimersRef.current = [];
+  };
 
   // Reset when level changes
   useEffect(() => {
@@ -132,7 +142,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     setPrekScene(null);
     setHelperVisible(false);
     setLeadHelping(false);
+    clearHelpTimers();
+    setHelpStage(null);
+    setHelpPhase("setup");
   }, [world.id, level.id]);
+  useEffect(() => () => clearHelpTimers(), []);
+
 
   const currentPhrase = phrases[currentPhraseIndex] ?? "";
   const verbHint = useMemo(
