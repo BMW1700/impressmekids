@@ -122,7 +122,7 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     duration: 3.2,
     label: { text: "GULP!", color: "#0ea5e9" },
     // Hold head back during the 3s drink — glass prop empties inside the sprite.
-    transform: tx({ rotate: [0, -12, -18, -18, -18, -10, 0], y: [0, -3, -4, -4, -4, -2, 0] }, 3.1),
+    transform: tx({ rotate: [0, 12, 18, 18, 18, 10, 0], y: [0, -3, -4, -4, -4, -2, 0] }, 3.1),
     props: [],
   },
   sleep: {
