@@ -1135,16 +1135,18 @@ export const RPGCharacterSprite = ({
         </div>
       )}
 
-      {/* Bed (behind character) for sleep */}
+      {/* Bed (behind character) for sleep — pillow on the RIGHT (under head), blanket over body */}
       {isSleeping && (
         <div
           key={`bed-${limbKey}`}
           className={`pointer-events-none absolute left-[-8%] right-[-8%] bottom-[-6%] h-[42%] z-0 ${isEnemy ? 'scale-x-[-1]' : ''}`}
         >
+          {/* Bed frame */}
           <div className="absolute inset-x-0 bottom-0 h-[55%] rounded-md bg-gradient-to-b from-amber-700 to-amber-900 shadow-md" />
+          {/* White sheet */}
           <div className="absolute inset-x-[4%] bottom-[40%] h-[28%] rounded-sm bg-white shadow-inner" />
-          <div className="absolute left-[32%] right-[4%] bottom-[40%] h-[34%] rounded-sm bg-gradient-to-b from-sky-400 to-blue-600 shadow" />
-          <div className="absolute left-[6%] bottom-[60%] w-[28%] h-[20%] rounded-md bg-white shadow" />
+          {/* Pillow on the RIGHT side */}
+          <div className="absolute right-[4%] bottom-[55%] w-[30%] h-[26%] rounded-md bg-white shadow z-10" />
         </div>
       )}
 
