@@ -112,6 +112,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const verbActiveRef = useRef(false);
   const pendingCompleteRef = useRef<null | (() => void)>(null);
 
+  // Helper character (e.g. yellow Bouncer) that appears during help me/help you
+  // scenes and stays visible across both phrases of the help pair.
+  const [helperVisible, setHelperVisible] = useState(false);
+
   // Reset when level changes
   useEffect(() => {
     setCurrentPhraseIndex(0);
@@ -123,6 +127,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     verbActiveRef.current = false;
     pendingCompleteRef.current = null;
     setPrekScene(null);
+    setHelperVisible(false);
   }, [world.id, level.id]);
 
   const currentPhrase = phrases[currentPhraseIndex] ?? "";
