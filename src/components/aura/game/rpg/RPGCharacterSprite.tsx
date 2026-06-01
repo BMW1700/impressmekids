@@ -1175,25 +1175,53 @@ export const RPGCharacterSprite = ({
             <motion.div
               key={`apple-${limbKey}`}
               className="absolute"
-              style={{ right: '14%', top: '46%', width: '20%', height: '22%' }}
-              initial={{ opacity: 1, scale: 1 }}
+              style={{ right: '22%', top: '64%', width: '16%', height: '18%' }}
+              initial={{ x: 0, y: 0, opacity: 1 }}
               animate={{
-                scale: [1, 1, 0.72, 0.72, 0.42, 0.42, 0],
-                opacity: [1, 1, 1, 1, 1, 1, 0],
+                // Hand → mouth → hand, repeated 3 times (sync with eat arm swing 2.5s)
+                x: [0, -10, -10, 0, -10, -10, 0, -10, -10, 0],
+                y: [0, -55, -55, 0, -55, -55, 0, -55, -55, 0],
+                opacity: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
               }}
               transition={{
-                duration: 2.4,
-                times: [0, 0.18, 0.22, 0.52, 0.56, 0.85, 1],
+                duration: 2.5,
+                times: [0, 0.18, 0.28, 0.38, 0.5, 0.6, 0.7, 0.82, 0.9, 1],
                 ease: 'easeInOut',
               }}
             >
-              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 via-red-500 to-red-700 shadow-md" />
-              <div className="absolute top-[15%] left-[18%] w-[26%] h-[22%] rounded-full bg-white/60 blur-[1px]" />
-              <div className="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[6%] h-[20%] rounded-sm bg-amber-900" />
-              <div
-                className="absolute -top-[8%] left-[58%] w-[28%] h-[18%] rounded-full bg-green-500"
-                style={{ transform: 'rotate(35deg)' }}
-              />
+              {/* Apple body — bites taken on each mouth-touch via clip-path */}
+              <motion.div
+                className="absolute inset-0"
+                initial={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
+                animate={{
+                  clipPath: [
+                    // full
+                    'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+                    'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)',
+                    // bite 1 (top-right wedge removed)
+                    'polygon(0% 0%, 70% 0%, 60% 18%, 78% 32%, 100% 38%, 100% 100%, 0% 100%)',
+                    'polygon(0% 0%, 70% 0%, 60% 18%, 78% 32%, 100% 38%, 100% 100%, 0% 100%)',
+                    // bite 2 (right side gone)
+                    'polygon(0% 0%, 60% 0%, 48% 20%, 38% 42%, 50% 62%, 65% 78%, 60% 100%, 0% 100%)',
+                    'polygon(0% 0%, 60% 0%, 48% 20%, 38% 42%, 50% 62%, 65% 78%, 60% 100%, 0% 100%)',
+                    // bite 3 (mostly core)
+                    'polygon(0% 0%, 35% 0%, 28% 30%, 18% 50%, 28% 80%, 38% 100%, 0% 100%)',
+                  ],
+                }}
+                transition={{
+                  duration: 2.5,
+                  times: [0, 0.22, 0.3, 0.48, 0.55, 0.72, 0.8],
+                  ease: 'linear',
+                }}
+              >
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 via-red-500 to-red-700 shadow-md" />
+                <div className="absolute top-[15%] left-[18%] w-[26%] h-[22%] rounded-full bg-white/60 blur-[1px]" />
+                <div className="absolute -top-[12%] left-1/2 -translate-x-1/2 w-[6%] h-[20%] rounded-sm bg-amber-900" />
+                <div
+                  className="absolute -top-[8%] left-[58%] w-[28%] h-[18%] rounded-full bg-green-500"
+                  style={{ transform: 'rotate(35deg)' }}
+                />
+              </motion.div>
             </motion.div>
           )}
 
