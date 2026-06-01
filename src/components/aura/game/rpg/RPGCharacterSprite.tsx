@@ -923,6 +923,7 @@ export const RPGCharacterSprite = ({
   const legR = LEG_R_FOR[actKey] ?? IDLE_LEG;
   const isRunning = actKey === 'run';
   const isFlying = actKey === 'fly';
+  const isSinging = actKey === 'sing';
   // Re-key on actionNonce so the same action replays cleanly
   const limbKey = `${actKey}-${actionNonce}`;
 
