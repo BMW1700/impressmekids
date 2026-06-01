@@ -111,7 +111,11 @@ export const CastleCampaignSelect = ({ onPickEndless, onPickDaily, onPickCampaig
         </div>
 
         {/* Upgrades */}
+        {/* Upgrades */}
         <CastleUpgradesPanel />
+
+        {/* Leaderboard */}
+        <CastleLeaderboardPanel />
 
         {/* Legacy campaign */}
         {legacyLevels.length > 0 && (
