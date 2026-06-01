@@ -1165,10 +1165,21 @@ export const RPGCharacterSprite = ({
         />
       )}
 
-      {/* Character Container */}
-      <div className={`relative w-full h-full ${isEnemy ? 'scale-x-[-1]' : ''}`}>
+      {/* Character Container — lay sideways (head on right, feet on left) while sleeping */}
+      <div
+        className={`relative w-full h-full ${isEnemy ? 'scale-x-[-1]' : ''}`}
+        style={isSleeping ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(90deg)`, transformOrigin: 'center' } : undefined}
+      >
         {renderCharacter()}
       </div>
+
+      {/* Blanket drapes OVER the body (in front of character, behind head) */}
+      {isSleeping && (
+        <div
+          key={`blanket-${limbKey}`}
+          className="pointer-events-none absolute left-[-2%] right-[34%] bottom-[2%] h-[26%] z-20 rounded-md bg-gradient-to-b from-sky-400 to-blue-600 shadow-lg"
+        />
+      )}
 
       {/* Pre-K prop overlays */}
       {showPrekProps && (
