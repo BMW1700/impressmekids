@@ -364,12 +364,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                     <RPGCharacterSprite
                       type={helperType}
                       size="md"
-                      // Helper faces LEFT toward the lead character (isEnemy mirrors the sprite).
-                      isEnemy
-                      // Reach out during "help me"; gentle accepting pulse during "help you".
+                      // Helper stays unmirrored so "reach_left" arms point toward
+                      // the lead character on its visual left.
                       action={phraseLower === "help me" ? "reach_left" : phraseLower === "help you" ? "comforted" : "reach_left"}
                       actionNonce={currentPhraseIndex}
                     />
+
                   </motion.div>
                 )}
               </AnimatePresence>
