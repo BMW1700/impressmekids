@@ -6,12 +6,15 @@ export type HelpPhase = "setup" | "approach" | "fix" | "happy";
 // Mood indicators (floating above the character's head)
 // ──────────────────────────────────────────────────────────────────────────
 
-export const SadMood = ({ visible }: { visible: boolean }) => (
+type MoodProps = { visible: boolean; topPx?: number };
+
+export const SadMood = ({ visible, topPx = -24 }: MoodProps) => (
   <AnimatePresence>
     {visible && (
       <motion.div
         key="sad"
-        className="absolute -top-6 left-1/2 -translate-x-1/2 pointer-events-none z-40 w-14 h-10"
+        className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-40 w-14 h-10"
+        style={{ top: topPx }}
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 4 }}
@@ -36,12 +39,13 @@ export const SadMood = ({ visible }: { visible: boolean }) => (
   </AnimatePresence>
 );
 
-export const HappyMood = ({ visible }: { visible: boolean }) => (
+export const HappyMood = ({ visible, topPx = -28 }: MoodProps) => (
   <AnimatePresence>
     {visible && (
       <motion.div
         key="happy"
-        className="absolute -top-7 left-1/2 -translate-x-1/2 pointer-events-none z-40 w-14 h-8 flex items-end justify-center gap-1"
+        className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-40 w-14 h-8 flex items-end justify-center gap-1"
+        style={{ top: topPx }}
         initial={{ opacity: 0, scale: 0.4 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.4 }}
