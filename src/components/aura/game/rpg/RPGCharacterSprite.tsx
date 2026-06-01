@@ -1165,13 +1165,20 @@ export const RPGCharacterSprite = ({
         />
       )}
 
-      {/* Character Container — lay sideways (head on right, feet on left) while sleeping */}
+      {/* Character Container — lay sideways while sleeping; turn to profile facing right while running */}
       <div
         className={`relative w-full h-full ${isEnemy ? 'scale-x-[-1]' : ''}`}
-        style={isSleeping ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(90deg)`, transformOrigin: 'center' } : undefined}
+        style={
+          isSleeping
+            ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotate(90deg)`, transformOrigin: 'center' }
+            : isRunning
+              ? { transform: `${isEnemy ? 'scaleX(-1) ' : ''}rotateY(75deg) rotate(-8deg)`, transformOrigin: 'center', transformStyle: 'preserve-3d' }
+              : undefined
+        }
       >
         {renderCharacter()}
       </div>
+
 
       {/* Blanket drapes OVER the body (in front of character, behind head) */}
       {isSleeping && (
