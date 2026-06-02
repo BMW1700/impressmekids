@@ -430,9 +430,13 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 </>
               )}
             </div>
-            {/* Brown cardboard box — stationary on the ground next to the lead,
-                shown during "in the box" / "on the box" prek phrases. */}
+            {/* Ground-anchored props — siblings of the character's motion.div
+                so they do NOT inherit its transform (no head-pots, no
+                hand-level boxes). They render at the column level. */}
             <BoxProp visible={boxStage !== null} mode={boxStage ?? "on"} />
+            <WashHandsProp visible={washing} />
+            <PlantSeedProp visible={planting} />
+            <ThrowBallProp visible={throwing} />
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
