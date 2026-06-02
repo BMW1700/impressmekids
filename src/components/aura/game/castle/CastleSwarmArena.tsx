@@ -166,6 +166,18 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const knightStatsRef = useRef(knightStats);
   useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
+  // ---- Heroes (summonable units) ----
+  const heroesRef = useRef<ActiveHero[]>([]);
+  const heroIdRef = useRef(1);
+  const heroProjectilesRef = useRef<HeroProjectile[]>([]);
+  const heroProjIdRef = useRef(1);
+  const [heroCooldowns, setHeroCooldowns] = useState<Record<string, number>>({});
+  const [coinsHud, setCoinsHud] = useState(0);
+  const [, setHeroTick] = useState(0); // bumped to re-render hero layer
+  const unlockedHeroIdsRef = useRef(unlockedHeroIds);
+  useEffect(() => { unlockedHeroIdsRef.current = unlockedHeroIds; }, [unlockedHeroIds]);
+
+
   // ---- Save run ----
   const persistRun = useCallback((reason: "win" | "loss" | "quit", finalAcc: number, finalCoins: number) => {
     if (!user?.id) return;
