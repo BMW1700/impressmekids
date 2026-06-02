@@ -10,6 +10,7 @@ import {
   PumpProp,
   BrokenBatProp,
   DuctTapeProp,
+  DogWithLeashProp,
 } from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
@@ -135,6 +136,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // the helper slides further right to make room — and stays there for the
   // "help you" scene, where the blue lead walks over to him.
   const [helperOffsetX, setHelperOffsetX] = useState(0);
+  // Dog scene: 'my' shows blue holding the leash; 'your' shows yellow holding it.
+  const [dogStage, setDogStage] = useState<null | "my" | "your">(null);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
@@ -158,6 +161,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     setHelpStage(null);
     setHelpPhase("setup");
     setHelperOffsetX(0);
+    setDogStage(null);
   }, [world.id, level.id]);
   useEffect(() => () => clearHelpTimers(), []);
 
@@ -238,7 +242,33 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setHelpPhase("happy"), 3600),
         window.setTimeout(() => setHelpStage(null), 9000),
       );
+    } else if (lower === "my dog") {
+      // Blue lead is shown holding the leash of a dog standing next to him.
+      clearHelpTimers();
+      setHelperVisible(false);
+      setLeadHelping(false);
+      setHelpStage(null);
+      setDogStage("my");
+      helpTimersRef.current.push(
+        window.setTimeout(() => setDogStage(null), 4000),
+      );
+    } else if (lower === "your dog") {
+      // Yellow helper walks in a bit from the right and holds the leash.
+      clearHelpTimers();
+      setLeadHelping(false);
+      setHelpStage(null);
+      setDogStage("your");
+      setHelperOffsetX(40);
+      setHelperVisible(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => {
+          setDogStage(null);
+          setHelperVisible(false);
+          setHelperOffsetX(0);
+        }, 4200),
+      );
     }
+
 
     // Pre-K signature scene takes priority; fall back to legacy verb library.
     // For phrases, resolvePreKVerb checks the action word inside the phrase.
@@ -434,6 +464,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               {helpStage === "you" && leadHelping && (
                 <DuctTapeProp phase={helpPhase} />
               )}
+              {/* MY dog / YOUR dog scene: a dog with a collar + leash. */}
+              <DogWithLeashProp
+                holder={dogStage === "your" ? "right" : "left"}
+                visible={dogStage !== null}
+              />
+
 
               <VerbAnimationLayer
                 descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}

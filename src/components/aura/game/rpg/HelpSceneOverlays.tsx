@@ -374,3 +374,183 @@ export const DuctTapeProp = ({ phase }: { phase: HelpPhase }) => {
     </div>
   );
 };
+
+// ──────────────────────────────────────────────────────────────────────────
+// "MY dog" / "YOUR dog" scene: a cute cartoon dog with a collar + leash.
+// The leash arcs UP toward whichever character is "holding" it.
+//   holder="left"  → leash goes up-left, toward the BLUE lead's hand.
+//   holder="right" → leash goes up-right, toward the YELLOW helper's hand.
+// ──────────────────────────────────────────────────────────────────────────
+export const DogWithLeashProp = ({
+  holder,
+  visible,
+}: {
+  holder: "left" | "right";
+  visible: boolean;
+}) => {
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          key={`dog-${holder}`}
+          className="absolute pointer-events-none z-30"
+          // Sits on the ground next to the lead, slightly to the right so
+          // there's room for both characters around it.
+          style={{ right: "-38%", bottom: "0%", width: "78px", height: "68px" }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+        >
+          {/* Tiny idle bob so the dog feels alive */}
+          <motion.div
+            className="absolute inset-0"
+            animate={{ y: [0, -2, 0, -2, 0], rotate: [0, -1.5, 0, 1.5, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {/* Tail — wags */}
+            <motion.div
+              className="absolute"
+              style={{
+                right: "2px",
+                bottom: "30px",
+                width: "16px",
+                height: "5px",
+                background: "linear-gradient(90deg, #c2410c, #fb923c)",
+                borderRadius: "999px",
+                transformOrigin: "left center",
+                transform: "rotate(-25deg)",
+              }}
+              animate={{ rotate: [-25, -55, -25, -55, -25] }}
+              transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {/* Body */}
+            <div
+              className="absolute shadow-md"
+              style={{
+                left: "10px",
+                bottom: "10px",
+                width: "52px",
+                height: "30px",
+                background: "linear-gradient(180deg, #fdba74 0%, #fb923c 60%, #c2410c 100%)",
+                borderRadius: "26px 22px 22px 22px / 22px 18px 18px 18px",
+              }}
+            />
+            {/* Legs */}
+            <div
+              className="absolute bg-amber-800"
+              style={{ left: "16px", bottom: "0px", width: "7px", height: "12px", borderRadius: "3px" }}
+            />
+            <div
+              className="absolute bg-amber-800"
+              style={{ left: "48px", bottom: "0px", width: "7px", height: "12px", borderRadius: "3px" }}
+            />
+            {/* Head */}
+            <div
+              className="absolute shadow-sm"
+              style={{
+                left: "44px",
+                bottom: "26px",
+                width: "30px",
+                height: "28px",
+                background: "linear-gradient(180deg, #fdba74 0%, #fb923c 100%)",
+                borderRadius: "50%",
+              }}
+            />
+            {/* Floppy ear */}
+            <div
+              className="absolute"
+              style={{
+                left: "42px",
+                bottom: "42px",
+                width: "10px",
+                height: "16px",
+                background: "#9a3412",
+                borderRadius: "8px 8px 8px 10px",
+                transform: "rotate(-15deg)",
+              }}
+            />
+            {/* Snout */}
+            <div
+              className="absolute"
+              style={{
+                left: "62px",
+                bottom: "28px",
+                width: "14px",
+                height: "10px",
+                background: "#fde68a",
+                borderRadius: "50%",
+              }}
+            />
+            {/* Nose */}
+            <div
+              className="absolute rounded-full bg-slate-900"
+              style={{ left: "70px", bottom: "33px", width: "5px", height: "4px" }}
+            />
+            {/* Eye */}
+            <div
+              className="absolute rounded-full bg-slate-900"
+              style={{ left: "58px", bottom: "42px", width: "4px", height: "4px" }}
+            />
+            {/* Mouth */}
+            <div
+              className="absolute"
+              style={{
+                left: "63px",
+                bottom: "26px",
+                width: "8px",
+                height: "3px",
+                borderBottom: "1.5px solid #7c2d12",
+                borderBottomLeftRadius: "8px",
+                borderBottomRightRadius: "8px",
+              }}
+            />
+
+            {/* COLLAR — bright red band around the neck */}
+            <div
+              className="absolute shadow-sm"
+              style={{
+                left: "42px",
+                bottom: "24px",
+                width: "16px",
+                height: "6px",
+                background: "linear-gradient(180deg, #ef4444, #b91c1c)",
+                borderRadius: "3px",
+                transform: "rotate(-8deg)",
+                border: "1px solid #7f1d1d",
+              }}
+            />
+            {/* Collar tag */}
+            <div
+              className="absolute rounded-full bg-amber-300 border border-amber-600"
+              style={{ left: "48px", bottom: "20px", width: "5px", height: "5px" }}
+            />
+
+            {/* LEASH — an arcing line going up toward the holder's hand.
+                Implemented as a thin rotated strip; direction flips by holder. */}
+            <div
+              className="absolute"
+              style={{
+                // Anchor point is the collar ring (~ left:50, bottom:30).
+                left: "48px",
+                bottom: "30px",
+                width: holder === "left" ? "70px" : "70px",
+                height: "3px",
+                background: "linear-gradient(90deg, #1e293b, #475569)",
+                borderRadius: "999px",
+                transformOrigin: holder === "left" ? "left center" : "left center",
+                // For left-holder, rotate so the far end goes up-left.
+                // For right-holder, rotate so the far end goes up-right.
+                transform:
+                  holder === "left"
+                    ? "rotate(-150deg)"
+                    : "rotate(-35deg)",
+                boxShadow: "0 1px 0 rgba(0,0,0,0.15)",
+              }}
+            />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
