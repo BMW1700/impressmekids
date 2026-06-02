@@ -953,6 +953,46 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             );
           })}
 
+          {/* Heroes (summoned) — rendered between knights & floating UI */}
+          {heroesRef.current.map(h => {
+            const def = HEROES_BY_ID[h.heroId];
+            const pct = (h.x / ARENA_WIDTH) * 100;
+            const yOff = yOffsetForHero(h.role);
+            return (
+              <div
+                key={h.id}
+                className="absolute flex flex-col items-center pointer-events-none"
+                style={{ left: `${100 - pct}%`, bottom: `${64 + yOff}px` }}
+              >
+                <div className="w-10 h-1.5 bg-slate-900/80 rounded-full overflow-hidden mb-1 border border-slate-700">
+                  <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, (h.hp / h.maxHp) * 100)}%` }} />
+                </div>
+                <HeroSprite hero={def} size={36} />
+              </div>
+            );
+          })}
+
+          {/* Hero projectiles */}
+          {heroProjectilesRef.current.map(p => {
+            const pct = (p.x / ARENA_WIDTH) * 100;
+            return (
+              <div
+                key={p.id}
+                className="absolute pointer-events-none rounded-full"
+                style={{
+                  left: `${100 - pct}%`,
+                  bottom: "120px",
+                  width: p.splash ? 10 : 6,
+                  height: p.splash ? 10 : 6,
+                  background: p.color,
+                  boxShadow: `0 0 8px ${p.color}`,
+                  transform: "translateX(-50%)",
+                }}
+              />
+            );
+          })}
+
+
           {/* Floating damage numbers */}
           <AnimatePresence>
             {floatingHits.map(f => (
