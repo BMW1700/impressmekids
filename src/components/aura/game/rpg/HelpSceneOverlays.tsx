@@ -384,24 +384,43 @@ export const DuctTapeProp = ({ phase }: { phase: HelpPhase }) => {
 export const DogWithLeashProp = ({
   holder,
   visible,
+  rightPct = -38,
+  scale = 1,
+  leashLength = 70,
+  leashAngleDeg,
 }: {
   holder: "left" | "right";
   visible: boolean;
+  /** How far right of the lead the dog sits, as percent of lead's width. */
+  rightPct?: number;
+  /** Size multiplier for the dog (1 = original ~78x68). */
+  scale?: number;
+  /** Length of the leash strap in px. */
+  leashLength?: number;
+  /** Override leash rotation. Default: -150 for left holder, -35 for right. */
+  leashAngleDeg?: number;
 }) => {
+  const angle = leashAngleDeg ?? (holder === "left" ? -150 : -35);
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           key={`dog-${holder}`}
           className="absolute pointer-events-none z-30"
-          // Sits on the ground next to the lead, slightly to the right so
-          // there's room for both characters around it.
-          style={{ right: "-38%", bottom: "0%", width: "78px", height: "68px" }}
+          style={{
+            right: `${rightPct}%`,
+            bottom: "0%",
+            width: `${78 * scale}px`,
+            height: `${68 * scale}px`,
+            transformOrigin: "left bottom",
+          }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
+          <div style={{ transform: `scale(${scale})`, transformOrigin: "left bottom", width: "78px", height: "68px", position: "relative" }}>
+
           {/* Tiny idle bob so the dog feels alive */}
           <motion.div
             className="absolute inset-0"
