@@ -11,6 +11,8 @@ export interface CampaignLevel {
   enemyCastleHp: number;
   starThresholds: { needAccuracy: number; needWords: number };
   arc?: CastleArcId;            // which story arc this level belongs to
+  /** Hero id (see heroRoster.ts) granted the first time the player clears this level. */
+  rewardHeroId?: string;
 }
 
 /** 5 castle-specific story arcs — 5 levels each, runs alongside legacy 10 levels. */
