@@ -242,7 +242,33 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setHelpPhase("happy"), 3600),
         window.setTimeout(() => setHelpStage(null), 9000),
       );
+    } else if (lower === "my dog") {
+      // Blue lead is shown holding the leash of a dog standing next to him.
+      clearHelpTimers();
+      setHelperVisible(false);
+      setLeadHelping(false);
+      setHelpStage(null);
+      setDogStage("my");
+      helpTimersRef.current.push(
+        window.setTimeout(() => setDogStage(null), 4000),
+      );
+    } else if (lower === "your dog") {
+      // Yellow helper walks in a bit from the right and holds the leash.
+      clearHelpTimers();
+      setLeadHelping(false);
+      setHelpStage(null);
+      setDogStage("your");
+      setHelperOffsetX(40);
+      setHelperVisible(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => {
+          setDogStage(null);
+          setHelperVisible(false);
+          setHelperOffsetX(0);
+        }, 4200),
+      );
     }
+
 
     // Pre-K signature scene takes priority; fall back to legacy verb library.
     // For phrases, resolvePreKVerb checks the action word inside the phrase.
