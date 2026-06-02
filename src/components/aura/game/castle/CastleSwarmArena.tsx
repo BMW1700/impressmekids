@@ -453,8 +453,9 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
 
   const handleBatchComplete = useCallback(() => {
-    // Slide the word window forward
-    setBatchOffset(o => o + WORD_BATCH);
+    // Pull the next batch of words from the story runner (preserves sentence order).
+    setBatch(storyRunnerRef.current!.nextBatch(WORD_BATCH));
+    setBatchVersion(v => v + 1);
   }, []);
 
   // ---- Powers ----
