@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
@@ -20,11 +20,19 @@ import { WaveSurvivedCard, RunSummary } from "./WaveSurvivedCard";
 import type { CampaignLevel } from "./campaignLevels";
 import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
+import { useCastleHeroes } from "@/hooks/useCastleHeroes";
+import { useToast } from "@/hooks/use-toast";
 import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
 import { BossSpellBreak, SpellBreakGradeBand } from "./BossSpellBreak";
 import { playCrit, playPhonemeHit, playKnightSummon, playShieldUp } from "./sfx";
 import { wordContainsPhoneme } from "./phonemeMatcher";
+import {
+  ActiveHero, HeroProjectile, tickHeroes, summonHero, canSummon, yOffsetForHero,
+} from "./heroes/heroEngine";
+import { HEROES_BY_ID } from "./heroes/heroRoster";
+import { HeroSprite } from "./heroes/HeroSprite";
+import { SummonBar } from "./heroes/SummonBar";
 
 interface Enemy {
   id: number;
@@ -78,6 +86,8 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
   const { save: saveCampaign } = useCastleCampaign();
   const { stats: knightStats } = useCastleUpgrades();
+  const { unlockedIds: unlockedHeroIds, unlockFromCampaign, unlockFromShop, isUnlocked } = useCastleHeroes();
+  const { toast } = useToast();
 
   // ---- Reading content (story-driven) ----
   const storyRunnerRef = useRef<StoryRunner | null>(null);
@@ -156,6 +166,18 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const knightStatsRef = useRef(knightStats);
   useEffect(() => { knightStatsRef.current = knightStats; }, [knightStats]);
 
+  // ---- Heroes (summonable units) ----
+  const heroesRef = useRef<ActiveHero[]>([]);
+  const heroIdRef = useRef(1);
+  const heroProjectilesRef = useRef<HeroProjectile[]>([]);
+  const heroProjIdRef = useRef(1);
+  const [heroCooldowns, setHeroCooldowns] = useState<Record<string, number>>({});
+  const [coinsHud, setCoinsHud] = useState(0);
+  const [, setHeroTick] = useState(0); // bumped to re-render hero layer
+  const unlockedHeroIdsRef = useRef(unlockedHeroIds);
+  useEffect(() => { unlockedHeroIdsRef.current = unlockedHeroIds; }, [unlockedHeroIds]);
+
+
   // ---- Save run ----
   const persistRun = useCallback((reason: "win" | "loss" | "quit", finalAcc: number, finalCoins: number) => {
     if (!user?.id) return;
@@ -205,6 +227,13 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         words_read: wordsReadRef.current,
         won,
       });
+      // First-clear hero reward (idempotent — DB upsert).
+      if (won && mode.level.rewardHeroId && !isUnlocked(mode.level.rewardHeroId)) {
+        const def = HEROES_BY_ID[mode.level.rewardHeroId];
+        unlockFromCampaign(mode.level.rewardHeroId).then(() => {
+          if (def) toast({ title: "🏆 New hero unlocked!", description: `${def.name} — ${def.blurb}` });
+        }).catch(err => console.error("[castle-heroes] campaign unlock", err));
+      }
     }
 
     setSummary({
@@ -219,7 +248,54 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       stars,
     });
     persistRun(reason, acc, finalCoins);
-  }, [mode, characterName, saveCampaign, persistRun]);
+  }, [mode, characterName, saveCampaign, persistRun, isUnlocked, unlockFromCampaign, toast]);
+
+  // ---- Summon a hero into the arena ----
+  const handleSummonHero = useCallback((heroId: string) => {
+    if (endedRef.current || pausedRef.current) return;
+    if (!unlockedHeroIdsRef.current.has(heroId)) return;
+    const now = performance.now();
+    const cdUntil = heroCooldowns[heroId] ?? 0;
+    const activeOfThis = heroesRef.current.filter(h => h.heroId === heroId).length;
+    const check = canSummon(heroId, coinsRef.current, cdUntil, Date.now(), activeOfThis);
+    if (!check.ok) return;
+    const def = HEROES_BY_ID[heroId];
+    coinsRef.current -= def.summonCost;
+    setCoinsHud(coinsRef.current);
+    const hero = summonHero({
+      heroId,
+      now,
+      arenaWidth: ARENA_WIDTH,
+      idCounter: () => heroIdRef.current++,
+    });
+    heroesRef.current.push(hero);
+    setHeroCooldowns(prev => ({ ...prev, [heroId]: Date.now() + def.cooldownMs }));
+    playKnightSummon();
+    setHeroTick(t => t + 1);
+  }, [heroCooldowns]);
+
+  // ---- Buy a shop hero (spends coins permanently to unlock) ----
+  const handleBuyShopHero = useCallback(async (heroId: string) => {
+    const def = HEROES_BY_ID[heroId];
+    if (!def || def.unlock.kind !== "shop") return;
+    if (isUnlocked(heroId)) return;
+    const price = def.unlock.price;
+    if (coinsRef.current < price) {
+      toast({ title: "Not enough coins", description: `${def.name} costs ${price} 🪙`, variant: "destructive" });
+      return;
+    }
+    coinsRef.current -= price;
+    setCoinsHud(coinsRef.current);
+    try {
+      await unlockFromShop(heroId);
+      toast({ title: "🛡 Hero hired!", description: `${def.name} added to your roster.` });
+    } catch (err: any) {
+      // refund on failure
+      coinsRef.current += price;
+      setCoinsHud(coinsRef.current);
+      toast({ title: "Purchase failed", description: err?.message || "Try again.", variant: "destructive" });
+    }
+  }, [isUnlocked, unlockFromShop, toast]);
 
   // ---- Start a wave ----
   const startWave = useCallback((n: number) => {
@@ -587,6 +663,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         enemiesRef.current = enemiesRef.current.filter(e => !(e.dying && e.hp <= 0));
         knightsRef.current = knightsRef.current.filter(k => k.hp > 0 && k.x < ARENA_WIDTH + 10);
 
+        // 5b. Hero tick — summoned heroes attack, support, and project shots.
+        if (heroesRef.current.length || heroProjectilesRef.current.length) {
+          const r = tickHeroes({
+            now,
+            dt,
+            heroes: heroesRef.current,
+            enemies: enemiesRef.current,
+            projectiles: heroProjectilesRef.current,
+            projectileId: () => heroProjIdRef.current++,
+            arenaWidth: ARENA_WIDTH,
+          });
+          if (r.castleHeal > 0) {
+            castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + r.castleHeal);
+          }
+        }
+
         // 6. Wave clear?
         if (!transitioningRef.current &&
             waveSpawnedRef.current >= waveTotalRef.current &&
@@ -594,6 +686,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           transitioningRef.current = true;
           const earned = Math.round(coinsForWave(waveRef.current) * knightStatsRef.current.goldFindMul);
           coinsRef.current += earned;
+          setCoinsHud(coinsRef.current);
           const completedWave = waveRef.current;
 
           const isCampaign = mode.kind === "campaign";
@@ -634,6 +727,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         setCastleHpHud(castleHpRef.current);
         if (mode.kind === "campaign") setEnemyCastleHpHud(Math.max(0, enemyCastleHpRef.current));
         setEnemyTick(t => t + 1);
+        setHeroTick(t => t + 1);
       }
 
       raf = requestAnimationFrame(loop);
@@ -699,7 +793,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       spawnFloatingHit(xPct, `-${dmg}!`, "text-amber-300");
     }
 
-    if (coins > 0) coinsRef.current += Math.round(coins * knightStatsRef.current.goldFindMul);
+    if (coins > 0) { coinsRef.current += Math.round(coins * knightStatsRef.current.goldFindMul); setCoinsHud(coinsRef.current); }
     if (superFill > 0) {
       superMeterRef.current = Math.min(100, superMeterRef.current + superFill);
       setSuperMeter(superMeterRef.current);
@@ -859,6 +953,46 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             );
           })}
 
+          {/* Heroes (summoned) — rendered between knights & floating UI */}
+          {heroesRef.current.map(h => {
+            const def = HEROES_BY_ID[h.heroId];
+            const pct = (h.x / ARENA_WIDTH) * 100;
+            const yOff = yOffsetForHero(h.role);
+            return (
+              <div
+                key={h.id}
+                className="absolute flex flex-col items-center pointer-events-none"
+                style={{ left: `${100 - pct}%`, bottom: `${64 + yOff}px` }}
+              >
+                <div className="w-10 h-1.5 bg-slate-900/80 rounded-full overflow-hidden mb-1 border border-slate-700">
+                  <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, (h.hp / h.maxHp) * 100)}%` }} />
+                </div>
+                <HeroSprite hero={def} size={36} />
+              </div>
+            );
+          })}
+
+          {/* Hero projectiles */}
+          {heroProjectilesRef.current.map(p => {
+            const pct = (p.x / ARENA_WIDTH) * 100;
+            return (
+              <div
+                key={p.id}
+                className="absolute pointer-events-none rounded-full"
+                style={{
+                  left: `${100 - pct}%`,
+                  bottom: "120px",
+                  width: p.splash ? 10 : 6,
+                  height: p.splash ? 10 : 6,
+                  background: p.color,
+                  boxShadow: `0 0 8px ${p.color}`,
+                  transform: "translateX(-50%)",
+                }}
+              />
+            );
+          })}
+
+
           {/* Floating damage numbers */}
           <AnimatePresence>
             {floatingHits.map(f => (
@@ -928,6 +1062,26 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
           </div>
         )}
+
+        {/* Hero summon bar — coins balance + tappable hero cards */}
+        <div className="flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-xs">
+            <Coins className="w-3.5 h-3.5" /> {coinsHud}
+          </div>
+          <div className="flex-1 min-w-0">
+            <SummonBar
+              coins={coinsHud}
+              unlockedHeroIds={unlockedHeroIds}
+              cooldownsUntil={heroCooldowns}
+              activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
+                acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
+              }, {})}
+              onSummon={handleSummonHero}
+              onBuyShop={handleBuyShopHero}
+            />
+          </div>
+        </div>
+
         {/* Super bar */}
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-300" />

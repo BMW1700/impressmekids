@@ -1475,6 +1475,30 @@ export type Database = {
         }
         Relationships: []
       }
+      castle_unlocked_heroes: {
+        Row: {
+          grade_mode: string
+          hero_id: string
+          source: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          grade_mode: string
+          hero_id: string
+          source?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          grade_mode?: string
+          hero_id?: string
+          source?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       castle_upgrades: {
         Row: {
           cap_level: number

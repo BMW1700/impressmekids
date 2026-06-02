@@ -11,6 +11,8 @@ export interface CampaignLevel {
   enemyCastleHp: number;
   starThresholds: { needAccuracy: number; needWords: number };
   arc?: CastleArcId;            // which story arc this level belongs to
+  /** Hero id (see heroRoster.ts) granted the first time the player clears this level. */
+  rewardHeroId?: string;
 }
 
 /** 5 castle-specific story arcs — 5 levels each, runs alongside legacy 10 levels. */
@@ -88,13 +90,13 @@ const k5Levels: CampaignLevel[] = [
 
   // ===== Arc: The Goblin King's Return =====
   { id: "k5-arc1-1", name: "Burning Watchtower", description: "A goblin raiding party tests the eastern wall.", arc: "goblin_kings_return", waveCount: 5, composition: ["goblin", "goblin", "skeleton"], baseSpeedPxPerSec: 50, enemyCastleHp: 90, starThresholds: { needAccuracy: 78, needWords: 30 } },
-  { id: "k5-arc1-2", name: "Forest Ambush", description: "Berserkers charge from the treeline.", arc: "goblin_kings_return", waveCount: 6, composition: ["goblin", "berserker", "shaman"], baseSpeedPxPerSec: 55, enemyCastleHp: 130, starThresholds: { needAccuracy: 80, needWords: 40 } },
-  { id: "k5-arc1-3", name: "The Iron Pass", description: "Armored orcs lock shields and march.", arc: "goblin_kings_return", waveCount: 7, composition: ["orc", "armored_orc", "shaman", "goblin"], baseSpeedPxPerSec: 55, enemyCastleHp: 180, starThresholds: { needAccuracy: 82, needWords: 55 } },
-  { id: "k5-arc1-4", name: "Wyverns Overhead", description: "The King unleashes his sky cavalry.", arc: "goblin_kings_return", waveCount: 8, composition: ["bat", "wyvern", "goblin", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 210, starThresholds: { needAccuracy: 85, needWords: 70 } },
-  { id: "k5-arc1-5", name: "The Goblin King's Last Stand", description: "His personal guard. His final charge.", arc: "goblin_kings_return", waveCount: 10, composition: ["goblin", "armored_orc", "berserker", "wyvern", "shaman"], baseSpeedPxPerSec: 70, enemyCastleHp: 300, starThresholds: { needAccuracy: 87, needWords: 100 } },
+  { id: "k5-arc1-2", name: "Forest Ambush", description: "Berserkers charge from the treeline.", arc: "goblin_kings_return", waveCount: 6, composition: ["goblin", "berserker", "shaman"], baseSpeedPxPerSec: 55, enemyCastleHp: 130, starThresholds: { needAccuracy: 80, needWords: 40 }, rewardHeroId: "shield_knight" },
+  { id: "k5-arc1-3", name: "The Iron Pass", description: "Armored orcs lock shields and march.", arc: "goblin_kings_return", waveCount: 7, composition: ["orc", "armored_orc", "shaman", "goblin"], baseSpeedPxPerSec: 55, enemyCastleHp: 180, starThresholds: { needAccuracy: 82, needWords: 55 }, rewardHeroId: "elven_archer" },
+  { id: "k5-arc1-4", name: "Wyverns Overhead", description: "The King unleashes his sky cavalry.", arc: "goblin_kings_return", waveCount: 8, composition: ["bat", "wyvern", "goblin", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 210, starThresholds: { needAccuracy: 85, needWords: 70 }, rewardHeroId: "repairman" },
+  { id: "k5-arc1-5", name: "The Goblin King's Last Stand", description: "His personal guard. His final charge.", arc: "goblin_kings_return", waveCount: 10, composition: ["goblin", "armored_orc", "berserker", "wyvern", "shaman"], baseSpeedPxPerSec: 70, enemyCastleHp: 300, starThresholds: { needAccuracy: 87, needWords: 100 }, rewardHeroId: "knight" },
 
   // ===== Arc: Frost Invasion =====
-  { id: "k5-arc2-1", name: "The Frozen River", description: "Skeletons cross the ice toward the gate.", arc: "frost_invasion", waveCount: 6, composition: ["skeleton", "skeleton", "armored_orc"], baseSpeedPxPerSec: 55, enemyCastleHp: 150, starThresholds: { needAccuracy: 82, needWords: 50 } },
+  { id: "k5-arc2-1", name: "The Frozen River", description: "Skeletons cross the ice toward the gate.", arc: "frost_invasion", waveCount: 6, composition: ["skeleton", "skeleton", "armored_orc"], baseSpeedPxPerSec: 55, enemyCastleHp: 150, starThresholds: { needAccuracy: 82, needWords: 50 }, rewardHeroId: "rifleman" },
   { id: "k5-arc2-2", name: "Glacier Hunters", description: "Wyverns nest in the cliffs above.", arc: "frost_invasion", waveCount: 7, composition: ["wyvern", "wyvern", "skeleton", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 180, starThresholds: { needAccuracy: 84, needWords: 65 } },
   { id: "k5-arc2-3", name: "The Frost King's Vanguard", description: "Berserkers in iron-shod boots.", arc: "frost_invasion", waveCount: 8, composition: ["berserker", "armored_orc", "skeleton", "shaman"], baseSpeedPxPerSec: 60, enemyCastleHp: 230, starThresholds: { needAccuracy: 86, needWords: 80 } },
   { id: "k5-arc2-4", name: "The Crown Fortress", description: "Five waves to break the line.", arc: "frost_invasion", waveCount: 10, composition: ["berserker", "armored_orc", "wyvern", "necromancer", "skeleton"], baseSpeedPxPerSec: 70, enemyCastleHp: 320, starThresholds: { needAccuracy: 88, needWords: 110 } },
@@ -130,13 +132,13 @@ const tier6to12: CampaignLevel[] = [
 
   // ===== Arc: The Goblin King's Return (6-12 reskin: "Insurgent Resurgence") =====
   { id: "t12-arc1-1", name: "Border Sweep", description: "Insurgent cells probe the eastern checkpoint.", arc: "goblin_kings_return", waveCount: 6, composition: ["goblin", "skeleton", "berserker"], baseSpeedPxPerSec: 55, enemyCastleHp: 130, starThresholds: { needAccuracy: 82, needWords: 45 } },
-  { id: "t12-arc1-2", name: "Forest Ambush", description: "Berserker squads break cover.", arc: "goblin_kings_return", waveCount: 7, composition: ["berserker", "armored_orc", "shaman"], baseSpeedPxPerSec: 60, enemyCastleHp: 180, starThresholds: { needAccuracy: 84, needWords: 55 } },
-  { id: "t12-arc1-3", name: "The Iron Pass", description: "Armored convoy under air cover.", arc: "goblin_kings_return", waveCount: 8, composition: ["armored_orc", "wyvern", "berserker", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 230, starThresholds: { needAccuracy: 86, needWords: 75 } },
-  { id: "t12-arc1-4", name: "Air Cavalry", description: "Wyverns and drones.", arc: "goblin_kings_return", waveCount: 9, composition: ["wyvern", "bat", "armored_orc", "shaman"], baseSpeedPxPerSec: 75, enemyCastleHp: 280, starThresholds: { needAccuracy: 87, needWords: 90 } },
-  { id: "t12-arc1-5", name: "The Commander's Stand", description: "Their warlord refuses to fall back.", arc: "goblin_kings_return", waveCount: 10, composition: ["armored_orc", "berserker", "wyvern", "necromancer", "shaman"], baseSpeedPxPerSec: 80, enemyCastleHp: 380, starThresholds: { needAccuracy: 89, needWords: 130 } },
+  { id: "t12-arc1-2", name: "Forest Ambush", description: "Berserker squads break cover.", arc: "goblin_kings_return", waveCount: 7, composition: ["berserker", "armored_orc", "shaman"], baseSpeedPxPerSec: 60, enemyCastleHp: 180, starThresholds: { needAccuracy: 84, needWords: 55 }, rewardHeroId: "shield_knight" },
+  { id: "t12-arc1-3", name: "The Iron Pass", description: "Armored convoy under air cover.", arc: "goblin_kings_return", waveCount: 8, composition: ["armored_orc", "wyvern", "berserker", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 230, starThresholds: { needAccuracy: 86, needWords: 75 }, rewardHeroId: "elven_archer" },
+  { id: "t12-arc1-4", name: "Air Cavalry", description: "Wyverns and drones.", arc: "goblin_kings_return", waveCount: 9, composition: ["wyvern", "bat", "armored_orc", "shaman"], baseSpeedPxPerSec: 75, enemyCastleHp: 280, starThresholds: { needAccuracy: 87, needWords: 90 }, rewardHeroId: "repairman" },
+  { id: "t12-arc1-5", name: "The Commander's Stand", description: "Their warlord refuses to fall back.", arc: "goblin_kings_return", waveCount: 10, composition: ["armored_orc", "berserker", "wyvern", "necromancer", "shaman"], baseSpeedPxPerSec: 80, enemyCastleHp: 380, starThresholds: { needAccuracy: 89, needWords: 130 }, rewardHeroId: "knight" },
 
   // ===== Arc: Frost Invasion =====
-  { id: "t12-arc2-1", name: "Frozen Frontier", description: "Cold-resistant infantry crosses the line.", arc: "frost_invasion", waveCount: 7, composition: ["skeleton", "armored_orc", "berserker"], baseSpeedPxPerSec: 60, enemyCastleHp: 200, starThresholds: { needAccuracy: 84, needWords: 65 } },
+  { id: "t12-arc2-1", name: "Frozen Frontier", description: "Cold-resistant infantry crosses the line.", arc: "frost_invasion", waveCount: 7, composition: ["skeleton", "armored_orc", "berserker"], baseSpeedPxPerSec: 60, enemyCastleHp: 200, starThresholds: { needAccuracy: 84, needWords: 65 }, rewardHeroId: "rifleman" },
   { id: "t12-arc2-2", name: "Glacier Wyverns", description: "Air superiority must be denied.", arc: "frost_invasion", waveCount: 8, composition: ["wyvern", "wyvern", "armored_orc", "shaman"], baseSpeedPxPerSec: 70, enemyCastleHp: 240, starThresholds: { needAccuracy: 86, needWords: 80 } },
   { id: "t12-arc2-3", name: "Vanguard Push", description: "Heavy infantry in coordinated waves.", arc: "frost_invasion", waveCount: 9, composition: ["berserker", "armored_orc", "necromancer", "shaman"], baseSpeedPxPerSec: 65, enemyCastleHp: 290, starThresholds: { needAccuracy: 88, needWords: 100 } },
   { id: "t12-arc2-4", name: "The Crown Fortress", description: "Final push on the icebound keep.", arc: "frost_invasion", waveCount: 11, composition: ["berserker", "armored_orc", "wyvern", "necromancer", "lich"], baseSpeedPxPerSec: 75, enemyCastleHp: 400, starThresholds: { needAccuracy: 90, needWords: 140 } },
