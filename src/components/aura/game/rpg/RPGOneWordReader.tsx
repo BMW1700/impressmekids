@@ -266,19 +266,39 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setDogStage(null), 4000),
       );
     } else if (lower === "your dog") {
-      // Yellow helper walks in a bit from the right and holds the leash.
+      // Dog appears in front of the KNIGHT (right side) — no yellow helper.
       clearHelpTimers();
+      setHelperVisible(false);
       setLeadHelping(false);
       setHelpStage(null);
+      setHelperOffsetX(0);
       setDogStage("your");
-      setHelperOffsetX(0); // yellow helper must NOT move for "your dog"
-      setHelperVisible(true);
       helpTimersRef.current.push(
-        window.setTimeout(() => {
-          setDogStage(null);
-          setHelperVisible(false);
-          setHelperOffsetX(0);
-        }, 4200),
+        window.setTimeout(() => setDogStage(null), 4000),
+      );
+    } else if (lower === "in the box" || lower === "on the box") {
+      clearHelpTimers();
+      setBoxStage(lower === "in the box" ? "in" : "on");
+      helpTimersRef.current.push(
+        window.setTimeout(() => setBoxStage(null), 2400),
+      );
+    } else if (lower === "wash hands") {
+      clearHelpTimers();
+      setWashing(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setWashing(false), 2200),
+      );
+    } else if (lower === "plant seed") {
+      clearHelpTimers();
+      setPlanting(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setPlanting(false), 2400),
+      );
+    } else if (lower === "throw ball") {
+      clearHelpTimers();
+      setThrowing(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setThrowing(false), 1900),
       );
     }
 
