@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, School, Gamepad2 } from "lucide-react";
+import { Loader2, Gamepad2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { RPGShowcase } from "@/components/landing/RPGShowcase";
@@ -82,31 +82,8 @@ const ModeSelect = () => {
           <span className="text-yellow-400">NabuLearn</span>
         </motion.h1>
 
-        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-12 w-full max-w-2xl sm:max-w-none sm:w-auto">
-        {/* School Mode - larger */}
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => navigate('/school')}
-          className="w-full sm:w-64 h-48 sm:h-64 md:w-72 md:h-72 rounded-2xl flex flex-col items-center justify-center gap-3 sm:gap-4
-            bg-white/10 backdrop-blur-xl border border-white/20
-            shadow-[0_8px_32px_rgba(168,85,247,0.35),0_0_60px_rgba(168,85,247,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
-            hover:shadow-[0_12px_50px_rgba(168,85,247,0.5),0_0_80px_rgba(168,85,247,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]
-            hover:bg-white/15 hover:border-white/30
-            transition-all duration-300 cursor-pointer group"
-        >
-          <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl bg-white/10 flex items-center justify-center
-            group-hover:bg-white/20 transition-colors duration-300">
-            <School className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
-          </div>
-          <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">School Mode</span>
-          <span className="text-xs sm:text-sm text-white/60">Teachers, Students & Parents</span>
-        </motion.button>
-
-        {/* Game Mode - slightly smaller */}
+        <div className="flex items-center justify-center w-full">
+        {/* Game Mode */}
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -114,7 +91,7 @@ const ModeSelect = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/game')}
-          className="w-full sm:w-56 h-44 sm:h-56 md:w-64 md:h-64 rounded-2xl flex flex-col items-center justify-center gap-3 sm:gap-4
+          className="w-full max-w-sm sm:w-72 h-52 sm:h-64 md:w-80 md:h-80 rounded-2xl flex flex-col items-center justify-center gap-3 sm:gap-4
             bg-white/10 backdrop-blur-xl border border-white/20
             shadow-[0_8px_32px_rgba(168,85,247,0.35),0_0_60px_rgba(168,85,247,0.2),inset_0_1px_1px_rgba(255,255,255,0.15)]
             hover:shadow-[0_12px_50px_rgba(168,85,247,0.5),0_0_80px_rgba(168,85,247,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]
@@ -125,7 +102,7 @@ const ModeSelect = () => {
             group-hover:bg-white/20 transition-colors duration-300">
             <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
           </div>
-          <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Game Mode</span>
+          <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Enter the Adventure</span>
           <span className="text-xs sm:text-sm text-white/60">Play & Learn to Read</span>
         </motion.button>
         </div>
