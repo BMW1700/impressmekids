@@ -227,6 +227,13 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         words_read: wordsReadRef.current,
         won,
       });
+      // First-clear hero reward (idempotent — DB upsert).
+      if (won && mode.level.rewardHeroId && !isUnlocked(mode.level.rewardHeroId)) {
+        const def = HEROES_BY_ID[mode.level.rewardHeroId];
+        unlockFromCampaign(mode.level.rewardHeroId).then(() => {
+          if (def) toast({ title: "🏆 New hero unlocked!", description: `${def.name} — ${def.blurb}` });
+        }).catch(err => console.error("[castle-heroes] campaign unlock", err));
+      }
     }
 
     setSummary({
