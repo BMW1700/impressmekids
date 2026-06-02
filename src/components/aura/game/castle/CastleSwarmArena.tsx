@@ -5,7 +5,7 @@ import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame a
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
-import { curatedStories } from "@/data/curatedStories";
+import { StoryRunner, StoryBatch } from "./storyRunner";
 import {
   planWave, coinsForWave, TUTORIAL_WAVES, computeEnemyHp,
   makeSeededRng, hashSeed, computeStars,
