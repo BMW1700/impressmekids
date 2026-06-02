@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Gamepad2, BarChart3, LogOut, Home, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { SettingsMenu } from "@/components/SettingsMenu";
 import { ReactNode } from "react";
 
 interface GameHeaderProps {
