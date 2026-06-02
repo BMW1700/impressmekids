@@ -574,6 +574,10 @@ export const DogWithLeashProp = ({
 // character can hop INTO it. `mode="on"` shows a closed flat top so the
 // character can land ON it. Positioned absolutely by the parent column.
 // ──────────────────────────────────────────────────────────────────────────
+// All four props below are mounted as SIBLINGS of the character's motion.div
+// (at the column level), NOT inside it — so they stay anchored to ground
+// space while the character's body performs its transform animation.
+
 export const BoxProp = ({
   visible,
   mode,
@@ -585,82 +589,106 @@ export const BoxProp = ({
     {visible && (
       <motion.div
         key={`box-${mode}`}
-        className="absolute pointer-events-none z-20"
+        className="absolute pointer-events-none z-30"
         style={{
           left: "50%",
-          bottom: "62px",
-          width: "78px",
-          height: "62px",
+          bottom: "56px", // top edge sits at character foot level (mb-16 = 64px) minus 8px overlap
+          width: "96px",
+          height: "56px",
           transform: "translateX(-50%)",
         }}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
+        initial={{ opacity: 0, scale: 0.6, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.7, y: 12 }}
+        transition={{ duration: 0.3, ease: "backOut" }}
       >
-        {/* Front face of the box */}
+        {/* Front face */}
         <div
-          className="absolute inset-x-0 bottom-0 rounded-sm shadow-md"
+          className="absolute inset-x-0 bottom-0 rounded-md shadow-lg"
           style={{
-            height: "44px",
-            background: "linear-gradient(180deg, #b45309 0%, #92400e 60%, #78350f 100%)",
-            border: "1.5px solid #5a2d0c",
+            height: "40px",
+            background: "linear-gradient(180deg, #c2761d 0%, #9a4d12 60%, #6b2f08 100%)",
+            border: "2px solid #4a1f06",
+            boxShadow: "inset 0 -6px 0 rgba(0,0,0,0.25), 0 4px 8px rgba(0,0,0,0.3)",
           }}
         >
           {/* Vertical seam */}
-          <div className="absolute inset-y-1 left-1/2 w-[1.5px] -translate-x-1/2 bg-amber-950/60" />
+          <div className="absolute inset-y-1 left-1/2 w-[2px] -translate-x-1/2 bg-amber-950/70" />
           {/* Tape strip */}
-          <div className="absolute inset-x-3 top-2 h-[5px] rounded-sm bg-amber-100/70 border border-amber-200/80" />
+          <div className="absolute inset-x-4 top-2 h-[6px] rounded-sm bg-amber-100/80 border border-amber-200" />
         </div>
         {mode === "on" ? (
-          // Closed flat top — slight perspective lid
+          // Closed top — flat lid the character stands on
           <div
-            className="absolute left-0 right-0 rounded-sm shadow"
+            className="absolute left-0 right-0 rounded-md shadow"
             style={{
-              bottom: "40px",
-              height: "10px",
-              background: "linear-gradient(180deg, #d97706 0%, #b45309 100%)",
-              border: "1.5px solid #5a2d0c",
+              bottom: "36px",
+              height: "14px",
+              background: "linear-gradient(180deg, #e08a2a 0%, #b45309 70%, #8a3d08 100%)",
+              border: "2px solid #4a1f06",
               borderBottom: "none",
+              boxShadow: "inset 0 2px 0 rgba(255,255,255,0.25)",
             }}
           />
         ) : (
-          // Open flaps — two slanted panels splayed outward
+          // Open flaps splayed outward, leaving a dark opening
           <>
             <div
-              className="absolute origin-bottom-right rounded-sm shadow"
+              className="absolute"
               style={{
-                left: "-2px",
-                bottom: "40px",
-                width: "42px",
-                height: "20px",
-                background: "linear-gradient(180deg, #d97706 0%, #b45309 100%)",
-                border: "1.5px solid #5a2d0c",
-                transform: "rotate(-32deg)",
+                left: 0,
+                right: 0,
+                bottom: "36px",
+                height: "8px",
+                background: "#1c0a02",
+                borderRadius: "2px",
               }}
             />
             <div
-              className="absolute origin-bottom-left rounded-sm shadow"
+              className="absolute origin-bottom-right rounded-md shadow"
               style={{
-                right: "-2px",
+                left: "-4px",
                 bottom: "40px",
-                width: "42px",
-                height: "20px",
-                background: "linear-gradient(180deg, #d97706 0%, #b45309 100%)",
-                border: "1.5px solid #5a2d0c",
-                transform: "rotate(32deg)",
+                width: "52px",
+                height: "22px",
+                background: "linear-gradient(180deg, #e08a2a 0%, #b45309 100%)",
+                border: "2px solid #4a1f06",
+                transform: "rotate(-38deg)",
+              }}
+            />
+            <div
+              className="absolute origin-bottom-left rounded-md shadow"
+              style={{
+                right: "-4px",
+                bottom: "40px",
+                width: "52px",
+                height: "22px",
+                background: "linear-gradient(180deg, #e08a2a 0%, #b45309 100%)",
+                border: "2px solid #4a1f06",
+                transform: "rotate(38deg)",
               }}
             />
           </>
         )}
+        {/* Ground shadow */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded-full"
+          style={{
+            bottom: "-6px",
+            width: "90px",
+            height: "10px",
+            background: "radial-gradient(ellipse, rgba(0,0,0,0.35) 0%, transparent 70%)",
+          }}
+        />
       </motion.div>
     )}
   </AnimatePresence>
 );
 
 // ──────────────────────────────────────────────────────────────────────────
-// WashHandsProp — soap bar + water droplets + bubbles, anchored at the
-// character's hands. Plays a ~2s loop while visible.
+// WashHandsProp — sink basin with running faucet water + soap bubbles
+// foaming over the character's hands. Renders at column level so it stays
+// anchored even when the character body sways.
 // ──────────────────────────────────────────────────────────────────────────
 export const WashHandsProp = ({ visible }: { visible: boolean }) => (
   <AnimatePresence>
@@ -670,79 +698,160 @@ export const WashHandsProp = ({ visible }: { visible: boolean }) => (
         className="absolute pointer-events-none z-40"
         style={{
           left: "50%",
-          bottom: "32px",
-          width: "70px",
-          height: "60px",
+          bottom: "44px", // sits in front of character around hand height
+          width: "110px",
+          height: "100px",
           transform: "translateX(-50%)",
         }}
-        initial={{ opacity: 0, scale: 0.7 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.7 }}
-        transition={{ duration: 0.25 }}
+        initial={{ opacity: 0, y: 10, scale: 0.85 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.85 }}
+        transition={{ duration: 0.3 }}
       >
-        {/* Soap bar */}
-        <motion.div
-          className="absolute rounded-md shadow"
+        {/* Faucet body (back) */}
+        <div
+          className="absolute"
           style={{
-            left: "18px",
-            bottom: "10px",
-            width: "34px",
-            height: "16px",
-            background: "linear-gradient(180deg, #fce7f3 0%, #fbcfe8 60%, #f9a8d4 100%)",
-            border: "1px solid #ec4899",
+            left: "50%",
+            top: "0px",
+            width: "10px",
+            height: "30px",
+            background: "linear-gradient(180deg, #cbd5e1, #94a3b8)",
+            border: "1.5px solid #475569",
+            borderRadius: "3px",
+            transform: "translateX(-50%)",
           }}
-          animate={{ x: [0, -6, 6, -4, 4, 0], rotate: [0, -4, 4, -3, 3, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <div className="absolute left-[20%] top-[20%] w-[26%] h-[18%] rounded-full bg-white/70 blur-[1px]" />
-        </motion.div>
-        {/* Water droplets falling */}
-        {[0, 0.4, 0.8].map((d, i) => (
-          <motion.div
-            key={`drop-${i}`}
-            className="absolute rounded-full bg-sky-400"
-            style={{
-              left: `${24 + i * 10}px`,
-              top: "0px",
-              width: "5px",
-              height: "8px",
-            }}
-            animate={{ y: [0, 18, 36], opacity: [0, 1, 0] }}
-            transition={{ duration: 1.0, delay: d, repeat: Infinity, ease: "easeIn" }}
-          />
-        ))}
-        {/* Bubbles rising + popping */}
+        />
+        {/* Faucet spout */}
+        <div
+          className="absolute"
+          style={{
+            left: "50%",
+            top: "22px",
+            width: "26px",
+            height: "8px",
+            background: "linear-gradient(180deg, #cbd5e1, #64748b)",
+            border: "1.5px solid #475569",
+            borderRadius: "0 0 4px 4px",
+            transform: "translateX(-50%)",
+          }}
+        />
+        {/* Running water stream */}
+        <motion.div
+          className="absolute"
+          style={{
+            left: "50%",
+            top: "30px",
+            width: "8px",
+            height: "32px",
+            background: "linear-gradient(180deg, rgba(125,211,252,0.95), rgba(59,130,246,0.6))",
+            borderRadius: "4px",
+            transform: "translateX(-50%)",
+            filter: "drop-shadow(0 0 4px rgba(125,211,252,0.7))",
+          }}
+          animate={{ scaleY: [1, 1.08, 0.95, 1.05, 1] }}
+          transition={{ duration: 0.45, repeat: Infinity, ease: "easeInOut" }}
+        />
+        {/* Water splash droplets bouncing off hands */}
         {[
-          { l: 8, s: 9, d: 0 },
-          { l: 30, s: 12, d: 0.3 },
-          { l: 50, s: 8, d: 0.6 },
-          { l: 18, s: 7, d: 0.9 },
-          { l: 44, s: 10, d: 1.2 },
-        ].map((b, i) => (
+          { x: -22, d: 0 },
+          { x: -10, d: 0.15 },
+          { x: 8, d: 0.3 },
+          { x: 22, d: 0.45 },
+        ].map((s, i) => (
           <motion.div
-            key={`bub-${i}`}
-            className="absolute rounded-full"
+            key={`splash-${i}`}
+            className="absolute rounded-full bg-sky-300"
             style={{
-              left: `${b.l}px`,
-              bottom: "16px",
-              width: `${b.s}px`,
-              height: `${b.s}px`,
-              background:
-                "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(186,230,253,0.7) 60%, rgba(125,211,252,0.6))",
-              border: "1px solid rgba(125,211,252,0.85)",
+              left: "50%",
+              top: "62px",
+              width: "5px",
+              height: "5px",
             }}
-            animate={{ y: [0, -20, -32], opacity: [0, 1, 0], scale: [0.6, 1, 0.9] }}
-            transition={{ duration: 1.4, delay: b.d, repeat: Infinity, ease: "easeOut" }}
+            animate={{
+              x: [0, s.x],
+              y: [0, -8, 14],
+              opacity: [0, 1, 0],
+            }}
+            transition={{ duration: 0.7, delay: s.d, repeat: Infinity, ease: "easeOut" }}
           />
         ))}
+        {/* Foamy soap bubble cluster around hands */}
+        <div
+          className="absolute"
+          style={{
+            left: "50%",
+            top: "55px",
+            width: "90px",
+            height: "40px",
+            transform: "translateX(-50%)",
+          }}
+        >
+          {[
+            { l: 10, t: 18, s: 14, d: 0 },
+            { l: 28, t: 8, s: 18, d: 0.2 },
+            { l: 48, t: 14, s: 16, d: 0.4 },
+            { l: 64, t: 6, s: 14, d: 0.6 },
+            { l: 20, t: 22, s: 11, d: 0.8 },
+            { l: 58, t: 24, s: 12, d: 1.0 },
+          ].map((b, i) => (
+            <motion.div
+              key={`foam-${i}`}
+              className="absolute rounded-full"
+              style={{
+                left: `${b.l}px`,
+                top: `${b.t}px`,
+                width: `${b.s}px`,
+                height: `${b.s}px`,
+                background:
+                  "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.98), rgba(224,242,254,0.9) 55%, rgba(186,230,253,0.75))",
+                border: "1px solid rgba(125,211,252,0.85)",
+                boxShadow: "0 2px 4px rgba(14,165,233,0.25)",
+              }}
+              animate={{
+                y: [0, -3, 0, -3, 0],
+                scale: [1, 1.08, 1, 1.05, 1],
+                opacity: [0.85, 1, 0.9, 1, 0.85],
+              }}
+              transition={{
+                duration: 1.4,
+                delay: b.d,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+          {/* Small popping bubbles drifting upward */}
+          {[
+            { l: 14, s: 7, d: 0.1 },
+            { l: 40, s: 6, d: 0.5 },
+            { l: 66, s: 8, d: 0.9 },
+          ].map((b, i) => (
+            <motion.div
+              key={`pop-${i}`}
+              className="absolute rounded-full"
+              style={{
+                left: `${b.l}px`,
+                top: "20px",
+                width: `${b.s}px`,
+                height: `${b.s}px`,
+                background:
+                  "radial-gradient(circle at 35% 30%, rgba(255,255,255,1), rgba(224,242,254,0.6))",
+                border: "1px solid rgba(125,211,252,0.7)",
+              }}
+              animate={{ y: [0, -28, -40], opacity: [0, 1, 0], scale: [0.5, 1, 0.6] }}
+              transition={{ duration: 1.6, delay: b.d, repeat: Infinity, ease: "easeOut" }}
+            />
+          ))}
+        </div>
       </motion.div>
     )}
   </AnimatePresence>
 );
 
 // ──────────────────────────────────────────────────────────────────────────
-// PlantSeedProp — terracotta pot. A seed drops from above, then a green
-// stem grows up and a flower blooms on top. ~2.2s scene.
+// PlantSeedProp — terracotta pot on the GROUND beside character. Seed drops
+// in, stem grows, flower blooms. Anchored at column level, NOT character.
 // ──────────────────────────────────────────────────────────────────────────
 export const PlantSeedProp = ({ visible }: { visible: boolean }) => (
   <AnimatePresence>
@@ -752,25 +861,25 @@ export const PlantSeedProp = ({ visible }: { visible: boolean }) => (
         className="absolute pointer-events-none z-30"
         style={{
           left: "50%",
-          bottom: "62px",
-          width: "60px",
-          height: "90px",
-          transform: "translateX(-25%)",
+          bottom: "10px", // sits on the ground, low in the column
+          width: "70px",
+          height: "110px",
+          transform: "translateX(-50%)",
         }}
-        initial={{ opacity: 0, y: 6 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 6 }}
+        exit={{ opacity: 0, y: 8 }}
         transition={{ duration: 0.25 }}
       >
-        {/* Pot */}
+        {/* Pot body */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 bottom-0"
+          className="absolute left-1/2 -translate-x-1/2 bottom-0 shadow-lg"
           style={{
-            width: "44px",
-            height: "30px",
-            background: "linear-gradient(180deg, #c2410c 0%, #9a3412 100%)",
-            borderRadius: "4px 4px 8px 8px",
-            border: "1.5px solid #7c2d12",
+            width: "50px",
+            height: "34px",
+            background: "linear-gradient(180deg, #d97243 0%, #b45309 60%, #7c2d12 100%)",
+            borderRadius: "4px 4px 10px 10px",
+            border: "2px solid #5a1e08",
             clipPath: "polygon(8% 0, 92% 0, 84% 100%, 16% 100%)",
           }}
         />
@@ -778,90 +887,122 @@ export const PlantSeedProp = ({ visible }: { visible: boolean }) => (
         <div
           className="absolute left-1/2 -translate-x-1/2"
           style={{
-            bottom: "26px",
-            width: "48px",
-            height: "8px",
-            background: "linear-gradient(180deg, #ea580c 0%, #c2410c 100%)",
+            bottom: "30px",
+            width: "56px",
+            height: "10px",
+            background: "linear-gradient(180deg, #ea580c 0%, #b45309 100%)",
             borderRadius: "3px",
-            border: "1.5px solid #7c2d12",
+            border: "2px solid #5a1e08",
           }}
         />
-        {/* Soil */}
+        {/* Soil mound */}
         <div
           className="absolute left-1/2 -translate-x-1/2"
           style={{
-            bottom: "28px",
-            width: "38px",
-            height: "5px",
-            background: "#3f1d12",
-            borderRadius: "2px",
+            bottom: "32px",
+            width: "44px",
+            height: "7px",
+            background: "linear-gradient(180deg, #5a2a18 0%, #2f1208 100%)",
+            borderRadius: "4px 4px 2px 2px",
           }}
         />
         {/* Seed dropping in */}
         <motion.div
-          className="absolute left-1/2 -translate-x-1/2 rounded-full bg-amber-900"
-          style={{ width: "6px", height: "6px" }}
-          initial={{ bottom: "78px", opacity: 1 }}
-          animate={{ bottom: ["78px", "32px", "32px", "32px"], opacity: [1, 1, 1, 0] }}
-          transition={{ duration: 2.2, times: [0, 0.35, 0.5, 0.55], ease: "easeIn" }}
+          className="absolute left-1/2 -translate-x-1/2 rounded-full"
+          style={{
+            width: "7px",
+            height: "9px",
+            background: "linear-gradient(180deg, #a16207, #713f12)",
+            border: "1px solid #422006",
+          }}
+          initial={{ bottom: "100px", opacity: 1, rotate: 0 }}
+          animate={{
+            bottom: ["100px", "38px", "38px", "38px"],
+            opacity: [1, 1, 1, 0],
+            rotate: [0, 360, 360, 360],
+          }}
+          transition={{ duration: 2.2, times: [0, 0.32, 0.5, 0.55], ease: "easeIn" }}
         />
         {/* Stem growing */}
         <motion.div
           className="absolute left-1/2 -translate-x-1/2"
           style={{
-            bottom: "32px",
-            width: "4px",
+            bottom: "37px",
+            width: "5px",
             background: "linear-gradient(180deg, #16a34a 0%, #15803d 100%)",
             borderRadius: "999px",
             transformOrigin: "bottom center",
+            boxShadow: "0 0 4px rgba(34,197,94,0.5)",
           }}
           initial={{ height: 0 }}
-          animate={{ height: [0, 0, 30, 32] }}
+          animate={{ height: [0, 0, 36, 38] }}
           transition={{ duration: 2.2, times: [0, 0.5, 0.85, 1], ease: "easeOut" }}
         />
-        {/* Leaf */}
+        {/* Left leaf */}
         <motion.div
           className="absolute"
           style={{
-            left: "52%",
-            bottom: "46px",
-            width: "10px",
-            height: "6px",
-            background: "#22c55e",
+            left: "calc(50% - 14px)",
+            bottom: "56px",
+            width: "12px",
+            height: "8px",
+            background: "linear-gradient(135deg, #4ade80, #16a34a)",
+            borderRadius: "999px 0 999px 0",
+            transform: "rotate(20deg)",
+            transformOrigin: "right center",
+          }}
+          initial={{ scale: 0 }}
+          animate={{ scale: [0, 0, 1] }}
+          transition={{ duration: 2.2, times: [0, 0.7, 0.85], ease: "backOut" }}
+        />
+        {/* Right leaf */}
+        <motion.div
+          className="absolute"
+          style={{
+            left: "calc(50% + 2px)",
+            bottom: "62px",
+            width: "12px",
+            height: "8px",
+            background: "linear-gradient(135deg, #4ade80, #16a34a)",
             borderRadius: "0 999px 0 999px",
             transform: "rotate(-20deg)",
             transformOrigin: "left center",
           }}
           initial={{ scale: 0 }}
           animate={{ scale: [0, 0, 1] }}
-          transition={{ duration: 2.2, times: [0, 0.7, 0.85], ease: "easeOut" }}
+          transition={{ duration: 2.2, times: [0, 0.74, 0.88], ease: "backOut" }}
         />
         {/* Flower head */}
         <motion.div
           className="absolute left-1/2"
-          style={{ bottom: "60px", transform: "translateX(-50%)", width: "20px", height: "20px" }}
-          initial={{ scale: 0 }}
-          animate={{ scale: [0, 0, 0, 1.1, 1] }}
+          style={{ bottom: "72px", transform: "translateX(-50%)", width: "26px", height: "26px" }}
+          initial={{ scale: 0, rotate: -30 }}
+          animate={{ scale: [0, 0, 0, 1.2, 1], rotate: [-30, -30, -30, 10, 0] }}
           transition={{ duration: 2.2, times: [0, 0.78, 0.85, 0.95, 1], ease: "backOut" }}
         >
-          {/* Petals */}
           {[0, 72, 144, 216, 288].map((deg, i) => (
             <div
               key={i}
               className="absolute left-1/2 top-1/2 rounded-full"
               style={{
-                width: "10px",
-                height: "10px",
+                width: "13px",
+                height: "13px",
                 background: "linear-gradient(180deg, #fda4af, #f43f5e)",
-                transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(-5px)`,
-                border: "1px solid #be123c",
+                transform: `translate(-50%, -50%) rotate(${deg}deg) translateY(-7px)`,
+                border: "1.5px solid #be123c",
+                boxShadow: "0 1px 2px rgba(190,18,60,0.4)",
               }}
             />
           ))}
-          {/* Center */}
           <div
             className="absolute left-1/2 top-1/2 rounded-full bg-amber-400"
-            style={{ width: "7px", height: "7px", transform: "translate(-50%, -50%)", border: "1px solid #b45309" }}
+            style={{
+              width: "9px",
+              height: "9px",
+              transform: "translate(-50%, -50%)",
+              border: "1.5px solid #b45309",
+              boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.15)",
+            }}
           />
         </motion.div>
       </motion.div>
@@ -870,54 +1011,68 @@ export const PlantSeedProp = ({ visible }: { visible: boolean }) => (
 );
 
 // ──────────────────────────────────────────────────────────────────────────
-// ThrowBallProp — small baseball appears in the lead's hand on wind-up,
-// then flies right toward the knight with rotation and fades.
-// ~1.7s — matches the "throw ball" prek transform.
+// ThrowBallProp — large baseball appears in character's hand, winds up,
+// then arcs across the screen toward the knight with rotation + a motion
+// trail. Anchored at column level so the throw goes ALL THE WAY across.
 // ──────────────────────────────────────────────────────────────────────────
 export const ThrowBallProp = ({ visible }: { visible: boolean }) => (
   <AnimatePresence>
     {visible && (
       <motion.div
         key="ball"
-        className="absolute pointer-events-none z-40"
+        className="absolute pointer-events-none z-50"
         style={{
           left: "50%",
-          bottom: "58px",
-          width: "16px",
-          height: "16px",
+          bottom: "100px", // character hand height
+          width: "26px",
+          height: "26px",
           transform: "translateX(-50%)",
         }}
-        initial={{ opacity: 0, scale: 0.4 }}
+        initial={{ opacity: 0, scale: 0.3 }}
         animate={{
-          opacity: [0, 1, 1, 1, 0],
-          scale: [0.4, 1, 1, 0.9, 0.7],
-          x: [-10, -6, -8, 90, 180],
-          y: [0, -2, 4, -18, -8],
-          rotate: [0, -10, 0, 360, 720],
+          opacity: [0, 1, 1, 1, 1, 0],
+          scale: [0.3, 1, 1.05, 1, 0.85, 0.6],
+          // wind back (negative x = toward character body), then big arc right & up, then descend
+          x: [0, -28, -32, 60, 160, 240],
+          y: [10, 0, -2, -40, -25, 20],
+          rotate: [0, -25, -30, 360, 720, 900],
         }}
         exit={{ opacity: 0 }}
         transition={{
           duration: 1.7,
-          times: [0, 0.18, 0.45, 0.85, 1],
+          times: [0, 0.18, 0.32, 0.6, 0.85, 1],
           ease: "easeOut",
         }}
       >
+        {/* Baseball */}
         <div
-          className="absolute inset-0 rounded-full shadow"
+          className="absolute inset-0 rounded-full"
           style={{
-            background: "radial-gradient(circle at 30% 28%, #ffffff 0%, #f1f5f9 55%, #cbd5e1 100%)",
-            border: "1px solid #94a3b8",
+            background:
+              "radial-gradient(circle at 30% 28%, #ffffff 0%, #f1f5f9 55%, #94a3b8 100%)",
+            border: "1.5px solid #475569",
+            boxShadow: "0 3px 6px rgba(0,0,0,0.35), inset -2px -2px 0 rgba(0,0,0,0.15)",
           }}
         />
-        {/* Red stitch lines */}
-        <div
-          className="absolute inset-1 rounded-full"
-          style={{
-            borderTop: "1.5px solid #dc2626",
-            borderBottom: "1.5px solid #dc2626",
-            transform: "rotate(-20deg)",
-          }}
-        />
+        {/* Red stitch curves */}
+        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 26 26">
+          <path
+            d="M 5 7 Q 13 12 5 19"
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeDasharray="2 2"
+          />
+          <path
+            d="M 21 7 Q 13 12 21 19"
+            fill="none"
+            stroke="#dc2626"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeDasharray="2 2"
+          />
+        </svg>
       </motion.div>
     )}
   </AnimatePresence>
