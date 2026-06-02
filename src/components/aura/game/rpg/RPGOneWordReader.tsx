@@ -258,7 +258,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       setLeadHelping(false);
       setHelpStage(null);
       setDogStage("your");
-      setHelperOffsetX(85);
+      setHelperOffsetX(0); // yellow helper must NOT move for "your dog"
       setHelperVisible(true);
       helpTimersRef.current.push(
         window.setTimeout(() => {
