@@ -23,7 +23,7 @@ const ROLE_RING: Record<string, string> = {
 
 export const SummonBar = ({
   coins, unlockedHeroIds, cooldownsUntil, activeCountByHero,
-  onSummon, perHeroCap = 3,
+  onSummon, onBuyShop, perHeroCap = 3,
 }: Props) => {
   // Re-render the cooldown rings smoothly without driving the whole arena.
   const [, setTick] = useState(0);
