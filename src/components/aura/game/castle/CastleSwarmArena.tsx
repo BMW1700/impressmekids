@@ -970,8 +970,20 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             })}
           </div>
           <div className="flex-1 rounded-2xl bg-slate-900/60 border border-slate-800 p-1.5 overflow-hidden">
+            {/* Story context strip — shows the real sentence the kid is reading */}
+            <div className="px-3 pt-1 pb-1.5 text-[11px] sm:text-xs text-slate-300 leading-snug">
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <span className="font-semibold text-amber-300/90 truncate">
+                  {batch.storyTitle || "Story"}
+                </span>
+                <span className="text-slate-500 shrink-0">
+                  Sentence {batch.sentenceIndex}/{batch.totalSentences}
+                </span>
+              </div>
+              <p className="text-slate-200/90 italic line-clamp-2">{batch.sentence}</p>
+            </div>
             <RPGWordReader
-              key={`castle-batch-${batchOffset}`}
+              key={`castle-batch-${batchVersion}`}
               words={currentBatch}
               onResult={handleWordResult}
               onBatchComplete={handleBatchComplete}
