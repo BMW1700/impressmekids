@@ -86,6 +86,8 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
   const { save: saveCampaign } = useCastleCampaign();
   const { stats: knightStats } = useCastleUpgrades();
+  const { unlockedIds: unlockedHeroIds, unlockFromCampaign, unlockFromShop, shopHeroIds, isUnlocked } = useCastleHeroes();
+  const { toast } = useToast();
 
   // ---- Reading content (story-driven) ----
   const storyRunnerRef = useRef<StoryRunner | null>(null);
