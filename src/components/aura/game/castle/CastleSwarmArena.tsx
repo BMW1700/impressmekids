@@ -248,7 +248,54 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       stars,
     });
     persistRun(reason, acc, finalCoins);
-  }, [mode, characterName, saveCampaign, persistRun]);
+  }, [mode, characterName, saveCampaign, persistRun, isUnlocked, unlockFromCampaign, toast]);
+
+  // ---- Summon a hero into the arena ----
+  const handleSummonHero = useCallback((heroId: string) => {
+    if (endedRef.current || pausedRef.current) return;
+    if (!unlockedHeroIdsRef.current.has(heroId)) return;
+    const now = performance.now();
+    const cdUntil = heroCooldowns[heroId] ?? 0;
+    const activeOfThis = heroesRef.current.filter(h => h.heroId === heroId).length;
+    const check = canSummon(heroId, coinsRef.current, cdUntil, Date.now(), activeOfThis);
+    if (!check.ok) return;
+    const def = HEROES_BY_ID[heroId];
+    coinsRef.current -= def.summonCost;
+    setCoinsHud(coinsRef.current);
+    const hero = summonHero({
+      heroId,
+      now,
+      arenaWidth: ARENA_WIDTH,
+      idCounter: () => heroIdRef.current++,
+    });
+    heroesRef.current.push(hero);
+    setHeroCooldowns(prev => ({ ...prev, [heroId]: Date.now() + def.cooldownMs }));
+    playKnightSummon();
+    setHeroTick(t => t + 1);
+  }, [heroCooldowns]);
+
+  // ---- Buy a shop hero (spends coins permanently to unlock) ----
+  const handleBuyShopHero = useCallback(async (heroId: string) => {
+    const def = HEROES_BY_ID[heroId];
+    if (!def || def.unlock.kind !== "shop") return;
+    if (isUnlocked(heroId)) return;
+    const price = def.unlock.price;
+    if (coinsRef.current < price) {
+      toast({ title: "Not enough coins", description: `${def.name} costs ${price} 🪙`, variant: "destructive" });
+      return;
+    }
+    coinsRef.current -= price;
+    setCoinsHud(coinsRef.current);
+    try {
+      await unlockFromShop(heroId);
+      toast({ title: "🛡 Hero hired!", description: `${def.name} added to your roster.` });
+    } catch (err: any) {
+      // refund on failure
+      coinsRef.current += price;
+      setCoinsHud(coinsRef.current);
+      toast({ title: "Purchase failed", description: err?.message || "Try again.", variant: "destructive" });
+    }
+  }, [isUnlocked, unlockFromShop, toast]);
 
   // ---- Start a wave ----
   const startWave = useCallback((n: number) => {
