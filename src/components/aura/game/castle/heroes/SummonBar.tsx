@@ -10,6 +10,8 @@ interface Props {
   cooldownsUntil: Record<string, number>;
   activeCountByHero: Record<string, number>;
   onSummon: (heroId: string) => void;
+  /** Called when player taps a locked shop hero to buy it with coins. */
+  onBuyShop?: (heroId: string) => void;
   perHeroCap?: number;
 }
 
