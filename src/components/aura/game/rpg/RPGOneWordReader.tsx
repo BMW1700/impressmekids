@@ -611,7 +611,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 leashAngleDeg={-30}
               />
             </motion.div>
-            </motion.div>
           </div>
         </div>
 
