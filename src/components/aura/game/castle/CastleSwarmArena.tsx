@@ -663,6 +663,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         enemiesRef.current = enemiesRef.current.filter(e => !(e.dying && e.hp <= 0));
         knightsRef.current = knightsRef.current.filter(k => k.hp > 0 && k.x < ARENA_WIDTH + 10);
 
+        // 5b. Hero tick — summoned heroes attack, support, and project shots.
+        if (heroesRef.current.length || heroProjectilesRef.current.length) {
+          const r = tickHeroes({
+            now,
+            dt,
+            heroes: heroesRef.current,
+            enemies: enemiesRef.current,
+            projectiles: heroProjectilesRef.current,
+            projectileId: () => heroProjIdRef.current++,
+            arenaWidth: ARENA_WIDTH,
+          });
+          if (r.castleHeal > 0) {
+            castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + r.castleHeal);
+          }
+        }
+
         // 6. Wave clear?
         if (!transitioningRef.current &&
             waveSpawnedRef.current >= waveTotalRef.current &&
