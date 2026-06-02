@@ -1062,6 +1062,25 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
           </div>
         )}
+
+        {/* Hero summon bar — coins balance + tappable hero cards */}
+        <div className="flex items-center gap-2">
+          <div className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-xs">
+            <Coins className="w-3.5 h-3.5" /> {coinsHud}
+          </div>
+          <div className="flex-1 min-w-0">
+            <SummonBar
+              coins={coinsHud}
+              unlockedHeroIds={unlockedHeroIds}
+              cooldownsUntil={heroCooldowns}
+              activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
+                acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
+              }, {})}
+              onSummon={handleSummonHero}
+            />
+          </div>
+        </div>
+
         {/* Super bar */}
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-amber-300" />
