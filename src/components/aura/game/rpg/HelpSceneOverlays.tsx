@@ -259,40 +259,64 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </motion.div>
 
-        {/* Chunky silver duct-tape wrap directly over the crack — visible at all times */}
-        <motion.div
-          className="absolute top-1/2 -translate-y-1/2"
-          style={{ left: "38%", width: "20%", height: "115%" }}
-          animate={{
-            scaleX: broken ? 0.85 : 1,
-            rotate: broken ? -6 : 0,
-            x: broken ? -2 : 0,
-          }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <div className="absolute inset-0 rounded-md bg-gradient-to-b from-slate-300 via-slate-400 to-slate-600 shadow-lg border-2 border-slate-700/70">
-            <div
-              className="absolute inset-0 rounded-md opacity-60"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0 3px, transparent 3px 8px)",
-              }}
-            />
-            <div className="absolute inset-y-[6%] left-[15%] w-[20%] rounded-sm bg-white/60 blur-[1px]" />
-            {/* Edge sticky strips */}
-            <div className="absolute -top-[8%] left-[10%] right-[10%] h-[14%] rounded-sm bg-slate-400/90 border border-slate-600/60" />
-            <div className="absolute -bottom-[8%] left-[10%] right-[10%] h-[14%] rounded-sm bg-slate-400/90 border border-slate-600/60" />
-          </div>
-          {phase === "happy" && (
+        {/* Chunky matte duct-tape wrap directly over the crack — appears only when fixing */}
+        <AnimatePresence>
+          {(phase === "fix" || phase === "happy") && (
             <motion.div
-              className="absolute -top-[30%] right-[-25%] text-amber-300 text-lg"
-              animate={{ scale: [0.7, 1.2, 0.7], rotate: [0, 25, 0] }}
-              transition={{ duration: 0.9, repeat: Infinity }}
+              key="tape-wrap"
+              className="absolute top-1/2 -translate-y-1/2"
+              style={{ left: "36%", width: "24%", height: "120%" }}
+              initial={{ scaleX: 0, opacity: 0, rotate: -10 }}
+              animate={{ scaleX: 1, opacity: 1, rotate: 0 }}
+              exit={{ scaleX: 0, opacity: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
             >
-              ✦
+              {/* Real duct tape: matte gunmetal gray with horizontal cloth fibers */}
+              <div
+                className="absolute inset-0 rounded-[3px] shadow-md border border-zinc-800/60"
+                style={{
+                  background:
+                    "linear-gradient(180deg, #5a6068 0%, #4a5058 35%, #3d434b 65%, #2f343b 100%)",
+                }}
+              >
+                {/* Horizontal cloth fiber weave — signature duct-tape texture */}
+                <div
+                  className="absolute inset-0 rounded-[3px] opacity-70"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 2px)",
+                  }}
+                />
+                {/* Subtle dull sheen — NOT shiny */}
+                <div className="absolute inset-x-0 top-[20%] h-[18%] bg-white/8 blur-[2px]" />
+                {/* Torn ragged edges top & bottom */}
+                <div
+                  className="absolute -top-[1px] left-0 right-0 h-[6%] bg-zinc-700"
+                  style={{
+                    clipPath:
+                      "polygon(0 100%, 6% 30%, 14% 80%, 22% 20%, 32% 70%, 42% 25%, 52% 75%, 62% 30%, 72% 80%, 82% 25%, 92% 70%, 100% 35%, 100% 100%)",
+                  }}
+                />
+                <div
+                  className="absolute -bottom-[1px] left-0 right-0 h-[6%] bg-zinc-700"
+                  style={{
+                    clipPath:
+                      "polygon(0 0, 6% 70%, 14% 20%, 22% 80%, 32% 30%, 42% 75%, 52% 25%, 62% 70%, 72% 20%, 82% 75%, 92% 30%, 100% 65%, 100% 0)",
+                  }}
+                />
+              </div>
+              {phase === "happy" && (
+                <motion.div
+                  className="absolute -top-[30%] right-[-25%] text-amber-300 text-lg"
+                  animate={{ scale: [0.7, 1.2, 0.7], rotate: [0, 25, 0] }}
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                >
+                  ✦
+                </motion.div>
+              )}
             </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
 
         {/* Happy lift wobble */}
         {phase === "happy" && (
