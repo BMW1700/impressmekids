@@ -384,31 +384,31 @@ export const DuctTapeProp = ({ phase }: { phase: HelpPhase }) => {
 export const DogWithLeashProp = ({
   holder,
   visible,
-  rightPct = -38,
+  rightPct,
+  leftPct,
   scale = 1,
   leashLength = 70,
   leashAngleDeg,
 }: {
   holder: "left" | "right";
   visible: boolean;
-  /** How far right of the lead the dog sits, as percent of lead's width. */
   rightPct?: number;
-  /** Size multiplier for the dog (1 = original ~78x68). */
+  leftPct?: number;
   scale?: number;
-  /** Length of the leash strap in px. */
   leashLength?: number;
-  /** Override leash rotation. Default: -150 for left holder, -35 for right. */
   leashAngleDeg?: number;
 }) => {
   const angle = leashAngleDeg ?? (holder === "left" ? -150 : -35);
+  const positionStyle: React.CSSProperties =
+    leftPct !== undefined ? { left: `${leftPct}%` } : { right: `${rightPct ?? -38}%` };
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          key={`dog-${holder}`}
+          key={`dog-${holder}-${leftPct !== undefined ? "L" : "R"}`}
           className="absolute pointer-events-none z-30"
           style={{
-            right: `${rightPct}%`,
+            ...positionStyle,
             bottom: "0%",
             width: `${78 * scale}px`,
             height: `${68 * scale}px`,
