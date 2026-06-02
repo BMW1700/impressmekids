@@ -587,16 +587,30 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               animate={
                 heroAttacking
                   ? { x: -32, scale: 1.08 }
+                  : dogStage === "your"
+                  ? { x: 0, y: 0, scale: 1.04 }
                   : { x: 0, y: [0, -5, 0] }
               }
               transition={
                 heroAttacking
                   ? { duration: 0.22, ease: "easeOut" }
+                  : dogStage === "your"
+                  ? { duration: 0.3 }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
+              className="relative flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
+              {/* YOUR dog — sits just to the left of the knight, leash to knight's hand. */}
+              <DogWithLeashProp
+                visible={dogStage === "your"}
+                holder="right"
+                leftPct={-55}
+                scale={1}
+                leashLength={62}
+                leashAngleDeg={-30}
+              />
+            </motion.div>
             </motion.div>
           </div>
         </div>
