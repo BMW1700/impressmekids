@@ -464,6 +464,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               {helpStage === "you" && leadHelping && (
                 <DuctTapeProp phase={helpPhase} />
               )}
+              {/* MY dog / YOUR dog scene: a dog with a collar + leash. */}
+              <DogWithLeashProp
+                holder={dogStage === "your" ? "right" : "left"}
+                visible={dogStage !== null}
+              />
+
 
               <VerbAnimationLayer
                 descriptor={!prekScene && verb?.descriptor.kind === "emoji" ? verb.descriptor : null}
