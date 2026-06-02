@@ -10,6 +10,7 @@ import {
   PumpProp,
   BrokenBatProp,
   DuctTapeProp,
+  DogWithLeashProp,
 } from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
