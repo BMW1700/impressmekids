@@ -231,12 +231,16 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
 
   "in the box": {
     kind: "compound",
-    duration: 2.0,
+    duration: 2.4,
     label: { text: "IN", color: "#8b5cf6" },
-    // character SHRINKS DOWN and FADES — going inside something
+    // Hop UP, arc OVER the box, then drop DOWN inside and shrink as the box swallows them.
     transform: tx(
-      { y: [0, 5, 25, 45, 60], scale: [1, 0.85, 0.55, 0.3, 0.15], opacity: [1, 0.95, 0.7, 0.4, 0.1] },
-      1.9
+      {
+        y: [0, -30, -45, -20, 10, 25, 35],
+        scale: [1, 1, 0.95, 0.85, 0.7, 0.55, 0.45],
+        opacity: [1, 1, 1, 1, 0.95, 0.7, 0.4],
+      },
+      2.3
     ),
     props: [],
   },
@@ -244,9 +248,12 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "ON TOP", color: "#22c55e" },
-    // character HOPS UP and STAYS ELEVATED (on top of something)
+    // Two-hop arc that ENDS elevated, sitting on top of the box.
     transform: tx(
-      { y: [0, -30, -55, -50, -50, -50, -50], scaleY: [1, 0.9, 1, 1, 1, 1, 1] },
+      {
+        y: [0, -28, -10, -42, -42, -42, -42],
+        scaleY: [1, 0.9, 1, 1, 1, 1, 1],
+      },
       1.9
     ),
     props: [],
