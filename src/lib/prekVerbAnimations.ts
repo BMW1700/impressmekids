@@ -231,12 +231,16 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
 
   "in the box": {
     kind: "compound",
-    duration: 2.0,
+    duration: 2.4,
     label: { text: "IN", color: "#8b5cf6" },
-    // character SHRINKS DOWN and FADES — going inside something
+    // Hop UP, arc OVER the box, then drop DOWN inside and shrink as the box swallows them.
     transform: tx(
-      { y: [0, 5, 25, 45, 60], scale: [1, 0.85, 0.55, 0.3, 0.15], opacity: [1, 0.95, 0.7, 0.4, 0.1] },
-      1.9
+      {
+        y: [0, -30, -45, -20, 10, 25, 35],
+        scale: [1, 1, 0.95, 0.85, 0.7, 0.55, 0.45],
+        opacity: [1, 1, 1, 1, 0.95, 0.7, 0.4],
+      },
+      2.3
     ),
     props: [],
   },
@@ -244,9 +248,12 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "ON TOP", color: "#22c55e" },
-    // character HOPS UP and STAYS ELEVATED (on top of something)
+    // Two-hop arc that ENDS elevated, sitting on top of the box.
     transform: tx(
-      { y: [0, -30, -55, -50, -50, -50, -50], scaleY: [1, 0.9, 1, 1, 1, 1, 1] },
+      {
+        y: [0, -28, -10, -42, -42, -42, -42],
+        scaleY: [1, 0.9, 1, 1, 1, 1, 1],
+      },
       1.9
     ),
     props: [],
@@ -272,23 +279,25 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
   },
   "wash hands": {
     kind: "compound",
-    duration: 2.0,
+    duration: 2.2,
     label: { text: "WASH!", color: "#0ea5e9" },
-    // scrubbing side-to-side wiggle with little bounces (like rubbing hands together)
+    // Gentle side-to-side hand-scrub body sway — the WashHandsProp overlay
+    // shows the soap, water and bubbles in the character's hands.
     transform: tx(
-      { rotate: [0, -12, 12, -12, 12, -8, 8, 0], x: [0, -6, 6, -6, 6, -4, 4, 0], y: [0, -3, 0, -3, 0, -3, 0, 0] },
-      1.9
+      { x: [0, -5, 5, -5, 5, -3, 3, 0], y: [0, -2, 0, -2, 0, -1, 0, 0] },
+      2.1
     ),
     props: [],
   },
   "plant seed": {
     kind: "compound",
-    duration: 2.0,
+    duration: 2.4,
     label: { text: "PLANT!", color: "#22c55e" },
-    // bend down (squat to plant), then GROW UP big
+    // Bend down to drop the seed, hold while it lands, then stand up tall as
+    // the flower blooms — synced with the PlantSeedProp overlay (~2.2s).
     transform: tx(
-      { y: [0, 25, 25, 5, -10, -20], scale: [1, 0.85, 0.85, 1, 1.2, 1.4], scaleY: [1, 0.7, 0.7, 0.95, 1.1, 1.2] },
-      1.9
+      { y: [0, 18, 22, 22, 8, -4, -8], scaleY: [1, 0.85, 0.82, 0.85, 0.95, 1.02, 1.05] },
+      2.3
     ),
     props: [],
   },

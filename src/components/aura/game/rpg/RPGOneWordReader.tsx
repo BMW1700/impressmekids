@@ -11,6 +11,10 @@ import {
   BrokenBatProp,
   DuctTapeProp,
   DogWithLeashProp,
+  BoxProp,
+  WashHandsProp,
+  PlantSeedProp,
+  ThrowBallProp,
 } from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
@@ -138,6 +142,11 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [helperOffsetX, setHelperOffsetX] = useState(0);
   // Dog scene: 'my' shows blue holding the leash; 'your' shows yellow holding it.
   const [dogStage, setDogStage] = useState<null | "my" | "your">(null);
+  // Box scene: 'in' = character hops into a brown box; 'on' = character hops on top.
+  const [boxStage, setBoxStage] = useState<null | "in" | "on">(null);
+  const [washing, setWashing] = useState(false);
+  const [planting, setPlanting] = useState(false);
+  const [throwing, setThrowing] = useState(false);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
@@ -162,6 +171,10 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     setHelpPhase("setup");
     setHelperOffsetX(0);
     setDogStage(null);
+    setBoxStage(null);
+    setWashing(false);
+    setPlanting(false);
+    setThrowing(false);
   }, [world.id, level.id]);
   useEffect(() => () => clearHelpTimers(), []);
 
@@ -253,19 +266,39 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         window.setTimeout(() => setDogStage(null), 4000),
       );
     } else if (lower === "your dog") {
-      // Yellow helper walks in a bit from the right and holds the leash.
+      // Dog appears in front of the KNIGHT (right side) — no yellow helper.
       clearHelpTimers();
+      setHelperVisible(false);
       setLeadHelping(false);
       setHelpStage(null);
+      setHelperOffsetX(0);
       setDogStage("your");
-      setHelperOffsetX(0); // yellow helper must NOT move for "your dog"
-      setHelperVisible(true);
       helpTimersRef.current.push(
-        window.setTimeout(() => {
-          setDogStage(null);
-          setHelperVisible(false);
-          setHelperOffsetX(0);
-        }, 4200),
+        window.setTimeout(() => setDogStage(null), 4000),
+      );
+    } else if (lower === "in the box" || lower === "on the box") {
+      clearHelpTimers();
+      setBoxStage(lower === "in the box" ? "in" : "on");
+      helpTimersRef.current.push(
+        window.setTimeout(() => setBoxStage(null), 2400),
+      );
+    } else if (lower === "wash hands") {
+      clearHelpTimers();
+      setWashing(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setWashing(false), 2200),
+      );
+    } else if (lower === "plant seed") {
+      clearHelpTimers();
+      setPlanting(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setPlanting(false), 2400),
+      );
+    } else if (lower === "throw ball") {
+      clearHelpTimers();
+      setThrowing(true);
+      helpTimersRef.current.push(
+        window.setTimeout(() => setThrowing(false), 1900),
       );
     }
 
@@ -397,6 +430,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 </>
               )}
             </div>
+            {/* Brown cardboard box — stationary on the ground next to the lead,
+                shown during "in the box" / "on the box" prek phrases. */}
+            <BoxProp visible={boxStage !== null} mode={boxStage ?? "on"} />
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
@@ -464,19 +500,21 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               {helpStage === "you" && leadHelping && (
                 <DuctTapeProp phase={helpPhase} />
               )}
-              {/* MY dog / YOUR dog scene: dog with collar + leash to a holder.
-                  Both dogs use the SAME size (scale 1). For "my dog" the leash
-                  arcs DOWN-LEFT to the blue lead's right hand. For "your dog"
-                  the dog sits past the yellow helper and the leash arcs
-                  UP-LEFT to the helper's outstretched hand. */}
+              {/* MY dog scene: dog beside the BLUE LEAD, leash to lead's hand.
+                  YOUR dog renders in the KNIGHT column instead (see below). */}
               <DogWithLeashProp
-                visible={dogStage !== null}
-                holder={dogStage === "your" ? "right" : "left"}
-                rightPct={dogStage === "your" ? -135 : -55}
+                visible={dogStage === "my"}
+                holder="left"
+                rightPct={-55}
                 scale={1}
-                leashLength={dogStage === "your" ? 60 : 60}
-                leashAngleDeg={dogStage === "your" ? -25 : 150}
+                leashLength={60}
+                leashAngleDeg={150}
               />
+
+              {/* Wash hands / Plant seed / Throw ball — character-anchored props. */}
+              <WashHandsProp visible={washing} />
+              <PlantSeedProp visible={planting} />
+              <ThrowBallProp visible={throwing} />
 
 
 
@@ -549,16 +587,29 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               animate={
                 heroAttacking
                   ? { x: -32, scale: 1.08 }
+                  : dogStage === "your"
+                  ? { x: 0, y: 0, scale: 1.04 }
                   : { x: 0, y: [0, -5, 0] }
               }
               transition={
                 heroAttacking
                   ? { duration: 0.22, ease: "easeOut" }
+                  : dogStage === "your"
+                  ? { duration: 0.3 }
                   : { y: { duration: 2.2, repeat: Infinity, ease: "easeInOut" } }
               }
-              className="flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
+              className="relative flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
             >
               <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
+              {/* YOUR dog — sits just to the left of the knight, leash to knight's hand. */}
+              <DogWithLeashProp
+                visible={dogStage === "your"}
+                holder="right"
+                leftPct={-55}
+                scale={1}
+                leashLength={62}
+                leashAngleDeg={-30}
+              />
             </motion.div>
           </div>
         </div>
