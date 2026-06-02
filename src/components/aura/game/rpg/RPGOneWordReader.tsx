@@ -142,6 +142,11 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [helperOffsetX, setHelperOffsetX] = useState(0);
   // Dog scene: 'my' shows blue holding the leash; 'your' shows yellow holding it.
   const [dogStage, setDogStage] = useState<null | "my" | "your">(null);
+  // Box scene: 'in' = character hops into a brown box; 'on' = character hops on top.
+  const [boxStage, setBoxStage] = useState<null | "in" | "on">(null);
+  const [washing, setWashing] = useState(false);
+  const [planting, setPlanting] = useState(false);
+  const [throwing, setThrowing] = useState(false);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
