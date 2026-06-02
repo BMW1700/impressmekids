@@ -264,8 +264,8 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           {(phase === "fix" || phase === "happy") && (
             <motion.div
               key="tape-wrap"
-              className="absolute top-1/2 -translate-y-1/2"
-              style={{ left: "36%", width: "24%", height: "120%" }}
+              className="absolute top-1/2 -translate-y-1/2 z-50"
+              style={{ left: "30%", width: "34%", height: "135%" }}
               initial={{ scaleX: 0, opacity: 0, rotate: -10 }}
               animate={{ scaleX: 1, opacity: 1, rotate: 0 }}
               exit={{ scaleX: 0, opacity: 0 }}
