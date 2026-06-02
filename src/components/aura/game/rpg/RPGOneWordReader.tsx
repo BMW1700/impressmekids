@@ -497,19 +497,21 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               {helpStage === "you" && leadHelping && (
                 <DuctTapeProp phase={helpPhase} />
               )}
-              {/* MY dog / YOUR dog scene: dog with collar + leash to a holder.
-                  Both dogs use the SAME size (scale 1). For "my dog" the leash
-                  arcs DOWN-LEFT to the blue lead's right hand. For "your dog"
-                  the dog sits past the yellow helper and the leash arcs
-                  UP-LEFT to the helper's outstretched hand. */}
+              {/* MY dog scene: dog beside the BLUE LEAD, leash to lead's hand.
+                  YOUR dog renders in the KNIGHT column instead (see below). */}
               <DogWithLeashProp
-                visible={dogStage !== null}
-                holder={dogStage === "your" ? "right" : "left"}
-                rightPct={dogStage === "your" ? -135 : -55}
+                visible={dogStage === "my"}
+                holder="left"
+                rightPct={-55}
                 scale={1}
-                leashLength={dogStage === "your" ? 60 : 60}
-                leashAngleDeg={dogStage === "your" ? -25 : 150}
+                leashLength={60}
+                leashAngleDeg={150}
               />
+
+              {/* Wash hands / Plant seed / Throw ball — character-anchored props. */}
+              <WashHandsProp visible={washing} />
+              <PlantSeedProp visible={planting} />
+              <ThrowBallProp visible={throwing} />
 
 
 
