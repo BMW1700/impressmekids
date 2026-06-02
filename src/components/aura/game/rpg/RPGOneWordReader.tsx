@@ -464,14 +464,18 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               {helpStage === "you" && leadHelping && (
                 <DuctTapeProp phase={helpPhase} />
               )}
-              {/* MY dog / YOUR dog scene: dog with collar + leash to a holder. */}
+              {/* MY dog / YOUR dog scene: dog with collar + leash to a holder.
+                  Both dogs use the SAME size (scale 1). For "my dog" the leash
+                  arcs DOWN-LEFT to the blue lead's right hand. For "your dog"
+                  the dog sits past the yellow helper and the leash arcs
+                  UP-LEFT to the helper's outstretched hand. */}
               <DogWithLeashProp
                 visible={dogStage !== null}
                 holder={dogStage === "your" ? "right" : "left"}
-                rightPct={dogStage === "your" ? -95 : -70}
-                scale={dogStage === "my" ? 1.45 : 1}
-                leashLength={dogStage === "your" ? 78 : 95}
-                leashAngleDeg={dogStage === "your" ? -8 : -168}
+                rightPct={dogStage === "your" ? -135 : -55}
+                scale={1}
+                leashLength={dogStage === "your" ? 60 : 60}
+                leashAngleDeg={dogStage === "your" ? -25 : 150}
               />
 
 
