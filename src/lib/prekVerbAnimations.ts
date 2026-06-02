@@ -211,9 +211,10 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "MINE!", color: "#ef4444" },
-    // pulses in place + small happy hop (self-focused, "this is mine")
+    // Gentle self-focused pulse — no rotation so the dog beside the
+    // character stays visually stable.
     transform: tx(
-      { scale: [1, 1.2, 1.1, 1.2, 1.1, 1.15, 1], y: [0, -10, 0, -10, 0, -5, 0], rotate: [0, -5, 5, -5, 5, 0] },
+      { scale: [1, 1.08, 1.04, 1.08, 1.04, 1.06, 1] },
       1.9
     ),
     props: [],
@@ -222,13 +223,12 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "YOURS!", color: "#3b82f6" },
-    // leans RIGHT (toward "you"), as if gesturing across
-    transform: tx(
-      { rotate: [0, 20, 25, 20, 25, 10, 0], x: [0, 20, 35, 25, 35, 15, 0] },
-      1.9
-    ),
+    // Completely static — neither character should move or rotate; the
+    // visual meaning comes from the yellow helper holding the leash.
+    transform: tx({ scale: 1 }, 1.9),
     props: [],
   },
+
   "in the box": {
     kind: "compound",
     duration: 2.0,

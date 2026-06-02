@@ -384,24 +384,43 @@ export const DuctTapeProp = ({ phase }: { phase: HelpPhase }) => {
 export const DogWithLeashProp = ({
   holder,
   visible,
+  rightPct = -38,
+  scale = 1,
+  leashLength = 70,
+  leashAngleDeg,
 }: {
   holder: "left" | "right";
   visible: boolean;
+  /** How far right of the lead the dog sits, as percent of lead's width. */
+  rightPct?: number;
+  /** Size multiplier for the dog (1 = original ~78x68). */
+  scale?: number;
+  /** Length of the leash strap in px. */
+  leashLength?: number;
+  /** Override leash rotation. Default: -150 for left holder, -35 for right. */
+  leashAngleDeg?: number;
 }) => {
+  const angle = leashAngleDeg ?? (holder === "left" ? -150 : -35);
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           key={`dog-${holder}`}
           className="absolute pointer-events-none z-30"
-          // Sits on the ground next to the lead, slightly to the right so
-          // there's room for both characters around it.
-          style={{ right: "-38%", bottom: "0%", width: "78px", height: "68px" }}
+          style={{
+            right: `${rightPct}%`,
+            bottom: "0%",
+            width: `${78 * scale}px`,
+            height: `${68 * scale}px`,
+            transformOrigin: "left bottom",
+          }}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 8 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
         >
+          <div style={{ transform: `scale(${scale})`, transformOrigin: "left bottom", width: "78px", height: "68px", position: "relative" }}>
+
           {/* Tiny idle bob so the dog feels alive */}
           <motion.div
             className="absolute inset-0"
@@ -526,31 +545,27 @@ export const DogWithLeashProp = ({
               style={{ left: "48px", bottom: "20px", width: "5px", height: "5px" }}
             />
 
-            {/* LEASH — an arcing line going up toward the holder's hand.
-                Implemented as a thin rotated strip; direction flips by holder. */}
+            {/* LEASH — straight strap from collar to holder's hand. */}
             <div
               className="absolute"
               style={{
-                // Anchor point is the collar ring (~ left:50, bottom:30).
-                left: "48px",
+                // Anchor at the collar ring (~ left:50, bottom:30 in the 78x68 frame).
+                left: "50px",
                 bottom: "30px",
-                width: holder === "left" ? "70px" : "70px",
+                width: `${leashLength}px`,
                 height: "3px",
                 background: "linear-gradient(90deg, #1e293b, #475569)",
                 borderRadius: "999px",
-                transformOrigin: holder === "left" ? "left center" : "left center",
-                // For left-holder, rotate so the far end goes up-left.
-                // For right-holder, rotate so the far end goes up-right.
-                transform:
-                  holder === "left"
-                    ? "rotate(-150deg)"
-                    : "rotate(-35deg)",
+                transformOrigin: "left center",
+                transform: `rotate(${angle}deg)`,
                 boxShadow: "0 1px 0 rgba(0,0,0,0.15)",
               }}
             />
           </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
+
