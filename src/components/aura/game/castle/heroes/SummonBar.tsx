@@ -75,7 +75,7 @@ export const SummonBar = ({
 };
 
 const HeroCard = ({
-  hero, coins, cooldownsUntil, activeCount, perHeroCap, onSummon, locked,
+  hero, coins, cooldownsUntil, activeCount, perHeroCap, onSummon, onBuyShop, locked,
 }: {
   hero: HeroDef;
   coins: number;
@@ -83,6 +83,7 @@ const HeroCard = ({
   activeCount: number;
   perHeroCap: number;
   onSummon: () => void;
+  onBuyShop?: (heroId: string) => void;
   locked?: boolean;
 }) => {
   const now = Date.now();
@@ -90,13 +91,33 @@ const HeroCard = ({
   const cdPct = cdRemain > 0 ? Math.min(100, (cdRemain / hero.cooldownMs) * 100) : 0;
   const tooBroke = coins < hero.summonCost;
   const atCap = activeCount >= perHeroCap;
-  const disabled = locked || tooBroke || cdRemain > 0 || atCap;
-  const reason = locked ? "Locked" : tooBroke ? "Not enough coins" : cdRemain > 0 ? "Cooling down" : atCap ? "Max active" : `Summon ${hero.name}`;
+
+  // Locked + shop hero → tap to buy with coins.
+  const isShopBuyable = !!locked && hero.unlock.kind === "shop" && !!onBuyShop;
+  const shopPrice = hero.unlock.kind === "shop" ? hero.unlock.price : 0;
+  const cantAffordShop = isShopBuyable && coins < shopPrice;
+
+  const disabled = locked
+    ? !isShopBuyable || cantAffordShop
+    : tooBroke || cdRemain > 0 || atCap;
+
+  const reason = locked
+    ? isShopBuyable ? (cantAffordShop ? `Need ${shopPrice} 🪙 to hire` : `Hire ${hero.name} — ${shopPrice} 🪙`) : "Locked — earn in campaign"
+    : tooBroke ? "Not enough coins"
+    : cdRemain > 0 ? "Cooling down"
+    : atCap ? "Max active"
+    : `Summon ${hero.name}`;
+
+  const handleClick = () => {
+    if (disabled) return;
+    if (locked && isShopBuyable) onBuyShop!(hero.id);
+    else if (!locked) onSummon();
+  };
 
   return (
     <button
       type="button"
-      onClick={() => !disabled && onSummon()}
+      onClick={handleClick}
       title={`${hero.name} — ${hero.blurb}\n${reason}`}
       className={cn(
         "shrink-0 relative w-14 h-16 rounded-lg bg-slate-900/80 border border-slate-700/80 flex flex-col items-center justify-start p-1 transition",
@@ -121,7 +142,14 @@ const HeroCard = ({
       </div>
       <div className="mt-0.5 flex items-center gap-0.5 text-[10px] font-bold">
         {locked ? (
-          <span className="text-slate-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /></span>
+          isShopBuyable ? (
+            <>
+              <Coins className="w-2.5 h-2.5 text-amber-300" />
+              <span className={cn(cantAffordShop ? "text-rose-300" : "text-amber-200")}>{shopPrice}</span>
+            </>
+          ) : (
+            <span className="text-slate-400 flex items-center gap-0.5"><Lock className="w-2.5 h-2.5" /></span>
+          )
         ) : (
           <>
             <Coins className="w-2.5 h-2.5 text-amber-300" />
