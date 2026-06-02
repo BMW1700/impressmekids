@@ -213,6 +213,8 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
     backgroundImage:
       "linear-gradient(90deg, #e5e7eb 0%, #ffffff 18%, #94a3b8 44%, #f8fafc 62%, #64748b 100%), repeating-linear-gradient(0deg, rgba(15,23,42,0.28) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(15,23,42,0.18) 0 1px, transparent 1px 5px)",
   };
+  // Crack lives exactly at the boundary between handle (44%) and barrel (56%)
+  const CRACK_X = 44; // percent from left of bat container
   return (
     <div
       className="absolute pointer-events-none z-30"
@@ -225,16 +227,14 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           style={{ width: "44%", height: "60%", transformOrigin: "right center" }}
           animate={
             broken
-              ? { x: -6, rotate: -10 }
-              : { x: 0, rotate: 0 }
+              ? { x: -8, rotate: -12 }
+              : { x: 2, rotate: 0 }
           }
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <div className="absolute inset-0 rounded-l-full bg-gradient-to-r from-amber-900 via-amber-800 to-amber-700 shadow">
-            {/* Grip wrap */}
             <div className="absolute left-[5%] inset-y-[20%] w-[35%] rounded-l-full bg-gradient-to-r from-slate-900 to-slate-700" />
           </div>
-          {/* Jagged break edge on right */}
           {broken && (
             <div
               className="absolute right-[-2px] top-0 bottom-0 w-[8%] bg-amber-900"
@@ -249,15 +249,14 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           style={{ width: "56%", height: "78%", transformOrigin: "left center" }}
           animate={
             broken
-              ? { x: 6, rotate: 10 }
-              : { x: 0, rotate: 0 }
+              ? { x: 8, rotate: 12 }
+              : { x: -2, rotate: 0 }
           }
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
           <div className="absolute inset-0 rounded-r-full bg-gradient-to-r from-amber-700 via-amber-600 to-amber-500 shadow">
             <div className="absolute top-[15%] right-[12%] w-[18%] h-[18%] rounded-full bg-amber-300/60 blur-[1px]" />
           </div>
-          {/* Jagged break edge on left */}
           {broken && (
             <div
               className="absolute left-[-2px] top-0 bottom-0 w-[6%] bg-amber-700"
@@ -266,23 +265,41 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </motion.div>
 
-        {/* One short duct-tape strip directly over the crack — appears only when fixing */}
+        {/* ONE horizontal duct-tape wrap across the crack — strap goes ACROSS the bat */}
         <AnimatePresence>
           {repaired && (
             <motion.div
               key="tape-wrap"
-              className="absolute top-1/2 z-[100] rounded-[4px] border-2 border-slate-700 shadow-[0_2px_6px_rgba(15,23,42,0.55)]"
-              style={{ ...tapeTexture, left: "39.5%", width: "11%", height: "72%", transformOrigin: "center center" }}
-              initial={{ y: "-50%", scaleY: 0.15, opacity: 0, rotate: -4 }}
-              animate={{ y: "-50%", scaleY: 1, opacity: 1, rotate: -4 }}
+              className="absolute z-[120]"
+              style={{
+                left: `${CRACK_X - 9}%`,
+                width: "18%",
+                top: "calc(50% - 1px)",
+                height: "62%",
+                transform: "translateY(-50%)",
+                transformOrigin: "center center",
+              }}
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
               exit={{ scaleX: 0, opacity: 0 }}
-              transition={{ duration: 0.45, ease: "easeOut" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
             >
-              <div className="absolute inset-y-0 left-[42%] w-[18%] bg-white/55 blur-[2px]" />
-              <div className="absolute inset-x-[12%] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-slate-900/35" />
+              {/* The strap itself — silver, with cloth fibers and crisp dark edges */}
+              <div
+                className="absolute inset-0 rounded-[3px] border border-slate-800 shadow-[0_3px_8px_rgba(15,23,42,0.6)]"
+                style={tapeTexture}
+              >
+                {/* Sheen */}
+                <div className="absolute inset-y-[8%] left-[35%] w-[22%] bg-white/55 blur-[2px] rounded-full" />
+                {/* Top + bottom dark crease lines so it reads as a wrap going behind the bat */}
+                <div className="absolute -top-[1px] inset-x-0 h-[2px] bg-slate-900/70" />
+                <div className="absolute -bottom-[1px] inset-x-0 h-[2px] bg-slate-900/70" />
+                {/* Center seam */}
+                <div className="absolute inset-x-[8%] top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-slate-900/30" />
+              </div>
               {phase === "happy" && (
                 <motion.div
-                  className="absolute -top-[30%] right-[-25%] text-amber-300 text-lg"
+                  className="absolute -top-[40%] right-[-30%] text-amber-300 text-lg"
                   animate={{ scale: [0.7, 1.2, 0.7], rotate: [0, 25, 0] }}
                   transition={{ duration: 0.9, repeat: Infinity }}
                 >
@@ -293,7 +310,6 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </AnimatePresence>
 
-        {/* Happy lift wobble */}
         {phase === "happy" && (
           <motion.div
             className="absolute inset-0"
