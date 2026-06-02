@@ -34,6 +34,10 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
 
         <div className="flex items-center gap-2">
           {children}
+
+          <SettingsMenu />
+
+
           
           {session ? (
             <>
