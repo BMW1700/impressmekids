@@ -1077,6 +1077,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                 acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
               }, {})}
               onSummon={handleSummonHero}
+              onBuyShop={handleBuyShopHero}
             />
           </div>
         </div>
