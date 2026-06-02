@@ -79,28 +79,21 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const { save: saveCampaign } = useCastleCampaign();
   const { stats: knightStats } = useCastleUpgrades();
 
-  // ---- Reading content ----
-  const wordPool = useMemo(() => {
-    const stories = curatedStories.filter(s =>
-      gradeMode === "6to12" ? s.grade_level >= 6 : s.grade_level <= 5
-    );
-    const text = (stories.length ? stories : curatedStories)
-      .slice(0, 24).map(s => s.passage_text).join(" ");
-    const words = Array.from(new Set(
-      text.split(/\s+/).map(normalize).filter(w => w.length >= 2 && w.length <= 10)
-    ));
-    return words.length ? words : ["read", "brave", "knight", "castle", "story", "magic", "shield", "valor"];
-  }, [gradeMode]);
+  // ---- Reading content (story-driven) ----
+  const storyRunnerRef = useRef<StoryRunner | null>(null);
+  if (!storyRunnerRef.current) {
+    storyRunnerRef.current = new StoryRunner({
+      gradeBand: gradeMode === "6to12" ? "6-12" : "K-5",
+      levelId: mode.kind === "campaign" ? mode.level.id : undefined,
+      arcId: mode.kind === "campaign" ? mode.level.arc : undefined,
+    });
+  }
 
-  // Sliding word batch fed to RPGWordReader
-  const [batchOffset, setBatchOffset] = useState(0);
-  const currentBatch = useMemo(() => {
-    const out: string[] = [];
-    for (let i = 0; i < WORD_BATCH; i++) {
-      out.push(wordPool[(batchOffset + i) % wordPool.length]);
-    }
-    return out;
-  }, [batchOffset, wordPool]);
+  // Sliding word batch fed to RPGWordReader, sourced from continuous story sentences.
+  const [batchVersion, setBatchVersion] = useState(0);
+  const [batch, setBatch] = useState<StoryBatch>(() => storyRunnerRef.current!.nextBatch(WORD_BATCH));
+  const currentBatch = batch.words;
+  const wordPool = useMemo(() => storyRunnerRef.current!.uniqueWordPool(), []);
 
   // ---- React state (HUD-visible only, throttled) ----
   const [castleHpHud, setCastleHpHud] = useState(CASTLE_HP_MAX);
