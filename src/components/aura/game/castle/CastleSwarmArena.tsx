@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
@@ -20,11 +20,19 @@ import { WaveSurvivedCard, RunSummary } from "./WaveSurvivedCard";
 import type { CampaignLevel } from "./campaignLevels";
 import { useCastleCampaign } from "@/hooks/useCastleCampaign";
 import { useCastleUpgrades } from "@/hooks/useCastleUpgrades";
+import { useCastleHeroes } from "@/hooks/useCastleHeroes";
+import { useToast } from "@/hooks/use-toast";
 import { RPGWordReader } from "../rpg/RPGWordReader";
 import { scoreWord, pickPhonemeForWave, PhonemeTarget } from "./wordEconomy";
 import { BossSpellBreak, SpellBreakGradeBand } from "./BossSpellBreak";
 import { playCrit, playPhonemeHit, playKnightSummon, playShieldUp } from "./sfx";
 import { wordContainsPhoneme } from "./phonemeMatcher";
+import {
+  ActiveHero, HeroProjectile, tickHeroes, summonHero, canSummon, yOffsetForHero,
+} from "./heroes/heroEngine";
+import { HEROES_BY_ID } from "./heroes/heroRoster";
+import { HeroSprite } from "./heroes/HeroSprite";
+import { SummonBar } from "./heroes/SummonBar";
 
 interface Enemy {
   id: number;
