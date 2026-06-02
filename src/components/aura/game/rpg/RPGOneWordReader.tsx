@@ -430,6 +430,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 </>
               )}
             </div>
+            {/* Brown cardboard box — stationary on the ground next to the lead,
+                shown during "in the box" / "on the box" prek phrases. */}
+            <BoxProp visible={boxStage !== null} mode={boxStage ?? "on"} />
             <motion.div
               key={`enemy-${prekScene?.id ?? verb?.id ?? 0}-${leadHelping ? 'helping' : 'idle'}`}
               animate={
