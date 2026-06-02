@@ -66,6 +66,7 @@ export const SummonBar = ({
           activeCount={0}
           perHeroCap={perHeroCap}
           onSummon={() => { /* no-op when locked */ }}
+          onBuyShop={onBuyShop}
           locked
         />
       ))}
