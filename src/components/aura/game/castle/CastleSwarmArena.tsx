@@ -670,6 +670,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           transitioningRef.current = true;
           const earned = Math.round(coinsForWave(waveRef.current) * knightStatsRef.current.goldFindMul);
           coinsRef.current += earned;
+          setCoinsHud(coinsRef.current);
           const completedWave = waveRef.current;
 
           const isCampaign = mode.kind === "campaign";
