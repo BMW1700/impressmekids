@@ -545,31 +545,27 @@ export const DogWithLeashProp = ({
               style={{ left: "48px", bottom: "20px", width: "5px", height: "5px" }}
             />
 
-            {/* LEASH — an arcing line going up toward the holder's hand.
-                Implemented as a thin rotated strip; direction flips by holder. */}
+            {/* LEASH — straight strap from collar to holder's hand. */}
             <div
               className="absolute"
               style={{
-                // Anchor point is the collar ring (~ left:50, bottom:30).
-                left: "48px",
+                // Anchor at the collar ring (~ left:50, bottom:30 in the 78x68 frame).
+                left: "50px",
                 bottom: "30px",
-                width: holder === "left" ? "70px" : "70px",
+                width: `${leashLength}px`,
                 height: "3px",
                 background: "linear-gradient(90deg, #1e293b, #475569)",
                 borderRadius: "999px",
-                transformOrigin: holder === "left" ? "left center" : "left center",
-                // For left-holder, rotate so the far end goes up-left.
-                // For right-holder, rotate so the far end goes up-right.
-                transform:
-                  holder === "left"
-                    ? "rotate(-150deg)"
-                    : "rotate(-35deg)",
+                transformOrigin: "left center",
+                transform: `rotate(${angle}deg)`,
                 boxShadow: "0 1px 0 rgba(0,0,0,0.15)",
               }}
             />
           </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 };
+
