@@ -233,12 +233,14 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.4,
     label: { text: "IN", color: "#8b5cf6" },
-    // Hop UP, arc OVER the box, then drop DOWN inside and shrink as the box swallows them.
+    // Crouch → big hop UP and OVER the box opening → drop DOWN inside and
+    // shrink as the box swallows them. Box is anchored at the ground in
+    // front of the character (bottom ~56px), so y:+45 drops the feet inside.
     transform: tx(
       {
-        y: [0, -30, -45, -20, 10, 25, 35],
-        scale: [1, 1, 0.95, 0.85, 0.7, 0.55, 0.45],
-        opacity: [1, 1, 1, 1, 0.95, 0.7, 0.4],
+        y: [0, 10, -70, -50, 0, 35, 45],
+        scale: [1, 1, 1.02, 1, 0.85, 0.55, 0.35],
+        opacity: [1, 1, 1, 1, 1, 0.7, 0.2],
       },
       2.3
     ),
@@ -248,11 +250,13 @@ const PREK_VERBS: Record<string, CompoundVerbDescriptor> = {
     kind: "compound",
     duration: 2.0,
     label: { text: "ON TOP", color: "#22c55e" },
-    // Two-hop arc that ENDS elevated, sitting on top of the box.
+    // Crouch → spring up and arc onto the box top → land elevated and
+    // stay perched. Box top sits ~8px above character's normal foot line,
+    // so the final resting y is slightly negative to plant feet on the lid.
     transform: tx(
       {
-        y: [0, -28, -10, -42, -42, -42, -42],
-        scaleY: [1, 0.9, 1, 1, 1, 1, 1],
+        y: [0, 12, -55, -35, -12, -12, -12],
+        scaleY: [1, 0.82, 1.05, 1, 1, 1, 1],
       },
       1.9
     ),
