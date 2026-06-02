@@ -203,22 +203,29 @@ export const PumpProp = ({ phase }: { phase: HelpPhase }) => {
 // ──────────────────────────────────────────────────────────────────────────
 
 // Broken bat held by the HELPER (yellow). Two halves separated, then joined
-// with a gray duct-tape wrap during the 'fix' phase.
+// with a chunky silver duct-tape wrap during the 'fix' phase.
 export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
   const broken = phase === "setup" || phase === "approach";
   return (
     <div
       className="absolute pointer-events-none z-30"
-      style={{ right: "-40%", bottom: "10%", width: "140%", height: "55%" }}
+      style={{ right: "-55%", bottom: "-4%", width: "120%", height: "34%" }}
     >
-      <div className="relative w-full h-full" style={{ transform: "rotate(-12deg)" }}>
+      {/* Label above bat so it's unmistakably a baseball bat */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-white/95 border border-amber-700 shadow text-amber-900 text-[10px] font-black uppercase tracking-wider"
+        style={{ top: "-26%" }}
+      >
+        ⚾ Bat
+      </div>
+      <div className="relative w-full h-full" style={{ transform: "rotate(-8deg)" }}>
         {/* Handle half (left) */}
         <motion.div
           className="absolute left-0 top-1/2 -translate-y-1/2"
           style={{ width: "44%", height: "60%", transformOrigin: "right center" }}
           animate={
             broken
-              ? { x: -4, rotate: -8 }
+              ? { x: -6, rotate: -10 }
               : { x: 0, rotate: 0 }
           }
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -242,7 +249,7 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           style={{ width: "56%", height: "78%", transformOrigin: "left center" }}
           animate={
             broken
-              ? { x: 4, rotate: 8 }
+              ? { x: 6, rotate: 10 }
               : { x: 0, rotate: 0 }
           }
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -259,24 +266,56 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </motion.div>
 
-        {/* Duct-tape wrap appearing across the joint during 'fix' and 'happy' */}
+        {/* BROKEN! badge while broken */}
+        {broken && (
+          <motion.div
+            className="absolute left-[42%] -translate-x-1/2 px-1.5 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-black shadow"
+            style={{ top: "-40%" }}
+            animate={{ scale: [1, 1.15, 1], opacity: [0.85, 1, 0.85] }}
+            transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
+          >
+            BROKEN!
+          </motion.div>
+        )}
+
+        {/* Chunky silver duct-tape wrap across the joint during 'fix' and 'happy' */}
         <AnimatePresence>
           {(phase === "fix" || phase === "happy") && (
             <motion.div
               key="tape-wrap"
               className="absolute top-1/2 -translate-y-1/2"
-              style={{ left: "38%", width: "20%", height: "92%" }}
+              style={{ left: "32%", width: "32%", height: "120%" }}
               initial={{ scaleX: 0, opacity: 0 }}
               animate={{ scaleX: 1, opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <div className="absolute inset-0 rounded-sm bg-gradient-to-b from-slate-400 via-slate-500 to-slate-700 shadow">
-                {/* Tape texture lines */}
-                <div className="absolute inset-y-[18%] left-[20%] w-[8%] bg-slate-300/50" />
-                <div className="absolute inset-y-[18%] right-[20%] w-[8%] bg-slate-300/50" />
-                <div className="absolute inset-x-[15%] top-[10%] h-[6%] bg-slate-200/40" />
+              <div className="absolute inset-0 rounded-md bg-gradient-to-b from-slate-300 via-slate-400 to-slate-600 shadow-lg border-2 border-slate-700/70">
+                <div
+                  className="absolute inset-0 rounded-md opacity-60"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0 3px, transparent 3px 8px)",
+                  }}
+                />
+                <div className="absolute inset-y-[6%] left-[10%] w-[12%] rounded-sm bg-white/60 blur-[1px]" />
+                {/* Edge sticky strips */}
+                <div className="absolute -top-[8%] left-[10%] right-[10%] h-[14%] rounded-sm bg-slate-400/90 border border-slate-600/60" />
+                <div className="absolute -bottom-[8%] left-[10%] right-[10%] h-[14%] rounded-sm bg-slate-400/90 border border-slate-600/60" />
               </div>
+              {/* Tape label callout */}
+              <div className="absolute -top-[55%] left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded bg-slate-700 text-white text-[9px] font-black tracking-wider shadow whitespace-nowrap">
+                DUCT TAPE
+              </div>
+              {phase === "happy" && (
+                <motion.div
+                  className="absolute -top-[30%] right-[-25%] text-amber-300 text-lg"
+                  animate={{ scale: [0.7, 1.2, 0.7], rotate: [0, 25, 0] }}
+                  transition={{ duration: 0.9, repeat: Infinity }}
+                >
+                  ✦
+                </motion.div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -295,26 +334,72 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
 };
 
 // Duct-tape roll held by the LEAD (blue) as he walks over to fix the bat.
+// Larger, with a clearly hanging silver tape strip and an arrow toward the bat.
 export const DuctTapeProp = ({ phase }: { phase: HelpPhase }) => {
   // Tape only shows during the approach + fix; disappears for 'happy'.
   if (phase === "happy") return null;
   return (
     <div
       className="absolute pointer-events-none z-30"
-      style={{ right: "8%", bottom: "26%", width: "20%", height: "20%" }}
+      style={{ right: "4%", bottom: "30%", width: "32%", height: "32%" }}
     >
+      {/* Label so it's unmistakably duct tape */}
+      <div className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-slate-700 text-white text-[10px] font-black tracking-wider shadow border border-slate-300 whitespace-nowrap">
+        DUCT TAPE
+      </div>
+
       <motion.div
         className="relative w-full h-full"
-        animate={phase === "fix" ? { rotate: [0, -20, -40, -60] } : { rotate: 0 }}
+        animate={phase === "fix" ? { rotate: [0, -25, -50, -80, -110] } : { rotate: 0 }}
         transition={phase === "fix" ? { duration: 1.2, ease: "linear" } : { duration: 0.3 }}
       >
-        {/* Outer roll */}
-        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 shadow-md" />
+        {/* Outer roll — chunky silver */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-slate-300 via-slate-500 to-slate-800 shadow-lg border-2 border-slate-700">
+          {/* Diagonal tape ridges on the roll */}
+          <div
+            className="absolute inset-[6%] rounded-full opacity-50"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0 3px, transparent 3px 7px)",
+            }}
+          />
+        </div>
         {/* Inner hole */}
-        <div className="absolute inset-[30%] rounded-full bg-slate-100 shadow-inner" />
+        <div className="absolute inset-[32%] rounded-full bg-slate-100 shadow-inner border border-slate-400" />
         {/* Side highlight */}
-        <div className="absolute top-[10%] left-[18%] w-[28%] h-[16%] rounded-full bg-white/50 blur-[1px]" />
+        <div className="absolute top-[10%] left-[18%] w-[28%] h-[16%] rounded-full bg-white/60 blur-[1px]" />
+
+        {/* Pulled-out sticky tape strip hanging off the roll — clearly identifies it as tape */}
+        <div
+          className="absolute"
+          style={{ left: "-55%", top: "55%", width: "60%", height: "18%", transform: "rotate(8deg)" }}
+        >
+          <div className="relative w-full h-full rounded-sm bg-gradient-to-b from-slate-300 via-slate-400 to-slate-600 shadow border border-slate-700/60">
+            <div
+              className="absolute inset-0 rounded-sm opacity-50"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(45deg, rgba(255,255,255,0.4) 0 2px, transparent 2px 6px)",
+              }}
+            />
+          </div>
+        </div>
       </motion.div>
+
+      {/* Arrow → "Fix bat" callout during the fix phase */}
+      {phase === "fix" && (
+        <motion.div
+          className="absolute left-[-50%] top-1/2 -translate-y-1/2 flex items-center gap-1"
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <span className="text-2xl font-black text-slate-800 drop-shadow">→</span>
+          <span className="px-1.5 py-0.5 rounded bg-amber-300 text-amber-900 text-[9px] font-black uppercase shadow whitespace-nowrap">
+            Fix bat
+          </span>
+        </motion.div>
+      )}
     </div>
   );
 };
