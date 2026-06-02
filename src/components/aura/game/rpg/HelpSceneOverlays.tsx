@@ -259,49 +259,49 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </motion.div>
 
-        {/* Chunky matte duct-tape wrap directly over the crack — appears only when fixing */}
+        {/* Bright duct-tape wrap directly over the crack — appears only when fixing */}
         <AnimatePresence>
           {(phase === "fix" || phase === "happy") && (
             <motion.div
               key="tape-wrap"
-              className="absolute top-1/2 -translate-y-1/2 z-50"
-              style={{ left: "30%", width: "34%", height: "135%" }}
-              initial={{ scaleX: 0, opacity: 0, rotate: -10 }}
-              animate={{ scaleX: 1, opacity: 1, rotate: 0 }}
+              className="absolute z-[80]"
+              style={{ left: "38%", top: "-18%", width: "20%", height: "136%", transformOrigin: "center center" }}
+              initial={{ scaleX: 0.15, opacity: 0, rotate: -2 }}
+              animate={{ scaleX: 1, opacity: 1, rotate: -2 }}
               exit={{ scaleX: 0, opacity: 0 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
             >
-              {/* Real duct tape: matte gunmetal gray with horizontal cloth fibers */}
+              {/* High-contrast duct tape: wide silver band with torn edges and cloth fibers */}
               <div
-                className="absolute inset-0 rounded-[3px] shadow-md border border-zinc-800/60"
+                className="absolute inset-0 rounded-[4px] shadow-[0_2px_5px_rgba(15,23,42,0.45)] border-2 border-slate-600/80"
                 style={{
                   background:
-                    "linear-gradient(180deg, #5a6068 0%, #4a5058 35%, #3d434b 65%, #2f343b 100%)",
+                    "linear-gradient(90deg, #cbd5e1 0%, #f8fafc 18%, #94a3b8 42%, #e2e8f0 64%, #64748b 100%)",
                 }}
               >
-                {/* Horizontal cloth fiber weave — signature duct-tape texture */}
+                {/* Cloth fiber weave — signature duct-tape texture */}
                 <div
-                  className="absolute inset-0 rounded-[3px] opacity-70"
+                  className="absolute inset-0 rounded-[4px] opacity-80 mix-blend-multiply"
                   style={{
                     backgroundImage:
-                      "repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 2px)",
+                      "repeating-linear-gradient(0deg, rgba(15,23,42,0.32) 0 1px, transparent 1px 4px), repeating-linear-gradient(90deg, rgba(15,23,42,0.18) 0 1px, transparent 1px 5px)",
                   }}
                 />
-                {/* Subtle dull sheen — NOT shiny */}
-                <div className="absolute inset-x-0 top-[20%] h-[18%] bg-white/8 blur-[2px]" />
-                {/* Torn ragged edges top & bottom */}
+                <div className="absolute inset-y-0 left-[42%] w-[16%] bg-white/55 blur-[2px]" />
+                <div className="absolute inset-x-[18%] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-slate-800/30" />
+                {/* Torn ragged edges */}
                 <div
-                  className="absolute -top-[1px] left-0 right-0 h-[6%] bg-zinc-700"
+                  className="absolute inset-y-0 -left-[8%] w-[16%] bg-slate-300"
                   style={{
                     clipPath:
-                      "polygon(0 100%, 6% 30%, 14% 80%, 22% 20%, 32% 70%, 42% 25%, 52% 75%, 62% 30%, 72% 80%, 82% 25%, 92% 70%, 100% 35%, 100% 100%)",
+                      "polygon(100% 0, 42% 5%, 76% 13%, 31% 21%, 68% 31%, 26% 44%, 72% 56%, 35% 70%, 80% 82%, 38% 94%, 100% 100%)",
                   }}
                 />
                 <div
-                  className="absolute -bottom-[1px] left-0 right-0 h-[6%] bg-zinc-700"
+                  className="absolute inset-y-0 -right-[8%] w-[16%] bg-slate-400"
                   style={{
                     clipPath:
-                      "polygon(0 0, 6% 70%, 14% 20%, 22% 80%, 32% 30%, 42% 75%, 52% 25%, 62% 70%, 72% 20%, 82% 75%, 92% 30%, 100% 65%, 100% 0)",
+                      "polygon(0 0, 62% 7%, 22% 16%, 70% 26%, 28% 38%, 74% 51%, 34% 63%, 68% 76%, 25% 88%, 58% 96%, 0 100%)",
                   }}
                 />
               </div>
