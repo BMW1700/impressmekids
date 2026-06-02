@@ -11,6 +11,10 @@ import {
   BrokenBatProp,
   DuctTapeProp,
   DogWithLeashProp,
+  BoxProp,
+  WashHandsProp,
+  PlantSeedProp,
+  ThrowBallProp,
 } from "./HelpSceneOverlays";
 import { RPGWordReader, type WordAttempt } from "./RPGWordReader";
 import { VerbAnimationLayer } from "../effects/VerbAnimationLayer";
