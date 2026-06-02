@@ -727,6 +727,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         setCastleHpHud(castleHpRef.current);
         if (mode.kind === "campaign") setEnemyCastleHpHud(Math.max(0, enemyCastleHpRef.current));
         setEnemyTick(t => t + 1);
+        setHeroTick(t => t + 1);
       }
 
       raf = requestAnimationFrame(loop);
