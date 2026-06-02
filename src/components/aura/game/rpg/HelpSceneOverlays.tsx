@@ -234,18 +234,6 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
             {/* Grip wrap */}
             <div className="absolute left-[5%] inset-y-[20%] w-[35%] rounded-l-full bg-gradient-to-r from-slate-900 to-slate-700" />
           </div>
-          {repaired && (
-            <motion.div
-              className="absolute right-[-20%] top-[-28%] bottom-[-28%] w-[36%] z-[90] rounded-[5px] border-2 border-slate-700 shadow-[0_2px_6px_rgba(15,23,42,0.55)]"
-              style={tapeTexture}
-              initial={{ opacity: 0, scaleY: 0.15 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-            >
-              <div className="absolute inset-y-0 left-[42%] w-[18%] bg-white/55 blur-[2px]" />
-              <div className="absolute inset-x-[14%] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-slate-900/35" />
-            </motion.div>
-          )}
           {/* Jagged break edge on right */}
           {broken && (
             <div
@@ -269,18 +257,6 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           <div className="absolute inset-0 rounded-r-full bg-gradient-to-r from-amber-700 via-amber-600 to-amber-500 shadow">
             <div className="absolute top-[15%] right-[12%] w-[18%] h-[18%] rounded-full bg-amber-300/60 blur-[1px]" />
           </div>
-          {repaired && (
-            <motion.div
-              className="absolute left-[-18%] top-[-20%] bottom-[-20%] w-[30%] z-[90] rounded-[5px] border-2 border-slate-700 shadow-[0_2px_6px_rgba(15,23,42,0.55)]"
-              style={tapeTexture}
-              initial={{ opacity: 0, scaleY: 0.15 }}
-              animate={{ opacity: 1, scaleY: 1 }}
-              transition={{ duration: 0.28, ease: "easeOut", delay: 0.08 }}
-            >
-              <div className="absolute inset-y-0 left-[36%] w-[18%] bg-white/55 blur-[2px]" />
-              <div className="absolute inset-x-[14%] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-slate-900/35" />
-            </motion.div>
-          )}
           {/* Jagged break edge on left */}
           {broken && (
             <div
@@ -290,15 +266,15 @@ export const BrokenBatProp = ({ phase }: { phase: HelpPhase }) => {
           )}
         </motion.div>
 
-        {/* Extra front-facing tape strap directly over the crack — appears only when fixing */}
+        {/* One short duct-tape strip directly over the crack — appears only when fixing */}
         <AnimatePresence>
           {repaired && (
             <motion.div
               key="tape-wrap"
-              className="absolute z-[100] rounded-[5px] border-2 border-slate-700 shadow-[0_3px_8px_rgba(15,23,42,0.6)]"
-              style={{ ...tapeTexture, left: "39%", top: "-22%", width: "18%", height: "148%", transformOrigin: "center center" }}
-              initial={{ scaleY: 0.15, opacity: 0, rotate: -4 }}
-              animate={{ scaleY: 1, opacity: 1, rotate: -4 }}
+              className="absolute top-1/2 z-[100] rounded-[4px] border-2 border-slate-700 shadow-[0_2px_6px_rgba(15,23,42,0.55)]"
+              style={{ ...tapeTexture, left: "39.5%", width: "11%", height: "72%", transformOrigin: "center center" }}
+              initial={{ y: "-50%", scaleY: 0.15, opacity: 0, rotate: -4 }}
+              animate={{ y: "-50%", scaleY: 1, opacity: 1, rotate: -4 }}
               exit={{ scaleX: 0, opacity: 0 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
             >
