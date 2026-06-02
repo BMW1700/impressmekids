@@ -515,10 +515,6 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 leashAngleDeg={150}
               />
 
-              {/* Wash hands / Plant seed / Throw ball — character-anchored props. */}
-              <WashHandsProp visible={washing} />
-              <PlantSeedProp visible={planting} />
-              <ThrowBallProp visible={throwing} />
 
 
 
