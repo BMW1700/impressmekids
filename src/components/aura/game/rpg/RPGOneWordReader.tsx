@@ -136,6 +136,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // the helper slides further right to make room — and stays there for the
   // "help you" scene, where the blue lead walks over to him.
   const [helperOffsetX, setHelperOffsetX] = useState(0);
+  // Dog scene: 'my' shows blue holding the leash; 'your' shows yellow holding it.
+  const [dogStage, setDogStage] = useState<null | "my" | "your">(null);
   const helpTimersRef = useRef<number[]>([]);
   const clearHelpTimers = () => {
     helpTimersRef.current.forEach((id) => window.clearTimeout(id));
