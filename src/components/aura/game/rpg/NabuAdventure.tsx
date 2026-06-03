@@ -265,7 +265,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
                   <div className="text-5xl sm:text-6xl font-black uppercase tracking-wide text-slate-900">
                     {current.word}
                   </div>
-                  <div className="mt-1 text-3xl sm:text-4xl">{current.solutionEmoji}</div>
+                  <div className="mt-1 text-xs font-semibold uppercase tracking-widest text-amber-600">read it!</div>
                   <Button
                     size="sm"
                     variant="secondary"
