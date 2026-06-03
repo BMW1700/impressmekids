@@ -7,7 +7,7 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
-import { RPGOneWordReader } from "@/components/aura/game/rpg/RPGOneWordReader";
+import { NabuEpisodeWrapper } from "@/components/aura/game/rpg/NabuEpisodeWrapper";
 import { getPreKContent, isPreKWorldId } from "@/data/preKWordBanks";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
@@ -357,7 +357,7 @@ const AuraPractice = () => {
       <div className="h-screen overflow-hidden flex flex-col bg-background" onClick={handlePageInteraction}>
         {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 min-h-0 container mx-auto px-3 py-3 sm:px-4 sm:py-4">
-          <RPGOneWordReader
+          <NabuEpisodeWrapper
             world={selectedWorld}
             level={selectedLevel}
             onBack={() => setRpgView('level_select')}

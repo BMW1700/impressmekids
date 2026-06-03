@@ -12,7 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Settings, Sun, Moon, Monitor, Globe, Check, Trash2 } from "lucide-react";
+import { Settings, Sun, Moon, Monitor, Globe, Check, Trash2, Volume2, VolumeX } from "lucide-react";
+import { useTtsSetting } from "@/lib/tts";
 
 const languages: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
@@ -26,6 +27,7 @@ export const SettingsMenu = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useTtsSetting();
 
   const themeOptions = [
     { value: 'light', label: t('settings.light'), icon: Sun },
@@ -81,6 +83,27 @@ export const SettingsMenu = () => {
             {language === lang.code && <Check className="h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         ))}
+
+        <DropdownMenuSeparator />
+
+        {/* Read-aloud (TTS) toggle — for Pre-K Nabu speech bubbles */}
+        <DropdownMenuLabel className="flex items-center gap-2">
+          {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          Read aloud
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            setTtsEnabled(!ttsEnabled);
+          }}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            {ttsEnabled ? "On" : "Off"}
+          </span>
+          {ttsEnabled && <Check className="h-4 w-4 text-primary" />}
+        </DropdownMenuItem>
 
         {user && (
           <>
