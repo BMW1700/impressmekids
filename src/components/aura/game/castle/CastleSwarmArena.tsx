@@ -884,7 +884,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         key={`shake-${shake}`}
         animate={shake > 0 ? { x: [0, -8, 8, -5, 5, 0] } : {}}
         transition={{ duration: 0.35 }}
-        className="absolute inset-x-0 top-14 bottom-56 z-10"
+        className="absolute inset-x-0 top-10 bottom-44 z-10"
       >
         <div className="relative w-full h-full">
           {/* Player castle (right) */}
