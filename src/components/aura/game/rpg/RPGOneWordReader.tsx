@@ -409,13 +409,21 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             <ArrowLeft className="h-4 w-4 mr-1" /> Map
           </Button>
           <div className="text-base sm:text-lg font-extrabold text-slate-800 truncate">
-            {world.name} · Lv {level.id}
+            {nabuCopy?.title ?? `${world.name} · Lv ${level.id}`}
           </div>
           <div className="text-sm sm:text-base font-bold flex items-center gap-1 text-amber-700 bg-white/90 rounded-full px-3 py-1 shadow">
             <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
             {correctPhrases}/{phrases.length}
           </div>
         </div>
+
+        {/* Nabu prompt banner — emotional one-liner shown until first success */}
+        {nabuCopy && correctPhrases === 0 && !allDone && (
+          <div className="mx-auto -mt-0.5 max-w-[92%] rounded-full bg-white/85 px-3 py-1 text-center text-xs sm:text-sm font-bold text-slate-700 shadow">
+            {nabuCopy.prompt}
+          </div>
+        )}
+
 
         {/* Battle row — both characters aligned at exact same baseline */}
         <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2 pt-14">
