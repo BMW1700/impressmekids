@@ -653,29 +653,36 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 </>
               )}
 
-              {/* Echo stuck-in-sound-bubble overlay (W103 L1, pre-success only) */}
-              {showEchoStuck && correctPhrases === 0 && (
-                <motion.div
-                  className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
-                  style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
-                  animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <motion.div
-                    className="absolute -top-2 left-3 text-base"
-                    animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    ✨
-                  </motion.div>
-                  <motion.div
-                    className="absolute -bottom-1 right-2 text-base"
-                    animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2.2, repeat: Infinity }}
-                  >
-                    ✨
-                  </motion.div>
-                </motion.div>
+              {/* Echo sound-bubble (W103 L1) — pops/fades on success */}
+              {showEchoStuck && (
+                <AnimatePresence>
+                  {correctPhrases === 0 && (
+                    <motion.div
+                      key="echo-bubble"
+                      className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
+                      style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
+                      initial={{ scale: 1, opacity: 0.9 }}
+                      animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
+                      exit={{ scale: 1.5, opacity: 0 }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <motion.div
+                        className="absolute -top-2 left-3 text-base"
+                        animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        ✨
+                      </motion.div>
+                      <motion.div
+                        className="absolute -bottom-1 right-2 text-base"
+                        animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2.2, repeat: Infinity }}
+                      >
+                        ✨
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               )}
 
               {/* Bobo "lost his bounce" hint arc (W102 L1, pre-success only) */}
