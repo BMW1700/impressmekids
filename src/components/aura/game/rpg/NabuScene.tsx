@@ -381,7 +381,8 @@ const AxeScene = ({ phase }: { phase: ScenePhase }) => {
           <path d="M-14 -4 L18 -4 L24 12 L-8 12 Z" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+
     </Stage>
   );
 };
