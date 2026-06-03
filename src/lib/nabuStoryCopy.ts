@@ -77,48 +77,55 @@ const WORLD_DEFAULT: Record<number, NabuLevelCopy> = {
     title: "Wake Up Nabu Village",
     prompt: "Your voice makes Nabu Village shine!",
     hint: "✨ Your voice makes magic!",
-    successMessage: "Your voice woke up Nabu Village!",
+    successMessage: "Your voice helped Nabu Village!",
   },
   102: {
     title: "Bobo's Bouncy Day",
     prompt: "Read it to help Bobo!",
     hint: "✨ Your voice makes magic!",
-    successMessage: "Bobo is happy! You brought the sound back!",
+    successMessage: "You brought the sound back!",
   },
   103: {
     title: "Echo Needs You",
     prompt: "Echo is shy. Your voice makes Echo brave!",
     hint: "✨ Your voice makes magic!",
-    successMessage: "Echo feels brave! You helped!",
+    successMessage: "You helped Echo feel brave!",
   },
 };
 
 const LEVEL_OVERRIDES: Record<string, NabuLevelCopy> = {
-  // World 101 — First Words / Wake-up
+  // World 101 — Wake the village
   "101:3": {
     title: "Wake Up Nabu Village",
-    prompt: "The village is sleepy. Read to wake it up!",
+    prompt: "The village is sleepy. Read 'sun' to wake it up.",
     ctaLabel: "Wake the Village",
     hint: "✨ Your voice wakes the village!",
-    successMessage: "Your voice woke up Nabu Village!",
+    successMessage: "Your voice woke up the village!",
   },
 
-  // World 102 — Bobo
+  // World 102 — Bobo (jump level)
+  "102:1": {
+    title: "Bobo Lost His Jump",
+    prompt: "Bobo forgot how to jump! Read 'jump' to help him bounce.",
+    ctaLabel: "Help Bobo Jump",
+    hint: "✨ Help Bobo bounce again!",
+    successMessage: "Bobo can jump again!",
+  },
   "102:3": {
     title: "Bobo Lost His Clap",
-    prompt: "Bobo's clap is gone! Read clap to bring it back.",
+    prompt: "Bobo's clap is gone! Read 'clap' to bring it back.",
     ctaLabel: "Help Bobo Clap",
     hint: "✨ Bring Bobo's clap back!",
-    successMessage: "You gave my clap back! — Bobo",
+    successMessage: "Bobo can clap again!",
   },
 
   // World 103 — Echo
   "103:1": {
     title: "Echo Needs Help",
-    prompt: "Echo is stuck! Read help me to help Echo.",
+    prompt: "Echo is stuck in a sound bubble! Read 'help me' to help Echo.",
     ctaLabel: "Help Echo",
     hint: "✨ Help Echo feel brave!",
-    successMessage: "You helped me! I feel brave now! — Echo",
+    successMessage: "You helped Echo feel brave!",
   },
 };
 
