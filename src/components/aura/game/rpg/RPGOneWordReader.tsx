@@ -25,6 +25,7 @@ import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
+import { getNabuLevelCopy, getNabuDemoWords } from "@/lib/nabuStoryCopy";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
@@ -35,7 +36,8 @@ const enemyForWorld = (worldId: number): FriendlyEnemy => {
 };
 
 const enemyName = (e: FriendlyEnemy) =>
-  e === "bouncer" ? "Bouncer" : e === "echo_blob" ? "Echo" : "Wiggleworm";
+  e === "bouncer" ? "Bobo" : e === "echo_blob" ? "Echo" : "Wiggleworm";
+
 
 const meadowFor = (worldId: number) => {
   switch (worldId) {
