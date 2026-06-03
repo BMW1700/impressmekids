@@ -199,7 +199,8 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
         <rect x="660" y={GROUND_Y - 50} width="6" height="40" fill="#78350f" />
       </motion.g>
 
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={bridgeArcAnim} />
+
     </Stage>
   );
 };
