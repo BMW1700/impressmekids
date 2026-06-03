@@ -645,14 +645,17 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
               <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
-                {currentPhrase || (allDone ? "🎉" : "")}
+                {currentPhrase || (allDone ? (nabuCopy?.successMessage ?? "🎉") : "")}
               </div>
-              <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
-                {syllableHint(currentPhrase)}
-              </div>
+              {!allDone && (
+                <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
+                  {syllableHint(currentPhrase)}
+                </div>
+              )}
               {verbHint && !allDone && (
                 <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
-                  ✨ Watch what happens!
+                  {nabuCopy?.hint ?? "✨ Watch what happens!"}
+
                 </div>
               )}
             </motion.div>
