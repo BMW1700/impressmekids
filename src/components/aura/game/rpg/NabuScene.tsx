@@ -77,7 +77,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, obstacleX - 80, obstacleX, obstacleX + 80, 860],
-      y: [310, 310, 220, 310, 310],
+      y: [370, 370, 280, 370, 370],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.3, 0.5, 0.7, 1] },
     };
   }
