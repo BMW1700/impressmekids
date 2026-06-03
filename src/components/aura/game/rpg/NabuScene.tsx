@@ -873,7 +873,8 @@ const TentScene = ({ phase }: { phase: ScenePhase }) => {
         <path d={`M600 ${GROUND_Y} L600 ${GROUND_Y - 180}`} stroke="#7f1d1d" strokeWidth="3" />
         <path d={`M580 ${GROUND_Y} L600 ${GROUND_Y - 100} L620 ${GROUND_Y}`} fill="#1f2937" />
       </motion.g>
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(560)} />
+
     </Stage>
   );
 };
