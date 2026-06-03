@@ -186,22 +186,29 @@ const Stage = ({ children }: { children: React.ReactNode }) => (
 // SCENES
 // ──────────────────────────────────────────────────────────────────────────
 
-// ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
-// ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
-const bridgeArcAnim = (phase: ScenePhase): NabuAnim => {
+// ── JUMP: river across the path, Nabu leaps over it ──────────────────────
+const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
+    // crouch → soaring arc over the river → land → walk off
     return {
-      x: [140, 340, 500, 660, 860],
-      y: [370, 370, 290, 370, 370],
-      transition: { duration: 1.8, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] },
+      x: [140, 320, 420, 500, 580, 680, 860],
+      y: [370, 380, 200, 170, 200, 370, 370],
+      rotate: [0, -4, -10, 0, 10, 4, 0],
+      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.12, 0.32, 0.5, 0.68, 0.86, 1] },
     };
   }
-
+  if (phase === "solved") {
+    // little excited hop in place before the big jump
+    return {
+      x: [140, 140, 140],
+      y: [370, 330, 370],
+      transition: { duration: 0.6, ease: "easeOut", times: [0, 0.5, 1] },
+    };
+  }
   return nabuAnim(phase);
 };
 
-const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
-  const solved = phase === "solved" || phase === "transition";
+const JumpScene = ({ phase }: { phase: ScenePhase }) => {
   return (
     <Stage>
       <Sky from="#bae6fd" to="#a7f3d0" />
@@ -213,6 +220,9 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
       {/* river — cuts through ground */}
       <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L640 ${VB_H} L360 ${VB_H} Z`} fill="#3b82f6" />
       <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L630 ${GROUND_Y + 20} L370 ${GROUND_Y + 20} Z`} fill="#60a5fa" />
+      {/* river banks */}
+      <rect x="360" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
+      <rect x="616" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
       {/* shimmer */}
       <motion.path
         d={`M395 ${GROUND_Y + 35} q40 -8 80 0 q40 8 80 0 q40 -8 70 0`}
@@ -220,29 +230,8 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
         animate={{ x: [-4, 4, -4] }}
         transition={{ duration: 2, repeat: Infinity }}
       />
-      {/* bridge */}
-      <motion.g
-        initial={{ opacity: 0, y: -40 }}
-        animate={{ opacity: solved ? 1 : 0, y: solved ? 0 : -40 }}
-        transition={{ type: "spring", stiffness: 200, damping: 16 }}
-      >
-        <path d={`M340 ${GROUND_Y - 20} Q500 ${GROUND_Y - 90} 660 ${GROUND_Y - 20}`} stroke="#92400e" strokeWidth="14" fill="none" strokeLinecap="round" />
-        <path d={`M340 ${GROUND_Y - 4} Q500 ${GROUND_Y - 74} 660 ${GROUND_Y - 4}`} stroke="#b45309" strokeWidth="10" fill="none" strokeLinecap="round" />
 
-        {/* planks */}
-        {Array.from({ length: 9 }).map((_, i) => {
-          const t = i / 8;
-          const x = 340 + t * 320;
-          const y = GROUND_Y - 20 - Math.sin(t * Math.PI) * 70 + Math.abs(Math.sin(t * Math.PI)) * 0;
-          return <rect key={i} x={x - 14} y={y - 6} width="28" height="6" rx="2" fill="#78350f" />;
-        })}
-        {/* posts */}
-        <rect x="334" y={GROUND_Y - 50} width="6" height="40" fill="#78350f" />
-        <rect x="660" y={GROUND_Y - 50} width="6" height="40" fill="#78350f" />
-      </motion.g>
-
-      <NabuSprite phase={phase} anim={bridgeArcAnim} />
-
+      <NabuSprite phase={phase} anim={jumpArcAnim} />
     </Stage>
   );
 };
@@ -1134,7 +1123,7 @@ export const NabuScene = ({ word, phase, index }: NabuSceneProps) => {
   // Key remount per obstacle so animations restart cleanly
   const k = `${w}-${index}`;
   switch (w) {
-    case "BRIDGE": return <div key={k} className="absolute inset-0"><BridgeScene phase={phase} /></div>;
+    case "JUMP":   return <div key={k} className="absolute inset-0"><JumpScene phase={phase} /></div>;
     case "BOOTS":  return <div key={k} className="absolute inset-0"><BootsScene phase={phase} /></div>;
     case "KEY":    return <div key={k} className="absolute inset-0"><KeyScene phase={phase} /></div>;
     case "AXE":    return <div key={k} className="absolute inset-0"><AxeScene phase={phase} /></div>;
