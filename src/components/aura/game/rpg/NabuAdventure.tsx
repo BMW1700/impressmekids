@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Star, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NabuOwl } from "./NabuOwl";
+import { NabuScene } from "./NabuScene";
 import { RPGWordReader } from "./RPGWordReader";
 import { getPreKAdventure, type PreKAdventure } from "@/data/preKAdventures";
 import { speak } from "@/lib/tts";
@@ -142,36 +142,25 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   // ── Render helpers ─────────────────────────────────────────────────────────
   const scene = current ?? adventure.obstacles[0];
   const skyClass = phase === "ending" ? adventure.endingSky : scene?.sky ?? FALLBACK.endingSky;
-  const groundClass = scene?.ground ?? "from-emerald-400 to-emerald-600";
   const showWord = phase === "reading";
-  const showSolution = phase === "solved" || phase === "transition";
-  const nabuMood: "happy" | "curious" | "cheer" =
-    phase === "problem" ? "curious" :
-    phase === "solved" || phase === "ending" || phase === "transition" ? "cheer" :
-    "happy";
-
-  const placement = scene?.solutionPlacement ?? "over";
+  const scenePhase = phase === "intro" ? "problem" : phase === "ending" ? "solved" : phase;
 
   return (
-    <div
-      className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-b ${skyClass} shadow-xl`}
-    >
-      {/* Soft cloud decor */}
-      <div className="pointer-events-none absolute inset-0 opacity-50 select-none">
-        <div className="absolute top-3 left-8 text-3xl">☁️</div>
-        <div className="absolute top-10 right-12 text-2xl">☁️</div>
-      </div>
-      <div
-        className={`pointer-events-none absolute bottom-0 left-0 right-0 h-[26%] bg-gradient-to-t ${groundClass}`}
-      />
+    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl shadow-xl">
+      <div className={`absolute inset-0 bg-gradient-to-b ${skyClass}`} />
+
+      {/* Live SVG scene */}
+      {scene && phase !== "ending" && (
+        <NabuScene word={scene.word} phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"} index={index} />
+      )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
         {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-800 hover:bg-white/40">
+          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-800 hover:bg-white/60">
             <ArrowLeft className="h-4 w-4 mr-1" /> Map
           </Button>
-          <div className="truncate rounded-full bg-white/85 px-3 py-1 text-sm sm:text-base font-extrabold text-slate-800 shadow">
+          <div className="truncate rounded-full bg-white/90 px-3 py-1 text-sm sm:text-base font-extrabold text-slate-800 shadow">
             {adventure.goal}
           </div>
           <div className="flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-sm font-bold text-amber-700 shadow">
@@ -180,9 +169,8 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           </div>
         </div>
 
-        {/* ── Stage ─────────────────────────────────────────────────────── */}
+        {/* ── Stage overlay (speech + progress) ─────────────────────────── */}
         <div className="relative flex min-h-0 flex-1 items-end justify-center">
-          {/* Ending celebration takes over the whole stage */}
           {phase === "ending" ? (
             <motion.div
               key="ending"
@@ -191,83 +179,25 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
               transition={{ duration: 0.9, ease: "easeOut" }}
               className="flex flex-col items-center gap-3 pb-10"
             >
-              <div className="text-7xl sm:text-8xl drop-shadow-lg">{adventure.endingEmoji}</div>
-              <div className="rounded-2xl bg-white/95 px-6 py-3 text-center text-xl sm:text-2xl font-extrabold text-emerald-700 shadow-xl">
-                {adventure.endingLine}
-              </div>
-              <div className="flex gap-3 text-3xl sm:text-4xl">
-                <motion.span animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 1 }}>🎉</motion.span>
-                <motion.span animate={{ y: [0, -14, 0] }} transition={{ repeat: Infinity, duration: 1.2, delay: 0.2 }}>✨</motion.span>
-                <motion.span animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}>🎊</motion.span>
+              <div className="rounded-3xl bg-white/95 px-8 py-6 text-center shadow-2xl">
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-700">
+                  {adventure.endingLine}
+                </div>
+                <div className="mt-3 flex justify-center gap-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ y: [0, -10, 0], rotate: [0, 20, 0] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                    >
+                      <Star className="h-10 w-10 fill-amber-400 text-amber-500" />
+                    </motion.div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           ) : (
             <>
-              {/* Obstacle visual (left/centered) */}
-              <AnimatePresence mode="wait">
-                {scene && phase !== "transition" && (
-                  <motion.div
-                    key={`obstacle-${index}`}
-                    initial={{ opacity: 0, scale: 0.6, x: 40 }}
-                    animate={{ opacity: showSolution && placement === "replace" ? 0 : 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.6 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    className="absolute bottom-[18%] right-[14%] text-[88px] sm:text-[120px] drop-shadow-xl select-none"
-                  >
-                    {scene.sceneEmoji}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Solution emoji animation */}
-              <AnimatePresence>
-                {showSolution && scene && (
-                  <motion.div
-                    key={`solution-${index}`}
-                    initial={{
-                      opacity: 0,
-                      scale: 0.3,
-                      y: placement === "onNabu" ? -40 : -120,
-                    }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.5 }}
-                    transition={{ type: "spring", stiffness: 220, damping: 14 }}
-                    className={
-                      placement === "onNabu"
-                        ? "absolute bottom-[34%] left-[18%] text-6xl sm:text-7xl drop-shadow-xl select-none"
-                        : "absolute bottom-[20%] right-[14%] text-[88px] sm:text-[120px] drop-shadow-xl select-none"
-                    }
-                  >
-                    {scene.solutionEmoji}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Nabu the Owl */}
-              <motion.div
-                key={`nabu-${index}-${phase}`}
-                className="absolute bottom-[14%] left-[12%]"
-                initial={{ x: 0 }}
-                animate={
-                  phase === "transition"
-                    ? { x: 80, y: [0, -16, 0, -10, 0] }
-                    : phase === "solved"
-                    ? { y: [0, -18, 0, -10, 0], rotate: [0, -6, 6, -4, 0] }
-                    : phase === "problem"
-                    ? { x: [0, -6, 0], y: [0, -3, 0] }
-                    : { y: [0, -6, 0] }
-                }
-                transition={
-                  phase === "transition"
-                    ? { duration: 1.4, ease: "easeInOut" }
-                    : phase === "solved"
-                    ? { duration: 1.4 }
-                    : { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                }
-              >
-                <NabuOwl size={120} mood={nabuMood} />
-              </motion.div>
-
               {/* Speech bubble */}
               <AnimatePresence mode="wait">
                 {scene && (phase === "problem" || phase === "ask" || phase === "solved") && (
@@ -277,13 +207,12 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -8, scale: 0.95 }}
                     transition={{ duration: 0.35 }}
-                    className="absolute top-3 left-[24%] right-[24%] mx-auto max-w-[460px]"
+                    className="absolute top-3 left-1/2 -translate-x-1/2 w-[min(520px,80%)]"
                   >
                     <div className="relative rounded-2xl bg-white/95 px-4 py-2.5 text-center text-base sm:text-lg font-bold text-slate-800 shadow-xl">
                       {phase === "problem" ? scene.problemLine :
                        phase === "ask" ? scene.askLine :
                        scene.successLine}
-                      <div className="absolute -bottom-2 left-8 h-4 w-4 rotate-45 bg-white/95" />
                     </div>
                   </motion.div>
                 )}
