@@ -344,7 +344,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       setPrekScene(null);
       setVerbTrigger({ word: legacyWord, nonce: nonceRef.current });
     }
-  }, [damagePerPhrase, showCombatUI]);
+  }, [damagePerPhrase, showCombatUI, isPreK]);
 
   const handleResult = useCallback(
     (correct: boolean, _spoken: string, wordIndex: number) => {
