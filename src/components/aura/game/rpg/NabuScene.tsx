@@ -1129,10 +1129,48 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index }: NabuSceneProps) => {
+export const NabuScene = ({ word, phase, index, mood = null }: NabuSceneProps) => {
   const w = word.toUpperCase();
   // Key remount per obstacle so animations restart cleanly
   const k = `${w}-${index}`;
+  const wrap = (children: React.ReactNode) => (
+    <BennyMoodContext.Provider value={mood}>
+      <div key={k} className="absolute inset-0">{children}</div>
+    </BennyMoodContext.Provider>
+  );
+  switch (w) {
+    case "JUMP":   return wrap(<JumpScene phase={phase} />);
+    case "BOOTS":  return wrap(<BootsScene phase={phase} />);
+    case "KEY":    return wrap(<KeyScene phase={phase} />);
+    case "AXE":    return wrap(<AxeScene phase={phase} />);
+    case "BONE":   return wrap(<BoneScene phase={phase} />);
+    case "LADDER": return wrap(<LadderScene phase={phase} />);
+    case "UMBRELLA": return wrap(<UmbrellaScene phase={phase} />);
+    case "SUN":    return wrap(<SunScene phase={phase} />);
+    case "STAR":
+    case "LAMP":
+    case "TORCH":
+    case "FIRE":   return wrap(<LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} />);
+    case "ROOSTER":
+    case "BELL":
+    case "DRUM":
+    case "FAN":    return wrap(<SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
+    case "BALLOON":
+    case "KITE":
+    case "WINGS":
+    case "CAPE":   return wrap(<LiftScene phase={phase} kind={w as "BALLOON" | "KITE" | "WINGS" | "CAPE"} />);
+    case "BOAT":   return wrap(<BoatScene phase={phase} />);
+    case "ROCKET": return wrap(<RocketScene phase={phase} />);
+    case "WAVE":   return wrap(<WaveScene phase={phase} />);
+    case "NET":    return wrap(<NetScene phase={phase} />);
+    case "ROPE":   return wrap(<RopeScene phase={phase} />);
+    case "TENT":   return wrap(<TentScene phase={phase} />);
+    case "BED":    return wrap(<BedScene phase={phase} />);
+    case "NEST":   return wrap(<NestScene phase={phase} />);
+    case "WORM":   return wrap(<WormScene phase={phase} />);
+    default:       return wrap(<GenericScene phase={phase} word={w} />);
+  }
+};
   switch (w) {
     case "JUMP":   return <div key={k} className="absolute inset-0"><JumpScene phase={phase} /></div>;
     case "BOOTS":  return <div key={k} className="absolute inset-0"><BootsScene phase={phase} /></div>;
