@@ -142,6 +142,18 @@ const Stage = ({ children }: { children: React.ReactNode }) => (
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
+// ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
+const bridgeArcAnim = (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, 340, 500, 660, 860],
+      y: [310, 310, 240, 310, 310],
+      transition: { duration: 1.8, ease: "easeInOut" as const, times: [0, 0.18, 0.5, 0.82, 1] },
+    } as NabuAnim;
+  }
+  return nabuAnim(phase);
+};
+
 const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -170,6 +182,7 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
       >
         <path d={`M340 ${GROUND_Y - 20} Q500 ${GROUND_Y - 90} 660 ${GROUND_Y - 20}`} stroke="#92400e" strokeWidth="14" fill="none" strokeLinecap="round" />
         <path d={`M340 ${GROUND_Y - 4} Q500 ${GROUND_Y - 74} 660 ${GROUND_Y - 4}`} stroke="#b45309" strokeWidth="10" fill="none" strokeLinecap="round" />
+
         {/* planks */}
         {Array.from({ length: 9 }).map((_, i) => {
           const t = i / 8;
