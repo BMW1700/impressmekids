@@ -644,9 +644,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               transition={{ type: "spring", stiffness: 240, damping: 20 }}
               className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
             >
-              <div className="text-5xl sm:text-6xl font-black text-slate-900 lowercase leading-none">
+              <div
+                className={`${
+                  allDone && nabuCopy
+                    ? "text-2xl sm:text-3xl text-emerald-700 font-extrabold"
+                    : "text-5xl sm:text-6xl text-slate-900 font-black lowercase"
+                } leading-tight`}
+              >
                 {currentPhrase || (allDone ? (nabuCopy?.successMessage ?? "🎉") : "")}
               </div>
+
               {!allDone && (
                 <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
                   {syllableHint(currentPhrase)}
