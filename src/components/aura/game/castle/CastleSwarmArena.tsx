@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins, Crown } from "lucide-react";
+import { useCastleCrowns } from "@/lib/castleCrowns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
