@@ -56,7 +56,10 @@ const nabuAnim = (phase: ScenePhase) => {
   };
 };
 
-type NabuAnim = ReturnType<typeof nabuAnim>;
+// Loose type — framer-motion accepts many shapes here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NabuAnim = any;
+
 
 const NabuSprite = ({
   phase,
