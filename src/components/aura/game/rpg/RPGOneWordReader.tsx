@@ -25,7 +25,7 @@ import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
-import { getNabuLevelCopy, getNabuDemoWords } from "@/lib/nabuStoryCopy";
+import { getNabuLevelCopy, getNabuDemoWords, getNabuCreatureName, getNabuMeterLabel } from "@/lib/nabuStoryCopy";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
@@ -34,9 +34,6 @@ const enemyForWorld = (worldId: number): FriendlyEnemy => {
   if (worldId === 103) return "echo_blob";
   return "wiggleworm";
 };
-
-const enemyName = (e: FriendlyEnemy) =>
-  e === "bouncer" ? "Bobo" : e === "echo_blob" ? "Echo" : "Wiggleworm";
 
 
 const meadowFor = (worldId: number) => {
@@ -114,8 +111,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const enemy = enemyForWorld(world.id);
   const meadow = meadowFor(world.id);
-  // Suppress the red HP indicator + shake on Action Time (102) and Word + Picture (103).
-  const showCombatUI = world.id !== 102 && world.id !== 103;
+  // All Pre-K worlds (101/102/103) use the soft Pre-K HUD: no HP, no shake,
+  // no knight, no combat language.
+  const isPreK = world.id === 101 || world.id === 102 || world.id === 103;
+  const showCombatUI = !isPreK;
+  const creatureName = isPreK ? getNabuCreatureName(world.id) : (enemy === "bouncer" ? "Bobo" : enemy === "echo_blob" ? "Echo" : "Wiggleworm");
+  const meterLabel = getNabuMeterLabel(world.id);
+  // Per-level emotional staging flags
+  const showEchoStuck = isPreK && world.id === 103 && level.id === 1;
+  const showBoboLostBounce = isPreK && world.id === 102 && level.id === 1;
+  const showVillageScene = isPreK && world.id === 101 && level.id === 3;
 
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [correctPhrases, setCorrectPhrases] = useState(0);
@@ -398,6 +403,49 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t ${meadow.ground} pointer-events-none`} />
 
+      {/* Pre-K W101 L3 "Wake Up Nabu Village" decorative backdrop */}
+      {showVillageScene && (
+        <div className="absolute inset-0 pointer-events-none select-none">
+          {/* Warm morning glow that brightens as the village wakes */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/20 to-rose-200/30"
+            animate={{ opacity: allDone ? 1 : 0.45 }}
+            transition={{ duration: 1.2 }}
+          />
+          {/* Sun: dim while sleepy, bright after success */}
+          <motion.div
+            className="absolute top-4 right-8 text-5xl"
+            animate={{
+              opacity: allDone ? 1 : 0.55,
+              scale: allDone ? 1.15 : 1,
+              filter: allDone ? "drop-shadow(0 0 18px rgba(253,224,71,0.9))" : "none",
+            }}
+            transition={{ duration: 1 }}
+          >
+            ☀️
+          </motion.div>
+          {/* Sleepy houses silhouette row */}
+          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6 opacity-80">
+            <div className="text-4xl sm:text-5xl">🏠</div>
+            <div className="text-5xl sm:text-6xl">🏡</div>
+            <div className="text-4xl sm:text-5xl">🏠</div>
+          </div>
+          {/* Tiny lights that flicker on after success */}
+          <motion.div
+            className="absolute left-[22%] bottom-[30%] text-base"
+            animate={{ opacity: allDone ? 1 : 0 }}
+          >
+            ✨
+          </motion.div>
+          <motion.div
+            className="absolute right-[24%] bottom-[32%] text-base"
+            animate={{ opacity: allDone ? 1 : 0 }}
+          >
+            ✨
+          </motion.div>
+        </div>
+      )}
+
       <motion.div
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
@@ -432,9 +480,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             {/* Name + HP number + HP bar — absolutely positioned so it doesn't shift sprite baseline */}
             <div className="absolute left-1/2 -translate-x-1/2 -top-14 flex flex-col items-center gap-1 w-full">
               <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow">
-                {enemyName(enemy)}
+                {creatureName}
               </div>
-              {showCombatUI && (
+              {showCombatUI ? (
                 <>
                   <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
                     {Math.max(0, Math.round(enemyHp))} HP
@@ -444,6 +492,19 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
                       animate={{ width: `${enemyHp}%` }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[10px] sm:text-xs font-bold text-slate-600 leading-none">
+                    ✨ {meterLabel}
+                  </div>
+                  <div className="w-full max-w-[160px] h-2.5 bg-white/60 rounded-full overflow-hidden border border-white/80 shadow-inner">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-pink-300 via-amber-300 to-emerald-300"
+                      animate={{ width: `${phrases.length > 0 ? (correctPhrases / phrases.length) * 100 : 0}%` }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
                 </>
@@ -510,6 +571,42 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   }
                 />
               </div>
+
+              {/* Echo stuck-in-sound-bubble overlay (W103 L1, pre-success only) */}
+              {showEchoStuck && correctPhrases === 0 && (
+                <motion.div
+                  className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
+                  style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
+                  animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <motion.div
+                    className="absolute -top-2 left-3 text-base"
+                    animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    ✨
+                  </motion.div>
+                  <motion.div
+                    className="absolute -bottom-1 right-2 text-base"
+                    animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2.2, repeat: Infinity }}
+                  >
+                    ✨
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {/* Bobo "lost his bounce" hint arc (W102 L1, pre-success only) */}
+              {showBoboLostBounce && correctPhrases === 0 && (
+                <motion.div
+                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-1 text-2xl opacity-70"
+                  animate={{ opacity: [0.4, 0.9, 0.4] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                >
+                  <span className="tracking-[0.4em] text-amber-700">· · ·</span>
+                </motion.div>
+              )}
 
               {/* Help-ME scene overlays on the LEAD (blue) */}
               {helpStage === "me" && (
@@ -597,10 +694,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
 
 
-          {/* Knight */}
+          {/* Helper column — Pre-K shows a friendly Nabu Helper (voice-shield orb).
+              K–12 keeps the knight. Same column footprint + motion wrapper so
+              existing animation hooks (heroAttacking pulse) keep working. */}
           <div className="relative flex flex-col items-center w-[44%]">
             <div className="absolute left-1/2 -translate-x-1/2 -top-14 text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow whitespace-nowrap">
-              You can do it!
+              {isPreK ? "Nabu Helper" : "You can do it!"}
             </div>
             <motion.div
               animate={
@@ -619,8 +718,46 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               }
               className="relative flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
             >
-              <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
-              {/* YOUR dog — sits just to the left of the knight, leash to knight's hand. */}
+              {isPreK ? (
+                <div className="relative h-full w-full flex items-end justify-center">
+                  {/* Voice-shield orb: soft mic-sparkle helper, no weapons */}
+                  <motion.div
+                    className="relative w-[90px] h-[90px] sm:w-[104px] sm:h-[104px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-200 to-emerald-200 shadow-[0_8px_24px_rgba(56,189,248,0.35)] flex items-center justify-center"
+                    animate={{
+                      scale: heroAttacking ? [1, 1.15, 1] : [1, 1.04, 1],
+                      boxShadow: heroAttacking
+                        ? "0 0 32px rgba(167,243,208,0.9)"
+                        : "0 8px 24px rgba(56,189,248,0.35)",
+                    }}
+                    transition={{
+                      duration: heroAttacking ? 0.4 : 2.4,
+                      repeat: heroAttacking ? 0 : Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <div className="absolute inset-2 rounded-full bg-white/70" />
+                    <div className="relative text-4xl sm:text-5xl">🎤</div>
+                    {/* Sparkle ring */}
+                    <motion.div
+                      className="absolute -top-2 -right-1 text-xl"
+                      animate={{ rotate: [0, 12, -8, 0], opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2.6, repeat: Infinity }}
+                    >
+                      ✨
+                    </motion.div>
+                    <motion.div
+                      className="absolute -bottom-1 -left-2 text-base"
+                      animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2.2, repeat: Infinity }}
+                    >
+                      ✨
+                    </motion.div>
+                  </motion.div>
+                </div>
+              ) : (
+                <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
+              )}
+              {/* YOUR dog — sits just to the left of the helper, leash to helper's hand. */}
               <DogWithLeashProp
                 visible={dogStage === "your"}
                 holder="right"

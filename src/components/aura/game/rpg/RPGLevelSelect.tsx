@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
+import { getNabuHelpChip } from "@/lib/nabuStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
@@ -192,6 +193,9 @@ export const RPGLevelSelect = ({
         {levels.map((level, index) => {
           const isUnlocked = level.isUnlocked;
           const isTutorialLevel = isTutorialWorld;
+          const isPreKLevel = world.mode === 'prek';
+          const helpChip = isPreKLevel ? getNabuHelpChip(world.id) : null;
+          
           
           return (
             <motion.div
@@ -208,8 +212,10 @@ export const RPGLevelSelect = ({
                   }
                   ${isTutorialLevel
                     ? 'border-2 border-green-500/50 shadow-green-500/20 bg-green-900/20'
-                    : level.isBossLevel 
-                      ? 'border-2 border-red-500/50 shadow-red-500/20' 
+                    : level.isBossLevel
+                      ? (isPreKLevel
+                          ? 'border-2 border-pink-300/60 shadow-pink-300/20'
+                          : 'border-2 border-red-500/50 shadow-red-500/20')
                       : 'border border-slate-700'
                   }
                   ${level.isCompleted && !isTutorialLevel ? 'bg-green-900/20' : !isTutorialLevel ? 'bg-slate-800/50' : ''}`}
@@ -222,8 +228,8 @@ export const RPGLevelSelect = ({
                   </div>
                 )}
 
-                {/* Boss Badge */}
-                {level.isBossLevel && (
+                {/* Boss Badge — K–12 only; Pre-K shows a soft "Big Day" chip */}
+                {level.isBossLevel && !isPreKLevel && (
                   <div className="absolute top-2 right-2 z-5">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
@@ -233,6 +239,14 @@ export const RPGLevelSelect = ({
                       <Crown className="h-3 w-3" />
                       BOSS
                     </motion.div>
+                  </div>
+                )}
+                {level.isBossLevel && isPreKLevel && (
+                  <div className="absolute top-2 right-2 z-5">
+                    <div className="bg-pink-200 text-pink-800 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow">
+                      <Star className="h-3 w-3 fill-pink-500 text-pink-500" />
+                      Big Day
+                    </div>
                   </div>
                 )}
 
@@ -290,24 +304,33 @@ export const RPGLevelSelect = ({
                     )}
                   </div>
 
-                  {/* Enemies */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">{isTutorialLevel ? 'Practice:' : 'Enemies:'}</span>
-                    <div className="flex gap-1">
-                      {level.enemies.map((enemy, i) => (
-                        <div
-                          key={i}
-                          className="w-7 h-7 rounded bg-slate-700/50 flex items-center justify-center"
-                          title={enemy}
-                        >
-                          {enemyIcons[enemy]}
-                        </div>
-                      ))}
+                  {/* Help / Enemies row */}
+                  {isPreKLevel ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Help with:</span>
+                      <span className="text-xs font-bold text-pink-200 bg-pink-500/20 border border-pink-300/40 px-2 py-0.5 rounded-full">
+                        ✨ {helpChip}
+                      </span>
                     </div>
-                    {level.enemies.length > 1 && !isTutorialLevel && (
-                      <span className="text-xs text-orange-400 font-bold">MULTI!</span>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">{isTutorialLevel ? 'Practice:' : 'Enemies:'}</span>
+                      <div className="flex gap-1">
+                        {level.enemies.map((enemy, i) => (
+                          <div
+                            key={i}
+                            className="w-7 h-7 rounded bg-slate-700/50 flex items-center justify-center"
+                            title={enemy}
+                          >
+                            {enemyIcons[enemy]}
+                          </div>
+                        ))}
+                      </div>
+                      {level.enemies.length > 1 && !isTutorialLevel && (
+                        <span className="text-xs text-orange-400 font-bold">MULTI!</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             </motion.div>
