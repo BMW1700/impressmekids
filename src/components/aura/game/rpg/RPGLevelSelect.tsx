@@ -228,8 +228,8 @@ export const RPGLevelSelect = ({
                   </div>
                 )}
 
-                {/* Boss Badge */}
-                {level.isBossLevel && (
+                {/* Boss Badge — K–12 only; Pre-K shows a soft "Big Day" chip */}
+                {level.isBossLevel && !isPreKLevel && (
                   <div className="absolute top-2 right-2 z-5">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
@@ -239,6 +239,14 @@ export const RPGLevelSelect = ({
                       <Crown className="h-3 w-3" />
                       BOSS
                     </motion.div>
+                  </div>
+                )}
+                {level.isBossLevel && isPreKLevel && (
+                  <div className="absolute top-2 right-2 z-5">
+                    <div className="bg-pink-200 text-pink-800 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow">
+                      <Star className="h-3 w-3 fill-pink-500 text-pink-500" />
+                      Big Day
+                    </div>
                   </div>
                 )}
 
