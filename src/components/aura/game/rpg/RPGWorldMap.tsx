@@ -8,6 +8,13 @@ import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Check } from "lucide-react";
 import { 
   DrakeSilhouette, 
   IceGolemSilhouette, 
@@ -277,24 +284,53 @@ export const RPGWorldMap = ({
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          {/* Theme toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
-            onClick={() => {
-              const current = getStoredTheme();
-              const next: GameTheme = current === 'agent' ? 'classic' : 'agent';
+          {/* Mode switcher — Pre-K → Classic → Agent (grade-level order) */}
+          {(() => {
+            const current = getStoredTheme();
+            const MODES: { value: GameTheme; label: string; sub: string; emoji: string }[] = [
+              { value: 'prek',    label: 'Pre-K',   sub: 'Ages 3–5', emoji: '✨' },
+              { value: 'classic', label: 'Classic', sub: 'Grades K–5', emoji: '⚔️' },
+              { value: 'agent',   label: 'Agent',   sub: 'Grades 6–12', emoji: '🕵️' },
+            ];
+            const currentMode = MODES.find((m) => m.value === current) ?? MODES[1];
+            const handlePick = (next: GameTheme) => {
+              if (next === current) return;
               setStoredTheme(next);
-              if (onSwitchMode) {
-                onSwitchMode();
-              } else {
-                window.location.reload();
-              }
-            }}
-          >
-            {getStoredTheme() === 'agent' ? '🕵️ Agent Mode' : '⚔️ Classic'} — Switch
-          </Button>
+              if (onSwitchMode) onSwitchMode();
+              else window.location.reload();
+            };
+            return (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
+                  >
+                    {currentMode.emoji} {currentMode.label} — Switch
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {MODES.map((m) => (
+                    <DropdownMenuItem
+                      key={m.value}
+                      onClick={() => handlePick(m.value)}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">{m.emoji}</span>
+                        <span className="flex flex-col leading-tight">
+                          <span className="font-semibold">{m.label}</span>
+                          <span className="text-xs text-muted-foreground">{m.sub}</span>
+                        </span>
+                      </span>
+                      {current === m.value && <Check className="h-4 w-4 text-primary" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })()}
         </div>
         
         {/* Player HUD with Gold, XP, Streak, Achievements, Pets */}
