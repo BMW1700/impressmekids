@@ -240,3 +240,15 @@ export const HEROES_BY_ID: Record<string, HeroDef> = Object.fromEntries(
 export const STARTER_HERO_IDS = HERO_ROSTER.filter(h => h.unlock.kind === "starter").map(h => h.id);
 export const CAMPAIGN_HERO_IDS = HERO_ROSTER.filter(h => h.unlock.kind === "campaign").map(h => h.id);
 export const SHOP_HERO_IDS = HERO_ROSTER.filter(h => h.unlock.kind === "shop").map(h => h.id);
+
+export function heroUpgradeCost(level: number): number | null {
+  const costs = [80, 180, 380, 760, 1250];
+  if (level >= costs.length) return null;
+  return costs[Math.max(0, level)];
+}
+
+export function heroCrownUnlockPrice(hero: HeroDef): number {
+  if (hero.unlock.kind === "shop") return Math.max(35, Math.round(hero.unlock.price / 14));
+  if (hero.unlock.kind === "campaign") return 55;
+  return 0;
+}

@@ -1308,7 +1308,7 @@ export const RPGWordReader = ({
   const isActive = isListening || isEchoRetry;
 
   return (
-    <div className={`flex flex-col items-center ${compact ? 'gap-2' : 'gap-4'}`}>
+    <div className={`flex flex-col items-center ${compact ? 'gap-1' : 'gap-4'}`}>
       {/* Active Indicator */}
       {isActive && !compact && (
         <motion.div
@@ -1332,7 +1332,7 @@ export const RPGWordReader = ({
       )}
       
       {/* Multi-Word Queue Display with Color Coding */}
-      <div ref={wordQueueRef} className={`flex flex-wrap justify-center ${compact ? 'max-w-full gap-1.5' : 'max-w-md gap-2'}`}>
+      <div ref={wordQueueRef} className={`flex flex-wrap justify-center ${compact ? 'max-w-full gap-1' : 'max-w-md gap-2'}`}>
         {currentBatch.map((word, index) => {
           const clean = word.replace(/[^a-zA-Z']/g, '');
           const isActiveWord = index === currentIndex;
@@ -1366,14 +1366,14 @@ export const RPGWordReader = ({
           return (
             <motion.div
               key={`${word}-${index}`}
-              className={`${compact ? 'px-3 py-1.5' : 'px-4 py-2'} rounded-lg font-medium transition-all cursor-pointer ${colorClass}`}
+              className={`${compact ? 'px-2.5 py-1' : 'px-4 py-2'} rounded-lg font-medium transition-all cursor-pointer ${colorClass}`}
               animate={shouldPulse ? { scale: [1.1, 1.15, 1.1] } : {}}
               transition={{ repeat: shouldPulse ? Infinity : 0, duration: 1.2 }}
               onClick={() => playCorrectPronunciation(clean)}
             >
               <div className="flex items-center gap-1.5">
                 {icon}
-                <span className={compact ? 'text-sm' : shouldPulse ? 'text-lg' : 'text-sm'}>{clean}</span>
+                <span className={compact ? 'text-xs sm:text-sm' : shouldPulse ? 'text-lg' : 'text-sm'}>{clean}</span>
               </div>
             </motion.div>
           );
@@ -1474,15 +1474,15 @@ export const RPGWordReader = ({
       </div>}
 
       {/* Controls */}
-      <div className={`flex items-center justify-center gap-2 ${compact ? 'flex-wrap' : 'gap-3'}`}>
+      <div className={`flex items-center justify-center gap-1.5 ${compact ? 'flex-wrap' : 'gap-3'}`}>
         <Button
           variant="outline"
           size={compact ? "sm" : "lg"}
           onClick={hearWord}
           disabled={isActive || feedback !== null || !cleanWord}
-          className="border-blue-400/50 text-blue-300 hover:bg-blue-500/20"
+          className={`${compact ? 'h-8 px-3 text-xs' : ''} border-blue-400/50 text-blue-300 hover:bg-blue-500/20`}
         >
-          <Volume2 className="h-5 w-5 mr-2" />
+          <Volume2 className={`${compact ? 'h-4 w-4 mr-1.5' : 'h-5 w-5 mr-2'}`} />
           Hear
         </Button>
 
@@ -1498,7 +1498,7 @@ export const RPGWordReader = ({
               size={compact ? "sm" : "lg"}
               onClick={isActive ? pauseReading : startReading}
               disabled={disabled || !cleanWord}
-              className={`${compact ? 'min-w-[148px]' : 'min-w-[180px]'} font-bold transition-all ${
+              className={`${compact ? 'min-w-[120px] h-8 px-3 text-xs' : 'min-w-[180px]'} font-bold transition-all ${
                 isActive 
                   ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
                   : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'
@@ -1510,13 +1510,13 @@ export const RPGWordReader = ({
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 0.6 }}
                   >
-                    <Mic className="h-5 w-5 mr-2" />
+                    <Mic className={`${compact ? 'h-4 w-4 mr-1.5' : 'h-5 w-5 mr-2'}`} />
                   </motion.div>
                   Reading...
                 </>
               ) : (
                 <>
-                  <Play className="h-5 w-5 mr-2" />
+                  <Play className={`${compact ? 'h-4 w-4 mr-1.5' : 'h-5 w-5 mr-2'}`} />
                   Start Reading
                 </>
               )}
@@ -1529,7 +1529,7 @@ export const RPGWordReader = ({
             size={compact ? "sm" : "lg"}
             onClick={resumeReading}
             disabled={disabled}
-            className={`${compact ? 'min-w-[148px]' : 'min-w-[180px]'} font-bold bg-gradient-to-r from-emerald-500 to-green-600`}
+            className={`${compact ? 'min-w-[120px] h-8 px-3 text-xs' : 'min-w-[180px]'} font-bold bg-gradient-to-r from-emerald-500 to-green-600`}
           >
             <Play className="h-5 w-5 mr-2" />
             Resume

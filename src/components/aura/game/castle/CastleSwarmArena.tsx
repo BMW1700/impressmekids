@@ -87,7 +87,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
   const { save: saveCampaign } = useCastleCampaign();
   const { stats: knightStats } = useCastleUpgrades();
-  const { unlockedIds: unlockedHeroIds, unlockFromCampaign, unlockFromShop, isUnlocked } = useCastleHeroes();
+  const { unlockedIds: unlockedHeroIds, heroLevels, unlockFromCampaign, isUnlocked } = useCastleHeroes();
   const { toast } = useToast();
   const { crowns } = useCastleCrowns();
 
@@ -274,12 +274,13 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       now,
       arenaWidth: ARENA_WIDTH,
       idCounter: () => heroIdRef.current++,
+      heroLevel: heroLevels[heroId] ?? 0,
     });
     heroesRef.current.push(hero);
     setHeroCooldowns(prev => ({ ...prev, [heroId]: Date.now() + def.cooldownMs }));
     playKnightSummon();
     setHeroTick(t => t + 1);
-  }, [heroCooldowns]);
+  }, [heroCooldowns, heroLevels]);
 
 
   // ---- Start a wave ----
@@ -666,6 +667,9 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             projectileId: () => heroProjIdRef.current++,
             arenaWidth: ARENA_WIDTH,
           });
+          if (r.newProjectiles.length) {
+            heroProjectilesRef.current.push(...r.newProjectiles);
+          }
           if (r.castleHeal > 0) {
             castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + r.castleHeal);
           }
@@ -884,7 +888,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         key={`shake-${shake}`}
         animate={shake > 0 ? { x: [0, -8, 8, -5, 5, 0] } : {}}
         transition={{ duration: 0.35 }}
-        className="absolute inset-x-0 top-10 bottom-44 z-10"
+        className="absolute inset-x-0 top-10 bottom-32 z-10"
       >
         <div className="relative w-full h-full">
           {/* Player castle (right) */}
@@ -972,7 +976,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                 <div className="w-10 h-1.5 bg-slate-900/80 rounded-full overflow-hidden mb-1 border border-slate-700">
                   <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, (h.hp / h.maxHp) * 100)}%` }} />
                 </div>
-                <HeroSprite hero={def} size={36} />
+                <HeroSprite hero={def} size={48} level={h.level} bare attacking={performance.now() - h.lastActionAt < 180} />
               </div>
             );
           })}
@@ -983,17 +987,32 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             return (
               <div
                 key={p.id}
-                className="absolute pointer-events-none rounded-full"
+                className="absolute pointer-events-none"
                 style={{
                   left: `${100 - pct}%`,
-                  bottom: "120px",
-                  width: p.splash ? 10 : 6,
-                  height: p.splash ? 10 : 6,
+                  bottom: `${p.y}px`,
+                  width: p.kind === "arrow" ? 22 : p.splash ? 12 : 10,
+                  height: p.kind === "arrow" ? 4 : p.splash ? 12 : 6,
                   background: p.color,
                   boxShadow: `0 0 8px ${p.color}`,
                   transform: "translateX(-50%)",
+                  borderRadius: p.kind === "arrow" ? "999px 2px 2px 999px" : "999px",
                 }}
-              />
+              >
+                {p.kind === "arrow" && (
+                  <span
+                    className="absolute -left-2 top-1/2 -translate-y-1/2"
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderTop: "5px solid transparent",
+                      borderBottom: "5px solid transparent",
+                      borderRight: `9px solid ${p.color}`,
+                      filter: `drop-shadow(0 0 5px ${p.color})`,
+                    }}
+                  />
+                )}
+              </div>
             );
           })}
 
@@ -1062,48 +1081,32 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         </div>
       </motion.div>
 
-      {/* Bottom panel — compact strip */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] space-y-1.5 border-t border-rose-900/40">
-        {/* Resolve shield bar (from sight-word streaks) */}
-        {shieldHud > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-cyan-300 text-[10px] font-bold" aria-hidden>🛡</span>
-            <div className="flex-1 h-1.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
-              <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
-            </div>
-          </div>
-        )}
+      {/* Tiny floating summon dock — no full-width hero row covering the battlefield */}
+      <div className="absolute left-1 bottom-[8.25rem] z-30 max-w-[16rem] rounded-lg bg-slate-950/55 border border-slate-700/60 backdrop-blur-sm px-1 py-0.5">
+        <SummonBar
+          mana={manaHud}
+          unlockedHeroIds={unlockedHeroIds}
+          heroLevels={heroLevels}
+          cooldownsUntil={heroCooldowns}
+          activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
+            acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
+          }, {})}
+          onSummon={handleSummonHero}
+        />
+      </div>
 
-        {/* Hero summon bar + Super meter inline */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
-            <SummonBar
-              mana={manaHud}
-              unlockedHeroIds={unlockedHeroIds}
-              cooldownsUntil={heroCooldowns}
-              activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
-                acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
-              }, {})}
-              onSummon={handleSummonHero}
-            />
-          </div>
-          <div className="shrink-0 flex items-center gap-1.5">
-            <div className="w-16 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
-              <div className="h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all" style={{ width: `${superMeter}%` }} />
-            </div>
-            <Button
-              size="sm"
-              disabled={superMeter < 100}
-              onClick={castSuper}
-              className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black h-6 px-2 text-[11px] disabled:opacity-40"
-            >
-              SUPER
-            </Button>
+      {shieldHud > 0 && (
+        <div className="absolute left-2 right-2 bottom-32 z-20 flex items-center gap-2 pointer-events-none">
+          <span className="text-cyan-300 text-[10px] font-bold" aria-hidden>🛡</span>
+          <div className="flex-1 h-1.5 bg-slate-800/70 rounded-full overflow-hidden border border-slate-700/70">
+            <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
           </div>
         </div>
+      )}
 
-        {/* Powers + word reader */}
-        <div className="flex items-stretch gap-2">
+      {/* Bottom panel — compact strip */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/92 via-slate-950/82 to-slate-950/35 backdrop-blur-sm px-1.5 pt-1 pb-[max(env(safe-area-inset-bottom,0px),0.35rem)] border-t border-rose-900/35">
+        <div className="flex items-stretch gap-1.5">
           <div className="flex flex-col gap-1">
             {POWERS.map(p => {
               const remaining = Math.max(0, (powerCooldowns[p.id] ?? 0) - Date.now());
@@ -1114,10 +1117,10 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   key={p.id}
                   onClick={() => castPower(p.id)}
                   disabled={!ready || paused}
-                  className={`relative w-9 h-9 rounded-lg bg-gradient-to-br ${p.color} flex items-center justify-center shadow-md disabled:opacity-40 transition hover:scale-105 active:scale-95`}
+                  className={`relative w-8 h-8 rounded-lg bg-gradient-to-br ${p.color} flex items-center justify-center shadow-md disabled:opacity-40 transition hover:scale-105 active:scale-95`}
                   title={p.label}
                 >
-                  <Icon className="w-4 h-4 text-white drop-shadow" />
+                  <Icon className="w-3.5 h-3.5 text-white drop-shadow" />
                   {!ready && (
                     <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white bg-black/50 rounded-lg">
                       {Math.ceil(remaining / 1000)}
@@ -1127,10 +1130,10 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
               );
             })}
           </div>
-          <div className="flex-1 rounded-2xl bg-slate-900/60 border border-slate-800 p-1.5 overflow-hidden">
+          <div className="flex-1 rounded-lg bg-slate-900/55 border border-slate-800/80 p-1 overflow-hidden">
             {/* Story context strip — shows the real sentence the kid is reading */}
-            <div className="px-3 pt-1 pb-1.5 text-[11px] sm:text-xs text-slate-300 leading-snug">
-              <div className="flex items-center justify-between gap-2 mb-0.5">
+            <div className="px-2 pt-0.5 pb-1 text-[10px] sm:text-[11px] text-slate-300 leading-tight">
+              <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-amber-300/90 truncate">
                   {batch.storyTitle || "Story"}
                 </span>
@@ -1138,7 +1141,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   Sentence {batch.sentenceIndex}/{batch.totalSentences}
                 </span>
               </div>
-              <p className="text-slate-200/90 italic line-clamp-2">{batch.sentence}</p>
+              <p className="text-slate-200/90 italic truncate">{batch.sentence}</p>
             </div>
             <RPGWordReader
               key={`castle-batch-${batchVersion}`}
