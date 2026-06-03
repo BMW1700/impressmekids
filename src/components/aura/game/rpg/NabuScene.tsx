@@ -1026,8 +1026,8 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <foreignObject x={-55} y={-110} width={110} height={110}>
-          <NabuOwl size={110} mood={phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy"} />
+        <foreignObject x={-70} y={-140} width={140} height={140}>
+          <BennyDog mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
         </foreignObject>
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
