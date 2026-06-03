@@ -13,12 +13,21 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { BennyDog, type BennyMood } from "@/components/BennyDog";
+import { type BennyMood } from "@/components/BennyDog";
+import idleAsset from "@/assets/benny-idle.png.asset.json";
+import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
+import sadAsset from "@/assets/benny-sad.png.asset.json";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 // Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
 const BennyMoodContext = createContext<BennyMood | null>(null);
+
+const BENNY_SOURCES: Record<BennyMood, string> = {
+  idle: idleAsset.url,
+  celebrate: celebrateAsset.url,
+  sad: sadAsset.url,
+};
 
 interface NabuSceneProps {
   word: string;
@@ -124,9 +133,51 @@ const NabuSprite = ({
     (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
-      <foreignObject x={-size / 2} y={-size} width={size} height={size}>
-        <BennyDog mood={bennyMood} size={size} />
-      </foreignObject>
+      <BennySvgImage mood={bennyMood} size={size} />
+    </motion.g>
+  );
+};
+
+const bennyMoodAnim = (mood: BennyMood) => {
+  if (mood === "celebrate") {
+    return {
+      animate: { y: [0, -28, 0, -16, 0], scale: [1, 1.18, 1.08, 1.14, 1.05], rotate: 0 },
+      transition: { duration: 1.1, repeat: Infinity, ease: "easeOut" as const },
+    };
+  }
+  if (mood === "sad") {
+    return {
+      animate: { x: [0, -6, 6, -4, 4, 0], rotate: [0, -3, 3, -2, 2, 0], scale: 1 },
+      transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
+    };
+  }
+  return {
+    animate: { y: [0, -6, 0], rotate: 0, scale: 1 },
+    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
+  };
+};
+
+const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number }) => {
+  const anim = bennyMoodAnim(mood);
+  const src = BENNY_SOURCES[mood];
+
+  return (
+    <motion.g
+      key={mood}
+      animate={anim.animate}
+      transition={anim.transition}
+      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
+    >
+      <image
+        href={src}
+        xlinkHref={src}
+        x={-size / 2}
+        y={-size}
+        width={size}
+        height={size}
+        style={{ pointerEvents: "none" }}
+        preserveAspectRatio="xMidYMax meet"
+      />
     </motion.g>
   );
 };
@@ -478,9 +529,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <foreignObject x={-70} y={-140} width={140} height={140}>
-            <BennyDog mood="celebrate" size={140} />
-          </foreignObject>
+          <BennySvgImage mood="celebrate" size={140} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
@@ -1026,9 +1075,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <foreignObject x={-70} y={-140} width={140} height={140}>
-          <BennyDog mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
-        </foreignObject>
+        <BennySvgImage mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
           <g>
