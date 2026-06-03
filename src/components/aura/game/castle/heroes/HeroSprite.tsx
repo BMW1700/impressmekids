@@ -1,219 +1,154 @@
 import { HeroDef } from "./heroRoster";
+import type { ReactNode } from "react";
 
 interface Props {
   hero: HeroDef;
   size?: number;
-  /** Show a "ghost" tinted version (locked). */
   locked?: boolean;
-  /** When rendered in-arena, drop the dark card background so the sprite floats on the battlefield. */
   bare?: boolean;
+  level?: number;
+  attacking?: boolean;
 }
 
+const clampLevel = (level?: number) => Math.max(0, Math.min(5, Math.floor(Number(level) || 0)));
+
+const METAL = ["#64748b", "#7891aa", "#8aa6c3", "#d6b45d", "#e6c76c", "#f4dd8c"];
+const EDGE = "#020617";
+const SKIN = "#f2c49b";
+const WOOD = "#7c3f1d";
+const LEATHER = "#432818";
+const GEM = ["#38bdf8", "#22c55e", "#a78bfa", "#f59e0b", "#f43f5e", "#fef3c7"];
+
 /**
- * Crisp, layered SVG hero portraits. Same viewBox in summon bar AND on the
- * battlefield, so what you tap is what walks onto the field.
+ * Large readable battlefield sprites. Low levels intentionally look like scrappy
+ * recruits; upgrades add armor, plumes, glow, trim, and better weapons.
  */
-export const HeroSprite = ({ hero, size = 40, locked, bare }: Props) => {
-  const muted = locked ? 0.4 : 1;
-  const stroke = "#0b1220";
+export const HeroSprite = ({ hero, size = 46, locked, bare, level = 0, attacking }: Props) => {
+  const lvl = clampLevel(level);
+  const elite = lvl >= 3;
+  const legendary = lvl >= 5;
+  const armor = METAL[lvl];
+  const accent = GEM[lvl];
+  const body = hero.role === "wall" ? "#166534" : hero.role === "front" ? "#1e40af" : "#6d28d9";
+  const shadow = locked ? 0.35 : 1;
+  const bob = attacking ? "translate(2 -1)" : "translate(0 0)";
 
-  // Role-themed palettes
-  const palette =
-    hero.role === "wall"
-      ? { skin: "#fcd9b8", body: "#15803d", trim: "#bef264", cape: "#166534" }
-      : hero.role === "front"
-      ? { skin: "#fcd9b8", body: "#1d4ed8", trim: "#fbbf24", cape: "#7f1d1d" }
-      : { skin: "#fcd9b8", body: "#6d28d9", trim: "#f0abfc", cape: "#3b0764" };
+  const frame = !bare ? <rect x="2" y="2" width="60" height="60" rx="9" fill="#07111f" stroke={accent} strokeOpacity="0.45" strokeWidth="1.2" /> : null;
 
-  const id = hero.id;
+  const baseBody = (
+    <g transform={bob}>
+      <ellipse cx="32" cy="58" rx="16" ry="3.2" fill="#000" opacity="0.42" />
+      <path d="M17 27 C15 40 17 51 24 55 H40 C47 51 49 40 47 27 Z" fill={hero.role === "support" ? "#4c1d95" : body} stroke={EDGE} strokeWidth="2" />
+      <rect x="21" y="31" width="22" height="18" rx="4" fill={hero.role === "front" ? armor : body} stroke={EDGE} strokeWidth="2" />
+      <path d="M22 33 H42" stroke={accent} strokeWidth={elite ? 4 : 2.5} strokeLinecap="round" />
+      <path d="M24 48 V57 M40 48 V57" stroke={EDGE} strokeWidth="4" strokeLinecap="round" />
+      <circle cx="32" cy="20" r={hero.id === "giant" ? 11 : 8.5} fill={SKIN} stroke={EDGE} strokeWidth="2" />
+      {hero.role === "front" || elite ? (
+        <path d="M22 19 C22 10 42 10 42 19 V23 H22 Z" fill={armor} stroke={EDGE} strokeWidth="2" />
+      ) : (
+        <path d="M23 18 C24 11 40 11 41 18" fill="none" stroke={body} strokeWidth="5" strokeLinecap="round" />
+      )}
+      {elite && <path d="M32 8 C37 2 43 7 38 13" fill={accent} stroke={EDGE} strokeWidth="1.2" />}
+      <rect x="27" y="20" width="10" height="2.4" rx="1" fill={hero.role === "front" ? EDGE : "#111827"} />
+      <path d="M29 25 Q32 27 35 25" stroke={EDGE} strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      {legendary && <circle cx="32" cy="20" r="15" fill="none" stroke={accent} strokeWidth="1.2" opacity="0.75" />}
+    </g>
+  );
+
+  const bow = (elven = false) => (
+    <g transform={attacking ? "translate(2 -1) rotate(-8 48 30)" : ""}>
+      <path d="M49 10 C59 24 59 42 49 55" fill="none" stroke={elven ? "#86efac" : WOOD} strokeWidth="4" strokeLinecap="round" />
+      <path d="M49 10 C43 28 43 37 49 55" fill="none" stroke="#fef3c7" strokeWidth="1.2" />
+      <path d="M46 31 H18" stroke="#fef3c7" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M17 31 L25 27 L24 31 L25 35 Z" fill="#e2e8f0" stroke={EDGE} strokeWidth="0.8" />
+      {elite && <path d="M14 31 H3" stroke={accent} strokeWidth="2" strokeLinecap="round" opacity="0.8" />}
+    </g>
+  );
+
+  const sword = (kind: "short" | "shield" | "lance" | "holy" | "club" = "short") => (
+    <g transform={attacking ? "translate(3 0) rotate(10 47 34)" : ""}>
+      {kind === "shield" && <path d="M8 30 L20 26 V43 C17 50 13 54 8 56 C3 54 0 50 -2 43 V26 Z" fill="#0f5ca8" stroke={EDGE} strokeWidth="2" />}
+      {kind !== "club" ? (
+        <>
+          <path d={kind === "lance" ? "M47 8 V56" : "M49 13 V49"} stroke={kind === "holy" ? "#fff7ad" : "#e5e7eb"} strokeWidth={kind === "holy" ? 5 : 3.5} strokeLinecap="round" />
+          <path d="M45 48 H53" stroke={LEATHER} strokeWidth="4" strokeLinecap="round" />
+          {kind === "lance" && <path d="M47 5 L52 13 H42 Z" fill="#e5e7eb" stroke={EDGE} strokeWidth="1" />}
+        </>
+      ) : (
+        <>
+          <path d="M46 23 L55 49" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
+          <rect x="48" y="12" width="12" height="18" rx="4" fill="#854d0e" stroke={EDGE} strokeWidth="2" transform="rotate(18 54 21)" />
+        </>
+      )}
+    </g>
+  );
+
+  const staff = (kind: "ice" | "heal" | "torch" | "repair") => (
+    <g>
+      {kind === "repair" ? (
+        <>
+          <path d="M48 18 L40 54" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
+          <rect x="43" y="12" width="16" height="8" rx="2" fill="#94a3b8" stroke={EDGE} strokeWidth="2" transform="rotate(15 51 16)" />
+          <path d="M23 14 C25 7 39 7 41 14 H23 Z" fill="#facc15" stroke={EDGE} strokeWidth="2" />
+        </>
+      ) : kind === "torch" ? (
+        <>
+          <path d="M48 18 L48 55" stroke={WOOD} strokeWidth="4" strokeLinecap="round" />
+          <path d="M48 18 C40 10 47 2 48 0 C56 8 56 14 48 18 Z" fill="#f97316" stroke={EDGE} strokeWidth="1.4" />
+          <path d="M48 14 C44 9 48 5 49 4 C52 8 52 12 48 14 Z" fill="#fde047" />
+        </>
+      ) : (
+        <>
+          <path d="M48 9 V56" stroke={kind === "ice" ? "#bae6fd" : "#f8fafc"} strokeWidth="3.2" strokeLinecap="round" />
+          <circle cx="48" cy="9" r="7" fill={kind === "ice" ? "#67e8f9" : "#fef2f2"} stroke={EDGE} strokeWidth="2" />
+          {kind === "heal" && <path d="M48 4 V14 M43 9 H53" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" />}
+        </>
+      )}
+    </g>
+  );
+
+  const cannon = (
+    <g transform={attacking ? "translate(3 0)" : ""}>
+      <rect x="34" y="30" width="27" height="12" rx="4" fill="#334155" stroke={EDGE} strokeWidth="2" />
+      <circle cx="58" cy="36" r="4" fill="#020617" />
+      <circle cx="39" cy="45" r="4" fill="#78350f" stroke={EDGE} strokeWidth="1.5" />
+      <circle cx="54" cy="45" r="4" fill="#78350f" stroke={EDGE} strokeWidth="1.5" />
+      {attacking && <circle cx="63" cy="36" r="8" fill="#f97316" opacity="0.85" />}
+    </g>
+  );
+
+  let accessory: ReactNode = null;
+  if (hero.id === "archer") accessory = bow(false);
+  else if (hero.id === "elven_archer") accessory = bow(true);
+  else if (hero.id === "rifleman") accessory = <g><rect x="38" y="29" width="25" height="5" rx="2" fill="#1f2937" stroke={EDGE} strokeWidth="1.5" />{attacking && <path d="M63 31 L70 28 L68 34 Z" fill="#fde68a" />}</g>;
+  else if (hero.id === "dwarf_cannon") accessory = cannon;
+  else if (hero.id === "ice_mage") accessory = staff("ice");
+  else if (hero.id === "elven_healer") accessory = staff("heal");
+  else if (hero.id === "torch_bearer") accessory = staff("torch");
+  else if (hero.id === "repairman") accessory = staff("repair");
+  else if (hero.id === "shield_knight") accessory = sword("shield");
+  else if (hero.id === "knight") accessory = sword("lance");
+  else if (hero.id === "paladin") accessory = sword("holy");
+  else if (hero.id === "giant") accessory = sword("club");
+  else accessory = sword("short");
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 48 48"
-      style={{ opacity: muted, display: "block", overflow: "visible" }}
-      aria-label={hero.name}
-    >
-      {!bare && <rect x="0" y="0" width="48" height="48" rx="9" fill="#0b1220" />}
-
-      {/* Ground shadow */}
-      <ellipse cx="24" cy="43" rx="11" ry="2.2" fill="#000" opacity="0.45" />
-
-      {/* Cape / silhouette behind body */}
-      <path d="M14 22 Q12 34 16 40 L32 40 Q36 34 34 22 Z" fill={palette.cape} stroke={stroke} strokeWidth="0.6" />
-
-      {/* Body */}
-      <rect x="15" y="22" width="18" height="16" rx="3" fill={palette.body} stroke={stroke} strokeWidth="0.8" />
-      <rect x="15" y="22" width="18" height="3.5" fill={palette.trim} opacity="0.95" />
-      {/* Belt */}
-      <rect x="15" y="33" width="18" height="2" fill="#1f2937" opacity="0.7" />
-
-      {/* Legs */}
-      <rect x="17" y="38" width="4" height="5" rx="1" fill="#1f2937" />
-      <rect x="27" y="38" width="4" height="5" rx="1" fill="#1f2937" />
-
-      {/* Head */}
-      <circle cx="24" cy="14" r="6.5" fill={palette.skin} stroke={stroke} strokeWidth="0.8" />
-      {/* Hair / helmet base */}
-      <path d="M17.5 13 Q17 7 24 7 Q31 7 30.5 13 L17.5 13 Z" fill={palette.body} stroke={stroke} strokeWidth="0.6" />
-      {/* Eyes */}
-      <circle cx="21.5" cy="15" r="0.85" fill="#0f172a" />
-      <circle cx="26.5" cy="15" r="0.85" fill="#0f172a" />
-      {/* Mouth */}
-      <path d="M22 18 Q24 19 26 18" stroke="#0f172a" strokeWidth="0.7" fill="none" strokeLinecap="round" />
-
-      {/* Per-hero accessories */}
-      {id === "archer" && (
+    <svg width={size} height={size} viewBox="0 0 64 64" style={{ opacity: shadow, display: "block", overflow: "visible" }} aria-label={`${hero.name} level ${lvl}`}>
+      {frame}
+      {legendary && <circle cx="32" cy="32" r="27" fill={accent} opacity="0.12" />}
+      {baseBody}
+      {accessory}
+      {lvl > 0 && !bare && (
         <g>
-          {/* longbow */}
-          <path d="M37 12 Q42 24 37 36" stroke="#92400e" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-          <line x1="37" y1="12" x2="37" y2="36" stroke="#fde68a" strokeWidth="0.8" />
-          {/* quiver */}
-          <rect x="10" y="20" width="3" height="9" rx="1" fill="#7c2d12" />
-          <rect x="10.5" y="19" width="2" height="3" fill="#fde68a" />
+          <rect x="39" y="47" width="21" height="10" rx="5" fill="#020617" opacity="0.82" />
+          <text x="49.5" y="54.5" textAnchor="middle" fontSize="7.5" fill={accent} fontWeight="900">Lv {lvl}</text>
         </g>
       )}
-      {id === "elven_archer" && (
-        <g>
-          <path d="M37 9 Q44 24 37 39" stroke="#14532d" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <line x1="37" y1="9" x2="37" y2="39" stroke="#bbf7d0" strokeWidth="0.8" />
-          {/* pointy ears */}
-          <path d="M17 14 L14 11 L18 14 Z" fill={palette.skin} stroke={stroke} strokeWidth="0.4" />
-          <path d="M31 14 L34 11 L30 14 Z" fill={palette.skin} stroke={stroke} strokeWidth="0.4" />
-          {/* leaf circlet */}
-          <path d="M19 9 Q24 6 29 9" stroke="#16a34a" strokeWidth="1.2" fill="none" />
-        </g>
-      )}
-      {id === "rifleman" && (
-        <g>
-          <rect x="26" y="20" width="18" height="2.4" rx="0.4" fill="#1f2937" />
-          <rect x="26" y="22.4" width="6" height="1.5" fill="#374151" />
-          <rect x="42" y="19.5" width="2" height="1" fill="#fbbf24" />
-        </g>
-      )}
-      {id === "dwarf_cannon" && (
-        <g>
-          {/* short stocky body */}
-          <rect x="14" y="25" width="20" height="13" rx="3" fill={palette.body} stroke={stroke} strokeWidth="0.8" />
-          {/* beard */}
-          <path d="M19 20 Q24 27 29 20 L28 18 L20 18 Z" fill="#ea580c" />
-          {/* cannon barrel */}
-          <rect x="28" y="22" width="16" height="6" rx="1.5" fill="#374151" stroke={stroke} strokeWidth="0.6" />
-          <circle cx="44" cy="25" r="1.8" fill="#fbbf24" />
-          <rect x="30" y="21" width="3" height="1" fill="#9ca3af" />
-        </g>
-      )}
-      {id === "ice_mage" && (
-        <g>
-          {/* robe sweep */}
-          <path d="M13 24 L11 40 L37 40 L35 24 Z" fill="#1e3a8a" stroke={stroke} strokeWidth="0.6" />
-          {/* staff */}
-          <line x1="38" y1="6" x2="38" y2="40" stroke="#1e3a8a" strokeWidth="1.8" strokeLinecap="round" />
-          <polygon points="38,3 41,7 38,11 35,7" fill="#67e8f9" stroke="#0c4a6e" strokeWidth="0.5" />
-          <circle cx="38" cy="7" r="1.2" fill="#ecfeff" />
-          {/* hood */}
-          <path d="M17 12 Q24 4 31 12 L31 16 L17 16 Z" fill="#1e3a8a" />
-        </g>
-      )}
-      {id === "footman" && (
-        <g>
-          {/* round shield */}
-          <circle cx="11" cy="28" r="5" fill="#92400e" stroke={stroke} strokeWidth="0.6" />
-          <circle cx="11" cy="28" r="2" fill="#fbbf24" />
-          {/* sword */}
-          <rect x="36" y="14" width="2" height="18" fill="#e5e7eb" stroke={stroke} strokeWidth="0.4" />
-          <rect x="34" y="32" width="6" height="2" fill="#92400e" />
-        </g>
-      )}
-      {id === "shield_knight" && (
-        <g>
-          {/* kite shield */}
-          <path d="M6 22 L14 22 L14 34 L10 38 L6 34 Z" fill="#0369a1" stroke={stroke} strokeWidth="0.6" />
-          <path d="M8 26 L12 26 M10 24 L10 34" stroke="#fef3c7" strokeWidth="1" />
-          {/* sword */}
-          <rect x="36" y="14" width="2" height="20" fill="#e5e7eb" stroke={stroke} strokeWidth="0.4" />
-          {/* visor */}
-          <rect x="20" y="13" width="8" height="2" fill="#0f172a" />
-        </g>
-      )}
-      {id === "knight" && (
-        <g>
-          {/* full helm */}
-          <path d="M17 8 Q24 4 31 8 L31 17 L17 17 Z" fill="#94a3b8" stroke={stroke} strokeWidth="0.6" />
-          <rect x="20" y="13" width="8" height="2" fill="#0f172a" />
-          {/* plume */}
-          <path d="M24 1 Q28 -1 30 5 Q26 7 24 4 Z" fill="#dc2626" />
-          {/* lance */}
-          <rect x="37" y="10" width="2" height="26" fill="#e5e7eb" stroke={stroke} strokeWidth="0.4" />
-          <polygon points="38,8 40,11 36,11" fill="#cbd5e1" />
-        </g>
-      )}
-      {id === "paladin" && (
-        <g>
-          {/* gold armor */}
-          <rect x="15" y="22" width="18" height="16" rx="3" fill="#fbbf24" stroke={stroke} strokeWidth="0.8" />
-          <path d="M22 26 L26 26 M24 24 L24 34" stroke="#fff7ed" strokeWidth="1.3" />
-          {/* great sword */}
-          <rect x="37" y="6" width="3" height="26" fill="#f1f5f9" stroke={stroke} strokeWidth="0.4" />
-          <rect x="35" y="32" width="7" height="2" fill="#92400e" />
-          {/* halo */}
-          <ellipse cx="24" cy="6" rx="8" ry="1.6" fill="none" stroke="#fde047" strokeWidth="1.1" />
-        </g>
-      )}
-      {id === "giant" && (
-        <g>
-          {/* bigger silhouette overwrites body */}
-          <rect x="10" y="20" width="28" height="18" rx="3" fill={palette.body} stroke={stroke} strokeWidth="0.8" />
-          <circle cx="24" cy="11" r="8" fill={palette.skin} stroke={stroke} strokeWidth="0.8" />
-          {/* tusks */}
-          <path d="M20 16 L19 19 L21 18 Z" fill="#fffbeb" />
-          <path d="M28 16 L29 19 L27 18 Z" fill="#fffbeb" />
-          {/* big club */}
-          <rect x="36" y="18" width="10" height="5" fill="#92400e" stroke={stroke} strokeWidth="0.5" />
-          <rect x="36" y="20" width="10" height="2" fill="#1f2937" />
-        </g>
-      )}
-      {id === "repairman" && (
-        <g>
-          {/* hard hat */}
-          <path d="M16 11 Q24 5 32 11 L32 14 L16 14 Z" fill="#facc15" stroke={stroke} strokeWidth="0.6" />
-          {/* hammer */}
-          <rect x="34" y="14" width="2" height="20" fill="#92400e" />
-          <rect x="29" y="11" width="11" height="5" rx="1" fill="#9ca3af" stroke={stroke} strokeWidth="0.5" />
-          {/* tool belt */}
-          <rect x="15" y="33" width="18" height="2.5" fill="#7c2d12" />
-        </g>
-      )}
-      {id === "elven_healer" && (
-        <g>
-          {/* white robe */}
-          <path d="M14 24 L11 40 L37 40 L34 24 Z" fill="#f8fafc" stroke={stroke} strokeWidth="0.6" />
-          {/* cross emblem */}
-          <rect x="22" y="28" width="4" height="10" fill="#dc2626" />
-          <rect x="19" y="31" width="10" height="4" fill="#dc2626" />
-          {/* pointy ears */}
-          <path d="M17 14 L14 11 L18 14 Z" fill={palette.skin} stroke={stroke} strokeWidth="0.4" />
-          <path d="M31 14 L34 11 L30 14 Z" fill={palette.skin} stroke={stroke} strokeWidth="0.4" />
-        </g>
-      )}
-      {id === "torch_bearer" && (
-        <g>
-          {/* torch */}
-          <rect x="35" y="14" width="2" height="22" fill="#92400e" />
-          <path d="M36 14 Q31 8 36 2 Q41 8 36 14 Z" fill="#f59e0b" />
-          <path d="M36 11 Q33 7 36 4 Q39 7 36 11 Z" fill="#fde047" />
-          <circle cx="36" cy="6" r="1" fill="#fff7ed" />
-          {/* glow ring */}
-          <circle cx="36" cy="7" r="5" fill="#fbbf24" opacity="0.25" />
-        </g>
-      )}
-
       {locked && (
         <g>
-          {!bare && <rect x="0" y="0" width="48" height="48" rx="9" fill="#020617" opacity="0.6" />}
-          <circle cx="24" cy="24" r="9" fill="#0f172a" opacity="0.8" />
-          <text x="24" y="29" textAnchor="middle" fontSize="13" fill="#cbd5e1" fontWeight="bold">🔒</text>
+          <rect x="2" y="2" width="60" height="60" rx="9" fill="#020617" opacity="0.7" />
+          <circle cx="32" cy="32" r="12" fill="#0f172a" stroke="#64748b" strokeWidth="1.5" />
+          <text x="32" y="37" textAnchor="middle" fontSize="15" fill="#cbd5e1" fontWeight="bold">🔒</text>
         </g>
       )}
     </svg>

@@ -4,6 +4,7 @@ export interface ActiveHero {
   id: number;
   heroId: string;
   role: HeroRole;
+  level: number;
   x: number;            // arena px (0 = left/enemy side, ARENA_WIDTH = right/player castle)
   hp: number;
   maxHp: number;
@@ -15,18 +16,22 @@ export interface ActiveHero {
   nextPulseAt: number;
   /** Currently buffed by a torch bearer (attack speed *=). 1 means no buff. */
   attackSpeedMul: number;
+  /** Recent action timestamp for attack flashes / walk poses. */
+  lastActionAt: number;
 }
 
 export interface HeroProjectile {
   id: number;
   fromHeroId: number;
   x: number;            // travels right→left toward enemy
+  y: number;
   targetX: number;
   startX: number;
   born: number;
   dmg: number;
   splash: boolean;
   color: string;
+  kind: "arrow" | "bolt" | "shell" | "magic";
 }
 
 export interface EnemyLike {
@@ -41,13 +46,11 @@ export interface EnemyLike {
 
 /** Resolve where a hero spawns (in arena px) based on its role. */
 export function spawnXForHero(role: HeroRole, arenaWidth: number) {
-  // Player castle is on the RIGHT side (arenaWidth). Enemies march from x=arenaWidth → 0? Wait,
-  // checking arena: enemies start at x = ARENA_WIDTH and move toward x = 0 (left). Castle is at right
-  // visually but on screen the player castle is rendered on the RIGHT and we measure `100 - pct`.
-  // Internally enemies spawn at ARENA_WIDTH and march x -> 0. So the castle gate is x ~= 0 in arena coords.
-  if (role === "wall")    return 30;   // perched on top of the wall, very close to gate
-  if (role === "front")   return 90;   // a few steps out from the gate
-  /* support */           return 20;   // hugging the castle
+  // Internal coords: enemies spawn at arenaWidth and march down to 0.
+  // The player castle/gate is x≈0, rendered on the right via `left: 100 - pct`.
+  if (role === "wall")    return 34;   // on the castle wall
+  if (role === "front")   return 72;   // just outside the gate
+  /* support */           return 24;   // tucked safely near the castle
 }
 
 /** y-offset (px) above the ground line so wall units are visually higher. */
@@ -81,20 +84,24 @@ export function summonHero(opts: {
   now: number;
   arenaWidth: number;
   idCounter: () => number;
+  heroLevel?: number;
 }): ActiveHero {
   const def = HEROES_BY_ID[opts.heroId];
+  const level = Math.max(0, Math.min(5, opts.heroLevel ?? 0));
   return {
     id: opts.idCounter(),
     heroId: opts.heroId,
     role: def.role,
+    level,
     x: spawnXForHero(def.role, opts.arenaWidth),
-    hp: def.hp,
-    maxHp: def.hp,
+    hp: def.hp + level * 1.5,
+    maxHp: def.hp + level * 1.5,
     spawnedAt: opts.now,
     expiresAt: opts.now + def.lifetimeMs,
     nextAttackAt: opts.now + 400,
     nextPulseAt: opts.now + (def.support?.pulseMs ?? 1000),
     attackSpeedMul: 1,
+    lastActionAt: opts.now,
   };
 }
 
@@ -137,6 +144,9 @@ export function tickHeroes(opts: {
   // Pass 2: per-hero behavior
   for (const h of heroes) {
     const def = HEROES_BY_ID[h.heroId];
+    const level = Math.max(0, Math.min(5, h.level ?? 0));
+    const dmg = def.dmg * (1 + level * 0.18);
+    const cdMul = Math.max(0.62, 1 - level * 0.055);
 
     // Lifetime
     if (now >= h.expiresAt || h.hp <= 0) {
@@ -179,38 +189,43 @@ export function tickHeroes(opts: {
       if (now < h.nextAttackAt) continue;
       const target = nearestEnemyInRange(enemies, h.x, def.range);
       if (target) {
-        h.nextAttackAt = now + def.attackCdMs / Math.max(1, h.attackSpeedMul);
+        h.nextAttackAt = now + (def.attackCdMs * cdMul) / Math.max(1, h.attackSpeedMul);
         result.newProjectiles.push({
           id: projectileId(),
           fromHeroId: h.id,
           x: h.x,
+          y: yOffsetForHero(h.role) + 76,
           startX: h.x,
           targetX: target.x,
           born: now,
-          dmg: def.dmg,
+          dmg,
           splash: def.id === "dwarf_cannon",
+          kind: def.id === "dwarf_cannon" ? "shell" : def.id === "rifleman" ? "bolt" : def.id === "ice_mage" ? "magic" : "arrow",
           color:
             def.id === "ice_mage" ? "#67e8f9" :
             def.id === "dwarf_cannon" ? "#fbbf24" :
             def.id === "rifleman" ? "#e5e7eb" :
             "#fde68a",
         });
+        h.lastActionAt = now;
       }
     } else if (def.role === "front") {
       // Melee — engages anything within range, otherwise walks forward (left, lower x).
       if (now < h.nextAttackAt) continue;
       const target = nearestEnemyInRange(enemies, h.x, def.range);
       if (target) {
-        h.nextAttackAt = now + def.attackCdMs / Math.max(1, h.attackSpeedMul);
-        target.hp -= def.dmg;
+        h.nextAttackAt = now + (def.attackCdMs * cdMul) / Math.max(1, h.attackSpeedMul);
+        target.hp -= dmg;
         target.hitFlashUntil = now + 180;
         if (target.hp <= 0) target.dying = true;
         // Front-line takes a small tick of damage while engaged.
         h.hp -= 0.6;
+        h.lastActionAt = now;
       } else {
-        // March forward (toward enemies) up to a soft cap.
-        const advance = 18 * dt; // px/sec
-        h.x = Math.min(h.x + advance, 220);
+        // March forward toward enemies (higher x internally = farther left on screen).
+        const advance = 54 * dt; // px/sec; visibly moves instead of crawling.
+        h.x = Math.min(h.x + advance, 520);
+        if (advance > 0) h.lastActionAt = now;
       }
     }
   }
