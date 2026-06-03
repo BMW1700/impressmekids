@@ -1385,6 +1385,30 @@ export type Database = {
           },
         ]
       }
+      castle_hero_upgrades: {
+        Row: {
+          grade_mode: string
+          hero_id: string
+          level: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          grade_mode: string
+          hero_id: string
+          level?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          grade_mode?: string
+          hero_id?: string
+          level?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       castle_swarm_campaign_progress: {
         Row: {
           best_accuracy: number
@@ -8691,6 +8715,14 @@ export type Database = {
         Returns: number
       }
       peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
+      purchase_castle_hero_level: {
+        Args: { p_cost: number; p_grade_mode: string; p_hero_id: string }
+        Returns: Json
+      }
+      purchase_castle_hero_unlock: {
+        Args: { p_cost: number; p_grade_mode: string; p_hero_id: string }
+        Returns: Json
+      }
       purchase_castle_upgrade: {
         Args: { p_cost: number; p_grade_mode: string; p_track: string }
         Returns: Json
