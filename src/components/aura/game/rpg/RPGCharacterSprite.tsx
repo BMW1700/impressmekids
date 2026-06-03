@@ -1130,6 +1130,22 @@ export const RPGCharacterSprite = ({
         animate={{ scale: [1, 1.4, 1], opacity: [0.5, 0, 0.5] }}
         transition={{ repeat: Infinity, duration: 2.2, ease: "easeOut", delay: 0.6 }}
       />
+
+      {/* Big floppy ears — drooping plush ellipses behind the body. */}
+      <div className="absolute top-[16%] left-[2%] w-[24%] h-[40%] rounded-[60%]
+        bg-gradient-to-br from-cyan-200 via-sky-400 to-blue-600
+        shadow-[inset_-2px_-2px_5px_rgba(0,0,0,0.25)]
+        rotate-[-18deg] z-0" />
+      <div className="absolute top-[16%] right-[2%] w-[24%] h-[40%] rounded-[60%]
+        bg-gradient-to-bl from-cyan-200 via-sky-400 to-blue-600
+        shadow-[inset_2px_-2px_5px_rgba(0,0,0,0.25)]
+        rotate-[18deg] z-0" />
+      {/* Inner ear softer pink lining */}
+      <div className="absolute top-[24%] left-[8%] w-[12%] h-[24%] rounded-[60%]
+        bg-rose-200/70 rotate-[-18deg] z-0 blur-[1px]" />
+      <div className="absolute top-[24%] right-[8%] w-[12%] h-[24%] rounded-[60%]
+        bg-rose-200/70 rotate-[18deg] z-0 blur-[1px]" />
+
       {/* Blob body — soft amorphous shape */}
       <motion.div
         className="absolute inset-[22%] rounded-[42%]
@@ -1137,7 +1153,11 @@ export const RPGCharacterSprite = ({
           shadow-[inset_-6px_-6px_18px_rgba(0,0,0,0.2),inset_5px_5px_12px_rgba(255,255,255,0.6)]"
         animate={{ borderRadius: ["42% 42% 42% 42%", "50% 38% 45% 40%", "42% 42% 42% 42%"] }}
         transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-      />
+      >
+        {/* Soft belly highlight for plush volume */}
+        <div className="absolute bottom-[14%] left-[26%] right-[26%] h-[28%] rounded-[50%]
+          bg-gradient-to-b from-cyan-100/80 to-sky-200/30 blur-[1px]" />
+      </motion.div>
 
       {/* LEFT ARM */}
       <motion.div
@@ -1149,8 +1169,10 @@ export const RPGCharacterSprite = ({
         animate={armL.animate}
         transition={armL.transition}
       >
-        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
-          rounded-full bg-gradient-to-br from-sky-400 to-blue-600" />
+        {/* Mitten hand */}
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[150%] aspect-square
+          rounded-full bg-gradient-to-br from-sky-300 to-blue-700
+          shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3)] border border-blue-900/30" />
       </motion.div>
       {/* RIGHT ARM */}
       <motion.div
@@ -1162,19 +1184,41 @@ export const RPGCharacterSprite = ({
         animate={armR.animate}
         transition={armR.transition}
       >
-        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
-          rounded-full bg-gradient-to-bl from-sky-400 to-blue-600" />
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[150%] aspect-square
+          rounded-full bg-gradient-to-bl from-sky-300 to-blue-700
+          shadow-[inset_2px_-2px_4px_rgba(0,0,0,0.3)] border border-blue-900/30" />
       </motion.div>
 
-      {/* Eyes */}
-      <div className="absolute top-[40%] left-[34%] w-[10%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      {/* Concerned eyebrows — soft "shy" tilt for emotional readability */}
+      <div className="absolute top-[36%] left-[32%] w-[14%] h-[3%] bg-slate-800 rounded-full rotate-[12deg] z-20" />
+      <div className="absolute top-[36%] right-[32%] w-[14%] h-[3%] bg-slate-800 rounded-full rotate-[-12deg] z-20" />
+
+      {/* Big shy eyes with bright sclera + tiny highlights */}
+      <div className="absolute top-[40%] left-[32%] w-[14%] aspect-square bg-white rounded-full flex items-center justify-center z-10 shadow-[inset_0_0_2px_rgba(0,0,0,0.15)]">
+        <div className="w-[55%] h-[55%] bg-slate-900 rounded-full relative">
+          <div className="absolute top-[10%] right-[10%] w-[35%] h-[35%] bg-white rounded-full" />
+        </div>
       </div>
-      <div className="absolute top-[40%] right-[34%] w-[10%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-        <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+      <div className="absolute top-[40%] right-[32%] w-[14%] aspect-square bg-white rounded-full flex items-center justify-center z-10 shadow-[inset_0_0_2px_rgba(0,0,0,0.15)]">
+        <div className="w-[55%] h-[55%] bg-slate-900 rounded-full relative">
+          <div className="absolute top-[10%] left-[10%] w-[35%] h-[35%] bg-white rounded-full" />
+        </div>
       </div>
-      {/* Open mouth (singing the echo) */}
-      <div className="absolute top-[55%] left-[42%] right-[42%] aspect-square bg-slate-900 rounded-full z-10" />
+
+      {/* Soft pink cheek blushes — warmth and shy feel */}
+      <div className="absolute top-[50%] left-[26%] w-[10%] h-[5%] bg-rose-300/70 rounded-full blur-[1px] z-10" />
+      <div className="absolute top-[50%] right-[26%] w-[10%] h-[5%] bg-rose-300/70 rounded-full blur-[1px] z-10" />
+
+      {/* Tiny scarf — red band with knot to the side for signature silhouette */}
+      <div className="absolute top-[62%] left-[26%] right-[26%] h-[6%] rounded-full
+        bg-gradient-to-b from-rose-500 to-rose-700
+        shadow-[inset_0_-1px_2px_rgba(0,0,0,0.3)] z-20" />
+      <div className="absolute top-[64%] right-[22%] w-[10%] h-[8%]
+        bg-rose-600 rounded-[40%] rotate-[18deg] z-20
+        shadow-[inset_-1px_-1px_2px_rgba(0,0,0,0.3)]" />
+
+      {/* Open mouth (singing the echo) — sized smaller so eyes/scarf are the focal points */}
+      <div className="absolute top-[55%] left-[44%] right-[44%] aspect-square bg-slate-900 rounded-full z-10" />
     </div>
   );
 
