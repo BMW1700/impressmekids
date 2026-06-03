@@ -667,6 +667,9 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             projectileId: () => heroProjIdRef.current++,
             arenaWidth: ARENA_WIDTH,
           });
+          if (r.newProjectiles.length) {
+            heroProjectilesRef.current.push(...r.newProjectiles);
+          }
           if (r.castleHeal > 0) {
             castleHpRef.current = Math.min(CASTLE_HP_MAX, castleHpRef.current + r.castleHeal);
           }
