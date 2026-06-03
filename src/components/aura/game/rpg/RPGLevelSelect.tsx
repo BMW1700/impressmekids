@@ -304,24 +304,33 @@ export const RPGLevelSelect = ({
                     )}
                   </div>
 
-                  {/* Enemies */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">{isTutorialLevel ? 'Practice:' : 'Enemies:'}</span>
-                    <div className="flex gap-1">
-                      {level.enemies.map((enemy, i) => (
-                        <div
-                          key={i}
-                          className="w-7 h-7 rounded bg-slate-700/50 flex items-center justify-center"
-                          title={enemy}
-                        >
-                          {enemyIcons[enemy]}
-                        </div>
-                      ))}
+                  {/* Help / Enemies row */}
+                  {isPreKLevel ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">Help with:</span>
+                      <span className="text-xs font-bold text-pink-200 bg-pink-500/20 border border-pink-300/40 px-2 py-0.5 rounded-full">
+                        ✨ {helpChip}
+                      </span>
                     </div>
-                    {level.enemies.length > 1 && !isTutorialLevel && (
-                      <span className="text-xs text-orange-400 font-bold">MULTI!</span>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">{isTutorialLevel ? 'Practice:' : 'Enemies:'}</span>
+                      <div className="flex gap-1">
+                        {level.enemies.map((enemy, i) => (
+                          <div
+                            key={i}
+                            className="w-7 h-7 rounded bg-slate-700/50 flex items-center justify-center"
+                            title={enemy}
+                          >
+                            {enemyIcons[enemy]}
+                          </div>
+                        ))}
+                      </div>
+                      {level.enemies.length > 1 && !isTutorialLevel && (
+                        <span className="text-xs text-orange-400 font-bold">MULTI!</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </Card>
             </motion.div>
