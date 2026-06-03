@@ -478,8 +478,8 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <foreignObject x={-55} y={-110} width={110} height={110}>
-            <NabuOwl size={110} mood="cheer" />
+          <foreignObject x={-70} y={-140} width={140} height={140}>
+            <BennyDog mood="celebrate" size={140} />
           </foreignObject>
         </motion.g>
       ) : (
