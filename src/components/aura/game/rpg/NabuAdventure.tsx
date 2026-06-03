@@ -51,7 +51,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
+  const [hasStartedListening, setHasStartedListening] = useState(false);
   const timers = useRef<number[]>([]);
+
 
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -125,6 +127,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
+      setHasStartedListening(true);
       if (isCorrect) {
         setCorrect((c) => c + 1);
         setPhase("solved");
@@ -133,6 +136,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     },
     [phase]
   );
+
 
   const handleBatchComplete = useCallback(() => {
     // Word batch is size 1 — solved/transition handles flow.
@@ -295,6 +299,8 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
                   enableEchoRetry={true}
                   mode="fast"
                   compact
+                  autoStart={hasStartedListening}
+
                 />
               </div>
             )}

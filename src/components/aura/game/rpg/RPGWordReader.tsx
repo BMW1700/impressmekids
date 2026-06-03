@@ -44,7 +44,11 @@ interface RPGWordReaderProps {
   enableEchoRetry?: boolean;
   mode?: 'normal' | 'fast'; // Fast mode for Elara - more lenient, quicker feedback
   compact?: boolean;
+  /** Auto-start the mic on mount (used when chaining obstacles so the child
+   *  doesn't have to press "Start Reading" every time). */
+  autoStart?: boolean;
 }
+
 
 type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry' | 'waiting_action';
 
@@ -123,7 +127,9 @@ export const RPGWordReader = ({
   enableEchoRetry = true,
   mode = 'normal',
   compact = false,
+  autoStart = false,
 }: RPGWordReaderProps) => {
+
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -1276,6 +1282,17 @@ export const RPGWordReader = ({
     setSpokenText("");
     startRecognitionSession();
   }, [startRecognitionSession]);
+
+  // Auto-start the mic when chained from a previous obstacle.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && !disabled) {
+      autoStartedRef.current = true;
+      const id = window.setTimeout(() => startReading(), 200);
+      return () => window.clearTimeout(id);
+    }
+  }, [autoStart, disabled, startReading]);
+
 
   const pauseReading = useCallback(() => {
     stopRecognitionSession();
