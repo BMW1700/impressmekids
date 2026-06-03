@@ -11,16 +11,22 @@
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
+import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { NabuOwl } from "./NabuOwl";
+import { BennyDog, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
+
+// Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
+const BennyMoodContext = createContext<BennyMood | null>(null);
 
 interface NabuSceneProps {
   word: string;
   phase: ScenePhase;
   index: number; // forces remount per obstacle
+  mood?: BennyMood | null;
 }
+
 
 // Stage uses a 1000×500 SVG viewBox; ground line at y=380.
 const VB_W = 1000;
@@ -105,22 +111,21 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 110,
+  size = 140,
   anim,
-  mood: moodOverride,
 }: {
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
-  mood?: "happy" | "curious" | "cheer";
 }) => {
-  const mood =
-    moodOverride ??
-    (phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy");
+  const ctxMood = useContext(BennyMoodContext);
+  const bennyMood: BennyMood =
+    ctxMood ??
+    (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <foreignObject x={-size / 2} y={-size} width={size} height={size}>
-        <NabuOwl size={size} mood={mood} />
+        <BennyDog mood={bennyMood} size={size} />
       </foreignObject>
     </motion.g>
   );
@@ -473,8 +478,8 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <foreignObject x={-55} y={-110} width={110} height={110}>
-            <NabuOwl size={110} mood="cheer" />
+          <foreignObject x={-70} y={-140} width={140} height={140}>
+            <BennyDog mood="celebrate" size={140} />
           </foreignObject>
         </motion.g>
       ) : (
@@ -1021,8 +1026,8 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <foreignObject x={-55} y={-110} width={110} height={110}>
-          <NabuOwl size={110} mood={phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy"} />
+        <foreignObject x={-70} y={-140} width={140} height={140}>
+          <BennyDog mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
         </foreignObject>
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
@@ -1124,40 +1129,45 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index }: NabuSceneProps) => {
+export const NabuScene = ({ word, phase, index, mood = null }: NabuSceneProps) => {
   const w = word.toUpperCase();
   // Key remount per obstacle so animations restart cleanly
   const k = `${w}-${index}`;
+  const wrap = (children: React.ReactNode) => (
+    <BennyMoodContext.Provider value={mood}>
+      <div key={k} className="absolute inset-0">{children}</div>
+    </BennyMoodContext.Provider>
+  );
   switch (w) {
-    case "JUMP":   return <div key={k} className="absolute inset-0"><JumpScene phase={phase} /></div>;
-    case "BOOTS":  return <div key={k} className="absolute inset-0"><BootsScene phase={phase} /></div>;
-    case "KEY":    return <div key={k} className="absolute inset-0"><KeyScene phase={phase} /></div>;
-    case "AXE":    return <div key={k} className="absolute inset-0"><AxeScene phase={phase} /></div>;
-    case "BONE":   return <div key={k} className="absolute inset-0"><BoneScene phase={phase} /></div>;
-    case "LADDER": return <div key={k} className="absolute inset-0"><LadderScene phase={phase} /></div>;
-    case "UMBRELLA": return <div key={k} className="absolute inset-0"><UmbrellaScene phase={phase} /></div>;
-    case "SUN":    return <div key={k} className="absolute inset-0"><SunScene phase={phase} /></div>;
+    case "JUMP":   return wrap(<JumpScene phase={phase} />);
+    case "BOOTS":  return wrap(<BootsScene phase={phase} />);
+    case "KEY":    return wrap(<KeyScene phase={phase} />);
+    case "AXE":    return wrap(<AxeScene phase={phase} />);
+    case "BONE":   return wrap(<BoneScene phase={phase} />);
+    case "LADDER": return wrap(<LadderScene phase={phase} />);
+    case "UMBRELLA": return wrap(<UmbrellaScene phase={phase} />);
+    case "SUN":    return wrap(<SunScene phase={phase} />);
     case "STAR":
     case "LAMP":
     case "TORCH":
-    case "FIRE":   return <div key={k} className="absolute inset-0"><LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} /></div>;
+    case "FIRE":   return wrap(<LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} />);
     case "ROOSTER":
     case "BELL":
     case "DRUM":
-    case "FAN":    return <div key={k} className="absolute inset-0"><SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} /></div>;
+    case "FAN":    return wrap(<SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
     case "BALLOON":
     case "KITE":
     case "WINGS":
-    case "CAPE":   return <div key={k} className="absolute inset-0"><LiftScene phase={phase} kind={w as "BALLOON" | "KITE" | "WINGS" | "CAPE"} /></div>;
-    case "BOAT":   return <div key={k} className="absolute inset-0"><BoatScene phase={phase} /></div>;
-    case "ROCKET": return <div key={k} className="absolute inset-0"><RocketScene phase={phase} /></div>;
-    case "WAVE":   return <div key={k} className="absolute inset-0"><WaveScene phase={phase} /></div>;
-    case "NET":    return <div key={k} className="absolute inset-0"><NetScene phase={phase} /></div>;
-    case "ROPE":   return <div key={k} className="absolute inset-0"><RopeScene phase={phase} /></div>;
-    case "TENT":   return <div key={k} className="absolute inset-0"><TentScene phase={phase} /></div>;
-    case "BED":    return <div key={k} className="absolute inset-0"><BedScene phase={phase} /></div>;
-    case "NEST":   return <div key={k} className="absolute inset-0"><NestScene phase={phase} /></div>;
-    case "WORM":   return <div key={k} className="absolute inset-0"><WormScene phase={phase} /></div>;
-    default:       return <div key={k} className="absolute inset-0"><GenericScene phase={phase} word={w} /></div>;
+    case "CAPE":   return wrap(<LiftScene phase={phase} kind={w as "BALLOON" | "KITE" | "WINGS" | "CAPE"} />);
+    case "BOAT":   return wrap(<BoatScene phase={phase} />);
+    case "ROCKET": return wrap(<RocketScene phase={phase} />);
+    case "WAVE":   return wrap(<WaveScene phase={phase} />);
+    case "NET":    return wrap(<NetScene phase={phase} />);
+    case "ROPE":   return wrap(<RopeScene phase={phase} />);
+    case "TENT":   return wrap(<TentScene phase={phase} />);
+    case "BED":    return wrap(<BedScene phase={phase} />);
+    case "NEST":   return wrap(<NestScene phase={phase} />);
+    case "WORM":   return wrap(<WormScene phase={phase} />);
+    default:       return wrap(<GenericScene phase={phase} word={w} />);
   }
 };

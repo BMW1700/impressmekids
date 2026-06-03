@@ -52,7 +52,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
   const [hasStartedListening, setHasStartedListening] = useState(false);
+  const [bennyMood, setBennyMood] = useState<"idle" | "celebrate" | "sad" | null>(null);
   const timers = useRef<number[]>([]);
+  const moodTimer = useRef<number | null>(null);
 
 
   const clearTimers = () => {
@@ -124,17 +126,26 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   }, [phase, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mic result handling ────────────────────────────────────────────────────
+  const flashMood = useCallback((m: "celebrate" | "sad", ms: number) => {
+    setBennyMood(m);
+    if (moodTimer.current) window.clearTimeout(moodTimer.current);
+    moodTimer.current = window.setTimeout(() => setBennyMood(null), ms);
+  }, []);
+
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
       setHasStartedListening(true);
       if (isCorrect) {
         setCorrect((c) => c + 1);
+        flashMood("celebrate", 2000);
         setPhase("solved");
+      } else {
+        flashMood("sad", 1500);
       }
       // If incorrect, RPGWordReader handles echo/retry; we stay in reading.
     },
-    [phase]
+    [phase, flashMood]
   );
 
 
@@ -158,7 +169,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
 
       {/* Live SVG scene */}
       {scene && phase !== "ending" && (
-        <NabuScene word={scene.word} phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"} index={index} />
+        <NabuScene word={scene.word} phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"} index={index} mood={bennyMood} />
       )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
