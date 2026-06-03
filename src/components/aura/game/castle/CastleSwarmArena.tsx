@@ -89,6 +89,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const { stats: knightStats } = useCastleUpgrades();
   const { unlockedIds: unlockedHeroIds, unlockFromCampaign, unlockFromShop, isUnlocked } = useCastleHeroes();
   const { toast } = useToast();
+  const { crowns } = useCastleCrowns();
 
   // ---- Reading content (story-driven) ----
   const storyRunnerRef = useRef<StoryRunner | null>(null);
