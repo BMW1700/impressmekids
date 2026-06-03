@@ -127,6 +127,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
+      setHasStartedListening(true);
       if (isCorrect) {
         setCorrect((c) => c + 1);
         setPhase("solved");
@@ -135,6 +136,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     },
     [phase]
   );
+
 
   const handleBatchComplete = useCallback(() => {
     // Word batch is size 1 — solved/transition handles flow.
