@@ -193,6 +193,9 @@ export const RPGLevelSelect = ({
         {levels.map((level, index) => {
           const isUnlocked = level.isUnlocked;
           const isTutorialLevel = isTutorialWorld;
+          const isPreKLevel = world.mode === 'prek';
+          const helpChip = isPreKLevel ? getNabuHelpChip(world.id) : null;
+          
           
           return (
             <motion.div
