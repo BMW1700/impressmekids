@@ -40,12 +40,14 @@ const WORLD_102: Record<number, string[]> = {
   5: ["grow", "shrink", "fly", "sing", "wiggle"], // boss
 };
 
-// World 103: Word + Picture (two-word phrases with verb-phrase mappings)
+// World 103: Word + Picture (two-word phrases with verb-phrase mappings).
+// A few friendly object phrases are added to early levels — preschool-relatable
+// words (teddy, dog, cookie, ball) per the Nabu story shell.
 const WORLD_103: Record<number, string[]> = {
-  1: ["help me", "help you"],
-  2: ["my dog", "your dog"],
-  3: ["in the box", "on the box"],
-  4: ["drink water", "eat apple"],
+  1: ["help me", "help you", "my teddy"],
+  2: ["my dog", "your dog", "big dog"],
+  3: ["in the box", "on the box", "my ball"],
+  4: ["drink water", "eat apple", "hot cookie"],
   5: ["wash hands", "plant seed", "throw ball"], // boss
 };
 
