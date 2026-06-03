@@ -396,6 +396,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   return (
     <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
+      {isPreK && <NabuBubble nonce={cheerNonce} />}
       {/* Soft meadow decorations */}
       <div className="absolute inset-0 pointer-events-none opacity-40 select-none">
         <div className="absolute top-4 left-6 text-4xl">☁️</div>
