@@ -189,20 +189,26 @@ const Stage = ({ children }: { children: React.ReactNode }) => (
 // ── JUMP: river across the path, Nabu leaps over it ──────────────────────
 const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
-    // crouch → soaring arc over the river → land → walk off
+    // Even arc across the river at constant speed (linear easing, evenly spaced keyframes)
+    const xs = [140, 230, 320, 410, 500, 590, 680, 770, 860];
+    const arcPeak = 90; // modest height
+    const ys = xs.map((x) => {
+      // parabola peaking between river banks (x ~380..620), centered at 500
+      const t = Math.max(0, Math.min(1, (x - 320) / (680 - 320)));
+      const lift = Math.sin(t * Math.PI) * arcPeak;
+      return 370 - lift;
+    });
     return {
-      x: [140, 320, 420, 500, 580, 680, 860],
-      y: [370, 380, 200, 170, 200, 370, 370],
-      rotate: [0, -4, -10, 0, 10, 4, 0],
-      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.12, 0.32, 0.5, 0.68, 0.86, 1] },
+      x: xs,
+      y: ys,
+      transition: { duration: 1.8, ease: "linear" },
     };
   }
   if (phase === "solved") {
-    // little excited hop in place before the big jump
     return {
-      x: [140, 140, 140],
-      y: [370, 330, 370],
-      transition: { duration: 0.6, ease: "easeOut", times: [0, 0.5, 1] },
+      x: [140, 140],
+      y: [370, 340],
+      transition: { duration: 0.4, ease: "easeOut" },
     };
   }
   return nabuAnim(phase);
