@@ -76,8 +76,8 @@ const W101_L1: PreKAdventure = {
       sceneEmoji: "🌊", sky: sky.meadow, ground: ground.grass,
       problemLine: "Oh no! A river! I can't cross.",
       askLine: "I need something to walk over...",
-      word: "BRIDGE", solutionEmoji: "🌉", solutionPlacement: "over",
-      successLine: "A bridge! Thank you!",
+      word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
+      successLine: "Whoosh! Over we go!",
     },
     {
       sceneEmoji: "🟫", sky: sky.meadow, ground: ground.mud,
