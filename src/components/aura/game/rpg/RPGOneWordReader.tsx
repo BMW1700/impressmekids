@@ -524,15 +524,27 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
           </div>
         </div>
 
-        {/* Nabu prompt banner — emotional one-liner shown until first success */}
-        {nabuCopy && correctPhrases === 0 && !allDone && (
+        {/* Nabu prompt banner — only for K-12 worlds. In Pre-K the visual
+            scene IS the story, so the text banner would be noise. */}
+        {!isPreK && nabuCopy && correctPhrases === 0 && !allDone && (
           <div className="mx-auto -mt-0.5 max-w-[92%] rounded-full bg-white/85 px-3 py-1 text-center text-xs sm:text-sm font-bold text-slate-700 shadow">
             {nabuCopy.prompt}
           </div>
         )}
 
-
-        {/* Battle row — both characters aligned at exact same baseline */}
+        {/* Pre-K: replace the battle row entirely with a story scene that
+            advances visibly with every correct word. */}
+        {isPreK ? (
+          <div className="flex min-h-0 flex-1 px-1 pt-2">
+            <NabuPreKStoryScene
+              worldId={world.id}
+              progress={correctPhrases}
+              total={phrases.length}
+              celebrating={allDone}
+              lastTick={cheerNonce}
+            />
+          </div>
+        ) : (
         <div className="flex min-h-0 flex-1 items-end justify-between gap-3 px-2 pt-14">
           {/* Friendly creature */}
           <div className="relative flex flex-col items-center w-[44%]">
