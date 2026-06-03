@@ -808,35 +808,55 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             >
               {isPreK ? (
                 <div className="relative h-full w-full flex items-end justify-center">
-                  {/* Voice-shield orb: soft mic-sparkle helper, no weapons */}
+                  {/* Friendly voice-buddy orb — smiling face, magical, not a mic icon */}
                   <motion.div
-                    className="relative w-[90px] h-[90px] sm:w-[104px] sm:h-[104px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-200 to-emerald-200 shadow-[0_8px_24px_rgba(56,189,248,0.35)] flex items-center justify-center"
+                    className="relative w-[96px] h-[96px] sm:w-[112px] sm:h-[112px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-300 to-emerald-300 flex items-center justify-center"
+                    style={{ boxShadow: "0 10px 28px rgba(56,189,248,0.4), inset -6px -6px 14px rgba(255,255,255,0.5), inset 6px 6px 14px rgba(14,116,144,0.15)" }}
                     animate={{
-                      scale: heroAttacking ? [1, 1.15, 1] : [1, 1.04, 1],
-                      boxShadow: heroAttacking
-                        ? "0 0 32px rgba(167,243,208,0.9)"
-                        : "0 8px 24px rgba(56,189,248,0.35)",
+                      scale: heroAttacking ? [1, 1.18, 1] : [1, 1.04, 1],
+                      y: heroAttacking ? [0, -6, 0] : [0, -3, 0],
                     }}
                     transition={{
-                      duration: heroAttacking ? 0.4 : 2.4,
+                      duration: heroAttacking ? 0.5 : 2.6,
                       repeat: heroAttacking ? 0 : Infinity,
                       ease: "easeInOut",
                     }}
                   >
-                    <div className="absolute inset-2 rounded-full bg-white/70" />
-                    <div className="relative text-4xl sm:text-5xl">🎤</div>
-                    {/* Sparkle ring */}
+                    {/* Soft inner highlight */}
+                    <div className="absolute top-[10%] left-[18%] w-[36%] h-[26%] rounded-full bg-white/70 blur-[1px]" />
+                    {/* Face: two eyes */}
+                    <div className="absolute top-[36%] left-[26%] w-[14%] aspect-square bg-slate-900 rounded-full">
+                      <div className="absolute top-[12%] right-[12%] w-[40%] h-[40%] bg-white rounded-full" />
+                    </div>
+                    <div className="absolute top-[36%] right-[26%] w-[14%] aspect-square bg-slate-900 rounded-full">
+                      <div className="absolute top-[12%] left-[12%] w-[40%] h-[40%] bg-white rounded-full" />
+                    </div>
+                    {/* Cheek blushes */}
+                    <div className="absolute top-[52%] left-[18%] w-[14%] h-[7%] bg-rose-300/80 rounded-full blur-[1px]" />
+                    <div className="absolute top-[52%] right-[18%] w-[14%] h-[7%] bg-rose-300/80 rounded-full blur-[1px]" />
+                    {/* Curved smile */}
+                    <svg className="absolute top-[58%] left-[34%] w-[32%] h-[14%]" viewBox="0 0 32 14" fill="none">
+                      <path d="M2 2 Q 16 14, 30 2" stroke="hsl(348 70% 35%)" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    </svg>
+                    {/* Floating sparkles */}
                     <motion.div
-                      className="absolute -top-2 -right-1 text-xl"
-                      animate={{ rotate: [0, 12, -8, 0], opacity: [0.7, 1, 0.7] }}
+                      className="absolute -top-3 -right-2 text-xl"
+                      animate={{ rotate: [0, 14, -8, 0], opacity: [0.7, 1, 0.7], y: [0, -3, 0] }}
                       transition={{ duration: 2.6, repeat: Infinity }}
                     >
                       ✨
                     </motion.div>
                     <motion.div
-                      className="absolute -bottom-1 -left-2 text-base"
-                      animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2.2, repeat: Infinity }}
+                      className="absolute -bottom-2 -left-2 text-base"
+                      animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2.2, repeat: Infinity, delay: 0.4 }}
+                    >
+                      ✨
+                    </motion.div>
+                    <motion.div
+                      className="absolute top-[-10%] left-[-12%] text-sm"
+                      animate={{ y: [0, -8, 0], opacity: [0, 0.9, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, delay: 1 }}
                     >
                       ✨
                     </motion.div>
