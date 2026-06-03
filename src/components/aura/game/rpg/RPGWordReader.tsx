@@ -44,7 +44,11 @@ interface RPGWordReaderProps {
   enableEchoRetry?: boolean;
   mode?: 'normal' | 'fast'; // Fast mode for Elara - more lenient, quicker feedback
   compact?: boolean;
+  /** Auto-start the mic on mount (used when chaining obstacles so the child
+   *  doesn't have to press "Start Reading" every time). */
+  autoStart?: boolean;
 }
+
 
 type RecognitionState = 'idle' | 'listening' | 'processing' | 'paused' | 'echo_retry' | 'waiting_action';
 
