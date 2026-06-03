@@ -272,7 +272,8 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
           ))}
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={bouncyWalkAnim} />
+
       {/* boots on Nabu (follow nabu position) */}
       {solved && (
         <motion.g
