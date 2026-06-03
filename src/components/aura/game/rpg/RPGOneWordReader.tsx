@@ -403,6 +403,49 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t ${meadow.ground} pointer-events-none`} />
 
+      {/* Pre-K W101 L3 "Wake Up Nabu Village" decorative backdrop */}
+      {showVillageScene && (
+        <div className="absolute inset-0 pointer-events-none select-none">
+          {/* Warm morning glow that brightens as the village wakes */}
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/20 to-rose-200/30"
+            animate={{ opacity: allDone ? 1 : 0.45 }}
+            transition={{ duration: 1.2 }}
+          />
+          {/* Sun: dim while sleepy, bright after success */}
+          <motion.div
+            className="absolute top-4 right-8 text-5xl"
+            animate={{
+              opacity: allDone ? 1 : 0.55,
+              scale: allDone ? 1.15 : 1,
+              filter: allDone ? "drop-shadow(0 0 18px rgba(253,224,71,0.9))" : "none",
+            }}
+            transition={{ duration: 1 }}
+          >
+            ☀️
+          </motion.div>
+          {/* Sleepy houses silhouette row */}
+          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6 opacity-80">
+            <div className="text-4xl sm:text-5xl">🏠</div>
+            <div className="text-5xl sm:text-6xl">🏡</div>
+            <div className="text-4xl sm:text-5xl">🏠</div>
+          </div>
+          {/* Tiny lights that flicker on after success */}
+          <motion.div
+            className="absolute left-[22%] bottom-[30%] text-base"
+            animate={{ opacity: allDone ? 1 : 0 }}
+          >
+            ✨
+          </motion.div>
+          <motion.div
+            className="absolute right-[24%] bottom-[32%] text-base"
+            animate={{ opacity: allDone ? 1 : 0 }}
+          >
+            ✨
+          </motion.div>
+        </div>
+      )}
+
       <motion.div
         animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.35 }}
