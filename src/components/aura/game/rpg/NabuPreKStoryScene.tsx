@@ -192,256 +192,284 @@ const SleepyHouse = ({ index, lit }: { index: number; lit: boolean }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// WORLD 102 — Bobo's Bouncy Day
-// Each correct word makes Bobo hop higher. By the end he's flying.
+// WORLD 102 — Nabu Flies to the Moon
+// Each correct word flaps Nabu's wings and lifts him higher in the sky
+// toward a glowing moon. By the end he reaches it and the moon smiles.
 // ─────────────────────────────────────────────────────────────────────
 const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
   const ratio = total > 0 ? Math.min(1, progress / total) : 0;
-  const bounceHeight = 20 + ratio * 120;
+  // Nabu's vertical position: starts low (10%) and climbs to the moon (~78%)
+  const nabuY = `${88 - ratio * 68}%`;
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-2xl border-2 border-white/60 shadow-inner"
-      style={{ background: "linear-gradient(180deg, #fde68a 0%, #fb923c 100%)" }}
+      style={{ background: "linear-gradient(180deg, #1e1b4b 0%, #6d28d9 55%, #fb923c 100%)" }}
     >
-      {/* Clouds */}
-      {[10, 45, 75].map((left, i) => (
+      {/* Stars in the night sky */}
+      {[...Array(14)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute text-white"
+          style={{
+            left: `${(i * 67) % 92 + 4}%`,
+            top: `${(i * 41) % 55 + 4}%`,
+            fontSize: 10 + (i % 4) * 4,
+          }}
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 2 + (i % 3), repeat: Infinity, delay: i * 0.2 }}
+        >
+          ✦
+        </motion.div>
+      ))}
+
+      {/* The moon — Nabu's goal. Grows + smiles as Nabu gets closer. */}
+      <motion.div
+        className="absolute"
+        style={{ left: "50%", top: "12%", transform: "translateX(-50%)" }}
+        animate={{ scale: 1 + ratio * 0.25, y: [0, -4, 0] }}
+        transition={{ scale: { duration: 0.8 }, y: { duration: 3, repeat: Infinity, ease: "easeInOut" } }}
+      >
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <defs>
+            <radialGradient id="moonGlow" cx="50%" cy="50%">
+              <stop offset="0%" stopColor="#fff7d6" />
+              <stop offset="70%" stopColor="#fde68a" />
+              <stop offset="100%" stopColor="rgba(253,230,138,0)" />
+            </radialGradient>
+          </defs>
+          <circle cx="55" cy="55" r="55" fill="url(#moonGlow)" opacity={0.4 + ratio * 0.5} />
+          <circle cx="55" cy="55" r="34" fill="#fef9c3" stroke="#eab308" strokeWidth="2" />
+          {/* moon craters */}
+          <circle cx="44" cy="48" r="4" fill="#fde68a" opacity="0.7" />
+          <circle cx="66" cy="60" r="3" fill="#fde68a" opacity="0.7" />
+          <circle cx="58" cy="42" r="2" fill="#fde68a" opacity="0.7" />
+          {/* eyes that open as Nabu approaches */}
+          {ratio > 0.3 && (
+            <>
+              <circle cx="46" cy="52" r="2" fill="#1f2937" />
+              <circle cx="64" cy="52" r="2" fill="#1f2937" />
+            </>
+          )}
+          {/* smile that appears at the end */}
+          {ratio > 0.7 && (
+            <path d="M44 64 Q55 74 66 64" stroke="#1f2937" strokeWidth="2" fill="none" strokeLinecap="round" />
+          )}
+        </svg>
+      </motion.div>
+
+      {/* Drifting clouds Nabu passes through */}
+      {[20, 70].map((left, i) => (
         <motion.div
           key={i}
           className="absolute"
-          style={{ left: `${left}%`, top: `${8 + i * 5}%` }}
-          animate={{ x: [0, 12, 0] }}
-          transition={{ duration: 8 + i * 2, repeat: Infinity, ease: "easeInOut" }}
+          style={{ left: `${left}%`, top: `${30 + i * 25}%` }}
+          animate={{ x: [0, 10, 0] }}
+          transition={{ duration: 7 + i * 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <svg width="80" height="40" viewBox="0 0 80 40">
-            <ellipse cx="40" cy="22" rx="32" ry="14" fill="white" opacity="0.85" />
-            <ellipse cx="22" cy="24" rx="14" ry="10" fill="white" opacity="0.85" />
-            <ellipse cx="58" cy="24" rx="16" ry="10" fill="white" opacity="0.85" />
+          <svg width="70" height="34" viewBox="0 0 80 40">
+            <ellipse cx="40" cy="22" rx="32" ry="14" fill="white" opacity="0.55" />
+            <ellipse cx="22" cy="24" rx="14" ry="10" fill="white" opacity="0.55" />
+            <ellipse cx="58" cy="24" rx="16" ry="10" fill="white" opacity="0.55" />
           </svg>
         </motion.div>
       ))}
 
-      {/* Grass ground */}
-      <div className="absolute left-0 right-0 bottom-0 h-[22%]"
-        style={{ background: "linear-gradient(180deg, #65a30d 0%, #3f6212 100%)" }}
-      />
-
-      {/* Nabu cheering on the side */}
-      <NabuFloater lastTick={lastTick} x="14%" y="34%" size={84} mood="cheer" />
-      <motion.div
-        className="absolute"
-        style={{ left: "14%", top: "55%", transform: "translateX(-50%)" }}
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ duration: 1.2, repeat: Infinity }}
-      >
-        <div className="rounded-full bg-white/90 px-3 py-1 text-rose-700 font-extrabold text-sm shadow">
-          Go Bobo!
-        </div>
-      </motion.div>
-
-      {/* Bobo — bounces higher with progress, key on lastTick to retrigger */}
-      <motion.div
-        key={`bobo-${lastTick}`}
-        className="absolute"
-        style={{ left: "55%", bottom: "22%", transformOrigin: "center bottom" }}
-        animate={{ y: [0, -bounceHeight, 0], scaleY: [1, 1.05, 0.9, 1.05, 1] }}
-        transition={{ duration: 1.1, ease: "easeOut" }}
-      >
-        <BoboCharacter happy={ratio > 0.2 || celebrating} />
-      </motion.div>
-
-      {/* Bounce shadow */}
-      <motion.div
-        className="absolute rounded-full bg-black/30"
-        style={{ left: "55%", bottom: "21%", width: 70, height: 8, marginLeft: -35, filter: "blur(2px)" }}
-        animate={{ scaleX: [1, 0.5, 1], opacity: [0.4, 0.15, 0.4] }}
-        transition={{ duration: 1.1, ease: "easeOut" }}
-      />
-
-      {/* Bounce trail dots showing past hops */}
+      {/* Trail of feathers / sparkles showing where Nabu has been */}
       {Array.from({ length: progress }).map((_, i) => (
         <motion.div
           key={`trail-${i}`}
-          className="absolute text-amber-700 font-black"
-          style={{ left: `${20 + (i * 14) % 65}%`, bottom: `${30 + (i * 11) % 30}%`, fontSize: 14 + (i % 3) * 4 }}
+          className="absolute text-yellow-200"
+          style={{
+            left: `${42 + ((i * 7) % 18) - 9}%`,
+            top: `${82 - (i / Math.max(1, total)) * 60}%`,
+            fontSize: 16,
+          }}
           initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: [0, 1, 0.6], scale: 1 }}
+          animate={{ opacity: [0, 0.9, 0.5], scale: 1 }}
           transition={{ duration: 0.6 }}
+        >
+          ✦
+        </motion.div>
+      ))}
+
+      {/* NABU — the hero, climbing the sky */}
+      <motion.div
+        className="absolute"
+        style={{ left: "50%", transform: "translate(-50%, -50%)" }}
+        animate={{ top: nabuY }}
+        transition={{ duration: 0.9, ease: "easeOut" }}
+      >
+        <motion.div
+          key={`nabu-flap-${lastTick}`}
+          animate={{ y: [0, -10, 0, -6, 0], rotate: [0, -6, 6, -4, 0], scale: [1, 1.1, 1] }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+        >
+          <NabuOwl size={celebrating ? 130 : 110} mood={celebrating ? "cheer" : "happy"} />
+        </motion.div>
+        {/* Flap lines */}
+        <motion.div
+          key={`flap-${lastTick}`}
+          className="absolute -left-6 top-1/2 text-white/80 text-xl"
+          initial={{ opacity: 0, x: 0 }}
+          animate={{ opacity: [0, 1, 0], x: -10 }}
+          transition={{ duration: 0.6 }}
+        >
+          ≈
+        </motion.div>
+        <motion.div
+          key={`flap2-${lastTick}`}
+          className="absolute -right-6 top-1/2 text-white/80 text-xl"
+          initial={{ opacity: 0, x: 0 }}
+          animate={{ opacity: [0, 1, 0], x: 10 }}
+          transition={{ duration: 0.6 }}
+        >
+          ≈
+        </motion.div>
+      </motion.div>
+
+      <SparkleBurst tick={lastTick} x="50%" y={nabuY} />
+      {celebrating && <Confetti />}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// WORLD 103 — Nabu's Voice Wakes the Night
+// Nabu's hoot starts tiny. Each correct word makes his sound waves
+// grow bigger until they fill the whole sky and stars sparkle in time.
+// ─────────────────────────────────────────────────────────────────────
+const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
+  const ratio = total > 0 ? Math.min(1, progress / total) : 0;
+  // How many concentric song rings to show
+  const rings = Math.max(1, Math.min(5, progress + 1));
+  // Sky brightens with Nabu's growing song
+  const skyTop = interpolateColor("#1e1b4b", "#312e81", ratio);
+  const skyBot = interpolateColor("#4c1d95", "#a78bfa", ratio);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden rounded-2xl border-2 border-white/60 shadow-inner"
+      style={{ background: `linear-gradient(180deg, ${skyTop} 0%, ${skyBot} 100%)` }}
+    >
+      {/* Stars that pulse to Nabu's song */}
+      {[...Array(16)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute text-yellow-100"
+          style={{
+            left: `${(i * 59) % 94 + 3}%`,
+            top: `${(i * 37) % 70 + 4}%`,
+            fontSize: 10 + (i % 4) * 5,
+          }}
+          animate={{
+            opacity: [0.3, 0.4 + ratio * 0.6, 0.3],
+            scale: [1, 1 + ratio * 0.4, 1],
+          }}
+          transition={{ duration: 1.6 + (i % 3) * 0.4, repeat: Infinity, delay: i * 0.1 }}
         >
           ★
         </motion.div>
       ))}
 
-      <SparkleBurst tick={lastTick} x="55%" y="35%" />
-      {celebrating && <Confetti />}
-    </div>
-  );
-};
+      {/* A friendly listening tree at the bottom that lights up */}
+      <svg
+        className="absolute"
+        style={{ left: "8%", bottom: "8%" }}
+        width="80"
+        height="120"
+        viewBox="0 0 80 120"
+      >
+        <rect x="34" y="70" width="12" height="50" fill="#78350f" rx="2" />
+        <circle cx="40" cy="60" r="34" fill={ratio > 0.3 ? "#34d399" : "#065f46"} />
+        {ratio > 0.5 && <circle cx="32" cy="54" r="3" fill="#fef3c7" />}
+        {ratio > 0.5 && <circle cx="48" cy="58" r="3" fill="#fef3c7" />}
+      </svg>
+      <svg
+        className="absolute"
+        style={{ right: "8%", bottom: "8%" }}
+        width="70"
+        height="100"
+        viewBox="0 0 80 120"
+      >
+        <rect x="34" y="70" width="12" height="50" fill="#78350f" rx="2" />
+        <circle cx="40" cy="60" r="32" fill={ratio > 0.6 ? "#34d399" : "#065f46"} />
+        {ratio > 0.7 && <circle cx="40" cy="56" r="3" fill="#fef3c7" />}
+      </svg>
 
-const BoboCharacter = ({ happy }: { happy: boolean }) => (
-  <svg width="100" height="100" viewBox="0 0 100 100">
-    <ellipse cx="50" cy="92" rx="26" ry="3" fill="#000" opacity="0.18" />
-    <circle cx="50" cy="55" r="36" fill="#facc15" stroke="#a16207" strokeWidth="2" />
-    {/* cheeks */}
-    <circle cx="28" cy="62" r="6" fill="#fb7185" opacity="0.6" />
-    <circle cx="72" cy="62" r="6" fill="#fb7185" opacity="0.6" />
-    {/* eyes */}
-    <circle cx="38" cy="48" r="5" fill="#1f2937" />
-    <circle cx="62" cy="48" r="5" fill="#1f2937" />
-    <circle cx="39.5" cy="46.5" r="1.5" fill="white" />
-    <circle cx="63.5" cy="46.5" r="1.5" fill="white" />
-    {/* mouth */}
-    {happy ? (
-      <path d="M34 66 Q50 82 66 66" stroke="#7f1d1d" strokeWidth="3.5" fill="#fda4af" strokeLinecap="round" />
-    ) : (
-      <path d="M38 70 Q50 64 62 70" stroke="#7f1d1d" strokeWidth="3" fill="none" strokeLinecap="round" />
-    )}
-    {/* little arms */}
-    <ellipse cx="14" cy="60" rx="6" ry="9" fill="#facc15" stroke="#a16207" strokeWidth="2" />
-    <ellipse cx="86" cy="60" rx="6" ry="9" fill="#facc15" stroke="#a16207" strokeWidth="2" />
-    {/* feet */}
-    <ellipse cx="38" cy="92" rx="9" ry="5" fill="#a16207" />
-    <ellipse cx="62" cy="92" rx="9" ry="5" fill="#a16207" />
-  </svg>
-);
-
-// ─────────────────────────────────────────────────────────────────────
-// WORLD 103 — Echo trapped in a bubble
-// Each word cracks the bubble more; final word pops it.
-// ─────────────────────────────────────────────────────────────────────
-const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
-  const ratio = total > 0 ? Math.min(1, progress / total) : 0;
-  const bubbleScale = 1 - ratio * 0.35;
-  const bubbleOpacity = celebrating ? 0 : 1 - ratio * 0.4;
-  const popped = celebrating;
-
-  // Crack lines appear progressively
-  const cracks = useMemo(() => Math.min(4, progress), [progress]);
-
-  return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl border-2 border-white/60 shadow-inner"
-      style={{ background: "linear-gradient(180deg, #ede9fe 0%, #c4b5fd 100%)" }}
-    >
-      {/* drifting soft shapes */}
-      {[20, 60, 85].map((l, i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full"
-          style={{ left: `${l}%`, top: `${15 + i * 18}%`, width: 60 + i * 20, height: 60 + i * 20, background: "rgba(255,255,255,0.35)" }}
-          animate={{ y: [0, -10, 0], x: [0, 6, 0] }}
-          transition={{ duration: 6 + i, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ))}
-
-      {/* Nabu hovering above the bubble */}
-      <NabuFloater lastTick={lastTick} x="50%" y="20%" size={80} mood="curious" />
-
-      {/* Echo in/free of bubble — center */}
-      <div className="absolute" style={{ left: "50%", top: "58%", transform: "translate(-50%, -50%)" }}>
-        <div className="relative" style={{ width: 200, height: 200 }}>
-          {/* Bubble */}
-          <motion.svg
-            viewBox="0 0 200 200"
-            width="200"
-            height="200"
-            className="absolute inset-0"
-            animate={popped ? { scale: 1.6, opacity: 0 } : { scale: bubbleScale, opacity: bubbleOpacity, rotate: [0, 3, -3, 0] }}
-            transition={popped ? { duration: 0.5 } : { duration: 1.8, ease: "easeInOut", rotate: { repeat: Infinity, duration: 4 } }}
-          >
-            <defs>
-              <radialGradient id="bubGrad" cx="35%" cy="30%">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-                <stop offset="60%" stopColor="#bae6fd" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.35" />
-              </radialGradient>
-            </defs>
-            <circle cx="100" cy="100" r="92" fill="url(#bubGrad)" stroke="#38bdf8" strokeWidth="3" />
-            <ellipse cx="72" cy="58" rx="22" ry="11" fill="#ffffff" opacity="0.75" />
-            {/* cracks */}
-            {cracks >= 1 && <path d="M30 100 L60 90 L50 110 L80 105" stroke="#0c4a6e" strokeWidth="2" fill="none" strokeLinecap="round" />}
-            {cracks >= 2 && <path d="M170 90 L140 100 L150 80 L120 95" stroke="#0c4a6e" strokeWidth="2" fill="none" strokeLinecap="round" />}
-            {cracks >= 3 && <path d="M100 30 L92 60 L108 50 L100 80" stroke="#0c4a6e" strokeWidth="2" fill="none" strokeLinecap="round" />}
-            {cracks >= 4 && <path d="M60 150 L80 140 L70 160 L100 155" stroke="#0c4a6e" strokeWidth="2" fill="none" strokeLinecap="round" />}
-          </motion.svg>
-
-          {/* Echo character */}
+      {/* SONG RINGS — emanate from Nabu, grow with progress */}
+      <div className="absolute" style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)" }}>
+        {Array.from({ length: rings }).map((_, i) => (
           <motion.div
-            className="absolute inset-0 flex items-center justify-center"
-            animate={popped ? { y: -20, scale: 1.1 } : { y: [0, -3, 0] }}
-            transition={popped ? { duration: 0.6, type: "spring" } : { duration: 2.4, repeat: Infinity }}
-          >
-            <EchoCharacter free={popped} />
-          </motion.div>
-
-          {/* Pop sparkles when freed */}
-          <AnimatePresence>
-            {popped && [0, 1, 2, 3, 4, 5].map((i) => (
-              <motion.div
-                key={i}
-                className="absolute text-yellow-400 text-2xl"
-                style={{ left: "50%", top: "50%" }}
-                initial={{ x: 0, y: 0, opacity: 1, scale: 0.5 }}
-                animate={{
-                  x: Math.cos((i / 6) * Math.PI * 2) * 120,
-                  y: Math.sin((i / 6) * Math.PI * 2) * 120,
-                  opacity: 0,
-                  scale: 1.4,
-                }}
-                transition={{ duration: 1 }}
-              >
-                ✨
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+            key={`ring-${i}`}
+            className="absolute rounded-full border-[3px] border-yellow-200"
+            style={{
+              left: "50%",
+              top: "50%",
+              width: 80 + i * 40,
+              height: 80 + i * 40,
+              marginLeft: -(80 + i * 40) / 2,
+              marginTop: -(80 + i * 40) / 2,
+              opacity: 0.5,
+            }}
+            animate={{ scale: [0.6, 1.4], opacity: [0.7, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.4, ease: "easeOut" }}
+          />
+        ))}
       </div>
 
-      {/* sound waves escaping more as cracks grow */}
-      {[0, 1, 2].map((i) => (
-        <motion.div
-          key={i}
-          className="absolute rounded-full border-2 border-violet-400/60"
+      {/* NABU — the singer, glowing with his song */}
+      <motion.div
+        className="absolute"
+        style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)" }}
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {/* glow halo grows with progress */}
+        <div
+          className="absolute rounded-full"
           style={{
             left: "50%",
-            top: "58%",
-            width: 100,
-            height: 100,
-            marginLeft: -50,
-            marginTop: -50,
-            opacity: 0.3 + ratio * 0.5,
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 120 + ratio * 80,
+            height: 120 + ratio * 80,
+            background: "radial-gradient(circle, rgba(254,240,138,0.55) 0%, rgba(254,240,138,0) 70%)",
           }}
-          animate={{ scale: [0.5, 2.2], opacity: [0.6, 0] }}
-          transition={{ duration: 2, repeat: Infinity, delay: i * 0.55, ease: "easeOut" }}
         />
-      ))}
+        <motion.div
+          key={`nabu-sing-${lastTick}`}
+          animate={{ scale: [1, 1.18, 1], rotate: [0, -4, 4, 0] }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <NabuOwl size={celebrating ? 140 : 120} mood={celebrating ? "cheer" : "happy"} />
+        </motion.div>
+        {/* Music notes popping out per tick */}
+        <AnimatePresence>
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={`note-${lastTick}-${i}`}
+              className="absolute text-yellow-100 font-bold"
+              style={{ left: "50%", top: "30%", fontSize: 22 + i * 4 }}
+              initial={{ opacity: 0, x: 0, y: 0, rotate: 0 }}
+              animate={{
+                opacity: [0, 1, 0],
+                x: (i - 1) * 50,
+                y: -60 - i * 10,
+                rotate: (i - 1) * 20,
+              }}
+              transition={{ duration: 1.2, delay: i * 0.1 }}
+            >
+              ♪
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </motion.div>
 
-      <SparkleBurst tick={lastTick} x="50%" y="40%" />
+      <SparkleBurst tick={lastTick} x="50%" y="38%" />
       {celebrating && <Confetti />}
     </div>
   );
 };
 
-const EchoCharacter = ({ free }: { free: boolean }) => (
-  <svg width="90" height="90" viewBox="0 0 100 100">
-    <circle cx="50" cy="55" r="32" fill="#a78bfa" stroke="#5b21b6" strokeWidth="2" />
-    {/* ears */}
-    <path d="M22 32 L18 12 L36 24 Z" fill="#7c3aed" />
-    <path d="M78 32 L82 12 L64 24 Z" fill="#7c3aed" />
-    {/* eyes */}
-    <circle cx="40" cy="50" r="4.5" fill="#1f2937" />
-    <circle cx="60" cy="50" r="4.5" fill="#1f2937" />
-    <circle cx="41.5" cy="48.5" r="1.4" fill="white" />
-    <circle cx="61.5" cy="48.5" r="1.4" fill="white" />
-    {/* mouth */}
-    {free ? (
-      <path d="M36 66 Q50 84 64 66" stroke="#3b0764" strokeWidth="3.5" fill="#fda4af" strokeLinecap="round" />
-    ) : (
-      <rect x="40" y="64" width="20" height="5" rx="2" fill="#3b0764" />
-    )}
-    {/* cheeks */}
-    <circle cx="32" cy="62" r="4" fill="#fb7185" opacity="0.7" />
-    <circle cx="68" cy="62" r="4" fill="#fb7185" opacity="0.7" />
-  </svg>
-);
 
 // ─────────────────────────────────────────────────────────────────────
 // Confetti for celebration moments
