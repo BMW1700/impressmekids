@@ -528,9 +528,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <foreignObject x={-70} y={-140} width={140} height={140}>
-            <BennyDog mood="celebrate" size={140} />
-          </foreignObject>
+          <BennySvgImage mood="celebrate" size={140} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
@@ -1076,9 +1074,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <foreignObject x={-70} y={-140} width={140} height={140}>
-          <BennyDog mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
-        </foreignObject>
+        <BennySvgImage mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={140} />
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
           <g>
