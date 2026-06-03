@@ -85,7 +85,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
 };
 
 // Walk forward and stop at a target (use for arriving at nest, bed, tent, etc.).
-const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 70) =>
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
