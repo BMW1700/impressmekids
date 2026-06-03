@@ -56,16 +56,75 @@ const nabuAnim = (phase: ScenePhase) => {
   };
 };
 
-const NabuSprite = ({ phase, size = 110 }: { phase: ScenePhase; size?: number }) => {
-  const mood = phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy";
+// ── Scene-specific Nabu motion helpers ─────────────────────────────────────
+// All return a framer-motion `animate` object for the <motion.g> wrapper.
+
+// High-bouncing walk across — for muddy / squishy ground (BOOTS).
+const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, 280, 420, 560, 700, 860],
+      y: [310, 270, 310, 270, 310, 310],
+      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+    };
+  }
+  return nabuAnim(phase);
+};
+
+// Hop over an obstacle centered at obstacleX, then continue to NABU_EXIT.
+const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, obstacleX - 80, obstacleX, obstacleX + 80, 860],
+      y: [310, 310, 220, 310, 310],
+      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.3, 0.5, 0.7, 1] },
+    };
+  }
+  return nabuAnim(phase);
+};
+
+// Walk forward and stop at a target (use for arriving at nest, bed, tent, etc.).
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 70) =>
+  (phase: ScenePhase): NabuAnim => {
+    if (phase === "transition") {
+      return {
+        x: targetX,
+        y: targetY,
+        transition: { duration: 1.4, ease: "easeInOut" },
+      };
+    }
+    return nabuAnim(phase);
+  };
+
+
+// Loose type — framer-motion accepts many shapes here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NabuAnim = any;
+
+
+const NabuSprite = ({
+  phase,
+  size = 110,
+  anim,
+  mood: moodOverride,
+}: {
+  phase: ScenePhase;
+  size?: number;
+  anim?: (phase: ScenePhase) => NabuAnim;
+  mood?: "happy" | "curious" | "cheer";
+}) => {
+  const mood =
+    moodOverride ??
+    (phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy");
   return (
-    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={nabuAnim(phase)}>
+    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <foreignObject x={-size / 2} y={-size} width={size} height={size}>
         <NabuOwl size={size} mood={mood} />
       </foreignObject>
     </motion.g>
   );
 };
+
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
 const Clouds = ({ tint = "#ffffff" }: { tint?: string }) => (
@@ -127,6 +186,19 @@ const Stage = ({ children }: { children: React.ReactNode }) => (
 // ──────────────────────────────────────────────────────────────────────────
 
 // ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
+// ── BRIDGE: river across the path, bridge appears, Nabu walks across ─────
+const bridgeArcAnim = (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, 340, 500, 660, 860],
+      y: [310, 310, 240, 310, 310],
+      transition: { duration: 1.8, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] },
+    };
+  }
+
+  return nabuAnim(phase);
+};
+
 const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -155,6 +227,7 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
       >
         <path d={`M340 ${GROUND_Y - 20} Q500 ${GROUND_Y - 90} 660 ${GROUND_Y - 20}`} stroke="#92400e" strokeWidth="14" fill="none" strokeLinecap="round" />
         <path d={`M340 ${GROUND_Y - 4} Q500 ${GROUND_Y - 74} 660 ${GROUND_Y - 4}`} stroke="#b45309" strokeWidth="10" fill="none" strokeLinecap="round" />
+
         {/* planks */}
         {Array.from({ length: 9 }).map((_, i) => {
           const t = i / 8;
@@ -167,7 +240,8 @@ const BridgeScene = ({ phase }: { phase: ScenePhase }) => {
         <rect x="660" y={GROUND_Y - 50} width="6" height="40" fill="#78350f" />
       </motion.g>
 
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={bridgeArcAnim} />
+
     </Stage>
   );
 };
@@ -198,7 +272,8 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
           ))}
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={bouncyWalkAnim} />
+
       {/* boots on Nabu (follow nabu position) */}
       {solved && (
         <motion.g
@@ -270,7 +345,8 @@ const KeyScene = ({ phase }: { phase: ScenePhase }) => {
           <rect x="26" y="3" width="3" height="6" fill="#eab308" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+
     </Stage>
   );
 };
@@ -305,7 +381,8 @@ const AxeScene = ({ phase }: { phase: ScenePhase }) => {
           <path d="M-14 -4 L18 -4 L24 12 L-8 12 Z" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+
     </Stage>
   );
 };
@@ -601,7 +678,8 @@ const GenericScene = ({ phase, word, label }: { phase: ScenePhase; word: string;
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 90)} />
+
     </Stage>
   );
 };
@@ -643,7 +721,8 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} />
+
     </Stage>
   );
 };
@@ -677,7 +756,8 @@ const RocketScene = ({ phase }: { phase: ScenePhase }) => {
             style={{ originY: 100 }} />
         )}
       </motion.g>
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+
     </Stage>
   );
 };
@@ -765,7 +845,8 @@ const RopeScene = ({ phase }: { phase: ScenePhase }) => {
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(600)} />
+
     </Stage>
   );
 };
@@ -795,7 +876,8 @@ const TentScene = ({ phase }: { phase: ScenePhase }) => {
         <path d={`M600 ${GROUND_Y} L600 ${GROUND_Y - 180}`} stroke="#7f1d1d" strokeWidth="3" />
         <path d={`M580 ${GROUND_Y} L600 ${GROUND_Y - 100} L620 ${GROUND_Y}`} fill="#1f2937" />
       </motion.g>
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(560)} />
+
     </Stage>
   );
 };
@@ -1008,7 +1090,8 @@ const NestScene = ({ phase }: { phase: ScenePhase }) => {
           <line key={i} x1={500 + i * 9} y1={GROUND_Y - 18} x2={510 + i * 9} y2={GROUND_Y - 6} stroke="#92400e" strokeWidth="2" />
         ))}
       </motion.g>
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(490)} />
+
     </Stage>
   );
 };
@@ -1038,7 +1121,8 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
           transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(540)} />
+
     </Stage>
   );
 };

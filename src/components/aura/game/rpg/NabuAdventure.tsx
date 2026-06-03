@@ -97,16 +97,19 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
       return;
     }
     if (phase === "transition") {
-      // Nabu hops forward, next obstacle (or ending) takes over.
-      const next = index + 1;
-      if (next >= total) {
-        setPhase("ending");
-      } else {
-        setIndex(next);
-        setPhase("problem");
-      }
+      // Nabu walks/flies/climbs across — let the animation play before advancing.
+      queue(() => {
+        const next = index + 1;
+        if (next >= total) {
+          setPhase("ending");
+        } else {
+          setIndex(next);
+          setPhase("problem");
+        }
+      }, 2000);
       return;
     }
+
     if (phase === "ending") {
       speak(adventure.endingLine, { rate: 0.95, pitch: 1.25 });
       queue(() => {
