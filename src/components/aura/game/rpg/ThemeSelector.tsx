@@ -135,7 +135,51 @@ export const ThemeSelector = ({ onSelect }: ThemeSelectorProps) => {
             Play Agent Mode
           </Button>
         </motion.div>
-      </div>
+
+        {/* Pre-K */}
+        <motion.div
+          className="flex flex-col items-center w-80"
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          whileHover={{ scale: 1.03 }}
+        >
+          <div
+            className="bg-gradient-to-b from-pink-900/60 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border-2 border-pink-500/50 hover:border-pink-400 transition-all cursor-pointer w-full"
+            onClick={() => onSelect('prek')}
+          >
+            <div className="flex justify-center mb-4">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center">
+                <Sparkles className="h-12 w-12 text-white" />
+              </div>
+            </div>
+            <div className="text-center mb-4">
+              <h3 className="text-2xl font-bold text-white">Pre-K</h3>
+              <div className="flex items-center justify-center gap-1 text-pink-300 mt-1">
+                <Sparkles className="h-4 w-4" />
+                <span className="text-sm">First Words & Friends</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <GraduationCap className="h-4 w-4 text-pink-400" />
+              <span className="text-pink-300 font-medium">Ages 3–5</span>
+            </div>
+            <p className="text-sm text-slate-400 text-center mb-2">
+              Big friendly words with Bobo, Echo, and Nabu Village. Made for our youngest readers.
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center mt-3">
+              {['✨ Bobo', '💙 Echo', '🏡 Nabu', '🔤 Big Words'].map(tag => (
+                <span key={tag} className="text-xs bg-pink-900/50 text-pink-300 px-2 py-1 rounded-full">{tag}</span>
+              ))}
+            </div>
+          </div>
+          <Button
+            onClick={() => onSelect('prek')}
+            className="mt-3 bg-pink-600 hover:bg-pink-500 text-white font-bold px-8 w-full"
+          >
+            Play Pre-K
+          </Button>
+        </motion.div>
 
       <motion.p
         initial={{ opacity: 0 }}
