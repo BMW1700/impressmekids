@@ -169,7 +169,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
 
       {/* Live SVG scene */}
       {scene && phase !== "ending" && (
-        <NabuScene word={scene.word} phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"} index={index} />
+        <NabuScene word={scene.word} phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"} index={index} mood={bennyMood} />
       )}
 
       <div className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
