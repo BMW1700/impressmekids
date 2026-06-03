@@ -111,22 +111,21 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 110,
+  size = 140,
   anim,
-  mood: moodOverride,
 }: {
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
-  mood?: "happy" | "curious" | "cheer";
 }) => {
-  const mood =
-    moodOverride ??
-    (phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy");
+  const ctxMood = useContext(BennyMoodContext);
+  const bennyMood: BennyMood =
+    ctxMood ??
+    (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <foreignObject x={-size / 2} y={-size} width={size} height={size}>
-        <NabuOwl size={size} mood={mood} />
+        <BennyDog mood={bennyMood} size={size} />
       </foreignObject>
     </motion.g>
   );
