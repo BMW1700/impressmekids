@@ -721,7 +721,8 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} />
+
     </Stage>
   );
 };
