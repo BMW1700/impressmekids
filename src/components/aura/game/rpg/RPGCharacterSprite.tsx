@@ -929,6 +929,14 @@ export const RPGCharacterSprite = ({
 
   const renderBouncer = () => (
     <div className="relative w-full h-full flex items-center justify-center">
+      {/* Tuft ears — small plush bumps poking up behind the head (decorative, static) */}
+      <div className="absolute top-[6%] left-[26%] w-[14%] h-[12%] rounded-full
+        bg-gradient-to-br from-yellow-200 via-amber-300 to-orange-400
+        shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.18)] z-0" />
+      <div className="absolute top-[6%] right-[26%] w-[14%] h-[12%] rounded-full
+        bg-gradient-to-bl from-yellow-200 via-amber-300 to-orange-400
+        shadow-[inset_2px_-2px_4px_rgba(0,0,0,0.18)] z-0" />
+
       {/* Round bouncy body */}
       <motion.div
         className="absolute inset-[18%] rounded-full
@@ -939,9 +947,20 @@ export const RPGCharacterSprite = ({
       >
         {/* Highlight gleam */}
         <div className="absolute top-[12%] left-[18%] w-[28%] h-[20%] bg-white/60 rounded-full blur-sm" />
+        {/* Plush belly tuft — slightly lighter oval for soft volume */}
+        <div className="absolute bottom-[14%] left-[28%] right-[28%] h-[26%] rounded-full
+          bg-gradient-to-b from-yellow-100/80 to-amber-200/40 blur-[1px]" />
       </motion.div>
 
-      {/* LEFT ARM — shoulder at top of arm, swings from there */}
+      {/* Signature: little bandage patch (top-right of head) */}
+      <div className="absolute top-[20%] right-[24%] w-[14%] h-[5%] rounded-[3px]
+        bg-rose-100 rotate-[18deg] shadow-[inset_0_-1px_2px_rgba(0,0,0,0.15)] z-20
+        flex items-center justify-center">
+        <div className="w-[3px] h-[60%] bg-rose-300 rounded-full" />
+        <div className="absolute w-[60%] h-[3px] bg-rose-300 rounded-full" />
+      </div>
+
+      {/* LEFT ARM — shoulder at top of arm, swings from there. Hand styled as a plush mitten with thumb. */}
       <motion.div
         key={`armL-${limbKey}`}
         className="absolute top-[44%] left-[10%] w-[12%] h-[26%] rounded-full
@@ -951,10 +970,15 @@ export const RPGCharacterSprite = ({
         animate={armL.animate}
         transition={armL.transition}
       >
-        {/* Hand */}
-        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
-          rounded-full bg-gradient-to-br from-amber-400 to-orange-600
-          shadow-[inset_-2px_-2px_4px_rgba(0,0,0,0.3)]" />
+        {/* Mitten hand */}
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[160%] aspect-square
+          rounded-full bg-gradient-to-br from-orange-300 via-orange-500 to-orange-700
+          shadow-[inset_-3px_-3px_5px_rgba(0,0,0,0.35),inset_2px_2px_3px_rgba(255,255,255,0.4)]
+          border border-orange-800/30" />
+        {/* Mitten thumb bump */}
+        <div className="absolute bottom-[-8%] left-[-30%] w-[60%] aspect-square rounded-full
+          bg-gradient-to-br from-orange-400 to-orange-700
+          shadow-[inset_-2px_-2px_3px_rgba(0,0,0,0.3)]" />
       </motion.div>
 
       {/* RIGHT ARM */}
@@ -967,12 +991,24 @@ export const RPGCharacterSprite = ({
         animate={armR.animate}
         transition={armR.transition}
       >
-        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[140%] aspect-square
-          rounded-full bg-gradient-to-bl from-amber-400 to-orange-600
-          shadow-[inset_2px_-2px_4px_rgba(0,0,0,0.3)]" />
+        <div className="absolute bottom-[-15%] left-1/2 -translate-x-1/2 w-[160%] aspect-square
+          rounded-full bg-gradient-to-bl from-orange-300 via-orange-500 to-orange-700
+          shadow-[inset_3px_-3px_5px_rgba(0,0,0,0.35),inset_-2px_2px_3px_rgba(255,255,255,0.4)]
+          border border-orange-800/30" />
+        <div className="absolute bottom-[-8%] right-[-30%] w-[60%] aspect-square rounded-full
+          bg-gradient-to-bl from-orange-400 to-orange-700
+          shadow-[inset_2px_-2px_3px_rgba(0,0,0,0.3)]" />
       </motion.div>
 
-      {/* Eyes */}
+      {/* Eyebrows — small dark rounded bars angled inward for a friendly expression */}
+      {!isSleeping && (
+        <>
+          <div className="absolute top-[32%] left-[30%] w-[12%] h-[3%] bg-slate-800 rounded-full rotate-[-10deg] z-20" />
+          <div className="absolute top-[32%] right-[30%] w-[12%] h-[3%] bg-slate-800 rounded-full rotate-[10deg] z-20" />
+        </>
+      )}
+
+      {/* Eyes — bigger, with a glossy white highlight for plush feel */}
       {isSleeping ? (
         <>
           <div className="absolute top-[38%] left-[29%] w-[14%] h-[4%] bg-slate-900 rounded-full z-30" />
@@ -980,29 +1016,58 @@ export const RPGCharacterSprite = ({
         </>
       ) : (
         <>
-          <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-            <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+          <div className="absolute top-[35%] left-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10 shadow-[inset_0_0_2px_rgba(0,0,0,0.15)]">
+            <div className="w-[60%] h-[60%] bg-slate-900 rounded-full relative">
+              <div className="absolute top-[10%] right-[10%] w-[30%] h-[30%] bg-white rounded-full" />
+            </div>
           </div>
-          <div className="absolute top-[35%] right-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10">
-            <div className="w-1/2 h-1/2 bg-slate-900 rounded-full" />
+          <div className="absolute top-[35%] right-[30%] w-[12%] aspect-square bg-white rounded-full flex items-center justify-center z-10 shadow-[inset_0_0_2px_rgba(0,0,0,0.15)]">
+            <div className="w-[60%] h-[60%] bg-slate-900 rounded-full relative">
+              <div className="absolute top-[10%] left-[10%] w-[30%] h-[30%] bg-white rounded-full" />
+            </div>
           </div>
         </>
       )}
-      {/* Big grin */}
+
+      {/* Signature: orange star cheek patch (lower-left of face) */}
+      <div className="absolute top-[50%] left-[24%] w-[10%] h-[10%] z-20 pointer-events-none">
+        <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]">
+          <polygon
+            points="12,2 14.6,9.2 22,9.5 16,14 18.2,21.5 12,17.3 5.8,21.5 8,14 2,9.5 9.4,9.2"
+            fill="hsl(20 95% 55%)"
+            stroke="hsl(20 95% 32%)"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+
+      {/* Soft cheek blush (right side) */}
+      <div className="absolute top-[46%] right-[24%] w-[9%] h-[5%] bg-rose-300/70 rounded-full blur-[1px] z-10" />
+
+      {/* Big grin — softer plush mouth */}
       <div className="absolute top-[52%] left-[35%] right-[35%] h-[12%] bg-rose-700 rounded-b-full z-10
         border-t-2 border-rose-800" />
+      {/* Tiny tongue dot for warmth */}
+      <div className="absolute top-[58%] left-[46%] w-[8%] h-[4%] bg-rose-400 rounded-full z-20" />
 
-      {/* Feet (animatable legs) */}
+      {/* Springy feet — two-tone boot look. Keep same position/size + animation hook. */}
       <motion.div
         key={`legL-${limbKey}`}
-        className="absolute bottom-[10%] left-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full z-10"
+        className="absolute bottom-[10%] left-[30%] w-[12%] h-[8%] rounded-full z-10
+          bg-gradient-to-b from-orange-600 to-amber-900
+          shadow-[inset_-1px_-1px_2px_rgba(0,0,0,0.4),inset_1px_1px_2px_rgba(255,255,255,0.3)]
+          border-b-2 border-amber-950/50"
         style={{ transformOrigin: 'top center' }}
         animate={legL.animate}
         transition={legL.transition}
       />
       <motion.div
         key={`legR-${limbKey}`}
-        className="absolute bottom-[10%] right-[30%] w-[12%] h-[8%] bg-orange-700 rounded-full z-10"
+        className="absolute bottom-[10%] right-[30%] w-[12%] h-[8%] rounded-full z-10
+          bg-gradient-to-b from-orange-600 to-amber-900
+          shadow-[inset_-1px_-1px_2px_rgba(0,0,0,0.4),inset_1px_1px_2px_rgba(255,255,255,0.3)]
+          border-b-2 border-amber-950/50"
         style={{ transformOrigin: 'top center' }}
         animate={legR.animate}
         transition={legR.transition}
@@ -1050,6 +1115,7 @@ export const RPGCharacterSprite = ({
       )}
     </div>
   );
+
 
   const renderEchoBlob = () => (
     <div className="relative w-full h-full flex items-center justify-center">
