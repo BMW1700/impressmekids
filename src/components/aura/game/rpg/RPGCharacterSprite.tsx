@@ -13,6 +13,8 @@ interface RPGCharacterSpriteProps {
   action?: string | null;
   /** Bump on each new verb trigger so identical actions replay. */
   actionNonce?: number;
+  /** Pre-K only: optional expression layer. Additive — no effect when undefined. */
+  mood?: 'sad' | 'relieved' | 'celebrating' | null;
 }
 
 export const RPGCharacterSprite = ({
@@ -24,6 +26,7 @@ export const RPGCharacterSprite = ({
   size = 'md',
   action = null,
   actionNonce = 0,
+  mood = null,
 }: RPGCharacterSpriteProps) => {
   const sizeClasses = {
     sm: 'w-20 h-24',
