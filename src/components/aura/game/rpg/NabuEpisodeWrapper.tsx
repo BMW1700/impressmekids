@@ -62,7 +62,7 @@ export const NabuEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) 
         onComplete={handleReaderComplete}
       />
       {phase === "intro" && intro && (
-        <NabuEpisodeIntroOverlay intro={intro} onStart={() => setPhase("play")} />
+        <NabuEpisodeIntroOverlay intro={intro} worldId={world.id} onStart={() => setPhase("play")} />
       )}
       {phase === "outro" && outro && (
         <NabuEpisodeOutroOverlay outro={outro} onContinue={finish} />
