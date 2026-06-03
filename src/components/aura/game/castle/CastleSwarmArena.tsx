@@ -431,6 +431,12 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         waveNumber: waveRef.current,
       });
 
+      // ---- Mana reward ----
+      // Base 5 + combo bonus (capped) + phoneme-hit bonus.
+      const manaGain = 5 + Math.min(streakRef.current, 10) + (result.phonemeHit ? 8 : 0);
+      manaRef.current = Math.min(MANA_MAX, manaRef.current + manaGain);
+      setManaHud(manaRef.current);
+
       // Track sight-word streak: a word counts as sight whenever it added charge.
       const isSightWord = result.shieldCharge > 0;
       sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
@@ -495,6 +501,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
       superMeterRef.current = Math.min(100, superMeterRef.current + result.superFill);
       setSuperMeter(superMeterRef.current);
+
     } else {
       streakRef.current = 0;
       sightStreakRef.current = 0;
@@ -722,14 +729,10 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  // Auto-pause when tab/app backgrounds (iPad split-screen, app switch).
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden && !endedRef.current) setPaused(true);
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, []);
+  // NOTE: tab/visibility auto-pause removed — it fired on every minimize/fullscreen
+  // toggle and the player couldn't easily unpause. Pause is now driven exclusively
+  // by the toolbar Pause button and the click-to-unpause overlay.
+
 
   // ---- Boss spell-break resolution (partial-success scaled) ----
   const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
