@@ -633,7 +633,8 @@ export const RPGWorldMap = ({
                 </Card>
               </motion.div>
             );
-          })}
+          });
+          })()}
         </div>
       </div>
 
