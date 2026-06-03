@@ -1010,12 +1010,19 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             )}
           </AnimatePresence>
 
-          {/* Pause overlay */}
+          {/* Pause overlay — tap anywhere to resume */}
           {paused && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-              <div className="text-white font-black text-4xl tracking-widest">PAUSED</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setPaused(false)}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-black/60 backdrop-blur-sm cursor-pointer"
+              aria-label="Resume"
+            >
+              <div className="text-white font-black text-4xl tracking-widest drop-shadow">PAUSED</div>
+              <div className="text-slate-300 text-sm">Tap anywhere to resume</div>
+            </button>
           )}
+
 
           {/* Interstitial */}
           <WaveInterstitial show={!!interstitial} wave={interstitial?.wave ?? 0} coins={interstitial?.coins ?? 0} />
@@ -1049,24 +1056,29 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           </div>
         )}
 
-        {/* Hero summon bar — coins balance + tappable hero cards */}
+        {/* Hero summon bar — Mana fuels summons, Gold is for upgrades & shop */}
         <div className="flex items-center gap-2">
-          <div className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-xs">
-            <Coins className="w-3.5 h-3.5" /> {coinsHud}
+          <div className="shrink-0 flex flex-col gap-0.5">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/40 text-sky-200 font-bold text-[11px]" title="Mana — earned by reading. Spend it to summon heroes.">
+              <Sparkles className="w-3 h-3" /> {Math.floor(manaHud)}
+            </div>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-[11px]" title="Gold — earned per wave. Spend it on castle upgrades & shop heroes.">
+              <Coins className="w-3 h-3" /> {coinsHud}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <SummonBar
-              coins={coinsHud}
+              mana={manaHud}
               unlockedHeroIds={unlockedHeroIds}
               cooldownsUntil={heroCooldowns}
               activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
                 acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
               }, {})}
               onSummon={handleSummonHero}
-              onBuyShop={handleBuyShopHero}
             />
           </div>
         </div>
+
 
         {/* Super bar */}
         <div className="flex items-center gap-2">
