@@ -28,8 +28,9 @@ const VB_H = 500;
 const GROUND_Y = 380;
 
 // ── Nabu positions through the scene ──────────────────────────────────────
-const NABU_START = { x: 140, y: GROUND_Y - 70 };
-const NABU_EXIT = { x: 860, y: GROUND_Y - 70 };
+const NABU_START = { x: 140, y: GROUND_Y - 10 };
+const NABU_EXIT = { x: 860, y: GROUND_Y - 10 };
+
 
 const nabuAnim = (phase: ScenePhase) => {
   if (phase === "transition") {
