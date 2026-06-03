@@ -28,8 +28,9 @@ const VB_H = 500;
 const GROUND_Y = 380;
 
 // ── Nabu positions through the scene ──────────────────────────────────────
-const NABU_START = { x: 140, y: GROUND_Y - 70 };
-const NABU_EXIT = { x: 860, y: GROUND_Y - 70 };
+const NABU_START = { x: 140, y: GROUND_Y - 10 };
+const NABU_EXIT = { x: 860, y: GROUND_Y - 10 };
+
 
 const nabuAnim = (phase: ScenePhase) => {
   if (phase === "transition") {
@@ -64,7 +65,7 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [310, 270, 310, 270, 310, 310],
+      y: [370, 330, 370, 330, 370, 370],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
@@ -76,7 +77,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, obstacleX - 80, obstacleX, obstacleX + 80, 860],
-      y: [310, 310, 220, 310, 310],
+      y: [370, 370, 280, 370, 370],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.3, 0.5, 0.7, 1] },
     };
   }
@@ -84,7 +85,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
 };
 
 // Walk forward and stop at a target (use for arriving at nest, bed, tent, etc.).
-const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 70) =>
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
@@ -191,7 +192,7 @@ const bridgeArcAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 340, 500, 660, 860],
-      y: [310, 310, 240, 310, 310],
+      y: [370, 370, 290, 370, 370],
       transition: { duration: 1.8, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] },
     };
   }
