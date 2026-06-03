@@ -56,6 +56,47 @@ const nabuAnim = (phase: ScenePhase) => {
   };
 };
 
+// ── Scene-specific Nabu motion helpers ─────────────────────────────────────
+// All return a framer-motion `animate` object for the <motion.g> wrapper.
+
+// High-bouncing walk across — for muddy / squishy ground (BOOTS).
+const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, 280, 420, 560, 700, 860],
+      y: [310, 270, 310, 270, 310, 310],
+      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+    };
+  }
+  return nabuAnim(phase);
+};
+
+// Hop over an obstacle centered at obstacleX, then continue to NABU_EXIT.
+const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
+  if (phase === "transition") {
+    return {
+      x: [140, obstacleX - 80, obstacleX, obstacleX + 80, 860],
+      y: [310, 310, 220, 310, 310],
+      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.3, 0.5, 0.7, 1] },
+    };
+  }
+  return nabuAnim(phase);
+};
+
+// Walk forward and stop at a target (use for arriving at nest, bed, tent, etc.).
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 70) =>
+  (phase: ScenePhase): NabuAnim => {
+    if (phase === "transition") {
+      return {
+        x: targetX,
+        y: targetY,
+        transition: { duration: 1.4, ease: "easeInOut" },
+      };
+    }
+    return nabuAnim(phase);
+  };
+
+
 // Loose type — framer-motion accepts many shapes here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type NabuAnim = any;
