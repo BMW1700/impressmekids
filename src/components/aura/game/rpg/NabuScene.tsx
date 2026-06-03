@@ -65,7 +65,7 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [310, 270, 310, 270, 310, 310],
+      y: [370, 330, 370, 330, 370, 370],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
