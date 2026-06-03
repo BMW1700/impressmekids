@@ -1171,36 +1171,3 @@ export const NabuScene = ({ word, phase, index, mood = null }: NabuSceneProps) =
     default:       return wrap(<GenericScene phase={phase} word={w} />);
   }
 };
-  switch (w) {
-    case "JUMP":   return <div key={k} className="absolute inset-0"><JumpScene phase={phase} /></div>;
-    case "BOOTS":  return <div key={k} className="absolute inset-0"><BootsScene phase={phase} /></div>;
-    case "KEY":    return <div key={k} className="absolute inset-0"><KeyScene phase={phase} /></div>;
-    case "AXE":    return <div key={k} className="absolute inset-0"><AxeScene phase={phase} /></div>;
-    case "BONE":   return <div key={k} className="absolute inset-0"><BoneScene phase={phase} /></div>;
-    case "LADDER": return <div key={k} className="absolute inset-0"><LadderScene phase={phase} /></div>;
-    case "UMBRELLA": return <div key={k} className="absolute inset-0"><UmbrellaScene phase={phase} /></div>;
-    case "SUN":    return <div key={k} className="absolute inset-0"><SunScene phase={phase} /></div>;
-    case "STAR":
-    case "LAMP":
-    case "TORCH":
-    case "FIRE":   return <div key={k} className="absolute inset-0"><LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} /></div>;
-    case "ROOSTER":
-    case "BELL":
-    case "DRUM":
-    case "FAN":    return <div key={k} className="absolute inset-0"><SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} /></div>;
-    case "BALLOON":
-    case "KITE":
-    case "WINGS":
-    case "CAPE":   return <div key={k} className="absolute inset-0"><LiftScene phase={phase} kind={w as "BALLOON" | "KITE" | "WINGS" | "CAPE"} /></div>;
-    case "BOAT":   return <div key={k} className="absolute inset-0"><BoatScene phase={phase} /></div>;
-    case "ROCKET": return <div key={k} className="absolute inset-0"><RocketScene phase={phase} /></div>;
-    case "WAVE":   return <div key={k} className="absolute inset-0"><WaveScene phase={phase} /></div>;
-    case "NET":    return <div key={k} className="absolute inset-0"><NetScene phase={phase} /></div>;
-    case "ROPE":   return <div key={k} className="absolute inset-0"><RopeScene phase={phase} /></div>;
-    case "TENT":   return <div key={k} className="absolute inset-0"><TentScene phase={phase} /></div>;
-    case "BED":    return <div key={k} className="absolute inset-0"><BedScene phase={phase} /></div>;
-    case "NEST":   return <div key={k} className="absolute inset-0"><NestScene phase={phase} /></div>;
-    case "WORM":   return <div key={k} className="absolute inset-0"><WormScene phase={phase} /></div>;
-    default:       return <div key={k} className="absolute inset-0"><GenericScene phase={phase} word={w} /></div>;
-  }
-};
