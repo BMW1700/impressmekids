@@ -1283,6 +1283,17 @@ export const RPGWordReader = ({
     startRecognitionSession();
   }, [startRecognitionSession]);
 
+  // Auto-start the mic when chained from a previous obstacle.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && !disabled) {
+      autoStartedRef.current = true;
+      const id = window.setTimeout(() => startReading(), 200);
+      return () => window.clearTimeout(id);
+    }
+  }, [autoStart, disabled, startReading]);
+
+
   const pauseReading = useCallback(() => {
     stopRecognitionSession();
     setRecognitionState('paused');
