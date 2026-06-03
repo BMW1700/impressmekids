@@ -173,3 +173,87 @@ export function getNabuLevelCopy(
   const key = `${worldId}:${levelId}`;
   return LEVEL_OVERRIDES[key] ?? WORLD_DEFAULT[worldId] ?? null;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Episode shell copy — Nabu the Owl is the persistent lead.
+// Every Pre-K level (15 total across worlds 101/102/103) opens with a problem
+// Nabu states out loud and closes with a celebration. Cosmetic + audio only.
+// ────────────────────────────────────────────────────────────────────────────
+export interface NabuEpisodeIntro {
+  /** Nabu's spoken/displayed line that sets up the problem. Short. */
+  line: string;
+  /** Big tap-anywhere CTA on the intro card. */
+  cta: string;
+}
+
+export interface NabuEpisodeOutro {
+  /** Nabu's celebration line. Short. */
+  line: string;
+  /** A short sticker-style episode title shown above the line. */
+  title: string;
+}
+
+const EPISODE_INTROS: Record<string, NabuEpisodeIntro> = {
+  // World 101 — Nabu Village
+  "101:1": { line: "Nabu Village is so sleepy! Will you help me wake it up?", cta: "Help Nabu" },
+  "101:2": { line: "The houses are still dark. Let's turn the lights on with our words!", cta: "Light the houses" },
+  "101:3": { line: "The sun is hiding! Say the word and we'll wake the village together.", cta: "Wake the village" },
+  "101:4": { line: "A little Sleepy Shushie is yawning. Our voice can help him wake up!", cta: "Help the Shushie" },
+  "101:5": { line: "It's almost morning in Nabu Village! Let's finish waking everyone up.", cta: "Start the morning" },
+
+  // World 102 — Bobo
+  "102:1": { line: "Oh no — Bobo forgot how to JUMP! Can you remind him?", cta: "Help Bobo jump" },
+  "102:2": { line: "Bobo wants to spin, but he's wobbly. Let's help him with our voice!", cta: "Help Bobo spin" },
+  "102:3": { line: "Bobo's clap is gone! Read with me and let's bring it back.", cta: "Help Bobo clap" },
+  "102:4": { line: "Bobo wants to hop home. Our words can show him the way!", cta: "Help Bobo hop" },
+  "102:5": { line: "Bobo is throwing a bounce party — but he needs all his moves!", cta: "Start the party" },
+
+  // World 103 — Echo
+  "103:1": { line: "Echo is stuck in a sound bubble! Say the words with me to set her free.", cta: "Help Echo" },
+  "103:2": { line: "Echo is too shy to speak. Will you help her find her voice?", cta: "Find Echo's voice" },
+  "103:3": { line: "Echo wants to say something! Read with me so she can speak too.", cta: "Help Echo say it" },
+  "103:4": { line: "Echo is feeling braver. Let's help her say it nice and loud!", cta: "Cheer for Echo" },
+  "103:5": { line: "Echo is ready to shine! One more story together?", cta: "Help Echo shine" },
+};
+
+const EPISODE_OUTROS: Record<string, NabuEpisodeOutro> = {
+  "101:1": { title: "The Village Wakes Up", line: "You woke up Nabu Village! Yay!" },
+  "101:2": { title: "Lights On!",            line: "Look — all the houses are glowing!" },
+  "101:3": { title: "Here Comes the Sun",    line: "Your voice woke up the sun!" },
+  "101:4": { title: "Shushie Smiles",        line: "The little Shushie isn't sleepy anymore!" },
+  "101:5": { title: "Good Morning, Village", line: "Nabu Village is wide awake — thanks to you!" },
+
+  "102:1": { title: "Bobo Bounces Back",    line: "Bobo can JUMP again!" },
+  "102:2": { title: "Bobo Spins!",          line: "Whee! Bobo is spinning like a top!" },
+  "102:3": { title: "Bobo's Clap Returns",  line: "Bobo can clap again — and so can we!" },
+  "102:4": { title: "Bobo Hops Home",       line: "You helped Bobo hop all the way home!" },
+  "102:5": { title: "Bounce Party!",        line: "Bobo's whole bounce party is dancing!" },
+
+  "103:1": { title: "Echo Is Free",         line: "Pop! Echo's sound bubble is gone!" },
+  "103:2": { title: "Echo's Voice",         line: "Echo found her voice! Listen — she sounds happy!" },
+  "103:3": { title: "Echo Speaks",          line: "Echo said it out loud! Great job!" },
+  "103:4": { title: "Brave Echo",           line: "Echo isn't shy anymore. You helped her!" },
+  "103:5": { title: "Echo Lights Up",       line: "Echo is shining bright — because of you!" },
+};
+
+const WORLD_FALLBACK_INTRO: Record<number, NabuEpisodeIntro> = {
+  101: { line: "Nabu Village needs your voice!", cta: "Help Nabu" },
+  102: { line: "Bobo needs your help!", cta: "Help Bobo" },
+  103: { line: "Echo needs your help!", cta: "Help Echo" },
+};
+
+const WORLD_FALLBACK_OUTRO: Record<number, NabuEpisodeOutro> = {
+  101: { title: "We did it!", line: "Your voice helped Nabu Village!" },
+  102: { title: "We did it!", line: "You helped Bobo!" },
+  103: { title: "We did it!", line: "You helped Echo!" },
+};
+
+export function getEpisodeOpening(worldId: number, levelId: number): NabuEpisodeIntro | null {
+  if (!isNabuWorld(worldId)) return null;
+  return EPISODE_INTROS[`${worldId}:${levelId}`] ?? WORLD_FALLBACK_INTRO[worldId] ?? null;
+}
+
+export function getEpisodeCelebration(worldId: number, levelId: number): NabuEpisodeOutro | null {
+  if (!isNabuWorld(worldId)) return null;
+  return EPISODE_OUTROS[`${worldId}:${levelId}`] ?? WORLD_FALLBACK_OUTRO[worldId] ?? null;
+}
