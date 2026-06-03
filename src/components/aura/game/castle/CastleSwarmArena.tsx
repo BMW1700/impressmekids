@@ -1103,8 +1103,8 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         </div>
 
         {/* Powers + word reader */}
-        <div className="flex items-stretch gap-3">
-          <div className="flex flex-col gap-2">
+        <div className="flex items-stretch gap-2">
+          <div className="flex flex-col gap-1">
             {POWERS.map(p => {
               const remaining = Math.max(0, (powerCooldowns[p.id] ?? 0) - Date.now());
               const ready = remaining === 0;
@@ -1114,12 +1114,12 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   key={p.id}
                   onClick={() => castPower(p.id)}
                   disabled={!ready || paused}
-                  className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center shadow-lg disabled:opacity-40 transition hover:scale-105 active:scale-95`}
+                  className={`relative w-9 h-9 rounded-lg bg-gradient-to-br ${p.color} flex items-center justify-center shadow-md disabled:opacity-40 transition hover:scale-105 active:scale-95`}
                   title={p.label}
                 >
-                  <Icon className="w-6 h-6 text-white drop-shadow" />
+                  <Icon className="w-4 h-4 text-white drop-shadow" />
                   {!ready && (
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white bg-black/50 rounded-xl">
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white bg-black/50 rounded-lg">
                       {Math.ceil(remaining / 1000)}
                     </span>
                   )}
