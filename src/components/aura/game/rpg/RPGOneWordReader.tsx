@@ -895,6 +895,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             </motion.div>
           </div>
         </div>
+        )}
+
 
         {/* Word card */}
         <div className="relative">
