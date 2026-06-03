@@ -11,16 +11,22 @@
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
+import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { NabuOwl } from "./NabuOwl";
+import { BennyDog, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
+
+// Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
+const BennyMoodContext = createContext<BennyMood | null>(null);
 
 interface NabuSceneProps {
   word: string;
   phase: ScenePhase;
   index: number; // forces remount per obstacle
+  mood?: BennyMood | null;
 }
+
 
 // Stage uses a 1000×500 SVG viewBox; ground line at y=380.
 const VB_W = 1000;
