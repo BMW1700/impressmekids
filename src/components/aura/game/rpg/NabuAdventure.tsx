@@ -299,6 +299,8 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
                   enableEchoRetry={true}
                   mode="fast"
                   compact
+                  autoStart={hasStartedListening}
+
                 />
               </div>
             )}
