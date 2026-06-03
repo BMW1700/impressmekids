@@ -126,17 +126,26 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   }, [phase, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mic result handling ────────────────────────────────────────────────────
+  const flashMood = useCallback((m: "celebrate" | "sad", ms: number) => {
+    setBennyMood(m);
+    if (moodTimer.current) window.clearTimeout(moodTimer.current);
+    moodTimer.current = window.setTimeout(() => setBennyMood(null), ms);
+  }, []);
+
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
       setHasStartedListening(true);
       if (isCorrect) {
         setCorrect((c) => c + 1);
+        flashMood("celebrate", 2000);
         setPhase("solved");
+      } else {
+        flashMood("sad", 1500);
       }
       // If incorrect, RPGWordReader handles echo/retry; we stay in reading.
     },
-    [phase]
+    [phase, flashMood]
   );
 
 
