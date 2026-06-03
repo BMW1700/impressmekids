@@ -41,6 +41,42 @@ const isNabuWorld = (worldId: number) =>
 export const isNabuPreKWorld = isNabuWorld;
 
 // ────────────────────────────────────────────────────────────────────────────
+// Pre-K mission titles for level cards. Short, emotionally readable; replaces
+// the technical story.title only when world.mode === 'prek'.
+// ────────────────────────────────────────────────────────────────────────────
+const LEVEL_MISSION_TITLES: Record<number, Record<number, string>> = {
+  101: {
+    1: "Find the First Sound",
+    2: "Light Up the Houses",
+    3: "Wake Up the Village",
+    4: "Help the Sleepy Shushie",
+    5: "Big Day: Village Morning",
+  },
+  102: {
+    1: "Help Bobo Jump",
+    2: "Bobo's Silly Spin",
+    3: "Bobo Finds His Clap",
+    4: "Bobo Hops Again",
+    5: "Big Day: Bobo's Bounce Party",
+  },
+  103: {
+    1: "Echo Needs Help",
+    2: "Echo Finds Her Voice",
+    3: "Help Echo Say It",
+    4: "Echo Feels Brave",
+    5: "Big Day: Echo Lights Up",
+  },
+};
+
+export function getNabuLevelTitle(
+  worldId: number,
+  levelId: number
+): string | null {
+  if (!isNabuWorld(worldId)) return null;
+  return LEVEL_MISSION_TITLES[worldId]?.[levelId] ?? null;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 // Demo override: lets a Patrick-style 3-level walkthrough show the "sun" word
 // in World 101 Level 3 WITHOUT mutating the published curriculum sequence.
 // Activated by either ?nabu_demo=1 in the URL or localStorage flag.
@@ -94,16 +130,16 @@ const WORLD_DEFAULT: Record<number, NabuLevelCopy> = {
 };
 
 const LEVEL_OVERRIDES: Record<string, NabuLevelCopy> = {
-  // World 101 — Wake the village
+  // World 101 — Wake the village (DEMO MOMENT C)
   "101:3": {
-    title: "Wake Up Nabu Village",
+    title: "Wake Up the Village",
     prompt: "The village is sleepy. Read 'sun' to wake it up.",
     ctaLabel: "Wake the Village",
     hint: "✨ Your voice wakes the village!",
     successMessage: "Your voice woke up the village!",
   },
 
-  // World 102 — Bobo (jump level)
+  // World 102 — Bobo (DEMO MOMENT B)
   "102:1": {
     title: "Bobo Lost His Jump",
     prompt: "Bobo forgot how to jump! Read 'jump' to help him bounce.",
@@ -119,7 +155,7 @@ const LEVEL_OVERRIDES: Record<string, NabuLevelCopy> = {
     successMessage: "Bobo can clap again!",
   },
 
-  // World 103 — Echo
+  // World 103 — Echo (DEMO MOMENT A)
   "103:1": {
     title: "Echo Needs Help",
     prompt: "Echo is stuck in a sound bubble! Read 'help me' to help Echo.",

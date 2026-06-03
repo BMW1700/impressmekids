@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
-import { getNabuHelpChip } from "@/lib/nabuStoryCopy";
+import { getNabuHelpChip, getNabuLevelTitle } from "@/lib/nabuStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
@@ -195,6 +195,7 @@ export const RPGLevelSelect = ({
           const isTutorialLevel = isTutorialWorld;
           const isPreKLevel = world.mode === 'prek';
           const helpChip = isPreKLevel ? getNabuHelpChip(world.id) : null;
+          const prekMissionTitle = isPreKLevel ? getNabuLevelTitle(world.id, level.id) : null;
           
           
           return (
@@ -284,7 +285,9 @@ export const RPGLevelSelect = ({
 
                   {/* Story Title */}
                   <h3 className="font-bold text-white mb-1 line-clamp-1">
-                    {isTutorialLevel ? 'Tutorial: Learn to Play!' : level.story.title}
+                    {isTutorialLevel
+                      ? 'Tutorial: Learn to Play!'
+                      : (prekMissionTitle ?? level.story.title)}
                   </h3>
                   
                   {/* Story Info */}
