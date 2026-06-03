@@ -1118,7 +1118,8 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
           transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(540)} />
+
     </Stage>
   );
 };
