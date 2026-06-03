@@ -127,7 +127,9 @@ export const RPGWordReader = ({
   enableEchoRetry = true,
   mode = 'normal',
   compact = false,
+  autoStart = false,
 }: RPGWordReaderProps) => {
+
   // Core state
   const [recognitionState, setRecognitionState] = useState<RecognitionState>('idle');
   const [currentIndex, setCurrentIndex] = useState(0);
