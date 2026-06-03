@@ -175,6 +175,7 @@ const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number })
         y={-size}
         width={size}
         height={size}
+        style={{ pointerEvents: "none" }}
         preserveAspectRatio="xMidYMax meet"
       />
     </motion.g>
