@@ -51,7 +51,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
+  const [hasStartedListening, setHasStartedListening] = useState(false);
   const timers = useRef<number[]>([]);
+
 
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
