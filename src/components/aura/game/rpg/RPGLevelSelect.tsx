@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
+import { getNabuHelpChip } from "@/lib/nabuStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
