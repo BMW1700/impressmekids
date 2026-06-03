@@ -1087,7 +1087,8 @@ const NestScene = ({ phase }: { phase: ScenePhase }) => {
           <line key={i} x1={500 + i * 9} y1={GROUND_Y - 18} x2={510 + i * 9} y2={GROUND_Y - 6} stroke="#92400e" strokeWidth="2" />
         ))}
       </motion.g>
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(490)} />
+
     </Stage>
   );
 };
