@@ -102,7 +102,12 @@ const AuraPractice = () => {
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   
   // Theme-aware data sources
-  const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
+  const activeWorlds =
+    gameTheme === 'agent'
+      ? agentCampaignWorlds
+      : gameTheme === 'prek'
+        ? campaignWorlds.filter((w) => w.mode === 'prek')
+        : campaignWorlds.filter((w) => w.mode !== 'prek');
   const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
