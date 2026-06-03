@@ -111,8 +111,16 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const enemy = enemyForWorld(world.id);
   const meadow = meadowFor(world.id);
-  // Suppress the red HP indicator + shake on Action Time (102) and Word + Picture (103).
-  const showCombatUI = world.id !== 102 && world.id !== 103;
+  // All Pre-K worlds (101/102/103) use the soft Pre-K HUD: no HP, no shake,
+  // no knight, no combat language.
+  const isPreK = world.id === 101 || world.id === 102 || world.id === 103;
+  const showCombatUI = !isPreK;
+  const creatureName = isPreK ? getNabuCreatureName(world.id) : (enemy === "bouncer" ? "Bobo" : enemy === "echo_blob" ? "Echo" : "Wiggleworm");
+  const meterLabel = getNabuMeterLabel(world.id);
+  // Per-level emotional staging flags
+  const showEchoStuck = isPreK && world.id === 103 && level.id === 1;
+  const showBoboLostBounce = isPreK && world.id === 102 && level.id === 1;
+  const showVillageScene = isPreK && world.id === 101 && level.id === 3;
 
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
   const [correctPhrases, setCorrectPhrases] = useState(0);
