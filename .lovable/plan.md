@@ -1,53 +1,123 @@
-## Goal
-Split the three Pre-K worlds (101 Nabu Village, 102 Bobo, 103 Echo) out of **Classic Adventure** and surface them as their own **Pre-K** mode card on the "Choose Your Adventure" screen, next to Classic and Agent.
+# Pre-K Phase 1: Story Shell + Nabu the Owl
 
-Pre-K gameplay, animations, copy, sprites, characters, success states, mic, stars, and the underlying `RPGOneWordReader` stay 100% unchanged. K–12 Classic combat and Agent Mode are not touched.
+Wrap the existing 3 Pre-K worlds (101 / 102 / 103) in a story shell so every level has an opening problem, in-between dialogue, and an ending celebration — starring **Nabu the Owl** as the persistent lead, with Bobo and Echo as his friends. No new word logic, no treehouse, no collectibles, no changes to mic/speech recognition, stars, unlocking, navigation, or K–12.
 
-## Changes
+---
 
-### 1. `src/lib/gameTheme.ts`
-- Extend `GameTheme` to `'classic' | 'agent' | 'prek'`.
-- `getStoredTheme()` accepts/persists `'prek'`.
-- `getGradeMode('prek')` returns `'k5'` so Pre-K continues to read/write under the existing K-5 namespace (no DB or progress changes).
+## 1. Cast
 
-### 2. `src/pages/game/GameDashboard.tsx`
-- Switch the "Choose Your Adventure" grid from 2 cols to 3 (`grid-cols-1 sm:grid-cols-3`).
-- Add a third **Pre-K** card (pink/rose gradient, sparkle icon, "Ages 3–5" pill, copy: *"Big friendly words with Bobo, Echo, and Nabu Village. Made for our youngest readers."*, button: "✨ Start Pre-K").
-- Widen `handleModeSelect` to `'classic' | 'agent' | 'prek'`; same routing (`/game/play?tab=rpg`).
+- **Nabu the Owl** — preschool-aged, curious, slightly clumsy, kind. New persistent lead who appears in every Pre-K episode and asks the child for help.
+- **Bobo** — Nabu's bouncy friend (World 102, action verbs).
+- **Echo** — Nabu's shy friend (World 103, two-word phrases).
+- **Nabu Village** — the sleepy world they live in (World 101, sight words).
 
-### 3. `src/pages/student/AuraPractice.tsx`
-Change `activeWorlds` selection (line 105) to:
-- `'agent'` → `agentCampaignWorlds`
-- `'prek'` → `campaignWorlds.filter(w => w.mode === 'prek')`
-- default (`'classic'`) → `campaignWorlds.filter(w => w.mode !== 'prek')`
+## 2. Episode structure (every Pre-K level)
 
-`activeStories` stays as today.
+Each level becomes a 3-beat mini-episode wrapped around the existing One-Word Reader. No mechanic changes — the words, mic, stars, and progression are identical.
 
-### 4. `src/components/student/sections/AuraReadingSection.tsx`
-Apply the same three-branch filter to its local `activeWorlds` (line 86) so the embedded student-dashboard reading section matches.
+```text
+┌───────────────────────────────┐
+│ OPENING BEAT (3–5 sec)        │  Nabu speech bubble: the problem.
+│   "Uh oh! Nabu can't find     │  Big illustration, one short line, one
+│    his teddy. Help me!"       │  big "Help Nabu" tap-anywhere button.
+└───────────────┬───────────────┘
+                ▼
+┌───────────────────────────────┐
+│ READING (unchanged)           │  Existing RPGOneWordReader runs as-is.
+│   word → mic → next word      │  Between words, a tiny Nabu bubble
+│                               │  cheers ("Yes!" / "One more!").
+└───────────────┬───────────────┘
+                ▼
+┌───────────────────────────────┐
+│ CELEBRATION BEAT (3–5 sec)    │  Nabu: "We did it!" + sticker-style
+│   "You found Teddy!"          │  episode title. Existing star/unlock
+│                               │  screen follows untouched.
+└───────────────────────────────┘
+```
 
-### 5. `src/components/aura/game/rpg/RPGWorldMap.tsx`
-- Line 441: same three-branch filter when mapping world cards.
-- Line 461: replace `campaignWorlds.length` with `displayedWorlds.length` (compute once at top of map).
-- Cosmetic only: when theme is `'prek'`, the "Switch" pill (line 296) reads "✨ Pre-K — Switch"; header titles (lines 366/370) read "✨ Pre-K Adventure" / "Help your Nabu friends find their voice!".
+Same ritual every time — preschoolers love predictability.
 
-### 6. `src/components/aura/game/rpg/ThemeSelector.tsx`
-Add a third **Pre-K** card mirroring the dashboard card so users can switch into/out of Pre-K from the in-game theme picker. Same layout, pink/rose styling, "Ages 3–5" pill.
+## 3. Episode copy (15 episodes)
 
-## Out of Scope / Untouched
-- `RPGOneWordReader`, `nabuStoryCopy`, `RPGCharacterSprite` moods, village backdrop, success messages, Pre-K word banks, verb animations.
-- K–12 Classic combat: knight/wizard/Ella, RPG battle, minigames, Castle Swarm.
-- Agent Mode: characters, enemies, story routing, vocabulary/intel labels.
-- Mic/speech, Hear buttons, star thresholds, level unlocks, map navigation, character select.
-- Database, RLS, `grade_mode` column (Pre-K continues under `k5`).
+Hand-written opening + celebration lines, one per (world, level). Examples:
 
-## Risks & Mitigations
-- Many files branch on `theme === 'agent'` vs not. Because Pre-K is "not agent", those branches keep classic-style copy/labels — which is fine since the Pre-K card itself uses the existing Pre-K world UI (`mode === 'prek'` routes directly into the one-word reader and never reaches K–12 combat).
-- `getGradeMode('prek') = 'k5'` preserves all existing K-5 reading-stats/campaign-progress queries.
-- Classic users with progress on 101/102/103 keep that progress (keyed by world id); it just appears under the Pre-K card now.
+| World | Lvl | Opening (Nabu speech) | Celebration |
+|-------|-----|-----------------------|-------------|
+| 101 | 1 | "Nabu Village is so sleepy! Can you help me wake it up?" | "You woke up the village! Yay!" |
+| 101 | 2 | "The houses are dark. Let's turn the lights on with our words!" | "Look — the lights are on!" |
+| 102 | 1 | "Bobo can't remember how to JUMP. Can you remind him?" | "Bobo is bouncing again!" |
+| 103 | 1 | "Echo is too shy to talk. Will you help her find her voice?" | "Echo is smiling — you did it!" |
+| … | … | (15 total, hand-written) | … |
 
-## Confirmation
-- K–12 Classic combat: untouched
-- Agent Mode: untouched
-- Mic / Hear / stars / unlocks / navigation: untouched
-- Pre-K animations, copy, success messages, backdrops: untouched
+All copy lives in `nabuStoryCopy.ts`. No backend, no AI, $0/month.
+
+## 4. Word bank: keep + grow gently
+
+Per user direction: start with familiar words, add a few story-object words on top — no removals.
+
+- **World 101 (sight words)** — unchanged.
+- **World 102 (action verbs)** — unchanged.
+- **World 103 (two-word phrases)** — keep current phrases; add 3–4 new preschool-friendly object phrases (e.g. `"my teddy"`, `"hot cookie"`, `"big dog"`) only on levels that have room. Conservative: no level loses a word it already has.
+
+Mic, scoring, stars, unlock thresholds — untouched.
+
+## 5. TTS settings toggle
+
+Add a **"Read text aloud (text-to-speech)"** on/off toggle in the existing `SettingsMenu.tsx`, sitting next to language and theme controls.
+
+- Default: **on**.
+- Stored in `localStorage` under `nabu.tts.enabled`.
+- Pre-K speech bubbles read aloud via the browser Web Speech API only when toggle is on.
+- When off, bubbles render text-only and stay fully usable.
+- Toggle has no effect on mic/speech recognition or on K–12 modes.
+
+## 6. Scope guardrails
+
+**In scope:**
+- New `NabuEpisodeIntro` and `NabuEpisodeOutro` components.
+- A tiny inline `NabuBubble` between words (text + optional TTS).
+- `nabuStoryCopy.ts` extended with `getEpisodeOpening(worldId, levelId)` and `getEpisodeCelebration(worldId, levelId)`.
+- `RPGOneWordReader.tsx` wraps its render in `intro → reader → outro` only when `world.mode === 'prek'`.
+- `SettingsMenu.tsx` gains the TTS toggle.
+- A `useTtsSetting()` hook + `speak()` utility that no-ops when the toggle is off.
+
+**Out of scope (Phase 2+):**
+- Sticker book, treehouse, collectibles, decoration.
+- Character friends beyond Bobo/Echo.
+- Replacing or removing existing verbs/animations.
+- New characters in K–12, Agent, or Castle Swarm modes.
+- Recorded voice acting (architecture leaves room; not built now).
+
+**Untouched (confirmed):**
+- K–12 (Classic Adventure, Agent, Castle Swarm, all worlds with `mode !== 'prek'`).
+- Mic / speech recognition / matching rules.
+- Hear button, stars, unlocking, navigation, dashboards.
+- Database, RLS, grade-mode logic, analytics.
+- Pre-K mode card on the dashboard (already shipped).
+
+## 7. Files to change
+
+```text
+src/lib/nabuStoryCopy.ts                                 +episode copy + getters
+src/components/aura/game/rpg/RPGOneWordReader.tsx        wrap with intro/outro for prek
+src/components/aura/game/rpg/NabuEpisodeIntro.tsx        NEW
+src/components/aura/game/rpg/NabuEpisodeOutro.tsx        NEW
+src/components/aura/game/rpg/NabuBubble.tsx              NEW (between-word cheers)
+src/components/aura/game/rpg/NabuOwl.tsx                 NEW (SVG/illustrated owl mascot)
+src/lib/tts.ts                                           NEW: speak() + useTtsSetting()
+src/components/SettingsMenu.tsx                          +TTS toggle row
+src/data/preKWordBanks.ts                                small additive World 103 phrases
+```
+
+## 8. Success criteria
+
+- Every Pre-K level opens with a Nabu speech bubble stating the problem and ends with a celebration line.
+- Nabu appears as a visible mascot in all three worlds (lead in 101, alongside Bobo in 102, alongside Echo in 103).
+- A child can complete a level without reading any UI text — the loop is visual + (optional) TTS.
+- Turning the TTS toggle off silences all Nabu speech but keeps the game fully playable.
+- K–12 modes look and behave identically to today.
+- No regressions in mic, stars, unlock thresholds, or navigation.
+
+## 9. Phase 2 preview (not built now)
+
+Once Phase 1 lands and Patrick can feel the emotional shape, Phase 2 adds: sticker book on the Pre-K world map, episode-to-episode story arc ("Nabu's First Big Day"), and a treehouse home base. Architecture in Phase 1 leaves clean room for all three.
