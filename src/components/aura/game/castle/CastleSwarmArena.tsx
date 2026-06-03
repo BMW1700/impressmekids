@@ -1062,29 +1062,20 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         </div>
       </motion.div>
 
-      {/* Bottom panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] space-y-2 border-t border-rose-900/40">
+      {/* Bottom panel — compact strip */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] space-y-1.5 border-t border-rose-900/40">
         {/* Resolve shield bar (from sight-word streaks) */}
         {shieldHud > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-cyan-300 text-xs font-bold" aria-hidden>🛡</span>
-            <div className="flex-1 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+            <span className="text-cyan-300 text-[10px] font-bold" aria-hidden>🛡</span>
+            <div className="flex-1 h-1.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
               <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
             </div>
-            <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
           </div>
         )}
 
-        {/* Hero summon bar — Mana fuels summons, Gold is for upgrades & shop */}
+        {/* Hero summon bar + Super meter inline */}
         <div className="flex items-center gap-2">
-          <div className="shrink-0 flex flex-col gap-0.5">
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/40 text-sky-200 font-bold text-[11px]" title="Mana — earned by reading. Spend it to summon heroes.">
-              <Sparkles className="w-3 h-3" /> {Math.floor(manaHud)}
-            </div>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-[11px]" title="Gold — earned per wave. Spend it on castle upgrades & shop heroes.">
-              <Coins className="w-3 h-3" /> {coinsHud}
-            </div>
-          </div>
           <div className="flex-1 min-w-0">
             <SummonBar
               mana={manaHud}
@@ -1096,23 +1087,19 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
               onSummon={handleSummonHero}
             />
           </div>
-        </div>
-
-
-        {/* Super bar */}
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <div className="flex-1 h-3 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
-            <div className="h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all" style={{ width: `${superMeter}%` }} />
+          <div className="shrink-0 flex items-center gap-1.5">
+            <div className="w-16 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+              <div className="h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all" style={{ width: `${superMeter}%` }} />
+            </div>
+            <Button
+              size="sm"
+              disabled={superMeter < 100}
+              onClick={castSuper}
+              className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black h-6 px-2 text-[11px] disabled:opacity-40"
+            >
+              SUPER
+            </Button>
           </div>
-          <Button
-            size="sm"
-            disabled={superMeter < 100}
-            onClick={castSuper}
-            className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black h-7 disabled:opacity-40"
-          >
-            SUPER
-          </Button>
         </div>
 
         {/* Powers + word reader */}
