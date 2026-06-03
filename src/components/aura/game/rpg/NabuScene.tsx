@@ -678,7 +678,8 @@ const GenericScene = ({ phase, word, label }: { phase: ScenePhase; word: string;
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 90)} />
+
     </Stage>
   );
 };
