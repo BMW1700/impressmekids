@@ -345,7 +345,8 @@ const KeyScene = ({ phase }: { phase: ScenePhase }) => {
           <rect x="26" y="3" width="3" height="6" fill="#eab308" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+
     </Stage>
   );
 };
