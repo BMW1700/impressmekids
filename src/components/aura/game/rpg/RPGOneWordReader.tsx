@@ -27,6 +27,7 @@ import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
 import { getNabuLevelCopy, getNabuDemoWords, getNabuCreatureName, getNabuMeterLabel } from "@/lib/nabuStoryCopy";
 import { NabuBubble } from "./NabuBubble";
+import { NabuPreKStoryScene } from "./NabuPreKStoryScene";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
