@@ -408,28 +408,81 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="absolute inset-0 pointer-events-none select-none">
           {/* Warm morning glow that brightens as the village wakes */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/20 to-rose-200/30"
-            animate={{ opacity: allDone ? 1 : 0.45 }}
+            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/25 to-rose-200/40"
+            animate={{ opacity: allDone ? 1 : 0.4 }}
             transition={{ duration: 1.2 }}
           />
+          {/* Drifting clouds (slow, subtle) */}
+          <motion.div
+            className="absolute top-6 left-[10%] text-2xl opacity-60"
+            animate={{ x: [0, 30, 0] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          >☁️</motion.div>
+          <motion.div
+            className="absolute top-10 left-[55%] text-xl opacity-50"
+            animate={{ x: [0, -22, 0] }}
+            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          >☁️</motion.div>
           {/* Sun: dim while sleepy, bright after success */}
           <motion.div
             className="absolute top-4 right-8 text-5xl"
             animate={{
-              opacity: allDone ? 1 : 0.55,
-              scale: allDone ? 1.15 : 1,
-              filter: allDone ? "drop-shadow(0 0 18px rgba(253,224,71,0.9))" : "none",
+              opacity: allDone ? 1 : 0.5,
+              scale: allDone ? 1.2 : 1,
+              filter: allDone
+                ? "drop-shadow(0 0 22px rgba(253,224,71,0.95))"
+                : "grayscale(0.3) brightness(0.85)",
             }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 1.1 }}
           >
             ☀️
           </motion.div>
+          {/* Soft rolling-hill silhouette behind houses */}
+          <svg
+            className="absolute left-0 right-0 bottom-[18%] w-full h-[22%]"
+            viewBox="0 0 400 100"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0,80 Q60,30 130,55 T260,50 T400,65 L400,100 L0,100 Z"
+              fill="hsl(140 35% 70%)"
+              opacity={allDone ? 0.55 : 0.35}
+            />
+          </svg>
           {/* Sleepy houses silhouette row */}
-          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6 opacity-80">
-            <div className="text-4xl sm:text-5xl">🏠</div>
-            <div className="text-5xl sm:text-6xl">🏡</div>
-            <div className="text-4xl sm:text-5xl">🏠</div>
+          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="relative"
+                animate={{
+                  opacity: allDone ? 1 : 0.65,
+                  filter: allDone ? "none" : "grayscale(0.25) brightness(0.85)",
+                }}
+                transition={{ duration: 1 }}
+              >
+                <div className={i === 1 ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"}>
+                  {i === 1 ? "🏡" : "🏠"}
+                </div>
+                {/* Window light that turns on after success */}
+                <motion.div
+                  className="absolute left-1/2 -translate-x-1/2 top-[55%] w-2 h-2 rounded-full bg-amber-300"
+                  animate={{
+                    opacity: allDone ? [0, 1, 0.85] : 0,
+                    boxShadow: allDone
+                      ? "0 0 8px rgba(252,211,77,0.95)"
+                      : "none",
+                  }}
+                  transition={{ duration: 0.8, delay: i * 0.15 }}
+                />
+              </motion.div>
+            ))}
           </div>
+          {/* Soft dashed path under houses */}
+          <div className="absolute left-[10%] right-[10%] bottom-[20%] border-t-2 border-dashed border-amber-700/30" />
+          {/* Tiny flowers */}
+          <div className="absolute bottom-[14%] left-[18%] text-sm opacity-70">🌼</div>
+          <div className="absolute bottom-[14%] right-[20%] text-sm opacity-70">🌷</div>
           {/* Tiny lights that flicker on after success */}
           <motion.div
             className="absolute left-[22%] bottom-[30%] text-base"
