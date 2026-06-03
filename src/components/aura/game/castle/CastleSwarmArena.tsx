@@ -995,7 +995,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   height: p.kind === "arrow" ? 4 : p.splash ? 12 : 6,
                   background: p.color,
                   boxShadow: `0 0 8px ${p.color}`,
-                  transform: "translateX(-50%) rotate(180deg)",
+                  transform: "translateX(-50%)",
                   borderRadius: p.kind === "arrow" ? "999px 2px 2px 999px" : "999px",
                 }}
               >
