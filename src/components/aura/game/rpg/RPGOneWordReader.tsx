@@ -408,28 +408,81 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         <div className="absolute inset-0 pointer-events-none select-none">
           {/* Warm morning glow that brightens as the village wakes */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/20 to-rose-200/30"
-            animate={{ opacity: allDone ? 1 : 0.45 }}
+            className="absolute inset-0 bg-gradient-to-b from-amber-200/0 via-orange-200/25 to-rose-200/40"
+            animate={{ opacity: allDone ? 1 : 0.4 }}
             transition={{ duration: 1.2 }}
           />
+          {/* Drifting clouds (slow, subtle) */}
+          <motion.div
+            className="absolute top-6 left-[10%] text-2xl opacity-60"
+            animate={{ x: [0, 30, 0] }}
+            transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          >☁️</motion.div>
+          <motion.div
+            className="absolute top-10 left-[55%] text-xl opacity-50"
+            animate={{ x: [0, -22, 0] }}
+            transition={{ duration: 22, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          >☁️</motion.div>
           {/* Sun: dim while sleepy, bright after success */}
           <motion.div
             className="absolute top-4 right-8 text-5xl"
             animate={{
-              opacity: allDone ? 1 : 0.55,
-              scale: allDone ? 1.15 : 1,
-              filter: allDone ? "drop-shadow(0 0 18px rgba(253,224,71,0.9))" : "none",
+              opacity: allDone ? 1 : 0.5,
+              scale: allDone ? 1.2 : 1,
+              filter: allDone
+                ? "drop-shadow(0 0 22px rgba(253,224,71,0.95))"
+                : "grayscale(0.3) brightness(0.85)",
             }}
-            transition={{ duration: 1 }}
+            transition={{ duration: 1.1 }}
           >
             ☀️
           </motion.div>
+          {/* Soft rolling-hill silhouette behind houses */}
+          <svg
+            className="absolute left-0 right-0 bottom-[18%] w-full h-[22%]"
+            viewBox="0 0 400 100"
+            preserveAspectRatio="none"
+          >
+            <path
+              d="M0,80 Q60,30 130,55 T260,50 T400,65 L400,100 L0,100 Z"
+              fill="hsl(140 35% 70%)"
+              opacity={allDone ? 0.55 : 0.35}
+            />
+          </svg>
           {/* Sleepy houses silhouette row */}
-          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6 opacity-80">
-            <div className="text-4xl sm:text-5xl">🏠</div>
-            <div className="text-5xl sm:text-6xl">🏡</div>
-            <div className="text-4xl sm:text-5xl">🏠</div>
+          <div className="absolute left-0 right-0 bottom-[22%] flex justify-around items-end px-6">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="relative"
+                animate={{
+                  opacity: allDone ? 1 : 0.65,
+                  filter: allDone ? "none" : "grayscale(0.25) brightness(0.85)",
+                }}
+                transition={{ duration: 1 }}
+              >
+                <div className={i === 1 ? "text-5xl sm:text-6xl" : "text-4xl sm:text-5xl"}>
+                  {i === 1 ? "🏡" : "🏠"}
+                </div>
+                {/* Window light that turns on after success */}
+                <motion.div
+                  className="absolute left-1/2 -translate-x-1/2 top-[55%] w-2 h-2 rounded-full bg-amber-300"
+                  animate={{
+                    opacity: allDone ? [0, 1, 0.85] : 0,
+                    boxShadow: allDone
+                      ? "0 0 8px rgba(252,211,77,0.95)"
+                      : "none",
+                  }}
+                  transition={{ duration: 0.8, delay: i * 0.15 }}
+                />
+              </motion.div>
+            ))}
           </div>
+          {/* Soft dashed path under houses */}
+          <div className="absolute left-[10%] right-[10%] bottom-[20%] border-t-2 border-dashed border-amber-700/30" />
+          {/* Tiny flowers */}
+          <div className="absolute bottom-[14%] left-[18%] text-sm opacity-70">🌼</div>
+          <div className="absolute bottom-[14%] right-[20%] text-sm opacity-70">🌷</div>
           {/* Tiny lights that flicker on after success */}
           <motion.div
             className="absolute left-[22%] bottom-[30%] text-base"
@@ -524,6 +577,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { x: [0, 40, 90, 140, 180, 210, 220, 220], y: [0, -3, 0, -3, 0, -2, 0, 0] }
                   : prekScene?.descriptor.transform
                   ? prekScene.descriptor.transform.animate
+                  : allDone && showBoboLostBounce
+                  ? { y: [0, -48, 0, -32, 0, -18, 0], scale: [1, 1.08, 1, 1.05, 1, 1.02, 1] }
                   : allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
                   : verb?.descriptor.kind === "transform"
@@ -535,6 +590,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 2.8, ease: "easeInOut" }
                   : prekScene?.descriptor.transform
                   ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
+                  : allDone && showBoboLostBounce
+                  ? { duration: 1.6, repeat: Infinity, ease: "easeOut" }
                   : allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
@@ -569,32 +626,63 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       ? 8000 + currentPhraseIndex
                       : prekScene?.id ?? 0
                   }
+                  mood={
+                    showBoboLostBounce
+                      ? (allDone ? "celebrating" : (correctPhrases === 0 ? "sad" : null))
+                      : showEchoStuck && allDone
+                      ? "relieved"
+                      : null
+                  }
                 />
               </div>
 
-              {/* Echo stuck-in-sound-bubble overlay (W103 L1, pre-success only) */}
-              {showEchoStuck && correctPhrases === 0 && (
-                <motion.div
-                  className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
-                  style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
-                  animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <motion.div
-                    className="absolute -top-2 left-3 text-base"
-                    animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    ✨
-                  </motion.div>
-                  <motion.div
-                    className="absolute -bottom-1 right-2 text-base"
-                    animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2.2, repeat: Infinity }}
-                  >
-                    ✨
-                  </motion.div>
-                </motion.div>
+              {/* Bobo celebratory sparkle trail (W102 L1 success) */}
+              {showBoboLostBounce && allDone && (
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={`bobo-spark-${i}`}
+                      className="pointer-events-none absolute text-lg"
+                      style={{ left: `${30 + i * 18}%`, bottom: "30%" }}
+                      animate={{ y: [0, -40], opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.3 }}
+                    >
+                      ✨
+                    </motion.div>
+                  ))}
+                </>
+              )}
+
+              {/* Echo sound-bubble (W103 L1) — pops/fades on success */}
+              {showEchoStuck && (
+                <AnimatePresence>
+                  {correctPhrases === 0 && (
+                    <motion.div
+                      key="echo-bubble"
+                      className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
+                      style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
+                      initial={{ scale: 1, opacity: 0.9 }}
+                      animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
+                      exit={{ scale: 1.5, opacity: 0 }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <motion.div
+                        className="absolute -top-2 left-3 text-base"
+                        animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        ✨
+                      </motion.div>
+                      <motion.div
+                        className="absolute -bottom-1 right-2 text-base"
+                        animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 2.2, repeat: Infinity }}
+                      >
+                        ✨
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               )}
 
               {/* Bobo "lost his bounce" hint arc (W102 L1, pre-success only) */}
@@ -720,35 +808,55 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             >
               {isPreK ? (
                 <div className="relative h-full w-full flex items-end justify-center">
-                  {/* Voice-shield orb: soft mic-sparkle helper, no weapons */}
+                  {/* Friendly voice-buddy orb — smiling face, magical, not a mic icon */}
                   <motion.div
-                    className="relative w-[90px] h-[90px] sm:w-[104px] sm:h-[104px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-200 to-emerald-200 shadow-[0_8px_24px_rgba(56,189,248,0.35)] flex items-center justify-center"
+                    className="relative w-[96px] h-[96px] sm:w-[112px] sm:h-[112px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-300 to-emerald-300 flex items-center justify-center"
+                    style={{ boxShadow: "0 10px 28px rgba(56,189,248,0.4), inset -6px -6px 14px rgba(255,255,255,0.5), inset 6px 6px 14px rgba(14,116,144,0.15)" }}
                     animate={{
-                      scale: heroAttacking ? [1, 1.15, 1] : [1, 1.04, 1],
-                      boxShadow: heroAttacking
-                        ? "0 0 32px rgba(167,243,208,0.9)"
-                        : "0 8px 24px rgba(56,189,248,0.35)",
+                      scale: heroAttacking ? [1, 1.18, 1] : [1, 1.04, 1],
+                      y: heroAttacking ? [0, -6, 0] : [0, -3, 0],
                     }}
                     transition={{
-                      duration: heroAttacking ? 0.4 : 2.4,
+                      duration: heroAttacking ? 0.5 : 2.6,
                       repeat: heroAttacking ? 0 : Infinity,
                       ease: "easeInOut",
                     }}
                   >
-                    <div className="absolute inset-2 rounded-full bg-white/70" />
-                    <div className="relative text-4xl sm:text-5xl">🎤</div>
-                    {/* Sparkle ring */}
+                    {/* Soft inner highlight */}
+                    <div className="absolute top-[10%] left-[18%] w-[36%] h-[26%] rounded-full bg-white/70 blur-[1px]" />
+                    {/* Face: two eyes */}
+                    <div className="absolute top-[36%] left-[26%] w-[14%] aspect-square bg-slate-900 rounded-full">
+                      <div className="absolute top-[12%] right-[12%] w-[40%] h-[40%] bg-white rounded-full" />
+                    </div>
+                    <div className="absolute top-[36%] right-[26%] w-[14%] aspect-square bg-slate-900 rounded-full">
+                      <div className="absolute top-[12%] left-[12%] w-[40%] h-[40%] bg-white rounded-full" />
+                    </div>
+                    {/* Cheek blushes */}
+                    <div className="absolute top-[52%] left-[18%] w-[14%] h-[7%] bg-rose-300/80 rounded-full blur-[1px]" />
+                    <div className="absolute top-[52%] right-[18%] w-[14%] h-[7%] bg-rose-300/80 rounded-full blur-[1px]" />
+                    {/* Curved smile */}
+                    <svg className="absolute top-[58%] left-[34%] w-[32%] h-[14%]" viewBox="0 0 32 14" fill="none">
+                      <path d="M2 2 Q 16 14, 30 2" stroke="hsl(348 70% 35%)" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    </svg>
+                    {/* Floating sparkles */}
                     <motion.div
-                      className="absolute -top-2 -right-1 text-xl"
-                      animate={{ rotate: [0, 12, -8, 0], opacity: [0.7, 1, 0.7] }}
+                      className="absolute -top-3 -right-2 text-xl"
+                      animate={{ rotate: [0, 14, -8, 0], opacity: [0.7, 1, 0.7], y: [0, -3, 0] }}
                       transition={{ duration: 2.6, repeat: Infinity }}
                     >
                       ✨
                     </motion.div>
                     <motion.div
-                      className="absolute -bottom-1 -left-2 text-base"
-                      animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
-                      transition={{ duration: 2.2, repeat: Infinity }}
+                      className="absolute -bottom-2 -left-2 text-base"
+                      animate={{ y: [0, -5, 0], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2.2, repeat: Infinity, delay: 0.4 }}
+                    >
+                      ✨
+                    </motion.div>
+                    <motion.div
+                      className="absolute top-[-10%] left-[-12%] text-sm"
+                      animate={{ y: [0, -8, 0], opacity: [0, 0.9, 0] }}
+                      transition={{ duration: 3, repeat: Infinity, delay: 1 }}
                     >
                       ✨
                     </motion.div>
@@ -773,36 +881,42 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         {/* Word card */}
         <div className="relative">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={`word-${currentPhraseIndex}`}
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.02, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
-            >
-              <div
-                className={`${
-                  allDone && nabuCopy
-                    ? "text-2xl sm:text-3xl text-emerald-700 font-extrabold"
-                    : "text-5xl sm:text-6xl text-slate-900 font-black lowercase"
-                } leading-tight`}
+            {allDone && nabuCopy ? (
+              <motion.div
+                key="success-card"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: [0.8, 1.08, 1], opacity: 1 }}
+                exit={{ scale: 1.02, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 220, damping: 16, duration: 0.6 }}
+                className="bg-gradient-to-br from-emerald-50 via-amber-50 to-rose-50 rounded-2xl shadow-xl border-2 border-emerald-200 px-6 py-4 text-center"
               >
-                {currentPhrase || (allDone ? (nabuCopy?.successMessage ?? "🎉") : "")}
-              </div>
-
-              {!allDone && (
+                <div className="text-2xl sm:text-3xl md:text-4xl text-emerald-700 font-extrabold leading-tight">
+                  {nabuCopy.successMessage}
+                </div>
+                <div className="mt-1 text-base sm:text-lg">🎉 ✨ 🎉</div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`word-${currentPhraseIndex}`}
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.02, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 240, damping: 20 }}
+                className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
+              >
+                <div className="text-5xl sm:text-6xl text-slate-900 font-black lowercase leading-tight">
+                  {currentPhrase}
+                </div>
                 <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
                   {syllableHint(currentPhrase)}
                 </div>
-              )}
-              {verbHint && !allDone && (
-                <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
-                  {nabuCopy?.hint ?? "✨ Watch what happens!"}
-
-                </div>
-              )}
-            </motion.div>
+                {verbHint && (
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+                    {nabuCopy?.hint ?? "✨ Watch what happens!"}
+                  </div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           <Button

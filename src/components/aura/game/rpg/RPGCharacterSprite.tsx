@@ -13,6 +13,8 @@ interface RPGCharacterSpriteProps {
   action?: string | null;
   /** Bump on each new verb trigger so identical actions replay. */
   actionNonce?: number;
+  /** Pre-K only: optional expression layer. Additive — no effect when undefined. */
+  mood?: 'sad' | 'relieved' | 'celebrating' | null;
 }
 
 export const RPGCharacterSprite = ({
@@ -24,6 +26,7 @@ export const RPGCharacterSprite = ({
   size = 'md',
   action = null,
   actionNonce = 0,
+  mood = null,
 }: RPGCharacterSpriteProps) => {
   const sizeClasses = {
     sm: 'w-20 h-24',
@@ -1113,6 +1116,32 @@ export const RPGCharacterSprite = ({
           ))}
         </>
       )}
+
+      {/* MOOD overlay (additive; no effect when mood is null) */}
+      {mood === 'sad' && (
+        <>
+          {/* downturned mouth covers the grin */}
+          <div className="absolute top-[56%] left-[38%] right-[38%] h-[6%] bg-rose-700 rounded-t-full z-30 border-b-2 border-rose-800" />
+          {/* small worry dot above brow */}
+          <div className="absolute top-[24%] left-[44%] w-[8%] h-[8%] rounded-full bg-sky-300/80 z-30 blur-[1px]" />
+        </>
+      )}
+      {mood === 'celebrating' && (
+        <>
+          {/* wide open smile + sparkle puffs */}
+          <div className="absolute top-[52%] left-[32%] right-[32%] h-[14%] bg-rose-700 rounded-b-full z-30 border-t-2 border-rose-800" />
+          <motion.div
+            className="absolute top-[14%] left-[8%] text-base z-30"
+            animate={{ y: [0, -6, 0], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >✨</motion.div>
+          <motion.div
+            className="absolute top-[18%] right-[8%] text-base z-30"
+            animate={{ y: [0, -6, 0], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.4, repeat: Infinity, delay: 0.2 }}
+          >✨</motion.div>
+        </>
+      )}
     </div>
   );
 
@@ -1219,6 +1248,17 @@ export const RPGCharacterSprite = ({
 
       {/* Open mouth (singing the echo) — sized smaller so eyes/scarf are the focal points */}
       <div className="absolute top-[55%] left-[44%] right-[44%] aspect-square bg-slate-900 rounded-full z-10" />
+
+      {/* MOOD overlay (additive; no effect when mood is null) */}
+      {mood === 'relieved' && (
+        <>
+          {/* small happy smile covers the open-mouth dot */}
+          <div className="absolute top-[55%] left-[40%] right-[40%] h-[6%] bg-rose-600 rounded-b-full z-30 border-t-2 border-rose-700" />
+          {/* brighter cheek blushes */}
+          <div className="absolute top-[50%] left-[24%] w-[12%] h-[6%] bg-rose-400/80 rounded-full blur-[1px] z-20" />
+          <div className="absolute top-[50%] right-[24%] w-[12%] h-[6%] bg-rose-400/80 rounded-full blur-[1px] z-20" />
+        </>
+      )}
     </div>
   );
 
