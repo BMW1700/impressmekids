@@ -180,7 +180,7 @@ const Sky = ({ from, to }: { from: string; to: string }) => (
 const Stage = ({ children }: { children: React.ReactNode }) => (
   <svg
     viewBox={`0 0 ${VB_W} ${VB_H}`}
-    preserveAspectRatio="xMidYMid slice"
+    preserveAspectRatio="xMidYMax meet"
     className="absolute inset-0 h-full w-full"
   >
     {children}
