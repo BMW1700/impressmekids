@@ -83,7 +83,12 @@ export const AuraReadingSection = () => {
   const currentGradeMode: GradeMode = getGradeMode(gameTheme);
   
   // Theme-aware data sources
-  const activeWorlds = gameTheme === 'agent' ? agentCampaignWorlds : campaignWorlds;
+  const activeWorlds =
+    gameTheme === 'agent'
+      ? agentCampaignWorlds
+      : gameTheme === 'prek'
+        ? campaignWorlds.filter((w) => w.mode === 'prek')
+        : campaignWorlds.filter((w) => w.mode !== 'prek');
   const activeStories = gameTheme === 'agent' ? agentStories : curatedStories;
 
   // RPG Mode state

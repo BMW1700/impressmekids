@@ -438,7 +438,15 @@ export const RPGWorldMap = ({
       {/* World Cards with Enhanced Connecting Paths */}
       <div className="max-w-4xl mx-auto relative z-[5]">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {(getStoredTheme() === 'agent' ? agentCampaignWorlds : campaignWorlds).map((world, index) => {
+          {(() => {
+            const theme = getStoredTheme();
+            const displayedWorlds =
+              theme === 'agent'
+                ? agentCampaignWorlds
+                : theme === 'prek'
+                  ? campaignWorlds.filter((w) => w.mode === 'prek')
+                  : campaignWorlds.filter((w) => w.mode !== 'prek');
+            return displayedWorlds.map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
             const completionPercent = progress.totalLevels > 0 
@@ -458,7 +466,7 @@ export const RPGWorldMap = ({
                 className="relative"
               >
                 {/* Enhanced SVG path connector to next world */}
-                {index < campaignWorlds.length - 1 && index % 2 === 1 && (
+                {index < displayedWorlds.length - 1 && index % 2 === 1 && (
                   <div className="hidden md:block absolute -bottom-8 left-1/2 -translate-x-1/2 z-0">
                     <WorldPath isActive={isComplete} delay={index * 0.2} />
                   </div>

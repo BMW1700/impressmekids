@@ -43,7 +43,7 @@ const GameDashboard = () => {
   const isSignedIn = !!session;
   const { data: readingSummary } = useGameReadingSummary(user?.id);
 
-  const handleModeSelect = (mode: 'classic' | 'agent') => {
+  const handleModeSelect = (mode: 'classic' | 'agent' | 'prek') => {
     setStoredTheme(mode);
     if (isSignedIn) {
       navigate('/game/play?tab=rpg');
