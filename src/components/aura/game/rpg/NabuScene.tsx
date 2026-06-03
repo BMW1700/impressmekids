@@ -56,16 +56,31 @@ const nabuAnim = (phase: ScenePhase) => {
   };
 };
 
-const NabuSprite = ({ phase, size = 110 }: { phase: ScenePhase; size?: number }) => {
-  const mood = phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy";
+type NabuAnim = ReturnType<typeof nabuAnim>;
+
+const NabuSprite = ({
+  phase,
+  size = 110,
+  anim,
+  mood: moodOverride,
+}: {
+  phase: ScenePhase;
+  size?: number;
+  anim?: (phase: ScenePhase) => NabuAnim;
+  mood?: "happy" | "curious" | "cheer";
+}) => {
+  const mood =
+    moodOverride ??
+    (phase === "problem" ? "curious" : phase === "solved" || phase === "transition" ? "cheer" : "happy");
   return (
-    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={nabuAnim(phase)}>
+    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <foreignObject x={-size / 2} y={-size} width={size} height={size}>
         <NabuOwl size={size} mood={mood} />
       </foreignObject>
     </motion.g>
   );
 };
+
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
 const Clouds = ({ tint = "#ffffff" }: { tint?: string }) => (
