@@ -165,10 +165,10 @@ export const ThemeSelector = ({ onSelect }: ThemeSelectorProps) => {
               <span className="text-pink-300 font-medium">Ages 3–5</span>
             </div>
             <p className="text-sm text-slate-400 text-center mb-2">
-              Big friendly words with Bobo, Echo, and Nabu Village. Made for our youngest readers.
+              Big friendly words with Benny, Maddy, and Nabu Village. Made for our youngest readers.
             </p>
             <div className="flex flex-wrap gap-1 justify-center mt-3">
-              {['✨ Bobo', '💙 Echo', '🏡 Nabu', '🔤 Big Words'].map(tag => (
+              {['✨ Benny', '💙 Maddy', '🏡 Nabu', '🔤 Big Words'].map(tag => (
                 <span key={tag} className="text-xs bg-pink-900/50 text-pink-300 px-2 py-1 rounded-full">{tag}</span>
               ))}
             </div>

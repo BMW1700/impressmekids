@@ -117,7 +117,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   // no knight, no combat language.
   const isPreK = world.id === 101 || world.id === 102 || world.id === 103;
   const showCombatUI = !isPreK;
-  const creatureName = isPreK ? getNabuCreatureName(world.id) : (enemy === "bouncer" ? "Bobo" : enemy === "echo_blob" ? "Echo" : "Wiggleworm");
+  const creatureName = isPreK ? getNabuCreatureName(world.id) : (enemy === "bouncer" ? "Benny" : enemy === "echo_blob" ? "Maddy" : "Wiggleworm");
   const meterLabel = getNabuMeterLabel(world.id);
   // Per-level emotional staging flags
   const showEchoStuck = isPreK && world.id === 103 && level.id === 1;

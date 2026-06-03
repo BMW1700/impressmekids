@@ -77,8 +77,8 @@ export const campaignWorlds: CampaignWorld[] = [
   },
   {
     id: 102,
-    name: 'Bobo\'s Bouncy Day',
-    description: 'Help Bobo find his sounds!',
+    name: 'Benny\'s Bouncy Day',
+    description: 'Help Benny find his sounds!',
     gradient: 'from-yellow-300 via-amber-300 to-orange-400',
     bgColor: 'bg-yellow-900/10',
     enemyTypes: ['bouncer'],
@@ -86,7 +86,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Bobo loves clapping, hopping and spinning. Read each word and Bobo does it with you!',
+    lore: 'Benny loves clapping, hopping and spinning. Read each word and Benny does it with you!',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
@@ -97,8 +97,8 @@ export const campaignWorlds: CampaignWorld[] = [
   },
   {
     id: 103,
-    name: 'Echo Needs You',
-    description: 'Help Echo feel brave.',
+    name: 'Maddy Needs You',
+    description: 'Help Maddy feel brave.',
     gradient: 'from-cyan-300 via-sky-300 to-blue-400',
     bgColor: 'bg-cyan-900/10',
     enemyTypes: ['echo_blob'],
@@ -106,7 +106,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Echo is shy and a little stuck. Read every word out loud and watch Echo light up.',
+    lore: 'Maddy is shy and a little stuck. Read every word out loud and watch Maddy light up.',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
@@ -223,7 +223,7 @@ export const campaignWorlds: CampaignWorld[] = [
     requiredGradeLevel: 2,
     storyCount: 6,
     unlockRequirement: 4,
-    lore: 'Deep beneath the mountains, the Whispering Caverns echo with forgotten words. The Echo Wraith feeds on silence, trapping knowledge in crystal prisons. Cave Trolls guard every passage.',
+    lore: 'Deep beneath the mountains, the Whispering Caverns echo with forgotten words. The Maddy Wraith feeds on silence, trapping knowledge in crystal prisons. Cave Trolls guard every passage.',
     levels: [
       { id: 1, storyIndex: 0, enemies: ['cave_troll'], isBossLevel: false, starThresholds: [55, 75, 90] },
       { id: 2, storyIndex: 1, enemies: ['crystal_spider', 'crystal_spider'], isBossLevel: false, starThresholds: [55, 75, 90] },

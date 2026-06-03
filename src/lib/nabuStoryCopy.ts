@@ -1,7 +1,7 @@
 // Pre-K "Nabu Village: The Lost Sounds" copy + demo overrides.
 // Cosmetic layer ONLY — no game/mic/animation behavior changes.
-// Worlds 101 (First Words / Wake-up), 102 (Bobo's Bouncy Day),
-// 103 (Echo Needs You). Everything outside these three worlds is untouched.
+// Worlds 101 (First Words / Wake-up), 102 (Benny's Bouncy Day),
+// 103 (Maddy Needs You). Everything outside these three worlds is untouched.
 
 export interface NabuLevelCopy {
   title: string;
@@ -14,8 +14,8 @@ export interface NabuLevelCopy {
 /** Soft, non-combat name for the Pre-K "troublemaker" per world. */
 export function getNabuCreatureName(worldId: number): string {
   if (worldId === 101) return "Sleepy Shushie";
-  if (worldId === 102) return "Bobo";
-  if (worldId === 103) return "Echo";
+  if (worldId === 102) return "Benny";
+  if (worldId === 103) return "Maddy";
   return "";
 }
 
@@ -53,18 +53,18 @@ const LEVEL_MISSION_TITLES: Record<number, Record<number, string>> = {
     5: "Big Day: Village Morning",
   },
   102: {
-    1: "Help Bobo Jump",
-    2: "Bobo's Silly Spin",
-    3: "Bobo Finds His Clap",
-    4: "Bobo Hops Again",
-    5: "Big Day: Bobo's Bounce Party",
+    1: "Help Benny Jump",
+    2: "Benny's Silly Spin",
+    3: "Benny Finds His Clap",
+    4: "Benny Hops Again",
+    5: "Big Day: Benny's Bounce Party",
   },
   103: {
-    1: "Echo Needs Help",
-    2: "Echo Finds Her Voice",
-    3: "Help Echo Say It",
-    4: "Echo Feels Brave",
-    5: "Big Day: Echo Lights Up",
+    1: "Maddy Needs Help",
+    2: "Maddy Finds Her Voice",
+    3: "Help Maddy Say It",
+    4: "Maddy Feels Brave",
+    5: "Big Day: Maddy Lights Up",
   },
 };
 
@@ -116,16 +116,16 @@ const WORLD_DEFAULT: Record<number, NabuLevelCopy> = {
     successMessage: "Your voice helped Nabu Village!",
   },
   102: {
-    title: "Bobo's Bouncy Day",
-    prompt: "Read it to help Bobo!",
+    title: "Benny's Bouncy Day",
+    prompt: "Read it to help Benny!",
     hint: "✨ Your voice makes magic!",
     successMessage: "You brought the sound back!",
   },
   103: {
-    title: "Echo Needs You",
-    prompt: "Echo is shy. Your voice makes Echo brave!",
+    title: "Maddy Needs You",
+    prompt: "Maddy is shy. Your voice makes Maddy brave!",
     hint: "✨ Your voice makes magic!",
-    successMessage: "You helped Echo feel brave!",
+    successMessage: "You helped Maddy feel brave!",
   },
 };
 
@@ -139,29 +139,29 @@ const LEVEL_OVERRIDES: Record<string, NabuLevelCopy> = {
     successMessage: "Your voice woke up the village!",
   },
 
-  // World 102 — Bobo (DEMO MOMENT B)
+  // World 102 — Benny (DEMO MOMENT B)
   "102:1": {
-    title: "Bobo Lost His Jump",
-    prompt: "Bobo forgot how to jump! Read 'jump' to help him bounce.",
-    ctaLabel: "Help Bobo Jump",
-    hint: "✨ Help Bobo bounce again!",
-    successMessage: "Bobo can jump again!",
+    title: "Benny Lost His Jump",
+    prompt: "Benny forgot how to jump! Read 'jump' to help him bounce.",
+    ctaLabel: "Help Benny Jump",
+    hint: "✨ Help Benny bounce again!",
+    successMessage: "Benny can jump again!",
   },
   "102:3": {
-    title: "Bobo Lost His Clap",
-    prompt: "Bobo's clap is gone! Read 'clap' to bring it back.",
-    ctaLabel: "Help Bobo Clap",
-    hint: "✨ Bring Bobo's clap back!",
-    successMessage: "Bobo can clap again!",
+    title: "Benny Lost His Clap",
+    prompt: "Benny's clap is gone! Read 'clap' to bring it back.",
+    ctaLabel: "Help Benny Clap",
+    hint: "✨ Bring Benny's clap back!",
+    successMessage: "Benny can clap again!",
   },
 
-  // World 103 — Echo (DEMO MOMENT A)
+  // World 103 — Maddy (DEMO MOMENT A)
   "103:1": {
-    title: "Echo Needs Help",
-    prompt: "Echo is stuck in a sound bubble! Read 'help me' to help Echo.",
-    ctaLabel: "Help Echo",
-    hint: "✨ Help Echo feel brave!",
-    successMessage: "You helped Echo feel brave!",
+    title: "Maddy Needs Help",
+    prompt: "Maddy is stuck in a sound bubble! Read 'help me' to help Maddy.",
+    ctaLabel: "Help Maddy",
+    hint: "✨ Help Maddy feel brave!",
+    successMessage: "You helped Maddy feel brave!",
   },
 };
 
@@ -201,19 +201,19 @@ const EPISODE_INTROS: Record<string, NabuEpisodeIntro> = {
   "101:4": { line: "A little Sleepy Shushie is yawning. Our voice can help him wake up!", cta: "Help the Shushie" },
   "101:5": { line: "It's almost morning in Nabu Village! Let's finish waking everyone up.", cta: "Start the morning" },
 
-  // World 102 — Bobo
-  "102:1": { line: "Oh no — Bobo forgot how to JUMP! Can you remind him?", cta: "Help Bobo jump" },
-  "102:2": { line: "Bobo wants to spin, but he's wobbly. Let's help him with our voice!", cta: "Help Bobo spin" },
-  "102:3": { line: "Bobo's clap is gone! Read with me and let's bring it back.", cta: "Help Bobo clap" },
-  "102:4": { line: "Bobo wants to hop home. Our words can show him the way!", cta: "Help Bobo hop" },
-  "102:5": { line: "Bobo is throwing a bounce party — but he needs all his moves!", cta: "Start the party" },
+  // World 102 — Benny
+  "102:1": { line: "Oh no — Benny forgot how to JUMP! Can you remind him?", cta: "Help Benny jump" },
+  "102:2": { line: "Benny wants to spin, but he's wobbly. Let's help him with our voice!", cta: "Help Benny spin" },
+  "102:3": { line: "Benny's clap is gone! Read with me and let's bring it back.", cta: "Help Benny clap" },
+  "102:4": { line: "Benny wants to hop home. Our words can show him the way!", cta: "Help Benny hop" },
+  "102:5": { line: "Benny is throwing a bounce party — but he needs all his moves!", cta: "Start the party" },
 
-  // World 103 — Echo
-  "103:1": { line: "Echo is stuck in a sound bubble! Say the words with me to set her free.", cta: "Help Echo" },
-  "103:2": { line: "Echo is too shy to speak. Will you help her find her voice?", cta: "Find Echo's voice" },
-  "103:3": { line: "Echo wants to say something! Read with me so she can speak too.", cta: "Help Echo say it" },
-  "103:4": { line: "Echo is feeling braver. Let's help her say it nice and loud!", cta: "Cheer for Echo" },
-  "103:5": { line: "Echo is ready to shine! One more story together?", cta: "Help Echo shine" },
+  // World 103 — Maddy
+  "103:1": { line: "Maddy is stuck in a sound bubble! Say the words with me to set her free.", cta: "Help Maddy" },
+  "103:2": { line: "Maddy is too shy to speak. Will you help her find her voice?", cta: "Find Maddy's voice" },
+  "103:3": { line: "Maddy wants to say something! Read with me so she can speak too.", cta: "Help Maddy say it" },
+  "103:4": { line: "Maddy is feeling braver. Let's help her say it nice and loud!", cta: "Cheer for Maddy" },
+  "103:5": { line: "Maddy is ready to shine! One more story together?", cta: "Help Maddy shine" },
 };
 
 const EPISODE_OUTROS: Record<string, NabuEpisodeOutro> = {
@@ -223,29 +223,29 @@ const EPISODE_OUTROS: Record<string, NabuEpisodeOutro> = {
   "101:4": { title: "Shushie Smiles",        line: "The little Shushie isn't sleepy anymore!" },
   "101:5": { title: "Good Morning, Village", line: "Nabu Village is wide awake — thanks to you!" },
 
-  "102:1": { title: "Bobo Bounces Back",    line: "Bobo can JUMP again!" },
-  "102:2": { title: "Bobo Spins!",          line: "Whee! Bobo is spinning like a top!" },
-  "102:3": { title: "Bobo's Clap Returns",  line: "Bobo can clap again — and so can we!" },
-  "102:4": { title: "Bobo Hops Home",       line: "You helped Bobo hop all the way home!" },
-  "102:5": { title: "Bounce Party!",        line: "Bobo's whole bounce party is dancing!" },
+  "102:1": { title: "Benny Bounces Back",    line: "Benny can JUMP again!" },
+  "102:2": { title: "Benny Spins!",          line: "Whee! Benny is spinning like a top!" },
+  "102:3": { title: "Benny's Clap Returns",  line: "Benny can clap again — and so can we!" },
+  "102:4": { title: "Benny Hops Home",       line: "You helped Benny hop all the way home!" },
+  "102:5": { title: "Bounce Party!",        line: "Benny's whole bounce party is dancing!" },
 
-  "103:1": { title: "Echo Is Free",         line: "Pop! Echo's sound bubble is gone!" },
-  "103:2": { title: "Echo's Voice",         line: "Echo found her voice! Listen — she sounds happy!" },
-  "103:3": { title: "Echo Speaks",          line: "Echo said it out loud! Great job!" },
-  "103:4": { title: "Brave Echo",           line: "Echo isn't shy anymore. You helped her!" },
-  "103:5": { title: "Echo Lights Up",       line: "Echo is shining bright — because of you!" },
+  "103:1": { title: "Maddy Is Free",         line: "Pop! Maddy's sound bubble is gone!" },
+  "103:2": { title: "Maddy's Voice",         line: "Maddy found her voice! Listen — she sounds happy!" },
+  "103:3": { title: "Maddy Speaks",          line: "Maddy said it out loud! Great job!" },
+  "103:4": { title: "Brave Maddy",           line: "Maddy isn't shy anymore. You helped her!" },
+  "103:5": { title: "Maddy Lights Up",       line: "Maddy is shining bright — because of you!" },
 };
 
 const WORLD_FALLBACK_INTRO: Record<number, NabuEpisodeIntro> = {
   101: { line: "Nabu Village needs your voice!", cta: "Help Nabu" },
-  102: { line: "Bobo needs your help!", cta: "Help Bobo" },
-  103: { line: "Echo needs your help!", cta: "Help Echo" },
+  102: { line: "Benny needs your help!", cta: "Help Benny" },
+  103: { line: "Maddy needs your help!", cta: "Help Maddy" },
 };
 
 const WORLD_FALLBACK_OUTRO: Record<number, NabuEpisodeOutro> = {
   101: { title: "We did it!", line: "Your voice helped Nabu Village!" },
-  102: { title: "We did it!", line: "You helped Bobo!" },
-  103: { title: "We did it!", line: "You helped Echo!" },
+  102: { title: "We did it!", line: "You helped Benny!" },
+  103: { title: "We did it!", line: "You helped Maddy!" },
 };
 
 export function getEpisodeOpening(worldId: number, levelId: number): NabuEpisodeIntro | null {
