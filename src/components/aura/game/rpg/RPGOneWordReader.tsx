@@ -577,6 +577,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { x: [0, 40, 90, 140, 180, 210, 220, 220], y: [0, -3, 0, -3, 0, -2, 0, 0] }
                   : prekScene?.descriptor.transform
                   ? prekScene.descriptor.transform.animate
+                  : allDone && showBoboLostBounce
+                  ? { y: [0, -48, 0, -32, 0, -18, 0], scale: [1, 1.08, 1, 1.05, 1, 1.02, 1] }
                   : allDone
                   ? { y: -20, rotate: [0, -8, 8, -8, 8, 0], scale: 1.1 }
                   : verb?.descriptor.kind === "transform"
@@ -588,6 +590,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                   ? { duration: 2.8, ease: "easeInOut" }
                   : prekScene?.descriptor.transform
                   ? { duration: prekScene.descriptor.duration, ease: "easeInOut" }
+                  : allDone && showBoboLostBounce
+                  ? { duration: 1.6, repeat: Infinity, ease: "easeOut" }
                   : allDone
                   ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
                   : verb?.descriptor.kind === "transform"
@@ -622,8 +626,32 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       ? 8000 + currentPhraseIndex
                       : prekScene?.id ?? 0
                   }
+                  mood={
+                    showBoboLostBounce
+                      ? (allDone ? "celebrating" : (correctPhrases === 0 ? "sad" : null))
+                      : showEchoStuck && allDone
+                      ? "relieved"
+                      : null
+                  }
                 />
               </div>
+
+              {/* Bobo celebratory sparkle trail (W102 L1 success) */}
+              {showBoboLostBounce && allDone && (
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={`bobo-spark-${i}`}
+                      className="pointer-events-none absolute text-lg"
+                      style={{ left: `${30 + i * 18}%`, bottom: "30%" }}
+                      animate={{ y: [0, -40], opacity: [0, 1, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.3 }}
+                    >
+                      ✨
+                    </motion.div>
+                  ))}
+                </>
+              )}
 
               {/* Echo stuck-in-sound-bubble overlay (W103 L1, pre-success only) */}
               {showEchoStuck && correctPhrases === 0 && (
