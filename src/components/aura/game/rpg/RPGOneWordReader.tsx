@@ -26,6 +26,7 @@ import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
 import { getNabuLevelCopy, getNabuDemoWords, getNabuCreatureName, getNabuMeterLabel } from "@/lib/nabuStoryCopy";
+import { NabuBubble } from "./NabuBubble";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
@@ -135,6 +136,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [shake, setShake] = useState(false);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
+  const [cheerNonce, setCheerNonce] = useState(0);
   const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor; phrase: string } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
@@ -226,6 +228,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const triggerHit = useCallback((phrase: string) => {
     setHeroAttacking(true);
+    // Pre-K cheer bubble from Nabu between words/phrases.
+    if (isPreK) setCheerNonce((n) => n + 1);
     window.setTimeout(() => {
       setHeroAttacking(false);
       if (showCombatUI) {
@@ -340,7 +344,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
       setPrekScene(null);
       setVerbTrigger({ word: legacyWord, nonce: nonceRef.current });
     }
-  }, [damagePerPhrase, showCombatUI]);
+  }, [damagePerPhrase, showCombatUI, isPreK]);
 
   const handleResult = useCallback(
     (correct: boolean, _spoken: string, wordIndex: number) => {
@@ -392,6 +396,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   return (
     <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
+      {isPreK && <NabuBubble nonce={cheerNonce} />}
       {/* Soft meadow decorations */}
       <div className="absolute inset-0 pointer-events-none opacity-40 select-none">
         <div className="absolute top-4 left-6 text-4xl">☁️</div>
