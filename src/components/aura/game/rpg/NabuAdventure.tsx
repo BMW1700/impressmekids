@@ -52,7 +52,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
   const [hasStartedListening, setHasStartedListening] = useState(false);
+  const [bennyMood, setBennyMood] = useState<"idle" | "celebrate" | "sad" | null>(null);
   const timers = useRef<number[]>([]);
+  const moodTimer = useRef<number | null>(null);
 
 
   const clearTimers = () => {
