@@ -280,7 +280,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     setHeroCooldowns(prev => ({ ...prev, [heroId]: Date.now() + def.cooldownMs }));
     playKnightSummon();
     setHeroTick(t => t + 1);
-  }, [heroCooldowns]);
+  }, [heroCooldowns, heroLevels]);
 
 
   // ---- Start a wave ----
@@ -984,7 +984,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             return (
               <div
                 key={p.id}
-                className="absolute pointer-events-none rounded-full"
+                className="absolute pointer-events-none"
                 style={{
                   left: `${100 - pct}%`,
                   bottom: `${p.y}px`,
@@ -995,7 +995,21 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   transform: "translateX(-50%) rotate(180deg)",
                   borderRadius: p.kind === "arrow" ? "999px 2px 2px 999px" : "999px",
                 }}
-              />
+              >
+                {p.kind === "arrow" && (
+                  <span
+                    className="absolute -left-2 top-1/2 -translate-y-1/2"
+                    style={{
+                      width: 0,
+                      height: 0,
+                      borderTop: "5px solid transparent",
+                      borderBottom: "5px solid transparent",
+                      borderRight: `9px solid ${p.color}`,
+                      filter: `drop-shadow(0 0 5px ${p.color})`,
+                    }}
+                  />
+                )}
+              </div>
             );
           })}
 
