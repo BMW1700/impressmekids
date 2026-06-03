@@ -1,71 +1,84 @@
-## Pre-K Emotional Polish Pass — Plan
+## Final Pre-K Polish Pass — "Patrick Demo" Ready
 
-Scope: Pre-K worlds 101/102/103 only. K–12, Castle Swarm, knight/wizard/goblin combat, mic, stars, unlocks, animations, and existing reading flow are NOT touched.
+Scope: Pre-K worlds 101 / 102 / 103 only. Visual + copy only. K–12 combat, knight/wizard/goblin sprites, Castle Swarm, mic/speech, Hear buttons, stars, map nav, unlock logic, and existing Pre-K animation triggers are NOT touched. No DB, no routes, no new dependencies.
 
-### Files to change
+Priority order (per user): **Demo 3 first** — Echo Needs Help, Bobo Lost His Jump, Wake Up Nabu Village — then broader Pre-K polish.
 
-1. **`src/components/aura/game/rpg/RPGLevelSelect.tsx`** — make Pre-K cards non-combat.
-2. **`src/components/aura/game/rpg/RPGOneWordReader.tsx`** — replace HP/enemy/knight UI with soft Pre-K equivalents.
-3. **`src/components/aura/game/rpg/RPGCharacterSprite.tsx`** — refine Bobo & Echo plushiness; add Echo "stuck-in-bubble" and Bobo "lost bounce" states; add a friendly "Nabu Helper" replacement for the knight in Pre-K.
-4. **`src/lib/nabuStoryCopy.ts`** — update per-level titles, prompts, success messages; add World 102 jump-level override.
-5. **`src/lib/campaignData.ts`** — soften Pre-K world copy only (`description`, `lore`); leave IDs, structure, levels, enemy keys, thresholds untouched.
+### Files touched (4)
 
-No DB, no new routes, no behavior changes.
+1. `src/components/aura/game/rpg/RPGOneWordReader.tsx` — village backdrop layer, redesigned Nabu Helper, stronger Echo bubble pop, Bobo jump payoff, dominant success message.
+2. `src/components/aura/game/rpg/RPGLevelSelect.tsx` — Pre-K mission titles override the technical story title.
+3. `src/lib/nabuStoryCopy.ts` — add `getNabuLevelTitle(worldId, levelId)` mission-title map; tighten success/prompt copy for the 3 demo levels.
+4. `src/components/aura/game/rpg/RPGCharacterSprite.tsx` — small additive expression hints for Bobo (`sad`/`celebrating` mood layer) and Echo (`relieved` smile), gated by new optional `mood` prop; existing callers untouched.
 
-### Detailed changes
+No changes to: `RPGWordReader`, `RPGBattleArena`, `RPGCombatPhase`, Castle Swarm, `preKWordBanks`, `getPreKContent`, verb animation library, speech manager, mic hooks, star thresholds, unlock logic, or K–12 reader/level cards.
 
-**1. Level cards (Pre-K only)** — gate on `world.mode === 'prek'`:
-- Hide the red `BOSS` pill on Pre-K boss level (id 5); show a soft pink `★ Big Day` chip instead.
-- Replace the `Enemies:` label with `Help with:` and swap the enemy icon row for a single soft chip per level: `Sleepy Shushie` (W101), `Wiggle Shushie` (W102), `Sound Snatcher` (W103). No combat tile grid.
-- Drop the red border/shadow on boss tile in Pre-K; keep gradient border instead.
+---
 
-**2. Reader screen (Pre-K = worlds 101/102/103)**:
-- Remove the `{HP number} HP` text and red HP bar entirely (already conditionally hidden on 102/103 — extend to 101 by forcing `showCombatUI = false` for all Pre-K worlds).
-- Add a soft progress meter under the friendly character labeled per world:
-  - 101 → "Village Sound"
-  - 102 → "Sound Magic"
-  - 103 → "Sleepy Spell"
-  Fill is `correctPhrases / phrases.length` (no health framing). Pastel gradient, no red.
-- Friendly-creature name label uses cute Pre-K names:
-  - 101: `Sleepy Shushie`
-  - 102: `Bobo`
-  - 103: `Echo`
-- Replace the right-side knight column in Pre-K with a "Nabu Helper" visual: a small voice-shield orb / mic-sparkle sprite rendered via a new `<NabuHelper />` block inside `RPGCharacterSprite` (or inline SVG in the reader). Keep its motion hooks (`heroAttacking → pulse`) so existing animation triggers still fire — just visually no sword/knight. K–12 reader (`RPGWordReader` flow) keeps the knight; this swap is local to `RPGOneWordReader`.
-- Make the success message dominant: when `allDone`, render `nabuCopy.successMessage` as the large hero text (already in place) and shrink the star pill.
+### 1. Demo Moment A — Echo Needs Help (W103 L1)
 
-**3. Per-level emotional staging**:
+Reader (`RPGOneWordReader.tsx`):
+- Echo's existing sound-bubble ring stays before success. Refine: soft cyan ring + 2 sparkle puffs only (no red, no mouth-blocking element). Confirm nothing reads as a gag.
+- On `allDone`: animate the bubble scaling up (`scale: 1 → 1.4`) and fading out (`opacity → 0`) over 600ms — a clear "pop".
+- Pass `mood="relieved"` to Echo's sprite when `allDone` (small smile + tiny blush layer added in `RPGCharacterSprite`, additive only).
+- Success card already shows `nabuCopy.successMessage`. Make it dominant: scale the message in (spring, scale 0.8→1.05→1), and keep the small star pill in the top bar.
 
-- **World 103 / Level 1 ("Echo Needs Help")** — add a glowing "sound bubble" ring overlay around Echo while `correctPhrases === 0`. Pure CSS/SVG ring + soft sparkle puffs; fades on first success. Already-existing helper/comforted animation stays.
-- **World 102 / Level (jump)** — add `102:1` override in `nabuStoryCopy.ts`:
-  - title: `Bobo Lost His Jump`
-  - prompt: `Bobo forgot how to jump! Read 'jump' to help him bounce.`
-  - success: `Bobo can jump again!`
-  - Visually: show a small dashed "missing bounce" arc under Bobo until first success; existing jump verb animation handles the payoff.
-- **World 101 / Level 3 ("Wake Up Nabu Village")** — add a lightweight village backdrop layer in the reader when `worldId === 101 && levelId === 3`: 2–3 simple SVG house silhouettes + a dim sun that brightens after success, soft clouds, warm morning glow gradient overlay. All decorative, no layout shift, sits behind characters.
+Copy (`nabuStoryCopy.ts`): keep current 103:1 prompt and success — already on-spec.
 
-**4. Copy updates in `nabuStoryCopy.ts`**:
-- Refresh prompts/success messages to match exact strings requested (Echo bubble, Bobo jump, Village sun).
-- Add a generic fallback success rotation pool: "Your voice helped!", "You brought the sound back!", "Nabu Village is brighter!"
+### 2. Demo Moment B — Bobo Lost His Jump (W102 L1)
 
-**5. `campaignData.ts` Pre-K copy only**:
-- W101 description: `Help wake up Nabu Village with your voice.`
-- W102 description: `Help Bobo find his sounds!`
-- W103 description: `Help Echo feel brave.`
-- Lore lines reworded to remove "stole"/"lost her voice" combat connotation; keep magical-helping framing.
+Reader:
+- Pre-success: keep dashed "lost bounce" arc. Add `mood="sad"` to Bobo sprite (small downturned mouth + worry dot, additive layer in sprite).
+- On `allDone`: trigger a celebratory jump on Bobo's wrapper — replace the current generic `allDone` wiggle with a higher arc when `world.id === 102 && level.id === 1`: `y: [0, -40, 0, -28, 0]`, duration 1.4s, plus a sparkle trail (3 `✨` motion divs fading up). Add `mood="celebrating"` (open smile + arms-up cue via sprite).
 
-**6. Bobo & Echo plush refinement (`RPGCharacterSprite.tsx`)**:
-- Tighten Bobo: rounder body silhouette, softer mitten shapes, simpler 2-tone shading (no extra detail layers) → reads as plush from silhouette.
-- Tighten Echo: clearer floppy ears, bigger shy eyes, add a "stuck" prop variant (soft glowing ring around body, two sparkle puffs) gated by an `isStuck` prop only used in World 103 L1 pre-success.
-- Preserve existing size, footprint, position, animation hooks (`isAttacking`, `isTakingDamage`, `action`, `actionNonce`).
+Copy: keep current 102:1 prompt + success.
 
-**7. Constraints — explicitly untouched**:
-- `RPGBattleArena`, `RPGCombatPhase`, `RPGWordReader` (K–12 reader), `RPGCharacterSprite.knight` for K–12 callers, Castle Swarm, mic/speech, stars, map nav, unlock logic, verb animation library, Pre-K word banks, `getPreKContent`.
-- K–12 still shows `BOSS`, `Enemies:`, HP — guarded by `world.mode === 'prek'` checks.
+### 3. Demo Moment C — Wake Up Nabu Village (W101 L3)
 
-### Risks
-- The "Nabu Helper" swap in the reader is the most invasive visual change. Mitigation: keep the same column dimensions and motion wrapper so layout + `heroAttacking` pulse keep working; only the inner sprite changes.
-- Village backdrop on W101 L3 is additive decoration behind characters — no z-index/layout impact.
+Reader (existing village backdrop expanded, still behind characters, low contrast):
+- Add: soft rolling-hill silhouette (1 SVG path, muted green), 1–2 drifting clouds (slow `x` translate), a soft dashed "path" line under houses, 2 tiny flower dots.
+- Pre-success: hill, houses, sun all dimmed (`opacity 0.45`, `filter: grayscale(0.3) brightness(0.85)`).
+- Post-success: morning glow overlay fades to full, sun brightens + glows (already wired), windows on each house light up (small yellow dots animate `opacity 0→1`), one cloud drifts off gently.
+- Success message "Your voice woke up the village!" already configured.
 
-### Summary delivered to user after build
-- Bullet list of the 5 files edited
-- Confirmation that K–12 combat, knight/wizard/goblin sprites, Castle Swarm, and mic/stars/unlock flow are untouched.
+### 4. Magical Nabu Helper redesign
+
+Replace the current "🎤 inside bubble" with a friendly voice-buddy orb:
+- Glowing pastel orb (cyan→emerald gradient, soft pulse) with a simple **smiling face** (two dot eyes + curved smile via inline SVG/divs), a small mic-sparkle accent (✨ instead of 🎤 as the primary icon), and floating sparkles.
+- Preserve column footprint (`w-[118px] sm:w-[140px]`, height same), preserve `heroAttacking` pulse hook, keep position. K–12 still renders `<RPGCharacterSprite type="knight" />`.
+
+### 5. Pre-K mission titles on level cards
+
+`nabuStoryCopy.ts` — add:
+```ts
+getNabuLevelTitle(worldId, levelId): string | null
+```
+Returns short emotional titles per the user's examples:
+- W101: Wake Up the Village · Find the First Sound · Light Up the Houses · Help the Sleepy Shushie · Big Day: Village Morning
+- W102: Help Bobo Jump · Bobo Finds His Clap · Bobo Hops Again · Bobo's Silly Spin · Big Day: Bobo's Bounce Party
+- W103: Echo Needs Help · Echo Finds Her Voice · Help Echo Say It · Echo Feels Brave · Big Day: Echo Lights Up
+
+`RPGLevelSelect.tsx` — when `world.mode === 'prek'`, render the mission title instead of `level.story.title`. Keep word count, grade chip, stars, "Help with: Shushie" chip unchanged.
+
+### 6. Sprite mood prop (additive, safe)
+
+`RPGCharacterSprite.tsx`:
+- Add optional `mood?: "sad" | "relieved" | "celebrating"` prop.
+- In `renderBouncer` and `renderEchoBlob`, render a small sibling layer for the mouth/eye/blush variant when `mood` is set. No size/position/footprint change. No effect when `mood` is undefined → all existing callers untouched.
+
+### 7. Constraints — explicitly untouched
+
+K–12 reader (`RPGWordReader`), knight/wizard/goblin sprites for K–12 callers, all combat HP/shake/enemy logic for K–12, Castle Swarm, mic/speech recognition, `playCorrectPronunciation` (Hear button), star thresholds, map navigation, level unlock logic, verb animation library, Pre-K word banks, `getPreKContent`, RLS / DB.
+
+### Risks & mitigations
+
+- Village backdrop additions stay z-index behind characters; uses existing absolutely-positioned overlay div — no layout shift.
+- Nabu Helper swap keeps the same wrapper `motion.div` and column dimensions, so `heroAttacking` pulse + future word-card layout are unaffected.
+- `mood` prop is purely additive; absence preserves current visuals exactly for K–12 and other Pre-K levels.
+- Bobo's celebratory jump only overrides `allDone` animation on W102 L1; other levels keep current wiggle.
+
+### After implementation, summary delivered to user
+
+- 4 files changed (listed above)
+- Visual + copy diff per demo moment
+- Confirmation K–12, mic, Hear, stars, navigation, unlocks untouched
