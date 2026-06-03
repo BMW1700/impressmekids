@@ -173,9 +173,14 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const heroProjIdRef = useRef(1);
   const [heroCooldowns, setHeroCooldowns] = useState<Record<string, number>>({});
   const [coinsHud, setCoinsHud] = useState(0);
+  // Mana = summon currency, earned per correct word, resets each match.
+  const manaRef = useRef(20);
+  const [manaHud, setManaHud] = useState(20);
+  const MANA_MAX = 300;
   const [, setHeroTick] = useState(0); // bumped to re-render hero layer
   const unlockedHeroIdsRef = useRef(unlockedHeroIds);
   useEffect(() => { unlockedHeroIdsRef.current = unlockedHeroIds; }, [unlockedHeroIds]);
+
 
 
   // ---- Save run ----
@@ -250,18 +255,18 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     persistRun(reason, acc, finalCoins);
   }, [mode, characterName, saveCampaign, persistRun, isUnlocked, unlockFromCampaign, toast]);
 
-  // ---- Summon a hero into the arena ----
+  // ---- Summon a hero into the arena (spends MANA, not gold) ----
   const handleSummonHero = useCallback((heroId: string) => {
     if (endedRef.current || pausedRef.current) return;
     if (!unlockedHeroIdsRef.current.has(heroId)) return;
     const now = performance.now();
     const cdUntil = heroCooldowns[heroId] ?? 0;
     const activeOfThis = heroesRef.current.filter(h => h.heroId === heroId).length;
-    const check = canSummon(heroId, coinsRef.current, cdUntil, Date.now(), activeOfThis);
+    const check = canSummon(heroId, manaRef.current, cdUntil, Date.now(), activeOfThis);
     if (!check.ok) return;
     const def = HEROES_BY_ID[heroId];
-    coinsRef.current -= def.summonCost;
-    setCoinsHud(coinsRef.current);
+    manaRef.current -= def.summonCost;
+    setManaHud(manaRef.current);
     const hero = summonHero({
       heroId,
       now,
@@ -274,28 +279,6 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     setHeroTick(t => t + 1);
   }, [heroCooldowns]);
 
-  // ---- Buy a shop hero (spends coins permanently to unlock) ----
-  const handleBuyShopHero = useCallback(async (heroId: string) => {
-    const def = HEROES_BY_ID[heroId];
-    if (!def || def.unlock.kind !== "shop") return;
-    if (isUnlocked(heroId)) return;
-    const price = def.unlock.price;
-    if (coinsRef.current < price) {
-      toast({ title: "Not enough coins", description: `${def.name} costs ${price} 🪙`, variant: "destructive" });
-      return;
-    }
-    coinsRef.current -= price;
-    setCoinsHud(coinsRef.current);
-    try {
-      await unlockFromShop(heroId);
-      toast({ title: "🛡 Hero hired!", description: `${def.name} added to your roster.` });
-    } catch (err: any) {
-      // refund on failure
-      coinsRef.current += price;
-      setCoinsHud(coinsRef.current);
-      toast({ title: "Purchase failed", description: err?.message || "Try again.", variant: "destructive" });
-    }
-  }, [isUnlocked, unlockFromShop, toast]);
 
   // ---- Start a wave ----
   const startWave = useCallback((n: number) => {
@@ -448,6 +431,12 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         waveNumber: waveRef.current,
       });
 
+      // ---- Mana reward ----
+      // Base 5 + combo bonus (capped) + phoneme-hit bonus.
+      const manaGain = 5 + Math.min(streakRef.current, 10) + (result.phonemeHit ? 8 : 0);
+      manaRef.current = Math.min(MANA_MAX, manaRef.current + manaGain);
+      setManaHud(manaRef.current);
+
       // Track sight-word streak: a word counts as sight whenever it added charge.
       const isSightWord = result.shieldCharge > 0;
       sightStreakRef.current = isSightWord ? sightStreakRef.current + 1 : 0;
@@ -512,6 +501,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
       superMeterRef.current = Math.min(100, superMeterRef.current + result.superFill);
       setSuperMeter(superMeterRef.current);
+
     } else {
       streakRef.current = 0;
       sightStreakRef.current = 0;
@@ -739,14 +729,10 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
 
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  // Auto-pause when tab/app backgrounds (iPad split-screen, app switch).
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden && !endedRef.current) setPaused(true);
-    };
-    document.addEventListener('visibilitychange', onVis);
-    return () => document.removeEventListener('visibilitychange', onVis);
-  }, []);
+  // NOTE: tab/visibility auto-pause removed — it fired on every minimize/fullscreen
+  // toggle and the player couldn't easily unpause. Pause is now driven exclusively
+  // by the toolbar Pause button and the click-to-unpause overlay.
+
 
   // ---- Boss spell-break resolution (partial-success scaled) ----
   const handleSpellBreakResult = useCallback((broken: boolean, wordsRead: number) => {
@@ -1024,12 +1010,19 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             )}
           </AnimatePresence>
 
-          {/* Pause overlay */}
+          {/* Pause overlay — tap anywhere to resume */}
           {paused && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-              <div className="text-white font-black text-4xl tracking-widest">PAUSED</div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setPaused(false)}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-black/60 backdrop-blur-sm cursor-pointer"
+              aria-label="Resume"
+            >
+              <div className="text-white font-black text-4xl tracking-widest drop-shadow">PAUSED</div>
+              <div className="text-slate-300 text-sm">Tap anywhere to resume</div>
+            </button>
           )}
+
 
           {/* Interstitial */}
           <WaveInterstitial show={!!interstitial} wave={interstitial?.wave ?? 0} coins={interstitial?.coins ?? 0} />
@@ -1063,24 +1056,29 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           </div>
         )}
 
-        {/* Hero summon bar — coins balance + tappable hero cards */}
+        {/* Hero summon bar — Mana fuels summons, Gold is for upgrades & shop */}
         <div className="flex items-center gap-2">
-          <div className="shrink-0 flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-xs">
-            <Coins className="w-3.5 h-3.5" /> {coinsHud}
+          <div className="shrink-0 flex flex-col gap-0.5">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/40 text-sky-200 font-bold text-[11px]" title="Mana — earned by reading. Spend it to summon heroes.">
+              <Sparkles className="w-3 h-3" /> {Math.floor(manaHud)}
+            </div>
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-[11px]" title="Gold — earned per wave. Spend it on castle upgrades & shop heroes.">
+              <Coins className="w-3 h-3" /> {coinsHud}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <SummonBar
-              coins={coinsHud}
+              mana={manaHud}
               unlockedHeroIds={unlockedHeroIds}
               cooldownsUntil={heroCooldowns}
               activeCountByHero={heroesRef.current.reduce<Record<string, number>>((acc, h) => {
                 acc[h.heroId] = (acc[h.heroId] ?? 0) + 1; return acc;
               }, {})}
               onSummon={handleSummonHero}
-              onBuyShop={handleBuyShopHero}
             />
           </div>
         </div>
+
 
         {/* Super bar */}
         <div className="flex items-center gap-2">
