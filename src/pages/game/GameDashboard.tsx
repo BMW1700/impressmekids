@@ -156,7 +156,38 @@ const GameDashboard = () => {
                 <p className="text-muted-foreground">Select a reading mode that matches your level</p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {/* Pre-K Mode */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className="h-full"
+                >
+                  <Card
+                    className="cursor-pointer transition-all duration-300 hover:scale-[1.03] bg-gradient-to-br from-pink-500/30 via-rose-500/20 to-orange-400/30 border-pink-500/40 hover:border-pink-400/60 hover:shadow-lg hover:shadow-pink-500/10 h-full"
+                    onClick={() => handleModeSelect('prek')}
+                  >
+                    <CardContent className="p-6 text-center space-y-4 flex flex-col h-full justify-between">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/30 to-rose-500/20 flex items-center justify-center mx-auto border border-pink-500/30">
+                        <Star className="w-8 h-8 text-pink-300" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold">Pre-K</h3>
+                        <span className="inline-block mt-1 text-xs font-semibold bg-pink-500/20 text-pink-200 border border-pink-500/30 px-3 py-1 rounded-full">
+                          Ages 3–5
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Big friendly words with Bobo, Echo, and Nabu Village. Made for our youngest readers.
+                      </p>
+                      <Button className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold">
+                        ✨ Start Pre-K
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
                 {/* Classic Adventure Mode */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
