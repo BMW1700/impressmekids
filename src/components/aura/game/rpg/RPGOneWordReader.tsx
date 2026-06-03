@@ -26,6 +26,7 @@ import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
 import { getNabuLevelCopy, getNabuDemoWords, getNabuCreatureName, getNabuMeterLabel } from "@/lib/nabuStoryCopy";
+import { NabuBubble } from "./NabuBubble";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
@@ -135,6 +136,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
   const [shake, setShake] = useState(false);
 
   const [verbTrigger, setVerbTrigger] = useState<{ word: string; nonce: number } | null>(null);
+  const [cheerNonce, setCheerNonce] = useState(0);
   const [prekScene, setPrekScene] = useState<{ id: number; descriptor: CompoundVerbDescriptor; phrase: string } | null>(null);
   const nonceRef = useRef(0);
   const verb = useVerbAnimation(verbTrigger);
@@ -226,6 +228,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   const triggerHit = useCallback((phrase: string) => {
     setHeroAttacking(true);
+    // Pre-K cheer bubble from Nabu between words/phrases.
+    if (isPreK) setCheerNonce((n) => n + 1);
     window.setTimeout(() => {
       setHeroAttacking(false);
       if (showCombatUI) {
