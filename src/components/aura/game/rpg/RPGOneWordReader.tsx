@@ -76,8 +76,16 @@ interface RPGOneWordReaderProps {
 }
 
 export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWordReaderProps) => {
-  const content: PreKLevelContent = useMemo(
-    () => getPreKContent(world.id, level.id),
+  const content: PreKLevelContent = useMemo(() => {
+    const demoWords = getNabuDemoWords(world.id, level.id);
+    if (demoWords && demoWords.length > 0) {
+      return { kind: "single", words: demoWords };
+    }
+    return getPreKContent(world.id, level.id);
+  }, [world.id, level.id]);
+
+  const nabuCopy = useMemo(
+    () => getNabuLevelCopy(world.id, level.id),
     [world.id, level.id]
   );
 
@@ -87,6 +95,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
     if (content.kind === "phrase") return content.phrases;
     return content.words;
   }, [content]);
+
 
   // Flat word list fed to RPGWordReader. In phrase mode each phrase is split
   // on whitespace; in single mode each item is already one word.
