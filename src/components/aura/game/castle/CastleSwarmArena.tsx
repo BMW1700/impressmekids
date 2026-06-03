@@ -173,9 +173,14 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const heroProjIdRef = useRef(1);
   const [heroCooldowns, setHeroCooldowns] = useState<Record<string, number>>({});
   const [coinsHud, setCoinsHud] = useState(0);
+  // Mana = summon currency, earned per correct word, resets each match.
+  const manaRef = useRef(20);
+  const [manaHud, setManaHud] = useState(20);
+  const MANA_MAX = 300;
   const [, setHeroTick] = useState(0); // bumped to re-render hero layer
   const unlockedHeroIdsRef = useRef(unlockedHeroIds);
   useEffect(() => { unlockedHeroIdsRef.current = unlockedHeroIds; }, [unlockedHeroIds]);
+
 
 
   // ---- Save run ----
@@ -250,18 +255,18 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     persistRun(reason, acc, finalCoins);
   }, [mode, characterName, saveCampaign, persistRun, isUnlocked, unlockFromCampaign, toast]);
 
-  // ---- Summon a hero into the arena ----
+  // ---- Summon a hero into the arena (spends MANA, not gold) ----
   const handleSummonHero = useCallback((heroId: string) => {
     if (endedRef.current || pausedRef.current) return;
     if (!unlockedHeroIdsRef.current.has(heroId)) return;
     const now = performance.now();
     const cdUntil = heroCooldowns[heroId] ?? 0;
     const activeOfThis = heroesRef.current.filter(h => h.heroId === heroId).length;
-    const check = canSummon(heroId, coinsRef.current, cdUntil, Date.now(), activeOfThis);
+    const check = canSummon(heroId, manaRef.current, cdUntil, Date.now(), activeOfThis);
     if (!check.ok) return;
     const def = HEROES_BY_ID[heroId];
-    coinsRef.current -= def.summonCost;
-    setCoinsHud(coinsRef.current);
+    manaRef.current -= def.summonCost;
+    setManaHud(manaRef.current);
     const hero = summonHero({
       heroId,
       now,
@@ -274,28 +279,6 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     setHeroTick(t => t + 1);
   }, [heroCooldowns]);
 
-  // ---- Buy a shop hero (spends coins permanently to unlock) ----
-  const handleBuyShopHero = useCallback(async (heroId: string) => {
-    const def = HEROES_BY_ID[heroId];
-    if (!def || def.unlock.kind !== "shop") return;
-    if (isUnlocked(heroId)) return;
-    const price = def.unlock.price;
-    if (coinsRef.current < price) {
-      toast({ title: "Not enough coins", description: `${def.name} costs ${price} 🪙`, variant: "destructive" });
-      return;
-    }
-    coinsRef.current -= price;
-    setCoinsHud(coinsRef.current);
-    try {
-      await unlockFromShop(heroId);
-      toast({ title: "🛡 Hero hired!", description: `${def.name} added to your roster.` });
-    } catch (err: any) {
-      // refund on failure
-      coinsRef.current += price;
-      setCoinsHud(coinsRef.current);
-      toast({ title: "Purchase failed", description: err?.message || "Try again.", variant: "destructive" });
-    }
-  }, [isUnlocked, unlockFromShop, toast]);
 
   // ---- Start a wave ----
   const startWave = useCallback((n: number) => {
