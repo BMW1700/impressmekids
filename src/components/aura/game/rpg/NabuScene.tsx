@@ -842,7 +842,8 @@ const RopeScene = ({ phase }: { phase: ScenePhase }) => {
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} />
+      <NabuSprite phase={phase} anim={walkToAnim(600)} />
+
     </Stage>
   );
 };
