@@ -180,6 +180,8 @@ export const ThemeSelector = ({ onSelect }: ThemeSelectorProps) => {
             Play Pre-K
           </Button>
         </motion.div>
+      </div>
+
 
       <motion.p
         initial={{ opacity: 0 }}
