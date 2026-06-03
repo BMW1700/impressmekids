@@ -1,7 +1,8 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins } from "lucide-react";
+import { ArrowLeft, Heart, Sparkles, Zap, Flame, Snowflake, Pause, Play, Flame as Combo, Coins, Crown } from "lucide-react";
+import { useCastleCrowns } from "@/lib/castleCrowns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { getStoredTheme, getGradeMode } from "@/lib/gameTheme";
@@ -88,6 +89,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
   const { stats: knightStats } = useCastleUpgrades();
   const { unlockedIds: unlockedHeroIds, unlockFromCampaign, unlockFromShop, isUnlocked } = useCastleHeroes();
   const { toast } = useToast();
+  const { crowns } = useCastleCrowns();
 
   // ---- Reading content (story-driven) ----
   const storyRunnerRef = useRef<StoryRunner | null>(null);
@@ -809,25 +811,42 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
     <div className="fixed inset-0 z-50 bg-slate-950 overflow-hidden">
       <ArenaBackground />
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between p-3 bg-gradient-to-b from-black/80 to-transparent">
-        <Button variant="ghost" size="sm" onClick={() => endRun("quit")} className="text-white hover:bg-white/10">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Exit
+      {/* Top bar — compact HUD strip */}
+      <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 px-2 py-1.5 bg-gradient-to-b from-black/85 to-transparent">
+        <Button variant="ghost" size="sm" onClick={() => endRun("quit")} className="h-7 px-2 text-white hover:bg-white/10">
+          <ArrowLeft className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Exit</span>
         </Button>
-        <div className="text-amber-300 font-black text-sm tracking-wide drop-shadow">
+
+        {/* Currencies */}
+        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/40 text-sky-200 font-bold text-[11px]" title="Mana — earned by reading. Spend to summon heroes.">
+            <Sparkles className="w-3 h-3" /> {Math.floor(manaHud)}
+          </div>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-[11px]" title="Gold — spend on castle upgrades & shop heroes.">
+            <Coins className="w-3 h-3" /> {coinsHud}
+          </div>
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-fuchsia-500/15 border border-fuchsia-500/40 text-fuchsia-200 font-bold text-[11px]" title="Crowns — premium currency for legendary heroes & cosmetics.">
+            <Crown className="w-3 h-3" /> {crowns}
+          </div>
+        </div>
+
+        {/* Wave label */}
+        <div className="hidden sm:block text-amber-300 font-black text-xs tracking-wide drop-shadow truncate max-w-[28%]">
           {mode.kind === "campaign"
             ? `${mode.level.name} · ${waveHud}/${mode.level.waveCount}`
             : mode.kind === "daily" ? `Daily · Wave ${waveHud}`
-            : waveHud > TUTORIAL_WAVES ? `ENDLESS · Wave ${waveHud}` : `Wave ${waveHud} / ${TUTORIAL_WAVES}`}
+            : waveHud > TUTORIAL_WAVES ? `ENDLESS · ${waveHud}` : `Wave ${waveHud}/${TUTORIAL_WAVES}`}
         </div>
-        <div className="flex items-center gap-2 text-white">
-          <Heart className="w-4 h-4 text-rose-400" />
-          <div className="w-28 h-3 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+
+        {/* Castle HP + pause */}
+        <div className="flex items-center gap-1.5 text-white">
+          <Heart className="w-3.5 h-3.5 text-rose-400" />
+          <div className="w-20 sm:w-28 h-2.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
             <div className="h-full bg-gradient-to-r from-rose-500 to-red-600 transition-all" style={{ width: `${castleHpHud}%` }} />
           </div>
-          <span className="text-xs w-6 text-right font-bold">{castleHpHud}</span>
-          <Button variant="ghost" size="icon" onClick={() => setPaused(p => !p)} className="text-white h-7 w-7 hover:bg-white/10">
-            {paused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          <span className="text-[10px] w-5 text-right font-bold">{castleHpHud}</span>
+          <Button variant="ghost" size="icon" onClick={() => setPaused(p => !p)} className="text-white h-6 w-6 hover:bg-white/10">
+            {paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
           </Button>
         </div>
       </div>
@@ -839,24 +858,24 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             initial={{ y: -40, opacity: 0, scale: 0.9 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -40, opacity: 0 }}
-            className="absolute top-16 left-1/2 -translate-x-1/2 z-30 px-6 py-2 bg-gradient-to-r from-rose-600 to-red-700 text-white font-black rounded-full shadow-2xl border-2 border-amber-400 text-lg"
+            className="absolute top-12 left-1/2 -translate-x-1/2 z-30 px-4 py-1.5 bg-gradient-to-r from-rose-600 to-red-700 text-white font-black rounded-full shadow-2xl border-2 border-amber-400 text-sm"
           >
             {waveBanner}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Phoneme-of-wave badge — kids "hunt" for matching words */}
-      <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-slate-900/85 border border-amber-400/60 text-amber-200 text-xs font-bold shadow-lg flex items-center gap-2 mt-12 sm:mt-0">
-        <Sparkles className="w-3.5 h-3.5" />
+      {/* Phoneme-of-wave badge */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 z-20 px-2.5 py-0.5 rounded-full bg-slate-900/85 border border-amber-400/60 text-amber-200 text-[11px] font-bold shadow-lg flex items-center gap-1.5">
+        <Sparkles className="w-3 h-3" />
         <span className="text-slate-300 font-medium">Hunt:</span>
         <span className="text-amber-300 font-black tracking-wider">{phonemeOfWave.label}</span>
       </div>
 
-      {/* Combo */}
+      {/* Combo — small chip top-right under HUD */}
       {comboHud >= 3 && (
-        <div className="absolute top-16 right-4 z-30 flex items-center gap-1 px-3 py-1 rounded-full bg-rose-700/90 text-white font-bold text-sm shadow-lg border border-rose-400">
-          <Combo className="w-4 h-4" /> Combo x{comboHud}
+        <div className="absolute top-10 right-2 z-30 flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-rose-700/90 text-white font-bold text-[11px] shadow-lg border border-rose-400">
+          <Combo className="w-3 h-3" /> x{comboHud}
         </div>
       )}
 
@@ -865,7 +884,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         key={`shake-${shake}`}
         animate={shake > 0 ? { x: [0, -8, 8, -5, 5, 0] } : {}}
         transition={{ duration: 0.35 }}
-        className="absolute inset-x-0 top-14 bottom-56 z-10"
+        className="absolute inset-x-0 top-10 bottom-44 z-10"
       >
         <div className="relative w-full h-full">
           {/* Player castle (right) */}
@@ -1043,29 +1062,20 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         </div>
       </motion.div>
 
-      {/* Bottom panel */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm p-3 pb-[max(env(safe-area-inset-bottom,0px),0.75rem)] space-y-2 border-t border-rose-900/40">
+      {/* Bottom panel — compact strip */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/95 via-slate-950/90 to-slate-950/60 backdrop-blur-sm px-2 pt-1.5 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] space-y-1.5 border-t border-rose-900/40">
         {/* Resolve shield bar (from sight-word streaks) */}
         {shieldHud > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-cyan-300 text-xs font-bold" aria-hidden>🛡</span>
-            <div className="flex-1 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+            <span className="text-cyan-300 text-[10px] font-bold" aria-hidden>🛡</span>
+            <div className="flex-1 h-1.5 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
               <div className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all" style={{ width: `${shieldHud}%` }} />
             </div>
-            <span className="text-cyan-200 text-[10px] font-bold w-8 text-right">Resolve</span>
           </div>
         )}
 
-        {/* Hero summon bar — Mana fuels summons, Gold is for upgrades & shop */}
+        {/* Hero summon bar + Super meter inline */}
         <div className="flex items-center gap-2">
-          <div className="shrink-0 flex flex-col gap-0.5">
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-500/15 border border-sky-500/40 text-sky-200 font-bold text-[11px]" title="Mana — earned by reading. Spend it to summon heroes.">
-              <Sparkles className="w-3 h-3" /> {Math.floor(manaHud)}
-            </div>
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-200 font-bold text-[11px]" title="Gold — earned per wave. Spend it on castle upgrades & shop heroes.">
-              <Coins className="w-3 h-3" /> {coinsHud}
-            </div>
-          </div>
           <div className="flex-1 min-w-0">
             <SummonBar
               mana={manaHud}
@@ -1077,28 +1087,24 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
               onSummon={handleSummonHero}
             />
           </div>
-        </div>
-
-
-        {/* Super bar */}
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <div className="flex-1 h-3 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
-            <div className="h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all" style={{ width: `${superMeter}%` }} />
+          <div className="shrink-0 flex items-center gap-1.5">
+            <div className="w-16 h-2 bg-slate-800/80 rounded-full overflow-hidden border border-slate-700">
+              <div className="h-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all" style={{ width: `${superMeter}%` }} />
+            </div>
+            <Button
+              size="sm"
+              disabled={superMeter < 100}
+              onClick={castSuper}
+              className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black h-6 px-2 text-[11px] disabled:opacity-40"
+            >
+              SUPER
+            </Button>
           </div>
-          <Button
-            size="sm"
-            disabled={superMeter < 100}
-            onClick={castSuper}
-            className="bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-black h-7 disabled:opacity-40"
-          >
-            SUPER
-          </Button>
         </div>
 
         {/* Powers + word reader */}
-        <div className="flex items-stretch gap-3">
-          <div className="flex flex-col gap-2">
+        <div className="flex items-stretch gap-2">
+          <div className="flex flex-col gap-1">
             {POWERS.map(p => {
               const remaining = Math.max(0, (powerCooldowns[p.id] ?? 0) - Date.now());
               const ready = remaining === 0;
@@ -1108,12 +1114,12 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   key={p.id}
                   onClick={() => castPower(p.id)}
                   disabled={!ready || paused}
-                  className={`relative w-12 h-12 rounded-xl bg-gradient-to-br ${p.color} flex items-center justify-center shadow-lg disabled:opacity-40 transition hover:scale-105 active:scale-95`}
+                  className={`relative w-9 h-9 rounded-lg bg-gradient-to-br ${p.color} flex items-center justify-center shadow-md disabled:opacity-40 transition hover:scale-105 active:scale-95`}
                   title={p.label}
                 >
-                  <Icon className="w-6 h-6 text-white drop-shadow" />
+                  <Icon className="w-4 h-4 text-white drop-shadow" />
                   {!ready && (
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white bg-black/50 rounded-xl">
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white bg-black/50 rounded-lg">
                       {Math.ceil(remaining / 1000)}
                     </span>
                   )}
