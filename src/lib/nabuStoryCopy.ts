@@ -4,16 +4,35 @@
 // 103 (Echo Needs You). Everything outside these three worlds is untouched.
 
 export interface NabuLevelCopy {
-  /** Short emotional title shown in the reader top bar. */
   title: string;
-  /** One-sentence prompt shown above the word card at the start of the level. */
   prompt: string;
-  /** Optional bigger CTA-style label for the primary button (future use). */
   ctaLabel?: string;
-  /** Replaces "✨ Watch what happens!" hint chip. */
   hint: string;
-  /** Shown when the level is complete (replaces the 🎉 placeholder). */
   successMessage: string;
+}
+
+/** Soft, non-combat name for the Pre-K "troublemaker" per world. */
+export function getNabuCreatureName(worldId: number): string {
+  if (worldId === 101) return "Sleepy Shushie";
+  if (worldId === 102) return "Bobo";
+  if (worldId === 103) return "Echo";
+  return "";
+}
+
+/** Soft progress meter label per world — no HP/health framing. */
+export function getNabuMeterLabel(worldId: number): string {
+  if (worldId === 101) return "Village Sound";
+  if (worldId === 102) return "Sound Magic";
+  if (worldId === 103) return "Sleepy Spell";
+  return "Sound Magic";
+}
+
+/** Friendly chip label per Pre-K world for level cards. */
+export function getNabuHelpChip(worldId: number): string {
+  if (worldId === 101) return "Sleepy Shushie";
+  if (worldId === 102) return "Wiggle Shushie";
+  if (worldId === 103) return "Sound Snatcher";
+  return "Shushie";
 }
 
 const isNabuWorld = (worldId: number) =>
