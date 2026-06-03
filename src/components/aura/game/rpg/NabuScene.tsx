@@ -1123,7 +1123,7 @@ export const NabuScene = ({ word, phase, index }: NabuSceneProps) => {
   // Key remount per obstacle so animations restart cleanly
   const k = `${w}-${index}`;
   switch (w) {
-    case "BRIDGE": return <div key={k} className="absolute inset-0"><BridgeScene phase={phase} /></div>;
+    case "JUMP":   return <div key={k} className="absolute inset-0"><JumpScene phase={phase} /></div>;
     case "BOOTS":  return <div key={k} className="absolute inset-0"><BootsScene phase={phase} /></div>;
     case "KEY":    return <div key={k} className="absolute inset-0"><KeyScene phase={phase} /></div>;
     case "AXE":    return <div key={k} className="absolute inset-0"><AxeScene phase={phase} /></div>;
