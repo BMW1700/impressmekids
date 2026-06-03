@@ -881,36 +881,42 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
         {/* Word card */}
         <div className="relative">
           <AnimatePresence mode="wait">
-            <motion.div
-              key={`word-${currentPhraseIndex}`}
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.02, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 240, damping: 20 }}
-              className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
-            >
-              <div
-                className={`${
-                  allDone && nabuCopy
-                    ? "text-2xl sm:text-3xl text-emerald-700 font-extrabold"
-                    : "text-5xl sm:text-6xl text-slate-900 font-black lowercase"
-                } leading-tight`}
+            {allDone && nabuCopy ? (
+              <motion.div
+                key="success-card"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: [0.8, 1.08, 1], opacity: 1 }}
+                exit={{ scale: 1.02, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 220, damping: 16, duration: 0.6 }}
+                className="bg-gradient-to-br from-emerald-50 via-amber-50 to-rose-50 rounded-2xl shadow-xl border-2 border-emerald-200 px-6 py-4 text-center"
               >
-                {currentPhrase || (allDone ? (nabuCopy?.successMessage ?? "🎉") : "")}
-              </div>
-
-              {!allDone && (
+                <div className="text-2xl sm:text-3xl md:text-4xl text-emerald-700 font-extrabold leading-tight">
+                  {nabuCopy.successMessage}
+                </div>
+                <div className="mt-1 text-base sm:text-lg">🎉 ✨ 🎉</div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`word-${currentPhraseIndex}`}
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.02, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 240, damping: 20 }}
+                className="bg-white rounded-2xl shadow-lg border-2 border-white px-6 py-3 text-center"
+              >
+                <div className="text-5xl sm:text-6xl text-slate-900 font-black lowercase leading-tight">
+                  {currentPhrase}
+                </div>
                 <div className="mt-1 text-xs sm:text-sm font-bold text-slate-400 tracking-widest">
                   {syllableHint(currentPhrase)}
                 </div>
-              )}
-              {verbHint && !allDone && (
-                <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
-                  {nabuCopy?.hint ?? "✨ Watch what happens!"}
-
-                </div>
-              )}
-            </motion.div>
+                {verbHint && (
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+                    {nabuCopy?.hint ?? "✨ Watch what happens!"}
+                  </div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
 
           <Button
