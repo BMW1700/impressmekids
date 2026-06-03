@@ -658,10 +658,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
 
 
-          {/* Knight */}
+          {/* Helper column — Pre-K shows a friendly Nabu Helper (voice-shield orb).
+              K–12 keeps the knight. Same column footprint + motion wrapper so
+              existing animation hooks (heroAttacking pulse) keep working. */}
           <div className="relative flex flex-col items-center w-[44%]">
             <div className="absolute left-1/2 -translate-x-1/2 -top-14 text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow whitespace-nowrap">
-              You can do it!
+              {isPreK ? "Nabu Helper" : "You can do it!"}
             </div>
             <motion.div
               animate={
@@ -680,8 +682,46 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
               }
               className="relative flex h-[112px] w-[118px] items-end justify-center sm:h-[132px] sm:w-[140px]"
             >
-              <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
-              {/* YOUR dog — sits just to the left of the knight, leash to knight's hand. */}
+              {isPreK ? (
+                <div className="relative h-full w-full flex items-end justify-center">
+                  {/* Voice-shield orb: soft mic-sparkle helper, no weapons */}
+                  <motion.div
+                    className="relative w-[90px] h-[90px] sm:w-[104px] sm:h-[104px] rounded-full bg-gradient-to-br from-sky-200 via-cyan-200 to-emerald-200 shadow-[0_8px_24px_rgba(56,189,248,0.35)] flex items-center justify-center"
+                    animate={{
+                      scale: heroAttacking ? [1, 1.15, 1] : [1, 1.04, 1],
+                      boxShadow: heroAttacking
+                        ? "0 0 32px rgba(167,243,208,0.9)"
+                        : "0 8px 24px rgba(56,189,248,0.35)",
+                    }}
+                    transition={{
+                      duration: heroAttacking ? 0.4 : 2.4,
+                      repeat: heroAttacking ? 0 : Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <div className="absolute inset-2 rounded-full bg-white/70" />
+                    <div className="relative text-4xl sm:text-5xl">🎤</div>
+                    {/* Sparkle ring */}
+                    <motion.div
+                      className="absolute -top-2 -right-1 text-xl"
+                      animate={{ rotate: [0, 12, -8, 0], opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2.6, repeat: Infinity }}
+                    >
+                      ✨
+                    </motion.div>
+                    <motion.div
+                      className="absolute -bottom-1 -left-2 text-base"
+                      animate={{ y: [0, -4, 0], opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2.2, repeat: Infinity }}
+                    >
+                      ✨
+                    </motion.div>
+                  </motion.div>
+                </div>
+              ) : (
+                <RPGCharacterSprite type="knight" size="lg" isAttacking={heroAttacking} />
+              )}
+              {/* YOUR dog — sits just to the left of the helper, leash to helper's hand. */}
               <DogWithLeashProp
                 visible={dogStage === "your"}
                 holder="right"
