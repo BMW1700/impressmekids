@@ -572,6 +572,42 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                 />
               </div>
 
+              {/* Echo stuck-in-sound-bubble overlay (W103 L1, pre-success only) */}
+              {showEchoStuck && correctPhrases === 0 && (
+                <motion.div
+                  className="pointer-events-none absolute left-1/2 bottom-2 -translate-x-1/2 w-[130px] h-[130px] sm:w-[150px] sm:h-[150px] rounded-full border-[3px] border-cyan-300/80 bg-cyan-200/25 backdrop-blur-[1px]"
+                  style={{ boxShadow: "0 0 24px rgba(125,211,252,0.55) inset, 0 0 24px rgba(125,211,252,0.45)" }}
+                  animate={{ scale: [1, 1.04, 1], opacity: [0.85, 1, 0.85] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <motion.div
+                    className="absolute -top-2 left-3 text-base"
+                    animate={{ y: [0, -4, 0], opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    ✨
+                  </motion.div>
+                  <motion.div
+                    className="absolute -bottom-1 right-2 text-base"
+                    animate={{ y: [0, 4, 0], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2.2, repeat: Infinity }}
+                  >
+                    ✨
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {/* Bobo "lost his bounce" hint arc (W102 L1, pre-success only) */}
+              {showBoboLostBounce && correctPhrases === 0 && (
+                <motion.div
+                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-1 text-2xl opacity-70"
+                  animate={{ opacity: [0.4, 0.9, 0.4] }}
+                  transition={{ duration: 1.8, repeat: Infinity }}
+                >
+                  <span className="tracking-[0.4em] text-amber-700">· · ·</span>
+                </motion.div>
+              )}
+
               {/* Help-ME scene overlays on the LEAD (blue) */}
               {helpStage === "me" && (
                 <>
