@@ -58,7 +58,7 @@ export const campaignWorlds: CampaignWorld[] = [
   {
     id: 101,
     name: 'Nabu Village: First Words',
-    description: 'Help the Nabu Buddies wake up their village.',
+    description: 'Help wake up Nabu Village with your voice.',
     gradient: 'from-pink-300 via-rose-300 to-orange-300',
     bgColor: 'bg-pink-900/10',
     enemyTypes: ['wiggleworm'],
@@ -66,7 +66,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'The Shushies stole some of Nabu Village\'s sounds. Read each word out loud — your voice brings the village back to life.',
+    lore: 'Nabu Village is sleepy and quiet. Read each word out loud — your voice brings the village back to life.',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
@@ -78,7 +78,7 @@ export const campaignWorlds: CampaignWorld[] = [
   {
     id: 102,
     name: 'Bobo\'s Bouncy Day',
-    description: 'Read it. Watch Bobo come alive!',
+    description: 'Help Bobo find his sounds!',
     gradient: 'from-yellow-300 via-amber-300 to-orange-400',
     bgColor: 'bg-yellow-900/10',
     enemyTypes: ['bouncer'],
@@ -86,7 +86,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Bobo Bounce loves clapping, hopping and spinning. Read each word and Bobo does it with you!',
+    lore: 'Bobo loves clapping, hopping and spinning. Read each word and Bobo does it with you!',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
@@ -98,7 +98,7 @@ export const campaignWorlds: CampaignWorld[] = [
   {
     id: 103,
     name: 'Echo Needs You',
-    description: 'Echo is shy. Your voice makes Echo brave.',
+    description: 'Help Echo feel brave.',
     gradient: 'from-cyan-300 via-sky-300 to-blue-400',
     bgColor: 'bg-cyan-900/10',
     enemyTypes: ['echo_blob'],
@@ -106,7 +106,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Echo lost her voice to the Shushies. Read every word out loud and watch Echo light up.',
+    lore: 'Echo is shy and a little stuck. Read every word out loud and watch Echo light up.',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['echo_blob'], isBossLevel: false, starThresholds: [50, 70, 90] },
