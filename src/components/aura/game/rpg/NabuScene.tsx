@@ -151,9 +151,10 @@ const bridgeArcAnim = (phase: ScenePhase): NabuAnim => {
     return {
       x: [140, 340, 500, 660, 860],
       y: [310, 310, 240, 310, 310],
-      transition: { duration: 1.8, ease: "easeInOut" as const, times: [0, 0.18, 0.5, 0.82, 1] },
-    } as NabuAnim;
+      transition: { duration: 1.8, ease: "easeInOut", times: [0, 0.18, 0.5, 0.82, 1] },
+    };
   }
+
   return nabuAnim(phase);
 };
 
