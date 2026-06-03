@@ -437,9 +437,9 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
             {/* Name + HP number + HP bar — absolutely positioned so it doesn't shift sprite baseline */}
             <div className="absolute left-1/2 -translate-x-1/2 -top-14 flex flex-col items-center gap-1 w-full">
               <div className="text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow">
-                {enemyName(enemy)}
+                {creatureName}
               </div>
-              {showCombatUI && (
+              {showCombatUI ? (
                 <>
                   <div className="text-sm sm:text-base font-black text-rose-700 drop-shadow-[0_1px_0_white] leading-none">
                     {Math.max(0, Math.round(enemyHp))} HP
@@ -449,6 +449,19 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
                       className="h-full bg-gradient-to-r from-rose-400 via-rose-500 to-red-500"
                       animate={{ width: `${enemyHp}%` }}
                       transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[10px] sm:text-xs font-bold text-slate-600 leading-none">
+                    ✨ {meterLabel}
+                  </div>
+                  <div className="w-full max-w-[160px] h-2.5 bg-white/60 rounded-full overflow-hidden border border-white/80 shadow-inner">
+                    <motion.div
+                      className="h-full bg-gradient-to-r from-pink-300 via-amber-300 to-emerald-300"
+                      animate={{ width: `${phrases.length > 0 ? (correctPhrases / phrases.length) * 100 : 0}%` }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                   </div>
                 </>
