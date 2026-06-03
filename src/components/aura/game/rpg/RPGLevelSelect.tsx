@@ -212,8 +212,10 @@ export const RPGLevelSelect = ({
                   }
                   ${isTutorialLevel
                     ? 'border-2 border-green-500/50 shadow-green-500/20 bg-green-900/20'
-                    : level.isBossLevel 
-                      ? 'border-2 border-red-500/50 shadow-red-500/20' 
+                    : level.isBossLevel
+                      ? (isPreKLevel
+                          ? 'border-2 border-pink-300/60 shadow-pink-300/20'
+                          : 'border-2 border-red-500/50 shadow-red-500/20')
                       : 'border border-slate-700'
                   }
                   ${level.isCompleted && !isTutorialLevel ? 'bg-green-900/20' : !isTutorialLevel ? 'bg-slate-800/50' : ''}`}
