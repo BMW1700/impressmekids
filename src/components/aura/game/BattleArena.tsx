@@ -96,6 +96,10 @@ export const BattleArena = ({
   const verbTransform = verb?.descriptor.kind === 'transform' ? verb : null;
   const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
 
+  // Drive Sir Valor's video mood from the same triggers used for beam effects.
+  // Hit beats attack if both fire on the same frame.
+  const valorMood = useTransientValorMood(triggerAttackBeam, triggerDamageBeam);
+
   // Trigger attack beam (player -> enemy)
   useEffect(() => {
     if (triggerAttackBeam && triggerAttackBeam > 0) {
