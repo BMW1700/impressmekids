@@ -665,41 +665,64 @@ const LightScene = ({ phase, kind }: { phase: ScenePhase; kind: "STAR" | "LAMP" 
   );
 };
 
-// ── Generic "Nabu carries the object" scene for everything else ──────────
-const GenericScene = ({ phase, word, label }: { phase: ScenePhase; word: string; label?: string }) => {
+// ── Generic "Benny carries the object" scene for everything else ──────────
+// Renders the solutionEmoji as a huge animated centerpiece so EVERY word has
+// a believable visual without needing a hand-built scene.
+const GenericScene = ({
+  phase,
+  word,
+  emoji,
+}: {
+  phase: ScenePhase;
+  word: string;
+  emoji?: string;
+}) => {
   const solved = phase === "solved" || phase === "transition";
   return (
     <Stage>
       <Sky from="#bae6fd" to="#fef3c7" />
       <Clouds />
       <Grass />
-      {/* Decorative path */}
       <path d={`M0 ${GROUND_Y + 30} Q500 ${GROUND_Y + 10} 1000 ${GROUND_Y + 30}`} stroke="#fbbf24" strokeWidth="20" fill="none" opacity="0.5" />
       {/* "?" thought when problem */}
       {!solved && (
         <motion.g animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          <circle cx={NABU_START.x + 60} cy={NABU_START.y - 110} r="22" fill="#ffffff" stroke="#475569" strokeWidth="3" />
-          <text x={NABU_START.x + 60} y={NABU_START.y - 102} textAnchor="middle" fontSize="28" fontWeight="900" fill="#475569">?</text>
+          <circle cx={NABU_START.x + 60} cy={NABU_START.y - 160} r="28" fill="#ffffff" stroke="#475569" strokeWidth="3" />
+          <text x={NABU_START.x + 60} y={NABU_START.y - 150} textAnchor="middle" fontSize="36" fontWeight="900" fill="#475569">?</text>
         </motion.g>
       )}
-      {/* solution object as labeled emblem */}
-      {solved && (
+      {/* Giant animated emoji solution */}
+      {solved && emoji && (
         <motion.g
-          initial={{ opacity: 0, scale: 0.4, y: -30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 200, damping: 14 }}
+          initial={{ opacity: 0, scale: 0.2, y: -60 }}
+          animate={{ opacity: 1, scale: [0.2, 1.25, 1], y: [-60, 0, 0] }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
         >
-          <g transform={`translate(560 ${GROUND_Y - 130})`}>
-            <rect x="-90" y="-50" width="180" height="100" rx="20" fill="#ffffff" stroke="#f59e0b" strokeWidth="6" />
-            <text x="0" y="14" textAnchor="middle" fontSize="40" fontWeight="900" fill="#92400e">{label ?? word}</text>
-          </g>
+          <motion.text
+            x={560}
+            y={GROUND_Y - 110}
+            textAnchor="middle"
+            fontSize="240"
+            style={{ filter: "drop-shadow(0 8px 12px rgba(0,0,0,0.25))" }}
+            animate={{ y: [GROUND_Y - 110, GROUND_Y - 130, GROUND_Y - 110], rotate: [-3, 3, -3] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {emoji}
+          </motion.text>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 90)} />
-
+      {/* Word label when problem (helps the kid connect) */}
+      {solved && (
+        <motion.g initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <rect x="440" y={GROUND_Y - 30} width="240" height="48" rx="14" fill="#ffffff" stroke="#f59e0b" strokeWidth="5" />
+          <text x="560" y={GROUND_Y + 2} textAnchor="middle" fontSize="30" fontWeight="900" fill="#92400e">{word}</text>
+        </motion.g>
+      )}
+      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 10)} />
     </Stage>
   );
 };
+
 
 // ── BOAT: water, boat appears, Nabu sails across ─────────────────────────
 const BoatScene = ({ phase }: { phase: ScenePhase }) => {
@@ -1143,9 +1166,8 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index, mood = null }: NabuSceneProps) => {
+export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: NabuSceneProps) => {
   const w = word.toUpperCase();
-  // Key remount per obstacle so animations restart cleanly
   const k = `${w}-${index}`;
   const wrap = (children: React.ReactNode) => (
     <BennyMoodContext.Provider value={mood}>
@@ -1182,6 +1204,7 @@ export const NabuScene = ({ word, phase, index, mood = null }: NabuSceneProps) =
     case "BED":    return wrap(<BedScene phase={phase} />);
     case "NEST":   return wrap(<NestScene phase={phase} />);
     case "WORM":   return wrap(<WormScene phase={phase} />);
-    default:       return wrap(<GenericScene phase={phase} word={w} />);
+    default:       return wrap(<GenericScene phase={phase} word={w} emoji={solutionEmoji} />);
   }
 };
+
