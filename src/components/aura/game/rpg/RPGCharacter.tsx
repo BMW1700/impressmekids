@@ -766,7 +766,15 @@ export const RPGCharacter = ({
       const valorMood: 'idle' | 'attack' | 'hit' =
         ks === 'attacking' ? 'attack' : ks === 'hit' ? 'hit' : 'idle';
       return (
-        <SirValorVideo mood={valorMood} size={220} variant={(skinVariant as string) || 'default'} />
+        <SirValorVideo
+          mood={valorMood}
+          size={220}
+          variant={(skinVariant as string) || 'default'}
+          showHealthBar={showHealthBar}
+          currentHp={currentHp}
+          maxHp={character.maxHp}
+          name={character.name}
+        />
       );
     }
     
