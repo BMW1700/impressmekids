@@ -146,6 +146,23 @@ const NabuSprite = ({
   );
 };
 
+// Backwards-compatible helper used by scenes that render Benny outside the
+// standard NabuSprite anim helper (e.g. rocket lift-off).
+const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
+  const footTrim = size * FEET_PADDING_RATIO;
+  return (
+    <foreignObject
+      x={-size / 2}
+      y={-size + footTrim}
+      width={size}
+      height={size}
+      style={{ overflow: "visible", pointerEvents: "none" }}
+    >
+      <BennyDog mood={mood} size={size} />
+    </foreignObject>
+  );
+};
+
 
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
