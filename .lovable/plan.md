@@ -1,46 +1,23 @@
 ## Goal
+Fix Benny's white/checkerboard background and give him a tiny bit of life (blink + tail wag). Both are easy.
 
-Swap Nabu the Owl for Benny the Dog as the in-scene character on every Pre-K adventure level. All environments (river, mud, locked door, ladder, etc.), word cards, mic logic, scoring, and traversal animations stay exactly as they are — only the character sprite changes, and it now also reacts with mood (idle / celebrate / sad) to mic results.
+## Steps
 
-## What changes
+1. **Remove background from Benny images**
+   - Re-run `imagegen--edit_image` on `benny-idle.png`, `benny-celebrate.png`, `benny-sad.png` with `transparent_background: true` so they become clean transparent PNGs.
+   - Re-upload each via `lovable-assets` and overwrite the existing `.asset.json` pointers in `src/assets/`.
+   - No code changes needed — `BennyDog.tsx` already renders them as transparent `<img>` with `object-fit: contain`.
 
-1. **Upload the 3 attached images to the Lovable Assets CDN** and write pointer files:
-   - `src/assets/benny-idle.png.asset.json`
-   - `src/assets/benny-celebrate.png.asset.json`
-   - `src/assets/benny-sad.png.asset.json`
-   (No binaries in the repo. The `public/assets` path from the original request is not needed.)
+2. **Add subtle life to idle pose** (in `src/components/BennyDog.tsx`)
+   - Keep the existing gentle 1.8s translateY bounce.
+   - Add a CSS-only **blink**: a thin dark overlay across the eye region using a small absolutely-positioned `<span>` with a `scaleY` keyframe (0→1→0) every ~4s, 0.15s duration. Because eye position is baked into the PNG, this is approximate — it reads as a quick shimmer over the eyes rather than true eyelids.
+   - Add a CSS-only **tail wag**: since the tail is also baked into the PNG, true tail-only animation isn't possible without a separate tail asset. Two honest options:
+     - (a) Skip the tail wag and only do blink (recommended — looks clean).
+     - (b) Generate a separate transparent `benny-tail.png` and layer it with a `rotate` keyframe anchored at the tail base. This is more work and requires careful alignment.
 
-2. **New component `src/components/BennyDog.tsx`**
-   - Props: `mood: "idle" | "celebrate" | "sad"`, `size?: number` (default 140), plus optional `className` / `style` so it can be reused both as a corner mascot and as the in-scene sprite.
-   - Renders the correct PNG per mood with framer-motion:
-     - `idle` → gentle vertical bounce loop
-     - `celebrate` → quick jump + scale-up
-     - `sad` → small left/right shake
-   - `<img alt="Benny the dog">`, `draggable={false}`, `pointer-events-none`.
+## Question for you
+For the tail wag, do you want:
+- **(a)** Just blink, skip tail wag (fast, clean), or
+- **(b)** Generate a separate tail layer so it can actually wag (more setup, may need positional tweaking)?
 
-3. **Replace Nabu sprite inside every scene** (`src/components/aura/game/rpg/NabuScene.tsx`)
-   - Remove the SVG `NabuSprite` (owl body, wings, eyes, beak).
-   - Introduce a `BennySprite` that wraps `<BennyDog>` in a `motion.div` so it can still receive the existing per-scene `anim` keyframes (`jumpArcAnim`, `bouncyWalkAnim`, `walkToAnim`, `bridgeArcAnim` replacement, rocket lift-off, boat sail, etc.). The `anim` API stays the same so all per-scene traversal animations (JUMP arc over river, BOOTS walk through mud, KEY walk-to-door, LADDER climb, ROCKET fly, BOAT sail, AXE hop, NEST walk-to, etc.) keep working untouched.
-   - Mood wiring: `BennySprite` accepts a `mood` prop forwarded to `BennyDog`. Default is `idle`. During `solved` / `transition` phases the scene passes `celebrate`. Scenes do not know about `sad` — that comes from the mic layer (see #4).
-
-4. **Wire mic results to mood** (`src/components/aura/game/rpg/NabuAdventure.tsx`)
-   - Add `bennyMood` state. On `handleResult(true)` → `celebrate` for 2s then back to `idle` (already aligned with the existing `solved → transition` window). On `handleResult(false)` → `sad` for 1.5s then back to `idle`.
-   - Pass `bennyMood` down to `NabuScene` → `BennySprite`. If `bennyMood` is set it overrides the phase-derived default (so a wrong answer can show sad even while the scene is still in `reading`).
-   - All scoring, word-card rendering, TTS, progress dots, and ending screen are unchanged.
-
-5. **Cleanup**
-   - Delete the now-unused owl SVG sprite code from `NabuScene.tsx` (keep `Stage`, `Sky`, `Clouds`, `Grass`, all environment shapes, and all `*Anim` helpers).
-   - Keep file/component names (`NabuScene`, `NabuAdventure`, `NabuEpisodeWrapper`) as-is to avoid touching the wider Pre-K wrapper / story-shell wiring. Only the rendered character changes; user-facing dialogue copy that says "Nabu" stays for now (separate change if you want it renamed everywhere).
-
-## Files touched
-
-- **Create**: `src/components/BennyDog.tsx`
-- **Create**: `src/assets/benny-idle.png.asset.json`, `benny-celebrate.png.asset.json`, `benny-sad.png.asset.json` (via `lovable-assets` CLI)
-- **Edit**: `src/components/aura/game/rpg/NabuScene.tsx` (replace owl SVG sprite with `BennySprite`, keep all scene environments + anim helpers)
-- **Edit**: `src/components/aura/game/rpg/NabuAdventure.tsx` (add `bennyMood` state, pass to scene)
-
-## Out of scope
-
-- Renaming Nabu → Benny in spoken dialogue, story-shell intro/outro, world copy, or memory entries.
-- Changing any non-Pre-K screens (Castle, LexiQuest, etc.).
-- Changing scoring, word selection, mic/echo retry, or scene environments.
+Once you confirm, I'll switch to build mode and ship it.
