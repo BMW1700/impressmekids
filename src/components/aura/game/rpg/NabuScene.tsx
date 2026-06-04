@@ -169,7 +169,10 @@ const BennyStack = ({ mood, size }: { mood: BennyMood; size: number }) => {
             opacity: m === mood ? 1 : 0,
             transition: "opacity 0.3s ease-in-out",
             pointerEvents: "none",
+            mixBlendMode: "multiply",
+            isolation: "isolate",
           }}
+
         />
       ))}
     </motion.g>
