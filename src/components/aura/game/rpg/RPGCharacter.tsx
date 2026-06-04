@@ -7,7 +7,7 @@ import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { GrogTheKing, GrogState } from "../characters/GrogTheKing";
 import { KnightState } from "../characters/SirValor";
 import { SirValorVideo } from "../characters/SirValorVideo";
-import { getSkinArtStyle } from "@/lib/gameEconomy";
+import { getSkinArtStyle, supportsAlphaWebm } from "@/lib/gameEconomy";
 import { Elara, WizardState } from "../characters/Elara";
 import { PrincessElla, PrincessState } from "../characters/PrincessElla";
 import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
