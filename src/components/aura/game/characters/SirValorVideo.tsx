@@ -12,20 +12,29 @@
 // .asset.json pointers and pass `variant="skinId"`. Nothing else changes.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import idleAsset from "@/assets/valor-idle.mp4.asset.json";
-import attackAsset from "@/assets/valor-attack.mp4.asset.json";
-import hitAsset from "@/assets/valor-hit.mp4.asset.json";
-import idlePosterAsset from "@/assets/valor-idle-poster.png.asset.json";
+import idleWebm from "@/assets/valor-idle.webm.asset.json";
+import attackWebm from "@/assets/valor-attack.webm.asset.json";
+import hitWebm from "@/assets/valor-hit.webm.asset.json";
+import idleMp4 from "@/assets/valor-idle.mp4.asset.json";
+import attackMp4 from "@/assets/valor-attack.mp4.asset.json";
+import hitMp4 from "@/assets/valor-hit.mp4.asset.json";
+import idlePosterAsset from "@/assets/valor-idle-poster-transparent.png.asset.json";
 
 export type ValorMood = "idle" | "attack" | "hit";
 
-type VariantAssets = { idle: string; attack: string; hit: string; poster: string };
+type ClipSources = { webm: string; mp4: string };
+type VariantAssets = {
+  idle: ClipSources;
+  attack: ClipSources;
+  hit: ClipSources;
+  poster: string;
+};
 
 const VALOR_VARIANTS: Record<string, VariantAssets> = {
   default: {
-    idle: idleAsset.url,
-    attack: attackAsset.url,
-    hit: hitAsset.url,
+    idle: { webm: idleWebm.url, mp4: idleMp4.url },
+    attack: { webm: attackWebm.url, mp4: attackMp4.url },
+    hit: { webm: hitWebm.url, mp4: hitMp4.url },
     poster: idlePosterAsset.url,
   },
 };
@@ -79,7 +88,6 @@ export const SirValorVideo = ({
             width: "100%",
             height: "100%",
             objectFit: "contain",
-            mixBlendMode: "multiply",
           }}
         />
       </div>
@@ -102,7 +110,7 @@ export const SirValorVideo = ({
       {MOODS.map((m) => (
         <ValorClip
           key={m}
-          src={assets[m]}
+          sources={assets[m]}
           poster={assets.poster}
           active={m === mood}
           ariaLabel={m === mood ? "Sir Valor" : undefined}
@@ -113,13 +121,13 @@ export const SirValorVideo = ({
 };
 
 interface ValorClipProps {
-  src: string;
+  sources: ClipSources;
   poster: string;
   active: boolean;
   ariaLabel?: string;
 }
 
-const ValorClip = ({ src, poster, active, ariaLabel }: ValorClipProps) => {
+const ValorClip = ({ sources, poster, active, ariaLabel }: ValorClipProps) => {
   const ref = useRef<HTMLVideoElement>(null);
 
   // When this clip becomes active, restart from frame 0 so attack/hit animations
@@ -141,7 +149,6 @@ const ValorClip = ({ src, poster, active, ariaLabel }: ValorClipProps) => {
   return (
     <video
       ref={ref}
-      src={src}
       poster={poster}
       autoPlay
       muted
@@ -158,12 +165,15 @@ const ValorClip = ({ src, poster, active, ariaLabel }: ValorClipProps) => {
         objectFit: "contain",
         opacity: active ? 1 : 0,
         transition: "opacity 0.3s ease-in-out",
-        // Knocks out the pure-white background baked into the MP4s.
-        mixBlendMode: "multiply",
         pointerEvents: "none",
         userSelect: "none",
       }}
-    />
+    >
+      {/* VP9 WebM with real alpha — modern browsers (Chrome/Edge/Firefox, Safari 16+). */}
+      <source src={sources.webm} type="video/webm" />
+      {/* MP4 fallback for older Safari — no transparency but plays. */}
+      <source src={sources.mp4} type="video/mp4" />
+    </video>
   );
 };
 
