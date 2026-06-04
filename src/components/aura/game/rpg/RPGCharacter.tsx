@@ -760,16 +760,22 @@ export const RPGCharacter = ({
       );
     }
     
-    // For heroes — Sir Valor uses video-driven sprites.
+    // For heroes — Sir Valor: pick art tier from the equipped skin's catalog entry.
+    // 'video' → realistic flushed-out videos. 'svg' → Classic hand-drawn knight.
+    // Safari (no alpha-WebM) is handled by SirValorVideo's 'auto' fallback.
     if (spriteType === 'knight') {
       const ks = getKnightState(isAttacking, isTakingDamage, isDefending, currentHp, character.maxHp);
       const valorMood: 'idle' | 'attack' | 'hit' =
         ks === 'attacking' ? 'attack' : ks === 'hit' ? 'hit' : 'idle';
+      const variant = (skinVariant as string) || 'default';
+      const artStyle = getSkinArtStyle('valor', variant);
+      const renderMode: 'video' | 'svg' | 'auto' = artStyle === 'video' ? 'auto' : 'svg';
       return (
         <SirValorVideo
           mood={valorMood}
           size={220}
-          variant={(skinVariant as string) || 'default'}
+          variant={variant}
+          renderMode={renderMode}
           showHealthBar={showHealthBar}
           currentHp={currentHp}
           maxHp={character.maxHp}
