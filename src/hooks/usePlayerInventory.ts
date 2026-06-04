@@ -212,18 +212,34 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
           .eq("id", skin.id);
       }
 
-      // Default skins have no inventory row — unequipping others IS the equip
+      // Pure-default skins (skinVariant === 'default') don't keep a row —
+      // unequipping all others IS the equip. But other free skins (e.g.
+      // 'realistic_valor') still need a real row so we can mark them equipped.
       if (skinData.skinVariant === 'default') {
         return itemId;
       }
 
-      // Equip the new skin
+      // Equip the new skin — insert a row if the user doesn't have one yet
+      // (free skins like realistic_valor are never "purchased" but still
+      // need a row so is_equipped sticks).
       const targetItem = inventory.find(i => i.item_id === itemId);
       if (targetItem) {
         const { error } = await supabase
           .from("player_inventory")
           .update({ is_equipped: true })
           .eq("id", targetItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("player_inventory")
+          .insert({
+            student_id: studentId,
+            item_id: itemId,
+            item_category: 'skin',
+            quantity: 1,
+            is_equipped: true,
+            grade_mode: gm,
+          } as any);
         if (error) throw error;
       }
 
