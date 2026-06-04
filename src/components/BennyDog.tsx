@@ -53,10 +53,37 @@ const ensureKeyframes = () => {
   0%, 94%, 100% { opacity: 0; }
   96%, 98%      { opacity: 1; }
 }
+@keyframes benny-tail-wag {
+  0%, 100% { transform: rotate(-16deg); }
+  50%      { transform: rotate(18deg); }
+}
 .benny-anim-idle      { animation: benny-idle-bounce 1.8s ease-in-out infinite; }
 .benny-anim-celebrate { animation: benny-celebrate    0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake    0.4s ease-in-out 3; }
 .benny-blink-layer    { animation: benny-blink 4.2s ease-in-out infinite; }
+.benny-tail-layer {
+  position: absolute;
+  right: 8%;
+  top: 38%;
+  width: 25%;
+  height: 10%;
+  border-radius: 999px 999px 999px 25%;
+  background: hsl(var(--primary));
+  transform-origin: 8% 50%;
+  animation: benny-tail-wag 0.42s ease-in-out infinite;
+}
+.benny-eye-blink {
+  position: absolute;
+  top: 29%;
+  width: 8%;
+  height: 2.4%;
+  border-radius: 999px;
+  background: hsl(var(--foreground));
+  opacity: 0;
+  animation: benny-blink 4.2s ease-in-out infinite;
+}
+.benny-eye-blink-left { left: 38%; }
+.benny-eye-blink-right { left: 53%; }
 `;
   document.head.appendChild(el);
 };
@@ -96,6 +123,7 @@ export const BennyDog = ({
         className={`benny-anim-${mood}`}
         style={{ position: "absolute", inset: 0 }}
       >
+        {mood === "idle" && <span className="benny-tail-layer" aria-hidden />}
         {MOODS.map((m) => (
           <img
             key={m}
@@ -135,6 +163,12 @@ export const BennyDog = ({
               userSelect: "none",
             }}
           />
+        )}
+        {mood === "idle" && (
+          <>
+            <span className="benny-eye-blink benny-eye-blink-left" aria-hidden />
+            <span className="benny-eye-blink benny-eye-blink-right" aria-hidden />
+          </>
         )}
       </div>
     </div>
