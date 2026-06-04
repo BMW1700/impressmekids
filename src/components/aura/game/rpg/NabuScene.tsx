@@ -109,9 +109,17 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
 type NabuAnim = any;
 
 
+// Loose type — framer-motion accepts many shapes here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type NabuAnim = any;
+
+// Transparent padding under the dog's paws in the source PNGs.
+// Subtract this slice from the bottom so the visible feet sit on GROUND_Y.
+const FEET_PADDING_RATIO = 0.08;
+
 const NabuSprite = ({
   phase,
-  size = 140,
+  size = 280,
   anim,
 }: {
   phase: ScenePhase;
@@ -122,56 +130,24 @@ const NabuSprite = ({
   const bennyMood: BennyMood =
     ctxMood ??
     (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
+
+  // Anchor the visible feet on the ground line.
+  const footTrim = size * FEET_PADDING_RATIO;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
-      <BennySvgImage mood={bennyMood} size={size} />
-    </motion.g>
-  );
-};
-
-const bennyMoodAnim = (mood: BennyMood) => {
-  if (mood === "celebrate") {
-    return {
-      animate: { y: [0, -28, 0, -16, 0], scale: [1, 1.18, 1.08, 1.14, 1.05], rotate: 0 },
-      transition: { duration: 1.1, repeat: Infinity, ease: "easeOut" as const },
-    };
-  }
-  if (mood === "sad") {
-    return {
-      animate: { x: [0, -6, 6, -4, 4, 0], rotate: [0, -3, 3, -2, 2, 0], scale: 1 },
-      transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
-    };
-  }
-  return {
-    animate: { y: [0, -6, 0], rotate: 0, scale: 1 },
-    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
-  };
-};
-
-const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number }) => {
-  const anim = bennyMoodAnim(mood);
-  const src = BENNY_SOURCES[mood];
-
-  return (
-    <motion.g
-      key={mood}
-      animate={anim.animate}
-      transition={anim.transition}
-      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
-    >
-      <image
-        href={src}
-        xlinkHref={src}
+      <foreignObject
         x={-size / 2}
-        y={-size}
+        y={-size + footTrim}
         width={size}
         height={size}
-        style={{ pointerEvents: "none" }}
-        preserveAspectRatio="xMidYMax meet"
-      />
+        style={{ overflow: "visible", pointerEvents: "none" }}
+      >
+        <BennyDog mood={bennyMood} size={size} />
+      </foreignObject>
     </motion.g>
   );
 };
+
 
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
