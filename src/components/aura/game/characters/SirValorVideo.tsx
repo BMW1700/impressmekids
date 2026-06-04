@@ -202,27 +202,18 @@ export const SirValorVideo = ({
         {!reducedMotion && <SwordShine />}
       </div>
 
-      {/* Name + HP bar — matches the goblin/Elara visual treatment. */}
+      {/* HP bar — matches Elara/goblin (no name; the name chip already sits above the character). */}
       {showHealthBar && (
-        <div className="mt-1 w-full flex flex-col items-center">
-          <div
-            className="text-xs font-bold text-white mb-1"
-            style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.9)" }}
-          >
-            {name}
-          </div>
+        <div className="mt-1 flex flex-col items-center" style={{ width: 90 }}>
           {typeof currentHp === "number" && typeof maxHp === "number" && (
             <div
-              className="text-[10px] font-bold text-white mb-0.5"
+              className="text-center text-xs font-bold text-white mb-0.5"
               style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.9)" }}
             >
               {Math.max(0, Math.round(currentHp))}/{maxHp}
             </div>
           )}
-          <div
-            className="h-2.5 rounded-full overflow-hidden border border-black/40 bg-black/60"
-            style={{ width: Math.min(size * 0.7, 140) }}
-          >
+          <div className="h-2.5 w-full bg-black/60 rounded-full overflow-hidden border border-black/40">
             <motion.div
               className="h-full rounded-full"
               style={{ background: hpColor }}
