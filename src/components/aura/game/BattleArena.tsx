@@ -57,15 +57,6 @@ const mapToGoblinState = (state: GrogState): GoblinState => {
   }
 };
 
-const mapToKnightState = (state: PlayerState): KnightState => {
-  switch (state) {
-    case 'hit': return 'hit';
-    case 'attacking': return 'attacking';
-    case 'defeated': return 'defeated';
-    case 'victory': return 'victory';
-    default: return 'idle';
-  }
-};
 
 export const BattleArena = ({
   enemyType,
