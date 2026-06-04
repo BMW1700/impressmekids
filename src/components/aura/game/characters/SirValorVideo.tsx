@@ -12,20 +12,29 @@
 // .asset.json pointers and pass `variant="skinId"`. Nothing else changes.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import idleAsset from "@/assets/valor-idle.mp4.asset.json";
-import attackAsset from "@/assets/valor-attack.mp4.asset.json";
-import hitAsset from "@/assets/valor-hit.mp4.asset.json";
-import idlePosterAsset from "@/assets/valor-idle-poster.png.asset.json";
+import idleWebm from "@/assets/valor-idle.webm.asset.json";
+import attackWebm from "@/assets/valor-attack.webm.asset.json";
+import hitWebm from "@/assets/valor-hit.webm.asset.json";
+import idleMp4 from "@/assets/valor-idle.mp4.asset.json";
+import attackMp4 from "@/assets/valor-attack.mp4.asset.json";
+import hitMp4 from "@/assets/valor-hit.mp4.asset.json";
+import idlePosterAsset from "@/assets/valor-idle-poster-transparent.png.asset.json";
 
 export type ValorMood = "idle" | "attack" | "hit";
 
-type VariantAssets = { idle: string; attack: string; hit: string; poster: string };
+type ClipSources = { webm: string; mp4: string };
+type VariantAssets = {
+  idle: ClipSources;
+  attack: ClipSources;
+  hit: ClipSources;
+  poster: string;
+};
 
 const VALOR_VARIANTS: Record<string, VariantAssets> = {
   default: {
-    idle: idleAsset.url,
-    attack: attackAsset.url,
-    hit: hitAsset.url,
+    idle: { webm: idleWebm.url, mp4: idleMp4.url },
+    attack: { webm: attackWebm.url, mp4: attackMp4.url },
+    hit: { webm: hitWebm.url, mp4: hitMp4.url },
     poster: idlePosterAsset.url,
   },
 };
