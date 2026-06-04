@@ -1,12 +1,12 @@
 // Pre-K Adventures: continuous, Dora-style obstacle → word → solution stories.
-// Each level is a small mission for Nabu the Owl. The CHILD reads the word
-// that names the tool Nabu needs to solve the obstacle in front of him.
+// Each level is a small mission for Benny the Dog. The CHILD reads the word
+// that names the tool Benny needs to solve the obstacle in front of him.
 //
 // Rules for authors (kept tight on purpose):
 //  - Every word must be the literal SOLUTION to a visible obstacle.
 //  - Every word must map to a single, picturable noun (emoji-friendly).
 //  - 4–6 obstacles per level. One ending celebration.
-//  - Keep Nabu's lines under ~8 words each — these are 3–4 year olds.
+//  - Keep Benny's lines under ~8 words each — these are 3–4 year olds.
 
 export interface PreKObstacle {
   /** Short scene description for the visual. */
@@ -14,7 +14,7 @@ export interface PreKObstacle {
   /** Friendly background color tokens (Tailwind classes). */
   sky: string;                   // e.g. "from-sky-200 via-cyan-200 to-emerald-200"
   ground: string;                // e.g. "from-emerald-300 to-emerald-500"
-  /** What Nabu sees / why he's stuck — spoken aloud. */
+  /** What Benny sees / why he's stuck — spoken aloud. */
   problemLine: string;           // "Oh no! A river! I can't cross!"
   /** The hint that prompts the child to help. */
   askLine: string;               // "I need something to cross with..."
@@ -24,13 +24,13 @@ export interface PreKObstacle {
   solutionEmoji: string;         // "🌉"
   /** Where the solution sits relative to the obstacle. */
   solutionPlacement?: "over" | "replace" | "onNabu";
-  /** Nabu's cheer after success. */
+  /** Benny's cheer after success. */
   successLine: string;           // "We did it! Thank you!"
 }
 
 export interface PreKAdventure {
   /** Big mission goal — shown in header + spoken at start. */
-  goal: string;                  // "Help Nabu get to Grandma's house!"
+  goal: string;                  // "Help Benny get to Grandma's house!"
   /** Final scene shown after the last obstacle is solved. */
   endingEmoji: string;           // "🏡"
   endingLine: string;            // "Yay! We made it to Grandma's!"
@@ -155,7 +155,7 @@ const W101_L2: PreKAdventure = {
 };
 
 const W101_L3: PreKAdventure = {
-  goal: "Wake up Nabu Village!",
+  goal: "Wake up Benny's Village!",
   endingEmoji: "🌅",
   endingLine: "Good morning, village!",
   endingSky: sky.morning,
@@ -236,7 +236,7 @@ const W101_L4: PreKAdventure = {
 };
 
 const W101_L5: PreKAdventure = {
-  goal: "Pick berries with Nabu!",
+  goal: "Pick berries with Benny!",
   endingEmoji: "🥧",
   endingLine: "Berry pie for everyone!",
   endingSky: sky.morning,
@@ -291,7 +291,7 @@ const W101_L5: PreKAdventure = {
 // ============================================================================
 
 const W102_L1: PreKAdventure = {
-  goal: "Help Nabu fly to the moon!",
+  goal: "Help Benny fly to the moon!",
   endingEmoji: "🌕",
   endingLine: "We made it to the moon!",
   endingSky: sky.night,
@@ -308,7 +308,7 @@ const W102_L1: PreKAdventure = {
       problemLine: "Wind is blowing me back!",
       askLine: "I need wings...",
       word: "CAPE", solutionEmoji: "🦸", solutionPlacement: "onNabu",
-      successLine: "Whoosh! Super Nabu!",
+      successLine: "Whoosh! Super Benny!",
     },
     {
       sceneEmoji: "⭐", sky: sky.dusk, ground: ground.clouds,
@@ -335,7 +335,7 @@ const W102_L1: PreKAdventure = {
 };
 
 const W102_L2: PreKAdventure = {
-  goal: "Catch a cloud with Nabu!",
+  goal: "Catch a cloud with Benny!",
   endingEmoji: "☁️",
   endingLine: "A fluffy cloud friend!",
   endingSky: sky.sky,
@@ -372,7 +372,7 @@ const W102_L2: PreKAdventure = {
 };
 
 const W102_L3: PreKAdventure = {
-  goal: "Help Nabu through the storm!",
+  goal: "Help Benny through the storm!",
   endingEmoji: "🌈",
   endingLine: "Hello, rainbow!",
   endingSky: sky.morning,
@@ -453,7 +453,7 @@ const W102_L4: PreKAdventure = {
 };
 
 const W102_L5: PreKAdventure = {
-  goal: "Space picnic with Nabu!",
+  goal: "Space picnic with Benny!",
   endingEmoji: "🪐",
   endingLine: "Best picnic in space!",
   endingSky: sky.night,
