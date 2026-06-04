@@ -26,7 +26,7 @@ const SOURCES: Record<BennyMood, string> = {
 const MOODS: BennyMood[] = ["idle", "celebrate", "sad"];
 
 // Inject keyframes once.
-const STYLE_ID = "benny-dog-keyframes";
+const STYLE_ID = "benny-dog-keyframes-v2";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
