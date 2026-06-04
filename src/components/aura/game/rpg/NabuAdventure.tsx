@@ -52,9 +52,23 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
   const [hasStartedListening, setHasStartedListening] = useState(false);
-  const [bennyMood, setBennyMood] = useState<"idle" | "celebrate" | "sad" | null>(null);
+  const [bennyMood, setBennyMood] = useState<
+    | "idle"
+    | "celebrate"
+    | "sad"
+    | "happy"
+    | "excited"
+    | "cheering"
+    | "thinking"
+    | "surprised"
+    | "sleepy"
+    | null
+  >(null);
   const timers = useRef<number[]>([]);
   const moodTimer = useRef<number | null>(null);
+  const streakRef = useRef(0);
+  const idleThinkTimer = useRef<number | null>(null);
+  const idleSleepyTimer = useRef<number | null>(null);
 
 
   const clearTimers = () => {
@@ -65,10 +79,23 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     timers.current.push(window.setTimeout(fn, ms));
   };
 
-  useEffect(() => () => clearTimers(), []);
+  const clearIdleTimers = () => {
+    if (idleThinkTimer.current) {
+      window.clearTimeout(idleThinkTimer.current);
+      idleThinkTimer.current = null;
+    }
+    if (idleSleepyTimer.current) {
+      window.clearTimeout(idleSleepyTimer.current);
+      idleSleepyTimer.current = null;
+    }
+  };
+
+  useEffect(() => () => { clearTimers(); clearIdleTimers(); }, []);
   useEffect(() => {
     // Reset on level change
     clearTimers();
+    clearIdleTimers();
+    streakRef.current = 0;
     setIndex(0);
     setCorrect(0);
     setPhase("intro");
