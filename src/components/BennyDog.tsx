@@ -1,8 +1,10 @@
 // Benny the Dog — Pre-K adventure character.
 // Three moods crossfade smoothly; both images stay mounted to avoid flicker.
+// Idle mood also crossfades to a closed-eye blink frame every few seconds.
 
 import { useEffect, useRef, useState } from "react";
 import idleAsset from "@/assets/benny-idle.png.asset.json";
+import idleBlinkAsset from "@/assets/benny-idle-blink.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -46,9 +48,15 @@ const ensureKeyframes = () => {
   60%      { transform: translateX(-6px); }
   80%      { transform: translateX(6px); }
 }
+/* Blink: eyes-closed frame fades in for a brief moment every ~4s. */
+@keyframes benny-blink {
+  0%, 94%, 100% { opacity: 0; }
+  96%, 98%      { opacity: 1; }
+}
 .benny-anim-idle      { animation: benny-idle-bounce 1.8s ease-in-out infinite; }
 .benny-anim-celebrate { animation: benny-celebrate    0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake    0.4s ease-in-out 3; }
+.benny-blink-layer    { animation: benny-blink 4.2s ease-in-out infinite; }
 `;
   document.head.appendChild(el);
 };
@@ -108,6 +116,26 @@ export const BennyDog = ({
             }}
           />
         ))}
+        {/* Blink layer — only fades in while idle so it perfectly overlays the open-eye frame. */}
+        {mood === "idle" && (
+          <img
+            src={idleBlinkAsset.url}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="benny-blink-layer"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: 0,
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          />
+        )}
       </div>
     </div>
   );
