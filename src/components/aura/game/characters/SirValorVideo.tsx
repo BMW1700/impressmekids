@@ -167,8 +167,10 @@ export const SirValorVideo = ({
   // can't decode alpha WebM cleanly (Safari).
   if (resolvedMode === "svg") {
     const svgVariant = toSvgVariant(variant);
-    const svgSize: "small" | "medium" | "large" =
-      size <= 110 ? "small" : size <= 180 ? "medium" : "large";
+    // Always render Classic SVG Valor at "medium" so he matches Elara /
+    // Princess Ella and doesn't dwarf the goblin in the arena. The wrapper
+    // box keeps its full `size` for centering / baseline offset.
+    const svgSize: "small" | "medium" | "large" = "medium";
     return (
       <div
         className={className}
