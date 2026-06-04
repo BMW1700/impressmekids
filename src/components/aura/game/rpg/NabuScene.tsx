@@ -109,9 +109,7 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
 type NabuAnim = any;
 
 
-// Loose type — framer-motion accepts many shapes here.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NabuAnim = any;
+
 
 // Transparent padding under the dog's paws in the source PNGs.
 // Subtract this slice from the bottom so the visible feet sit on GROUND_Y.
