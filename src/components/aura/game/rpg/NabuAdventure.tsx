@@ -163,9 +163,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
       return;
     }
     if (phase === "reading") {
-      // Wait for the ask line to finish before auto-pronouncing the word so
-      // the two utterances don't collide.
-      queue(() => speakWordPolite(current.word, 1200), 1000);
+      // Do NOT auto-pronounce the target word. The kid should attempt it
+      // cold by reading the letters. Pronunciation is only offered as a
+      // scaffold after the 2nd miss, or via the "Hear it" button.
       return;
     }
     if (phase === "solved") {
@@ -233,6 +233,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           if (next >= MAX_ATTEMPTS) {
             // Auto-pass so the kid is never stuck.
             window.setTimeout(() => triggerWin(true), 600);
+          } else if (next === 2) {
+            // Scaffold on 2nd miss: model the word for them to echo.
+            window.setTimeout(() => speakWordPolite(current.word, 1200), 500);
           }
           return next;
         });
