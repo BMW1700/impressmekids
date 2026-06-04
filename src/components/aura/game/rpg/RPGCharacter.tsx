@@ -770,7 +770,10 @@ export const RPGCharacter = ({
         ks === 'attacking' ? 'attack' : ks === 'hit' ? 'hit' : 'idle';
       const variant = (skinVariant as string) || 'default';
       const artStyle = getSkinArtStyle('valor', variant);
-      const renderMode: 'video' | 'svg' | 'auto' = artStyle === 'video' ? 'auto' : 'svg';
+      // Defensive: even if a 'video' skin is equipped, Safari (no alpha-WebM)
+      // must render the SVG Classic knight or we get a white box.
+      const renderMode: 'video' | 'svg' | 'auto' =
+        artStyle === 'video' ? (supportsAlphaWebm() ? 'auto' : 'svg') : 'svg';
       return (
         <SirValorVideo
           mood={valorMood}
