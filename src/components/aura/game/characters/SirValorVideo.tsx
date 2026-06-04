@@ -108,6 +108,12 @@ interface SirValorVideoProps {
   maxHp?: number;
   /** Name shown above the bar (defaults to "Sir Valor"). */
   name?: string;
+  /**
+   * 'video' = always render the realistic videos.
+   * 'svg'   = always render the Classic SVG knight (e.g. for SVG skins).
+   * 'auto'  = pick based on browser capability (Safari without alpha-WebM → svg).
+   */
+  renderMode?: "video" | "svg" | "auto";
   className?: string;
   style?: React.CSSProperties;
 }
@@ -121,12 +127,21 @@ export const SirValorVideo = ({
   currentHp,
   maxHp,
   name = "Sir Valor",
+  renderMode = "auto",
   className,
   style,
 }: SirValorVideoProps) => {
-  const skin = VALOR_SKINS[variant] ?? VALOR_SKINS.default;
   const reducedMotion = useReducedMotion();
 
+  // Resolve render mode. 'auto' picks based on browser capability; Safari
+  // without VP9 alpha decode would otherwise paint a white box behind the hero.
+  const resolvedMode: "video" | "svg" = useMemo(() => {
+    if (renderMode === "video") return "video";
+    if (renderMode === "svg") return "svg";
+    return supportsAlphaWebm() ? "video" : "svg";
+  }, [renderMode]);
+
+  const skin = VALOR_SKINS[variant] ?? VALOR_SKINS.default;
   const accessoriesUnder = (skin.accessories ?? []).filter((a) => a.z !== "over");
   const accessoriesOver = (skin.accessories ?? []).filter((a) => a.z === "over");
 
@@ -142,6 +157,48 @@ export const SirValorVideo = ({
         ? "linear-gradient(90deg, #eab308, #facc15)"
         : "linear-gradient(90deg, #dc2626, #ef4444)";
 
+  // Baseline offset — pulls the wrapper down so the rendered feet align with
+  // the goblin's feet in the arena's items-end columns.
+  const baselineOffsetPx = Math.round(size * VALOR_BASELINE_OFFSET_RATIO);
+
+  // ─── SVG branch ──────────────────────────────────────────────────────────
+  // Renders the Classic hand-drawn knight (with skin palette + HP bar) and
+  // skips the video stack entirely. Used for SVG skins and for browsers that
+  // can't decode alpha WebM cleanly (Safari).
+  if (resolvedMode === "svg") {
+    const svgVariant = toSvgVariant(variant);
+    const svgSize: "small" | "medium" | "large" =
+      size <= 110 ? "small" : size <= 180 ? "medium" : "large";
+    return (
+      <div
+        className={className}
+        style={{
+          position: "relative",
+          width: size,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pointerEvents: "none",
+          userSelect: "none",
+          marginBottom: baselineOffsetPx,
+          ...style,
+        }}
+      >
+        <div style={{ transform: flipX ? "scaleX(-1)" : undefined }}>
+          <SirValor
+            state={mood === "attack" ? "attacking" : mood === "hit" ? "hit" : "idle"}
+            healthPercent={hpPct}
+            currentHp={currentHp}
+            maxHp={maxHp}
+            size={svgSize}
+            showHealthBar={showHealthBar}
+            skinVariant={svgVariant}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // Outer wrapper holds the character box + (optional) HP bar so both share
   // a single horizontal center and the bar sits cleanly beneath the feet.
   return (
@@ -155,6 +212,7 @@ export const SirValorVideo = ({
         alignItems: "center",
         pointerEvents: "none",
         userSelect: "none",
+        marginBottom: baselineOffsetPx,
         ...style,
       }}
     >
