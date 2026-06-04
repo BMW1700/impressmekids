@@ -3008,7 +3008,7 @@ export const RPGBattleArena = ({
 
             {/* Heroes (Right Side) */}
             <motion.div
-              className="flex-1 flex justify-center gap-2 md:gap-4"
+              className="flex-1 flex justify-center items-end gap-2 md:gap-4"
               initial={{ x: 100, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
