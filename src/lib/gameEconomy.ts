@@ -299,58 +299,62 @@ export const STORE_ITEMS: StoreItem[] = [
   },
   
   // =============== DEFAULT SKINS (free, always owned) ===============
+  // Naming convention: "<Hero> — Classic" for SVG defaults, "<Hero> — Ascendant"
+  // for the base realistic (video) tier. Cool themed suffixes for variants
+  // (Golden Aegis, Frostward, etc.). Future realistic skins for Elara /
+  // Princess Ella follow the same pattern.
   {
-    id: 'default_valor', name: 'Classic Knight', description: 'The original hand-drawn Sir Valor',
+    id: 'default_valor', name: 'Sir Valor — Classic', description: 'The original hand-drawn Sir Valor',
     price: 0, category: 'skin', icon: '⚔️', rarity: 'common', character: 'valor', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'realistic_valor', name: 'Sir Valor (Realistic)', description: 'The new flushed-out animated Sir Valor',
+    id: 'realistic_valor', name: 'Sir Valor — Ascendant', description: 'Fully realized, cinematic Sir Valor',
     price: 0, category: 'skin', icon: '🛡️', rarity: 'rare', character: 'valor', skinVariant: 'realistic_default', theme: 'classic', artStyle: 'video',
   },
   {
-    id: 'default_elara', name: 'Classic Wizard', description: 'The original Elara look',
+    id: 'default_elara', name: 'Elara — Classic', description: 'The original Elara look',
     price: 0, category: 'skin', icon: '🔮', rarity: 'common', character: 'elara', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'default_ella', name: 'Classic Princess', description: 'The original Princess Ella look',
+    id: 'default_ella', name: 'Princess Ella — Classic', description: 'The original Princess Ella look',
     price: 0, category: 'skin', icon: '👸', rarity: 'common', character: 'ella', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'default_agent_x', name: 'Classic Agent X', description: 'Standard field operative gear',
+    id: 'default_agent_x', name: 'Agent X — Classic', description: 'Standard field operative gear',
     price: 0, category: 'skin', icon: '🕴️', rarity: 'common', character: 'agent_x', skinVariant: 'default', theme: 'agent',
   },
   {
-    id: 'default_cipher', name: 'Classic Cipher', description: 'Standard tech specialist outfit',
+    id: 'default_cipher', name: 'Cipher — Classic', description: 'Standard tech specialist outfit',
     price: 0, category: 'skin', icon: '💻', rarity: 'common', character: 'cipher', skinVariant: 'default', theme: 'agent',
   },
   {
-    id: 'default_shadow', name: 'Classic Shadow', description: 'Standard infiltrator suit',
+    id: 'default_shadow', name: 'Shadow — Classic', description: 'Standard infiltrator suit',
     price: 0, category: 'skin', icon: '🥷', rarity: 'common', character: 'shadow', skinVariant: 'default', theme: 'agent',
   },
 
   // =============== SKINS - SIR VALOR (classic SVG art tier) ===============
   {
-    id: 'golden_knight', name: 'Golden Knight', description: 'Shiny golden armor for Sir Valor',
+    id: 'golden_knight', name: 'Sir Valor — Golden Aegis', description: 'Shiny golden armor for Sir Valor',
     price: 1000, category: 'skin', icon: '👑', rarity: 'legendary', character: 'valor', skinVariant: 'golden', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'crystal_knight', name: 'Crystal Knight', description: 'Crystalline armor with particle effects',
+    id: 'crystal_knight', name: 'Sir Valor — Crystal Vanguard', description: 'Crystalline armor with particle effects',
     price: 800, category: 'skin', icon: '💎', rarity: 'epic', character: 'valor', skinVariant: 'crystal', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'flame_knight', name: 'Flame Knight', description: 'Burning armor wreathed in flames',
+    id: 'flame_knight', name: 'Sir Valor — Ember Blade', description: 'Burning armor wreathed in flames',
     price: 900, category: 'skin', icon: '🔥', rarity: 'epic', character: 'valor', skinVariant: 'flame', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'ice_knight', name: 'Frost Guardian', description: 'Frozen armor of the north',
+    id: 'ice_knight', name: 'Sir Valor — Frostward', description: 'Frozen armor of the north',
     price: 950, category: 'skin', icon: '🧊', rarity: 'epic', character: 'valor', skinVariant: 'ice', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'dragon_slayer', name: 'Dragon Slayer', description: 'Legendary dragon-scale armor',
+    id: 'dragon_slayer', name: 'Sir Valor — Dragonbane', description: 'Legendary dragon-scale armor',
     price: 1500, category: 'skin', icon: '🐉', rarity: 'legendary', character: 'valor', skinVariant: 'dragon', theme: 'classic', artStyle: 'svg',
   },
   {
-    id: 'shadow_knight', name: 'Shadow Knight', description: 'Dark armor from the void',
+    id: 'shadow_knight', name: 'Sir Valor — Nightfall', description: 'Dark armor from the void',
     price: 850, category: 'skin', icon: '🌑', rarity: 'epic', character: 'valor', skinVariant: 'shadow', theme: 'classic', artStyle: 'svg',
   },
 
@@ -693,8 +697,13 @@ export const getSkinArtStyle = (
  * instead of the white-boxed MP4 fallback.
  */
 export const supportsAlphaWebm = (): boolean => {
-  if (typeof document === 'undefined') return true; // SSR: assume capable; client re-checks.
+  if (typeof document === 'undefined' || typeof navigator === 'undefined') return true; // SSR
   try {
+    const ua = navigator.userAgent || '';
+    // Safari (desktop + iOS) reports `probably` for VP9 in WebM but has NO
+    // alpha-channel support, so the video renders opaque white. Force SVG.
+    const isSafari = /^((?!chrome|crios|fxios|android|edg).)*safari/i.test(ua);
+    if (isSafari) return false;
     const v = document.createElement('video');
     return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
   } catch {

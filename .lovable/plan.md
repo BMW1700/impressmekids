@@ -1,98 +1,68 @@
+# Skin Shop & Safari Fallback Fixes
 
-# Finalize Valor visuals + skin-level art tier (SVG ⇄ Video)
+Four bugs / polish items, all client-only.
 
-## 1. Hero / enemy feet alignment
+## 1. Classic Knight "Equip" button does nothing
 
-Root cause: `items-end` aligns the wrapper boxes, but the character pixels inside Sir Valor's 220×220 video don't reach the bottom edge, so he floats above the goblin's feet.
+**Cause** (`src/hooks/usePlayerInventory.ts`, `equipSkin`): when `skinVariant === 'default'`, the mutation early-returns after unequipping others — no inventory row is ever written for `default_valor`. Then `getEquippedSkin('valor')` falls through to the Safari-aware fallback and returns `'realistic_default'` again, so the UI never changes.
 
-Fix in `SirValorVideo.tsx`:
-- Apply a calibrated negative `marginBottom` (~`-28px`, scaled to `size`) on the outer wrapper, exposed as `VALOR_BASELINE_OFFSET`.
-- Keep `objectPosition: 50% 100%` so trim comes from the empty area above the head, not from the character.
-- No layout changes in `RPGBattleArena.tsx`.
+**Fix**: Drop the `if (skinVariant === 'default') return itemId` short-circuit. Always insert/update a row with `is_equipped: true` for the equipped skin (default ones included). `getEquippedSkin` then sees the explicit row and returns `'default'`, beating the realistic fallback. No other call sites depend on the "no row for default" behavior — `ownedItems` already merges `FREE_SKIN_IDS` so default skins remain free.
 
-## 2. Safari white box → automatic SVG fallback
+## 2. Safari still shows a white box behind realistic Valor
 
-Two parts:
+**Cause** (`src/lib/gameEconomy.ts`, `supportsAlphaWebm`): the probe only checks `canPlayType('video/webm; codecs="vp9"') === 'probably'`. Modern Safari (16+) reports `'probably'` for VP9 but **does not support the alpha channel**, so the WebM renders opaque white.
 
-**(a) Capability probe** (run once in `SirValorVideo.tsx`):
+**Fix**: tighten the probe to "Chromium/Firefox-capable AND not Safari":
+
 ```ts
-const supportsAlphaWebm =
-  typeof document !== "undefined" &&
-  document.createElement("video").canPlayType('video/webm; codecs="vp9"') === "probably";
-```
-Empty / `"maybe"` = unsupported (covers Safari).
-
-**(b) Render mode**: a `renderMode: 'video' | 'svg' | 'auto'` prop on `SirValorVideo`. Resolution:
-- `'auto'` + unsupported → `'svg'`
-- `'auto'` + supported → `'video'`
-- Explicit values are honored.
-
-When the resolved mode is `'svg'`, `SirValorVideo` delegates to the existing `SirValor` SVG component (which already supports all `ValorSkinVariant`s) and still wraps the HP bar, name chip, and sword shine. Eliminates the Safari white box automatically.
-
-## 3. Two distinct skin "art tiers" in the existing shop
-
-This is the part the user explicitly called out: equipping "Classic Knight" in the shop must actually show the SVG knight, not the video Valor.
-
-**Today** in `src/lib/gameEconomy.ts`:
-- `default_valor` → `skinVariant: 'default'` → routes to `SirValorVideo` regardless (bug).
-- All Valor skins (`golden`, `crystal`, `flame`, `ice`, `dragon`, `shadow`) only exist as SVG palettes but currently get hijacked by the video component.
-
-**Fix**: treat the art style as part of the skin identity. Two parallel skin lines:
-
-```text
-Classic (SVG, free starter)        Realistic (Video, new flushed-out art)
-─────────────────────────────────  ───────────────────────────────────────
-default_valor      Classic Knight  realistic_valor   Sir Valor (Realistic)
-golden_knight      Golden Knight   (future: realistic_golden_valor, etc.)
-crystal_knight     Crystal Knight
-flame_knight       Flame Knight
-ice_knight         Frost Guardian
-dragon_knight      Dragon Knight
-shadow_knight      Shadow Knight
+export const supportsAlphaWebm = (): boolean => {
+  if (typeof document === 'undefined' || typeof navigator === 'undefined') return true;
+  try {
+    const ua = navigator.userAgent;
+    const isSafari = /^((?!chrome|crios|fxios|android).)*safari/i.test(ua);
+    if (isSafari) return false;                       // Safari = always SVG
+    const v = document.createElement('video');
+    return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
+  } catch { return false; }
+};
 ```
 
-Concretely:
+This makes both the default-skin selection (`usePlayerInventory.getEquippedSkin`) and the `SirValorVideo` `'auto'` resolver pick the SVG branch on Safari, even if the user previously equipped `realistic_valor` on another browser. Belt-and-suspenders in `RPGCharacter.tsx`: when `artStyle === 'video'` but `!supportsAlphaWebm()`, pass `renderMode="svg"` directly (so we never even mount a `<video>` on Safari).
 
-**3a. Add an `artStyle` field to shop items** (`src/lib/gameEconomy.ts`):
-```ts
-artStyle?: 'svg' | 'video';   // defaults to 'svg' when omitted
-```
-- Tag all existing Valor skins (`default_valor`, `golden_knight`, …) with `artStyle: 'svg'`.
-- Add a new starter entry **`realistic_valor`** — `price: 0`, `rarity: 'rare'`, `character: 'valor'`, `skinVariant: 'realistic_default'`, `artStyle: 'video'`, `name: 'Sir Valor (Realistic)'`, `description: 'The new flushed-out Sir Valor.'` Unlocked by default so kids can flip to it immediately.
-- Leaves room to add `realistic_golden_valor`, `realistic_flame_valor`, etc., later as new realistic skins are produced — no schema change required.
+## 3. Default / Golden SVG Valor scaled too large
 
-**3b. Route by art style in `RPGCharacter.tsx`** (knight branch):
-- Read the equipped Valor skin's `artStyle` from the catalog (lookup helper in `gameEconomy.ts`, e.g. `getSkinById(skinVariant) → ShopItem`).
-- If `artStyle === 'video'` → render `SirValorVideo` with the chosen variant (currently only `realistic_default`).
-- If `artStyle === 'svg'` → render the existing `SirValor` SVG component with the matching `ValorSkinVariant` (`default | golden | crystal | flame | ice | dragon | shadow`) and skip `SirValorVideo` entirely.
-- Safari forces `artStyle: 'svg'` regardless of the equipped skin (with a small one-time toast: *"Realistic Valor is only available on Chrome/Edge/Firefox — using Classic art."*), so Safari users effectively start as the Classic SVG hero. They can still browse/equip the realistic skin; we just render the SVG until they switch browsers.
+**Cause** (`src/components/aura/game/characters/SirValorVideo.tsx`): the SVG fallback maps `size=220` → `svgSize='large'` (130×220), but every other hero (Elara, PrincessElla) renders at `'medium'` (100×170). Result: Classic Knight + Golden Knight tower over the goblin.
 
-**3c. Store UI** (`RPGStore.tsx` / `SkinPreviewCard.tsx`):
-- Group skins under two collapsible sub-headers inside the Skins tab: **Classic** (SVG) and **Realistic** (Video / new flushed-out art).
-- Each tile shows a small badge (`Classic` / `Realistic`) so kids can tell the lines apart.
-- Equipping a skin persists its full id (e.g. `realistic_default` or `golden`) into the existing `equippedSkins.valor` slot — no DB migration; values are already free-form strings.
+**Fix**: in the SVG branch, hard-code `svgSize = 'medium'` so all SVG Valor variants render at the historical knight size. Wrapper box stays 220×220 (centered), baseline offset unchanged, so feet still line up with the goblin. Realistic video path is untouched.
 
-**3d. Forward-compatible**: when realistic Elara / Princess Ella videos arrive later, the same pattern applies — add `realistic_elara`, `realistic_ella` entries with `artStyle: 'video'`, route in their character branches, and the SVG fallback story carries over for free.
+## 4. Rename every skin to the "Sir Valor / cool realistic" scheme
 
-## 4. Sword glow (already approved)
+`src/lib/gameEconomy.ts` only — UI auto-reflects names.
 
-Keep the previously approved CSS shine + radial halo, applied inside both render branches so the Classic SVG knight also sparkles. Respects `prefers-reduced-motion`.
+| id | Old name | New name |
+|---|---|---|
+| `default_valor` | Classic Knight | **Sir Valor — Classic** |
+| `golden_knight` | Golden Knight | **Sir Valor — Golden Aegis** |
+| `crystal_knight` | Crystal Knight | **Sir Valor — Crystal Vanguard** |
+| `flame_knight` | (Flame) | **Sir Valor — Ember Blade** |
+| `ice_knight` | (Ice) | **Sir Valor — Frostward** |
+| `dragon_knight` | (Dragon) | **Sir Valor — Dragonbane** |
+| `shadow_knight` | (Shadow) | **Sir Valor — Nightfall** |
+| `realistic_valor` | Sir Valor (Realistic) | **Sir Valor — Ascendant** *(realistic tier)* |
+| `default_elara` | Classic Wizard | **Elara — Classic** |
+| `default_ella` | Classic Princess | **Princess Ella — Classic** |
 
-## 5. Files changed
+Naming convention going forward for realistic tiers (so future Elara / Ella videos slot in): **`<Hero> — Ascendant`** for the base realistic skin, then themed cool suffixes (`Stormcaller`, `Sunforged`, etc.) for variants. Documented as a one-line comment above `STORE_ITEMS` so future skins follow the pattern.
 
-- `src/components/aura/game/characters/SirValorVideo.tsx`
-  - Baseline offset, capability probe, `renderMode` prop, SVG delegation.
-- `src/components/aura/game/rpg/RPGCharacter.tsx`
-  - Knight branch reads `artStyle` from the equipped skin and routes to `SirValor` (SVG) or `SirValorVideo`.
-- `src/lib/gameEconomy.ts`
-  - Add `artStyle` to `ShopItem`, tag existing Valor skins as `'svg'`, add new `realistic_valor` entry, add `getSkinById` helper.
-- `src/components/aura/game/rpg/RPGStore.tsx` (+ `SkinPreviewCard.tsx` if needed)
-  - Group skins by `artStyle`, render badge, preview the correct art per tile.
-- (Optional, tiny) `src/hooks/usePlayerInventory.ts` — auto-grant `realistic_valor` on first load so it appears as an equip-ready starter alongside `default_valor`.
+## Files
+
+- `src/lib/gameEconomy.ts` — rename entries, harden `supportsAlphaWebm`, add naming-convention comment.
+- `src/hooks/usePlayerInventory.ts` — remove `default` short-circuit in `equipSkin`.
+- `src/components/aura/game/characters/SirValorVideo.tsx` — force `svgSize='medium'` in SVG branch.
+- `src/components/aura/game/rpg/RPGCharacter.tsx` — pass `renderMode="svg"` directly on Safari (defensive).
 
 ## Out of scope
 
-- New realistic skins for Elara / Princess Ella (videos don't exist yet; structure is ready).
-- Additional realistic Valor variants beyond the base — added as videos land.
-- Re-encoding existing webm/mp4 assets.
-- Backend/DB schema changes (everything is client-side catalog + string ids).
+- Adding new realistic skins for Elara / Ella (no video assets yet).
+- Reworking the Skins grid layout or rarity colors.
+- Re-encoding videos to a Safari-compatible alpha format (HEVC w/ alpha) — separate asset task.

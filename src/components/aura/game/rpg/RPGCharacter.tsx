@@ -7,7 +7,7 @@ import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { GrogTheKing, GrogState } from "../characters/GrogTheKing";
 import { KnightState } from "../characters/SirValor";
 import { SirValorVideo } from "../characters/SirValorVideo";
-import { getSkinArtStyle } from "@/lib/gameEconomy";
+import { getSkinArtStyle, supportsAlphaWebm } from "@/lib/gameEconomy";
 import { Elara, WizardState } from "../characters/Elara";
 import { PrincessElla, PrincessState } from "../characters/PrincessElla";
 import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
@@ -770,7 +770,10 @@ export const RPGCharacter = ({
         ks === 'attacking' ? 'attack' : ks === 'hit' ? 'hit' : 'idle';
       const variant = (skinVariant as string) || 'default';
       const artStyle = getSkinArtStyle('valor', variant);
-      const renderMode: 'video' | 'svg' | 'auto' = artStyle === 'video' ? 'auto' : 'svg';
+      // Defensive: even if a 'video' skin is equipped, Safari (no alpha-WebM)
+      // must render the SVG Classic knight or we get a white box.
+      const renderMode: 'video' | 'svg' | 'auto' =
+        artStyle === 'video' ? (supportsAlphaWebm() ? 'auto' : 'svg') : 'svg';
       return (
         <SirValorVideo
           mood={valorMood}
