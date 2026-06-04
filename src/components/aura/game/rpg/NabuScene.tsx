@@ -120,7 +120,7 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 140,
+  size = 280,
   anim,
 }: {
   phase: ScenePhase;
@@ -172,7 +172,7 @@ const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number })
         href={src}
         xlinkHref={src}
         x={-size / 2}
-        y={-size}
+        y={-size + 10}
         width={size}
         height={size}
         style={{ pointerEvents: "none" }}
