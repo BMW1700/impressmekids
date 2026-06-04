@@ -164,6 +164,7 @@ export const SirValorVideo = ({
               width: "100%",
               height: "100%",
               objectFit: "contain",
+              objectPosition: "50% 100%",
               filter: skin.filter,
             }}
           />
