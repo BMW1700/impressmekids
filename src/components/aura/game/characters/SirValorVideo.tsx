@@ -30,8 +30,24 @@ import idleMp4 from "@/assets/valor-idle.mp4.asset.json";
 import attackMp4 from "@/assets/valor-attack.mp4.asset.json";
 import hitMp4 from "@/assets/valor-hit.mp4.asset.json";
 import idlePosterAsset from "@/assets/valor-idle-poster-transparent.png.asset.json";
+import { SirValor, type ValorSkinVariant } from "./SirValor";
+import { supportsAlphaWebm } from "@/lib/gameEconomy";
 
 export type ValorMood = "idle" | "attack" | "hit";
+
+/** Pixel offset applied to the bottom of the video so the rendered character's
+ *  feet line up with the goblin/enemy feet across the arena. The character art
+ *  sits a bit above the bottom of its 220px box, so we pull the whole wrapper
+ *  down by a fraction of `size` to close the gap. Tune here if the art changes. */
+const VALOR_BASELINE_OFFSET_RATIO = -28 / 220;
+
+/** Map any incoming variant string to a SVG-renderable variant for the
+ *  Classic art tier. Video-only variants (e.g. "realistic_default") fall back
+ *  to the base SVG knight look. */
+const toSvgVariant = (variant: string): ValorSkinVariant => {
+  const svgSet: ValorSkinVariant[] = ["default", "golden", "crystal", "flame", "ice", "dragon", "shadow"];
+  return (svgSet as string[]).includes(variant) ? (variant as ValorSkinVariant) : "default";
+};
 
 type ClipSources = { webm: string; mp4: string };
 
