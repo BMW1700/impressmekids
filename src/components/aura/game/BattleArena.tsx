@@ -5,7 +5,7 @@ import { PlayerCharacter, PlayerState, PlayerGender } from "./PlayerCharacter";
 import { EnergyBeamEffect } from "./EnergyBeamEffect";
 import { useState, useEffect } from "react";
 import { GoblinGuard, GoblinState } from "./characters/GoblinGuard";
-import { SirValor, KnightState } from "./characters/SirValor";
+
 import { SirValorVideo, useTransientValorMood } from "./characters/SirValorVideo";
 import { ParticleBurst } from "./effects/ParticleBurst";
 import { ImpactFlash } from "./effects/ImpactFlash";
