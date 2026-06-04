@@ -6,6 +6,7 @@ import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { GrogTheKing, GrogState } from "../characters/GrogTheKing";
 import { SirValor, KnightState } from "../characters/SirValor";
+import { SirValorVideo } from "../characters/SirValorVideo";
 import { Elara, WizardState } from "../characters/Elara";
 import { PrincessElla, PrincessState } from "../characters/PrincessElla";
 import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
