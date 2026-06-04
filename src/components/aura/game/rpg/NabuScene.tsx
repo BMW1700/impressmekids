@@ -13,28 +13,21 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { type BennyMood } from "@/components/BennyDog";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
-import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
-import sadAsset from "@/assets/benny-sad.png.asset.json";
+import { BennyDog, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 // Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
 const BennyMoodContext = createContext<BennyMood | null>(null);
 
-const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: idleAsset.url,
-  celebrate: celebrateAsset.url,
-  sad: sadAsset.url,
-};
-
 interface NabuSceneProps {
   word: string;
   phase: ScenePhase;
   index: number; // forces remount per obstacle
   mood?: BennyMood | null;
+  solutionEmoji?: string;
 }
+
 
 
 // Stage uses a 1000×500 SVG viewBox; ground line at y=380.
@@ -138,49 +131,23 @@ const NabuSprite = ({
   );
 };
 
-const bennyMoodAnim = (mood: BennyMood) => {
-  if (mood === "celebrate") {
-    return {
-      animate: { y: [0, -28, 0, -16, 0], scale: [1, 1.18, 1.08, 1.14, 1.05], rotate: 0 },
-      transition: { duration: 1.1, repeat: Infinity, ease: "easeOut" as const },
-    };
-  }
-  if (mood === "sad") {
-    return {
-      animate: { x: [0, -6, 6, -4, 4, 0], rotate: [0, -3, 3, -2, 2, 0], scale: 1 },
-      transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
-    };
-  }
-  return {
-    animate: { y: [0, -6, 0], rotate: 0, scale: 1 },
-    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
-  };
-};
-
-const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number }) => {
-  const anim = bennyMoodAnim(mood);
-  const src = BENNY_SOURCES[mood];
-
+const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
+  // Render the real BennyDog (with blink + tail wag) inside the SVG via foreignObject.
   return (
-    <motion.g
-      key={mood}
-      animate={anim.animate}
-      transition={anim.transition}
-      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
+    <foreignObject
+      x={-size / 2}
+      y={-size + 10}
+      width={size}
+      height={size}
+      style={{ pointerEvents: "none", overflow: "visible" }}
     >
-      <image
-        href={src}
-        xlinkHref={src}
-        x={-size / 2}
-        y={-size + 10}
-        width={size}
-        height={size}
-        style={{ pointerEvents: "none" }}
-        preserveAspectRatio="xMidYMax meet"
-      />
-    </motion.g>
+      <div style={{ width: "100%", height: "100%" }}>
+        <BennyDog mood={mood} size={size} />
+      </div>
+    </foreignObject>
   );
 };
+
 
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
