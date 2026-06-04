@@ -50,8 +50,8 @@ const ensureKeyframes = () => {
 }
 /* Blink: eyes-closed frame fades in for a brief moment every ~4s. */
 @keyframes benny-blink {
-  0%, 94%, 100% { opacity: 0; }
-  96%, 98%      { opacity: 1; }
+  0%, 88%, 100% { opacity: 0; transform: scaleY(0.08); }
+  91%, 96%      { opacity: 1; transform: scaleY(1); }
 }
 @keyframes benny-tail-wag {
   0%, 100% { transform: rotate(-16deg); }
@@ -60,7 +60,7 @@ const ensureKeyframes = () => {
 .benny-anim-idle      { animation: benny-idle-bounce 1.8s ease-in-out infinite; }
 .benny-anim-celebrate { animation: benny-celebrate    0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake    0.4s ease-in-out 3; }
-.benny-blink-layer    { animation: benny-blink 4.2s ease-in-out infinite; }
+.benny-blink-layer    { animation: benny-blink 3.2s ease-in-out infinite; }
 .benny-tail-layer {
   position: absolute;
   right: 8%;
@@ -74,16 +74,19 @@ const ensureKeyframes = () => {
 }
 .benny-eye-blink {
   position: absolute;
-  top: 29%;
-  width: 8%;
-  height: 2.4%;
+  top: 28.4%;
+  width: 10.5%;
+  height: 9.5%;
   border-radius: 999px;
-  background: hsl(var(--foreground));
+  background: hsl(var(--secondary));
   opacity: 0;
-  animation: benny-blink 4.2s ease-in-out infinite;
+  transform-origin: center;
+  animation: benny-blink 3.2s ease-in-out infinite;
+  z-index: 3;
+  box-shadow: inset 0 -0.35em 0 hsl(var(--foreground) / 0.55);
 }
-.benny-eye-blink-left { left: 38%; }
-.benny-eye-blink-right { left: 53%; }
+.benny-eye-blink-left { left: 36.3%; }
+.benny-eye-blink-right { left: 56.3%; }
 `;
   document.head.appendChild(el);
 };
