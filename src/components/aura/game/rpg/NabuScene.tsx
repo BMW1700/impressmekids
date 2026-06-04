@@ -13,21 +13,12 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { type BennyMood } from "@/components/BennyDog";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
-import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
-import sadAsset from "@/assets/benny-sad.png.asset.json";
+import { BennyDog, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 // Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
 const BennyMoodContext = createContext<BennyMood | null>(null);
-
-const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: idleAsset.url,
-  celebrate: celebrateAsset.url,
-  sad: sadAsset.url,
-};
 
 interface NabuSceneProps {
   word: string;
