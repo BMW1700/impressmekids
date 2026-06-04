@@ -52,23 +52,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
   const [hasStartedListening, setHasStartedListening] = useState(false);
-  const [bennyMood, setBennyMood] = useState<
-    | "idle"
-    | "celebrate"
-    | "sad"
-    | "happy"
-    | "excited"
-    | "cheering"
-    | "thinking"
-    | "surprised"
-    | "sleepy"
-    | null
-  >(null);
+  const [bennyMood, setBennyMood] = useState<"idle" | "celebrate" | "sad" | null>(null);
   const timers = useRef<number[]>([]);
   const moodTimer = useRef<number | null>(null);
-  const streakRef = useRef(0);
-  const idleThinkTimer = useRef<number | null>(null);
-  const idleSleepyTimer = useRef<number | null>(null);
 
 
   const clearTimers = () => {
@@ -79,23 +65,10 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     timers.current.push(window.setTimeout(fn, ms));
   };
 
-  const clearIdleTimers = () => {
-    if (idleThinkTimer.current) {
-      window.clearTimeout(idleThinkTimer.current);
-      idleThinkTimer.current = null;
-    }
-    if (idleSleepyTimer.current) {
-      window.clearTimeout(idleSleepyTimer.current);
-      idleSleepyTimer.current = null;
-    }
-  };
-
-  useEffect(() => () => { clearTimers(); clearIdleTimers(); }, []);
+  useEffect(() => () => clearTimers(), []);
   useEffect(() => {
     // Reset on level change
     clearTimers();
-    clearIdleTimers();
-    streakRef.current = 0;
     setIndex(0);
     setCorrect(0);
     setPhase("intro");
@@ -152,70 +125,28 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     // 'reading' is mic-driven (no auto-advance)
   }, [phase, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Mood machine ──────────────────────────────────────────────────────────
-  type Mood =
-    | "idle"
-    | "celebrate"
-    | "sad"
-    | "happy"
-    | "excited"
-    | "cheering"
-    | "thinking"
-    | "surprised"
-    | "sleepy";
-
-  const flashMood = useCallback((m: Mood, ms: number) => {
+  // ── Mic result handling ────────────────────────────────────────────────────
+  const flashMood = useCallback((m: "celebrate" | "sad", ms: number) => {
     setBennyMood(m);
     if (moodTimer.current) window.clearTimeout(moodTimer.current);
     moodTimer.current = window.setTimeout(() => setBennyMood(null), ms);
   }, []);
 
-  const armIdleTimers = useCallback(() => {
-    clearIdleTimers();
-    idleThinkTimer.current = window.setTimeout(() => {
-      setBennyMood("thinking");
-    }, 8000);
-  }, []);
-
-  // Arm the 8s thinking timer at the start of each "reading" phase.
-  useEffect(() => {
-    if (phase === "reading") {
-      armIdleTimers();
-    } else {
-      clearIdleTimers();
-    }
-  }, [phase, index, armIdleTimers]);
-
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
       setHasStartedListening(true);
-      clearIdleTimers();
       if (isCorrect) {
-        streakRef.current += 1;
-        const newCorrect = correct + 1;
-        setCorrect(newCorrect);
-
-        if (newCorrect === total && total >= 5) {
-          flashMood("excited", 3000);
-        } else {
-          flashMood("celebrate", 2000);
-        }
+        setCorrect((c) => c + 1);
+        flashMood("celebrate", 2000);
         setPhase("solved");
       } else {
-        streakRef.current = 0;
         flashMood("sad", 1500);
       }
+      // If incorrect, RPGWordReader handles echo/retry; we stay in reading.
     },
-    [phase, correct, total, flashMood]
+    [phase, flashMood]
   );
-
-  // Level-complete cheering when ending phase begins.
-  useEffect(() => {
-    if (phase === "ending") flashMood("cheering", 3000);
-  }, [phase, flashMood]);
-
-
 
 
   const handleBatchComplete = useCallback(() => {

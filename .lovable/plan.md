@@ -1,38 +1,46 @@
-Two surgical fixes in the Pre-K Benny screen. No other files touched.
+## Goal
 
-## 1. White/checkered box behind Benny
+Swap Nabu the Owl for Benny the Dog as the in-scene character on every Pre-K adventure level. All environments (river, mud, locked door, ladder, etc.), word cards, mic logic, scoring, and traversal animations stay exactly as they are — only the character sprite changes, and it now also reacts with mood (idle / celebrate / sad) to mic results.
 
-Cause: the source PNGs have a white square background baked in (visible in the screenshots). The SVG `<image>` elements faithfully render that white square.
+## What changes
 
-Fix in `src/components/aura/game/rpg/NabuScene.tsx` → `BennyStack`:
-- Add `style={{ mixBlendMode: "multiply", isolation: "isolate" }}` to each stacked `<image>`. White becomes invisible against the sky/grass; Benny's colored pixels stay intact.
-- Keep existing `opacity` crossfade and `pointer-events: none`.
-- Wrapping `<motion.g>` already has no background / padding / border — no further parent changes needed.
+1. **Upload the 3 attached images to the Lovable Assets CDN** and write pointer files:
+   - `src/assets/benny-idle.png.asset.json`
+   - `src/assets/benny-celebrate.png.asset.json`
+   - `src/assets/benny-sad.png.asset.json`
+   (No binaries in the repo. The `public/assets` path from the original request is not needed.)
 
-If `mix-blend-mode` shows any halo on a particular mood, fall back to the same property on the `<motion.g>` instead of each image — tested visually after the change.
+2. **New component `src/components/BennyDog.tsx`**
+   - Props: `mood: "idle" | "celebrate" | "sad"`, `size?: number` (default 140), plus optional `className` / `style` so it can be reused both as a corner mascot and as the in-scene sprite.
+   - Renders the correct PNG per mood with framer-motion:
+     - `idle` → gentle vertical bounce loop
+     - `celebrate` → quick jump + scale-up
+     - `sad` → small left/right shake
+   - `<img alt="Benny the dog">`, `draggable={false}`, `pointer-events-none`.
 
-## 2. Mood triggers — only 5 events, otherwise idle
+3. **Replace Nabu sprite inside every scene** (`src/components/aura/game/rpg/NabuScene.tsx`)
+   - Remove the SVG `NabuSprite` (owl body, wings, eyes, beak).
+   - Introduce a `BennySprite` that wraps `<BennyDog>` in a `motion.div` so it can still receive the existing per-scene `anim` keyframes (`jumpArcAnim`, `bouncyWalkAnim`, `walkToAnim`, `bridgeArcAnim` replacement, rocket lift-off, boat sail, etc.). The `anim` API stays the same so all per-scene traversal animations (JUMP arc over river, BOOTS walk through mud, KEY walk-to-door, LADDER climb, ROCKET fly, BOAT sail, AXE hop, NEST walk-to, etc.) keep working untouched.
+   - Mood wiring: `BennySprite` accepts a `mood` prop forwarded to `BennyDog`. Default is `idle`. During `solved` / `transition` phases the scene passes `celebrate`. Scenes do not know about `sad` — that comes from the mic layer (see #4).
 
-Edit `src/components/aura/game/rpg/NabuAdventure.tsx`:
+4. **Wire mic results to mood** (`src/components/aura/game/rpg/NabuAdventure.tsx`)
+   - Add `bennyMood` state. On `handleResult(true)` → `celebrate` for 2s then back to `idle` (already aligned with the existing `solved → transition` window). On `handleResult(false)` → `sad` for 1.5s then back to `idle`.
+   - Pass `bennyMood` down to `NabuScene` → `BennySprite`. If `bennyMood` is set it overrides the phase-derived default (so a wrong answer can show sad even while the scene is still in `reading`).
+   - All scoring, word-card rendering, TTS, progress dots, and ending screen are unchanged.
 
-- Remove the `surprised`-on-new-word flash entirely (delete the `flashMood("surprised", 1000)` block and the chained `armIdleTimers()` setTimeout inside the `phase === "reading"` effect).
-- Remove the `sleepy` idle timer.
-- Change `thinking` to fire after **8 seconds** of inactivity and **stay** (no auto-revert) until the next answer. Implementation: in `armIdleTimers`, keep only one `setTimeout(() => setBennyMood("thinking"), 8000)`. Clear it inside `handleResult` (already cleared via `clearIdleTimers()`).
-- Keep these exactly:
-  - correct → `celebrate` 2000 ms → idle
-  - wrong → `sad` 1500 ms → idle
-  - 8 s no answer → `thinking` (sticky until answer)
-  - level complete (`phase === "ending"`) → `cheering` 3000 ms → idle
-  - perfect score (`newCorrect === total && total >= 5`) → `excited` 3000 ms → idle
-- Remove the 3-streak `happy` branch — collapse to plain `celebrate` for every correct that isn't the perfect-score case.
-- Re-arm the 8 s `thinking` timer at the start of each `reading` phase and whenever an answer clears it.
-
-Resulting `Mood` union still includes unused values; leave the type alone to avoid touching `BennyDog`/`NabuScene` types.
+5. **Cleanup**
+   - Delete the now-unused owl SVG sprite code from `NabuScene.tsx` (keep `Stage`, `Sky`, `Clouds`, `Grass`, all environment shapes, and all `*Anim` helpers).
+   - Keep file/component names (`NabuScene`, `NabuAdventure`, `NabuEpisodeWrapper`) as-is to avoid touching the wider Pre-K wrapper / story-shell wiring. Only the rendered character changes; user-facing dialogue copy that says "Nabu" stays for now (separate change if you want it renamed everywhere).
 
 ## Files touched
-- `src/components/aura/game/rpg/NabuScene.tsx` — add `mixBlendMode: "multiply"` to stacked images.
-- `src/components/aura/game/rpg/NabuAdventure.tsx` — slim mood state machine to the 5 events above.
+
+- **Create**: `src/components/BennyDog.tsx`
+- **Create**: `src/assets/benny-idle.png.asset.json`, `benny-celebrate.png.asset.json`, `benny-sad.png.asset.json` (via `lovable-assets` CLI)
+- **Edit**: `src/components/aura/game/rpg/NabuScene.tsx` (replace owl SVG sprite with `BennySprite`, keep all scene environments + anim helpers)
+- **Edit**: `src/components/aura/game/rpg/NabuAdventure.tsx` (add `bennyMood` state, pass to scene)
 
 ## Out of scope
-- No changes to `BennyDog.tsx`, asset pointers, scene layout, or game logic.
-- No re-upload of PNGs (mix-blend handles the white background without new assets).
+
+- Renaming Nabu → Benny in spoken dialogue, story-shell intro/outro, world copy, or memory entries.
+- Changing any non-Pre-K screens (Castle, LexiQuest, etc.).
+- Changing scoring, word selection, mic/echo retry, or scene environments.

@@ -13,12 +13,21 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { BENNY_SOURCES, type BennyMood } from "@/components/BennyDog";
+import { type BennyMood } from "@/components/BennyDog";
+import idleAsset from "@/assets/benny-idle.png.asset.json";
+import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
+import sadAsset from "@/assets/benny-sad.png.asset.json";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 // Mood broadcast from NabuAdventure (mic-driven). null = use phase default.
 const BennyMoodContext = createContext<BennyMood | null>(null);
+
+const BENNY_SOURCES: Record<BennyMood, string> = {
+  idle: idleAsset.url,
+  celebrate: celebrateAsset.url,
+  sad: sadAsset.url,
+};
 
 interface NabuSceneProps {
   word: string;
@@ -109,79 +118,9 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
 type NabuAnim = any;
 
 
-
-
-// Transparent padding under the dog's paws in the source PNGs.
-// Subtract this slice from the bottom so the visible feet sit on GROUND_Y.
-const FEET_PADDING_RATIO = 0.08;
-
-const MOOD_KEYS: BennyMood[] = [
-  "idle", "celebrate", "sad", "happy", "excited",
-  "cheering", "thinking", "surprised", "sleepy",
-];
-
-// Per-mood transform animation (runs on the inner <motion.g>, anchored to feet).
-const bennyMoodAnim = (mood: BennyMood) => {
-  switch (mood) {
-    case "celebrate":
-      return { animate: { y: [0, -20, 0], scale: [1, 1.15, 1] }, transition: { duration: 0.4, repeat: Infinity, ease: "easeInOut" as const } };
-    case "sad":
-      return { animate: { x: [0, -8, 8, -6, 6, 0] }, transition: { duration: 0.4, repeat: 3, ease: "easeInOut" as const } };
-    case "happy":
-      return { animate: { y: [0, -6, 0] }, transition: { duration: 1.0, repeat: Infinity, ease: "easeInOut" as const } };
-    case "excited":
-      return { animate: { y: [0, -16, 0], rotate: [0, 180, 360] }, transition: { duration: 0.5, repeat: Infinity, ease: "linear" as const } };
-    case "cheering":
-      return { animate: { y: [0, -22, 0], scale: [1, 1.2, 1] }, transition: { duration: 0.6, repeat: Infinity, ease: "easeInOut" as const } };
-    case "thinking":
-      return { animate: { rotate: [-6, 6, -6] }, transition: { duration: 2.0, repeat: Infinity, ease: "easeInOut" as const } };
-    case "surprised":
-      return { animate: { scale: [1, 1.2, 1] }, transition: { duration: 0.3, ease: "easeOut" as const } };
-    case "sleepy":
-      return { animate: { rotate: [-3, 3, -3] }, transition: { duration: 3.0, repeat: Infinity, ease: "easeInOut" as const } };
-    default:
-      return { animate: { y: [0, -8, 0] }, transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const } };
-  }
-};
-
-// Stacked SVG <image> elements, crossfaded by opacity — never unmount.
-const BennyStack = ({ mood, size }: { mood: BennyMood; size: number }) => {
-  const footTrim = size * FEET_PADDING_RATIO;
-  const anim = bennyMoodAnim(mood);
-  return (
-    <motion.g
-      key={mood}
-      animate={anim.animate}
-      transition={anim.transition}
-      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
-    >
-      {MOOD_KEYS.map((m) => (
-        <image
-          key={m}
-          href={BENNY_SOURCES[m]}
-          xlinkHref={BENNY_SOURCES[m]}
-          x={-size / 2}
-          y={-size + footTrim}
-          width={size}
-          height={size}
-          preserveAspectRatio="xMidYMax meet"
-          style={{
-            opacity: m === mood ? 1 : 0,
-            transition: "opacity 0.3s ease-in-out",
-            pointerEvents: "none",
-            mixBlendMode: "multiply",
-            isolation: "isolate",
-          }}
-
-        />
-      ))}
-    </motion.g>
-  );
-};
-
 const NabuSprite = ({
   phase,
-  size = 280,
+  size = 140,
   anim,
 }: {
   phase: ScenePhase;
@@ -192,20 +131,56 @@ const NabuSprite = ({
   const bennyMood: BennyMood =
     ctxMood ??
     (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
-
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
-      <BennyStack mood={bennyMood} size={size} />
+      <BennySvgImage mood={bennyMood} size={size} />
     </motion.g>
   );
 };
 
-// Legacy helper used by scenes that render Benny outside NabuSprite (rocket, etc.).
-const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => (
-  <BennyStack mood={mood} size={size} />
-);
+const bennyMoodAnim = (mood: BennyMood) => {
+  if (mood === "celebrate") {
+    return {
+      animate: { y: [0, -28, 0, -16, 0], scale: [1, 1.18, 1.08, 1.14, 1.05], rotate: 0 },
+      transition: { duration: 1.1, repeat: Infinity, ease: "easeOut" as const },
+    };
+  }
+  if (mood === "sad") {
+    return {
+      animate: { x: [0, -6, 6, -4, 4, 0], rotate: [0, -3, 3, -2, 2, 0], scale: 1 },
+      transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
+    };
+  }
+  return {
+    animate: { y: [0, -6, 0], rotate: 0, scale: 1 },
+    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
+  };
+};
 
+const BennySvgImage = ({ mood, size = 140 }: { mood: BennyMood; size?: number }) => {
+  const anim = bennyMoodAnim(mood);
+  const src = BENNY_SOURCES[mood];
 
+  return (
+    <motion.g
+      key={mood}
+      animate={anim.animate}
+      transition={anim.transition}
+      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
+    >
+      <image
+        href={src}
+        xlinkHref={src}
+        x={-size / 2}
+        y={-size}
+        width={size}
+        height={size}
+        style={{ pointerEvents: "none" }}
+        preserveAspectRatio="xMidYMax meet"
+      />
+    </motion.g>
+  );
+};
 
 
 // ── Common reusable SVG bits ──────────────────────────────────────────────
