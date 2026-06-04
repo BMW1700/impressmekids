@@ -13,7 +13,7 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { BennyDog, type BennyMood } from "@/components/BennyDog";
+import { BENNY_SOURCES, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
@@ -115,6 +115,67 @@ type NabuAnim = any;
 // Subtract this slice from the bottom so the visible feet sit on GROUND_Y.
 const FEET_PADDING_RATIO = 0.08;
 
+const MOOD_KEYS: BennyMood[] = [
+  "idle", "celebrate", "sad", "happy", "excited",
+  "cheering", "thinking", "surprised", "sleepy",
+];
+
+// Per-mood transform animation (runs on the inner <motion.g>, anchored to feet).
+const bennyMoodAnim = (mood: BennyMood) => {
+  switch (mood) {
+    case "celebrate":
+      return { animate: { y: [0, -20, 0], scale: [1, 1.15, 1] }, transition: { duration: 0.4, repeat: Infinity, ease: "easeInOut" as const } };
+    case "sad":
+      return { animate: { x: [0, -8, 8, -6, 6, 0] }, transition: { duration: 0.4, repeat: 3, ease: "easeInOut" as const } };
+    case "happy":
+      return { animate: { y: [0, -6, 0] }, transition: { duration: 1.0, repeat: Infinity, ease: "easeInOut" as const } };
+    case "excited":
+      return { animate: { y: [0, -16, 0], rotate: [0, 180, 360] }, transition: { duration: 0.5, repeat: Infinity, ease: "linear" as const } };
+    case "cheering":
+      return { animate: { y: [0, -22, 0], scale: [1, 1.2, 1] }, transition: { duration: 0.6, repeat: Infinity, ease: "easeInOut" as const } };
+    case "thinking":
+      return { animate: { rotate: [-6, 6, -6] }, transition: { duration: 2.0, repeat: Infinity, ease: "easeInOut" as const } };
+    case "surprised":
+      return { animate: { scale: [1, 1.2, 1] }, transition: { duration: 0.3, ease: "easeOut" as const } };
+    case "sleepy":
+      return { animate: { rotate: [-3, 3, -3] }, transition: { duration: 3.0, repeat: Infinity, ease: "easeInOut" as const } };
+    default:
+      return { animate: { y: [0, -8, 0] }, transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const } };
+  }
+};
+
+// Stacked SVG <image> elements, crossfaded by opacity — never unmount.
+const BennyStack = ({ mood, size }: { mood: BennyMood; size: number }) => {
+  const footTrim = size * FEET_PADDING_RATIO;
+  const anim = bennyMoodAnim(mood);
+  return (
+    <motion.g
+      key={mood}
+      animate={anim.animate}
+      transition={anim.transition}
+      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
+    >
+      {MOOD_KEYS.map((m) => (
+        <image
+          key={m}
+          href={BENNY_SOURCES[m]}
+          xlinkHref={BENNY_SOURCES[m]}
+          x={-size / 2}
+          y={-size + footTrim}
+          width={size}
+          height={size}
+          preserveAspectRatio="xMidYMax meet"
+          style={{
+            opacity: m === mood ? 1 : 0,
+            transition: "opacity 0.3s ease-in-out",
+            pointerEvents: "none",
+          }}
+        />
+      ))}
+    </motion.g>
+  );
+};
+
 const NabuSprite = ({
   phase,
   size = 280,
@@ -129,39 +190,18 @@ const NabuSprite = ({
     ctxMood ??
     (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
 
-  // Anchor the visible feet on the ground line.
-  const footTrim = size * FEET_PADDING_RATIO;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
-      <foreignObject
-        x={-size / 2}
-        y={-size + footTrim}
-        width={size}
-        height={size}
-        style={{ overflow: "visible", pointerEvents: "none" }}
-      >
-        <BennyDog mood={bennyMood} size={size} />
-      </foreignObject>
+      <BennyStack mood={bennyMood} size={size} />
     </motion.g>
   );
 };
 
-// Backwards-compatible helper used by scenes that render Benny outside the
-// standard NabuSprite anim helper (e.g. rocket lift-off).
-const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  const footTrim = size * FEET_PADDING_RATIO;
-  return (
-    <foreignObject
-      x={-size / 2}
-      y={-size + footTrim}
-      width={size}
-      height={size}
-      style={{ overflow: "visible", pointerEvents: "none" }}
-    >
-      <BennyDog mood={mood} size={size} />
-    </foreignObject>
-  );
-};
+// Legacy helper used by scenes that render Benny outside NabuSprite (rocket, etc.).
+const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => (
+  <BennyStack mood={mood} size={size} />
+);
+
 
 
 
