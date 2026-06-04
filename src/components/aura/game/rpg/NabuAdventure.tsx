@@ -18,8 +18,7 @@ import { Button } from "@/components/ui/button";
 import { NabuScene } from "./NabuScene";
 import { RPGWordReader } from "./RPGWordReader";
 import { getPreKAdventure, type PreKAdventure } from "@/data/preKAdventures";
-import { speak } from "@/lib/tts";
-import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
+import { speak, speakWordPolite } from "@/lib/tts";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
 
@@ -144,32 +143,39 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   useEffect(() => {
     if (!current && phase !== "ending") return;
 
+    // Single fixed voice profile so Benny sounds like Benny in every phase.
+    const BENNY = { rate: 0.95, pitch: 1.15 } as const;
+
     if (phase === "intro") {
-      speak(`Let's help Benny! ${adventure.goal}`, { rate: 0.95, pitch: 1.15 });
-      queue(() => setPhase("problem"), 1700);
+      // Goal already names Benny — don't double-say it.
+      speak(adventure.goal, BENNY);
+      queue(() => setPhase("problem"), 2000);
       return;
     }
     if (phase === "problem") {
-      speak(current.problemLine, { rate: 0.95, pitch: 1.15 });
-      queue(() => setPhase("ask"), 1400);
+      speak(current.problemLine, BENNY);
+      queue(() => setPhase("ask"), 2200);
       return;
     }
     if (phase === "ask") {
-      speak(current.askLine, { rate: 0.95, pitch: 1.2 });
-      queue(() => setPhase("reading"), 1100);
+      speak(current.askLine, BENNY);
+      queue(() => setPhase("reading"), 1900);
       return;
     }
     if (phase === "reading") {
-      // Auto-play the pronunciation once so non-readers get an audible prompt.
-      queue(() => playCorrectPronunciation(current.word), 350);
+      // Wait for the ask line to finish before auto-pronouncing the word so
+      // the two utterances don't collide.
+      queue(() => speakWordPolite(current.word, 1200), 1000);
       return;
     }
     if (phase === "solved") {
+      // Let the sparkle/chime play first, then narrate the success line so
+      // they don't all hit the ear in the same 200ms.
       const line = wasAutoPassedRef.current
-        ? "Great try! Let's keep going!"
+        ? "Nice try! Let's keep going!"
         : current.successLine;
-      speak(line, { rate: 1, pitch: 1.3 });
-      queue(() => setPhase("transition"), 1500);
+      queue(() => speak(line, BENNY), 350);
+      queue(() => setPhase("transition"), 2000);
       return;
     }
     if (phase === "transition") {
@@ -185,7 +191,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
       return;
     }
     if (phase === "ending") {
-      speak(adventure.endingLine, { rate: 0.95, pitch: 1.25 });
+      speak(adventure.endingLine, BENNY);
       queue(() => {
         const stars = correct >= total ? 3 : correct >= Math.ceil(total * 0.7) ? 2 : 1;
         onComplete({ wordsRead: total, correctWords: correct, stars });
@@ -237,7 +243,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
 
   const handleSkip = () => triggerWin(true);
   const handleTapContinue = () => triggerWin(true);
-  const handleHearWord = () => current && playCorrectPronunciation(current.word);
+  const handleHearWord = () => current && speakWordPolite(current.word, 300);
   const handleReplayBubble = (line: string) =>
     speak(line, { rate: 0.95, pitch: 1.15 });
 
@@ -246,7 +252,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const skyClass = phase === "ending" ? adventure.endingSky : scene?.sky ?? FALLBACK.endingSky;
   const showWord = phase === "reading";
   const scenePhase = phase === "intro" ? "problem" : phase === "ending" ? "solved" : phase;
-  const showTapFallback = phase === "reading" && attempts >= 2;
+  // Show the warm "Tap to continue" after the first miss so a stuck kid is
+  // never further than one tap from progress.
+  const showTapFallback = phase === "reading" && attempts >= 1;
   const currentBubble =
     phase === "problem" ? scene?.problemLine :
     phase === "ask" ? scene?.askLine :
