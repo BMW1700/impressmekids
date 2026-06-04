@@ -13,7 +13,7 @@
 
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
-import { BennyDog, type BennyMood } from "@/components/BennyDog";
+import { BENNY_SOURCES, type BennyMood } from "@/components/BennyDog";
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
