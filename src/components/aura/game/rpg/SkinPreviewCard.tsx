@@ -6,6 +6,7 @@ import { PrincessElla } from "../characters/PrincessElla";
 import { AgentX } from "../characters/AgentX";
 import { Cipher } from "../characters/Cipher";
 import { Shadow } from "../characters/Shadow";
+import valorRealisticPoster from "@/assets/valor-idle-poster-transparent.png.asset.json";
 import { RARITY_COLORS, type ItemRarity, type SkinCharacter } from "@/lib/gameEconomy";
 
 interface SkinPreviewCardProps {
@@ -32,6 +33,18 @@ export const SkinPreviewCard = ({
   const renderCharacter = () => {
     switch (character) {
       case 'valor':
+        // Realistic Sir Valor isn't an SVG palette — render the poster of the
+        // flushed-out video so the shop tile matches what'll show in battle.
+        if (skinVariant === 'realistic_default') {
+          return (
+            <img
+              src={valorRealisticPoster.url}
+              alt="Sir Valor (Realistic)"
+              draggable={false}
+              style={{ height: 96, width: 'auto', objectFit: 'contain', objectPosition: '50% 100%' }}
+            />
+          );
+        }
         return (
           <SirValor
             state="idle"

@@ -25,6 +25,12 @@ export interface StoreItem {
   character?: SkinCharacter;
   skinVariant?: string;
   theme?: ItemTheme; // 'classic', 'agent', or 'shared' (default shared for potions/upgrades)
+  /**
+   * Visual art tier for skins. 'svg' = the original hand-drawn vector character,
+   * 'video' = the new flushed-out realistic video character.
+   * Undefined → treated as 'svg' (historical default).
+   */
+  artStyle?: 'svg' | 'video';
 }
 
 export interface CoinDrop {
@@ -294,16 +300,20 @@ export const STORE_ITEMS: StoreItem[] = [
   
   // =============== DEFAULT SKINS (free, always owned) ===============
   {
-    id: 'default_valor', name: 'Classic Knight', description: 'The original Sir Valor look',
-    price: 0, category: 'skin', icon: '⚔️', rarity: 'common', character: 'valor', skinVariant: 'default', theme: 'classic',
+    id: 'default_valor', name: 'Classic Knight', description: 'The original hand-drawn Sir Valor',
+    price: 0, category: 'skin', icon: '⚔️', rarity: 'common', character: 'valor', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
+  },
+  {
+    id: 'realistic_valor', name: 'Sir Valor (Realistic)', description: 'The new flushed-out animated Sir Valor',
+    price: 0, category: 'skin', icon: '🛡️', rarity: 'rare', character: 'valor', skinVariant: 'realistic_default', theme: 'classic', artStyle: 'video',
   },
   {
     id: 'default_elara', name: 'Classic Wizard', description: 'The original Elara look',
-    price: 0, category: 'skin', icon: '🔮', rarity: 'common', character: 'elara', skinVariant: 'default', theme: 'classic',
+    price: 0, category: 'skin', icon: '🔮', rarity: 'common', character: 'elara', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'default_ella', name: 'Classic Princess', description: 'The original Princess Ella look',
-    price: 0, category: 'skin', icon: '👸', rarity: 'common', character: 'ella', skinVariant: 'default', theme: 'classic',
+    price: 0, category: 'skin', icon: '👸', rarity: 'common', character: 'ella', skinVariant: 'default', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'default_agent_x', name: 'Classic Agent X', description: 'Standard field operative gear',
@@ -318,30 +328,30 @@ export const STORE_ITEMS: StoreItem[] = [
     price: 0, category: 'skin', icon: '🥷', rarity: 'common', character: 'shadow', skinVariant: 'default', theme: 'agent',
   },
 
-  // =============== SKINS - SIR VALOR ===============
+  // =============== SKINS - SIR VALOR (classic SVG art tier) ===============
   {
     id: 'golden_knight', name: 'Golden Knight', description: 'Shiny golden armor for Sir Valor',
-    price: 1000, category: 'skin', icon: '👑', rarity: 'legendary', character: 'valor', skinVariant: 'golden', theme: 'classic',
+    price: 1000, category: 'skin', icon: '👑', rarity: 'legendary', character: 'valor', skinVariant: 'golden', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'crystal_knight', name: 'Crystal Knight', description: 'Crystalline armor with particle effects',
-    price: 800, category: 'skin', icon: '💎', rarity: 'epic', character: 'valor', skinVariant: 'crystal', theme: 'classic',
+    price: 800, category: 'skin', icon: '💎', rarity: 'epic', character: 'valor', skinVariant: 'crystal', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'flame_knight', name: 'Flame Knight', description: 'Burning armor wreathed in flames',
-    price: 900, category: 'skin', icon: '🔥', rarity: 'epic', character: 'valor', skinVariant: 'flame', theme: 'classic',
+    price: 900, category: 'skin', icon: '🔥', rarity: 'epic', character: 'valor', skinVariant: 'flame', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'ice_knight', name: 'Frost Guardian', description: 'Frozen armor of the north',
-    price: 950, category: 'skin', icon: '🧊', rarity: 'epic', character: 'valor', skinVariant: 'ice', theme: 'classic',
+    price: 950, category: 'skin', icon: '🧊', rarity: 'epic', character: 'valor', skinVariant: 'ice', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'dragon_slayer', name: 'Dragon Slayer', description: 'Legendary dragon-scale armor',
-    price: 1500, category: 'skin', icon: '🐉', rarity: 'legendary', character: 'valor', skinVariant: 'dragon', theme: 'classic',
+    price: 1500, category: 'skin', icon: '🐉', rarity: 'legendary', character: 'valor', skinVariant: 'dragon', theme: 'classic', artStyle: 'svg',
   },
   {
     id: 'shadow_knight', name: 'Shadow Knight', description: 'Dark armor from the void',
-    price: 850, category: 'skin', icon: '🌑', rarity: 'epic', character: 'valor', skinVariant: 'shadow', theme: 'classic',
+    price: 850, category: 'skin', icon: '🌑', rarity: 'epic', character: 'valor', skinVariant: 'shadow', theme: 'classic', artStyle: 'svg',
   },
 
   // =============== SKINS - ELARA ===============
@@ -660,6 +670,37 @@ export const getItemsByRarity = (rarity: ItemRarity) =>
 // Get skins for a specific character
 export const getSkinsForCharacter = (character: SkinCharacter) =>
   STORE_ITEMS.filter(item => item.category === 'skin' && item.character === character);
+
+// Find a skin's catalog entry by its character + variant pair (the data we store at runtime).
+export const findSkinByVariant = (
+  character: SkinCharacter,
+  skinVariant: string,
+): StoreItem | undefined =>
+  STORE_ITEMS.find(
+    s => s.category === 'skin' && s.character === character && s.skinVariant === skinVariant,
+  );
+
+// Get a skin's art tier ('svg' | 'video'). Defaults to 'svg' for legacy entries.
+export const getSkinArtStyle = (
+  character: SkinCharacter,
+  skinVariant: string,
+): 'svg' | 'video' => findSkinByVariant(character, skinVariant)?.artStyle ?? 'svg';
+
+/**
+ * Browser capability probe — true iff the runtime can decode VP9 alpha WebM
+ * (which is what our realistic Sir Valor videos require for transparency).
+ * Safari without alpha-WebM support returns false, so we render the SVG hero
+ * instead of the white-boxed MP4 fallback.
+ */
+export const supportsAlphaWebm = (): boolean => {
+  if (typeof document === 'undefined') return true; // SSR: assume capable; client re-checks.
+  try {
+    const v = document.createElement('video');
+    return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
+  } catch {
+    return false;
+  }
+};
 
 // Generate coin drops from enemy
 export const generateCoinDrops = (

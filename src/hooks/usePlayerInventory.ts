@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { STORE_ITEMS, type StoreItem } from "@/lib/gameEconomy";
+import { STORE_ITEMS, supportsAlphaWebm, type StoreItem } from "@/lib/gameEconomy";
 
 export interface InventoryItem {
   id: string;
@@ -53,12 +53,16 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
     queryClient.invalidateQueries({ queryKey: ["campaign-progress", studentId] });
   };
 
-  // Default skins (free, always owned — used to revert to generic look)
-  const defaultSkinIds = STORE_ITEMS
-    .filter(s => s.category === 'skin' && s.skinVariant === 'default')
-    .map(s => s.id);
+  // Free skins that are always considered owned (no inventory row required).
+  // Includes the SVG default per character AND the new free 'realistic_valor'
+  // so kids can flip between Classic and Realistic Sir Valor with no purchase.
+  const FREE_SKIN_IDS = new Set<string>([
+    ...STORE_ITEMS.filter(s => s.category === 'skin' && s.skinVariant === 'default').map(s => s.id),
+    'realistic_valor',
+  ]);
+  const defaultSkinIds = Array.from(FREE_SKIN_IDS);
 
-  // Get list of owned item IDs (default skins are always owned)
+  // Get list of owned item IDs (free skins are always owned)
   const ownedItems = Array.from(new Set([...inventory.map(item => item.item_id), ...defaultSkinIds]));
 
   // Get equipped skin for a specific character (scoped per character, not first-equipped)
@@ -70,7 +74,12 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
         return skinData.skinVariant || null;
       }
     }
-    // No custom skin equipped → user is on the generic default look
+    // No custom skin equipped. For Sir Valor on browsers that can decode
+    // alpha-WebM cleanly, default to the new realistic art so kids see the
+    // flushed-out hero out of the box. Safari (no alpha-WebM) → Classic SVG.
+    if (character === 'valor' && supportsAlphaWebm()) {
+      return 'realistic_default';
+    }
     return 'default';
   };
 
@@ -203,18 +212,34 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
           .eq("id", skin.id);
       }
 
-      // Default skins have no inventory row — unequipping others IS the equip
+      // Pure-default skins (skinVariant === 'default') don't keep a row —
+      // unequipping all others IS the equip. But other free skins (e.g.
+      // 'realistic_valor') still need a real row so we can mark them equipped.
       if (skinData.skinVariant === 'default') {
         return itemId;
       }
 
-      // Equip the new skin
+      // Equip the new skin — insert a row if the user doesn't have one yet
+      // (free skins like realistic_valor are never "purchased" but still
+      // need a row so is_equipped sticks).
       const targetItem = inventory.find(i => i.item_id === itemId);
       if (targetItem) {
         const { error } = await supabase
           .from("player_inventory")
           .update({ is_equipped: true })
           .eq("id", targetItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("player_inventory")
+          .insert({
+            student_id: studentId,
+            item_id: itemId,
+            item_category: 'skin',
+            quantity: 1,
+            is_equipped: true,
+            grade_mode: gm,
+          } as any);
         if (error) throw error;
       }
 
