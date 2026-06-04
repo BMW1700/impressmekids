@@ -697,8 +697,13 @@ export const getSkinArtStyle = (
  * instead of the white-boxed MP4 fallback.
  */
 export const supportsAlphaWebm = (): boolean => {
-  if (typeof document === 'undefined') return true; // SSR: assume capable; client re-checks.
+  if (typeof document === 'undefined' || typeof navigator === 'undefined') return true; // SSR
   try {
+    const ua = navigator.userAgent || '';
+    // Safari (desktop + iOS) reports `probably` for VP9 in WebM but has NO
+    // alpha-channel support, so the video renders opaque white. Force SVG.
+    const isSafari = /^((?!chrome|crios|fxios|android|edg).)*safari/i.test(ua);
+    if (isSafari) return false;
     const v = document.createElement('video');
     return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
   } catch {
