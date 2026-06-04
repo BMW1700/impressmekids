@@ -212,16 +212,10 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
           .eq("id", skin.id);
       }
 
-      // Pure-default skins (skinVariant === 'default') don't keep a row —
-      // unequipping all others IS the equip. But other free skins (e.g.
-      // 'realistic_valor') still need a real row so we can mark them equipped.
-      if (skinData.skinVariant === 'default') {
-        return itemId;
-      }
-
-      // Equip the new skin — insert a row if the user doesn't have one yet
-      // (free skins like realistic_valor are never "purchased" but still
-      // need a row so is_equipped sticks).
+      // Always write/update an inventory row with is_equipped=true for the
+      // chosen skin — even default ones. Without this, getEquippedSkin's
+      // Safari/realistic fallback would override the user's pick and the
+      // Classic Knight "Equip" button would appear to do nothing.
       const targetItem = inventory.find(i => i.item_id === itemId);
       if (targetItem) {
         const { error } = await supabase
