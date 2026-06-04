@@ -46,22 +46,9 @@ const ensureKeyframes = () => {
   60%      { transform: translateX(-6px); }
   80%      { transform: translateX(6px); }
 }
-@keyframes benny-blink {
-  0%, 92%, 100% { transform: scaleY(0); }
-  95%, 97%      { transform: scaleY(1); }
-}
 .benny-anim-idle      { animation: benny-idle-bounce 1.8s ease-in-out infinite; }
 .benny-anim-celebrate { animation: benny-celebrate    0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake    0.4s ease-in-out 3; }
-.benny-eyelid {
-  position: absolute;
-  background: #d98a3d;
-  border-radius: 50%;
-  transform-origin: top center;
-  transform: scaleY(0);
-  animation: benny-blink 4.2s ease-in-out infinite;
-  pointer-events: none;
-}
 `;
   document.head.appendChild(el);
 };
