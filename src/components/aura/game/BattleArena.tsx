@@ -174,12 +174,7 @@ export const BattleArena = ({
           transition={{ duration: 0.5 }}
         >
           {usePremiumSprites ? (
-            <SirValor
-              state={mapToKnightState(playerState)}
-              healthPercent={playerHealthPercent}
-              currentStreak={currentStreak}
-              size="medium"
-            />
+            <SirValorVideo mood={valorMood} size={220} />
           ) : (
             <PlayerCharacter
               state={playerState}
