@@ -233,6 +233,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           if (next >= MAX_ATTEMPTS) {
             // Auto-pass so the kid is never stuck.
             window.setTimeout(() => triggerWin(true), 600);
+          } else if (next === 2) {
+            // Scaffold on 2nd miss: model the word for them to echo.
+            window.setTimeout(() => speakWordPolite(current.word, 1200), 500);
           }
           return next;
         });
