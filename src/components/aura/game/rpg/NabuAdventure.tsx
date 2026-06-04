@@ -152,28 +152,80 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     // 'reading' is mic-driven (no auto-advance)
   }, [phase, index]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Mic result handling ────────────────────────────────────────────────────
-  const flashMood = useCallback((m: "celebrate" | "sad", ms: number) => {
+  // ── Mood machine ──────────────────────────────────────────────────────────
+  type Mood =
+    | "idle"
+    | "celebrate"
+    | "sad"
+    | "happy"
+    | "excited"
+    | "cheering"
+    | "thinking"
+    | "surprised"
+    | "sleepy";
+
+  const flashMood = useCallback((m: Mood, ms: number) => {
     setBennyMood(m);
     if (moodTimer.current) window.clearTimeout(moodTimer.current);
     moodTimer.current = window.setTimeout(() => setBennyMood(null), ms);
   }, []);
 
+  const armIdleTimers = useCallback(() => {
+    clearIdleTimers();
+    idleThinkTimer.current = window.setTimeout(() => {
+      setBennyMood("thinking");
+    }, 5000);
+    idleSleepyTimer.current = window.setTimeout(() => {
+      setBennyMood("sleepy");
+    }, 15000);
+  }, []);
+
+  // Arm idle timers whenever the child enters "reading" for a new word.
+  // Also flash "surprised" briefly when the word appears.
+  useEffect(() => {
+    if (phase === "reading") {
+      flashMood("surprised", 1000);
+      // Re-arm idle timers after the surprised flash clears.
+      window.setTimeout(() => armIdleTimers(), 1000);
+    } else {
+      clearIdleTimers();
+    }
+  }, [phase, index, flashMood, armIdleTimers]);
+
   const handleResult = useCallback(
     (isCorrect: boolean) => {
       if (phase !== "reading") return;
       setHasStartedListening(true);
+      clearIdleTimers();
       if (isCorrect) {
-        setCorrect((c) => c + 1);
-        flashMood("celebrate", 2000);
+        streakRef.current += 1;
+        const newCorrect = correct + 1;
+        setCorrect(newCorrect);
+
+        // Priority: perfect-round excited > 3-streak happy > celebrate.
+        if (newCorrect === total && total >= 5) {
+          flashMood("excited", 3000);
+        } else if (streakRef.current >= 3) {
+          flashMood("happy", 2000);
+          streakRef.current = 0;
+        } else {
+          flashMood("celebrate", 2000);
+        }
         setPhase("solved");
       } else {
+        streakRef.current = 0;
         flashMood("sad", 1500);
       }
       // If incorrect, RPGWordReader handles echo/retry; we stay in reading.
     },
-    [phase, flashMood]
+    [phase, correct, total, flashMood]
   );
+
+  // Level-complete cheering when ending phase begins.
+  useEffect(() => {
+    if (phase === "ending") flashMood("cheering", 3000);
+  }, [phase, flashMood]);
+
 
 
   const handleBatchComplete = useCallback(() => {
