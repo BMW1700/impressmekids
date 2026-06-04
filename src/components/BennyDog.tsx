@@ -1,7 +1,7 @@
-// Benny the Dog — the Pre-K adventure character.
-// Three moods: idle (gentle bounce), celebrate (jump + scale), sad (shake).
+// Benny the Dog — Pre-K adventure character.
+// Three moods crossfade smoothly; both images stay mounted to avoid flicker.
 
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import idleAsset from "@/assets/benny-idle.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
@@ -21,35 +21,61 @@ const SOURCES: Record<BennyMood, string> = {
   sad: sadAsset.url,
 };
 
-const ANIMATIONS = {
-  idle: {
-    animate: { y: [0, -6, 0], rotate: [0, 0, 0] },
-    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
-  },
-  celebrate: {
-    animate: { y: [0, -28, 0, -16, 0], scale: [1, 1.18, 1.08, 1.14, 1.05] },
-    transition: { duration: 1.1, repeat: Infinity, ease: "easeOut" as const },
-  },
-  sad: {
-    animate: { x: [0, -6, 6, -4, 4, 0], rotate: [0, -3, 3, -2, 2, 0] },
-    transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
-  },
+const MOODS: BennyMood[] = ["idle", "celebrate", "sad"];
+
+// Inject keyframes once.
+const STYLE_ID = "benny-dog-keyframes";
+const ensureKeyframes = () => {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = STYLE_ID;
+  el.textContent = `
+@keyframes benny-idle-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+@keyframes benny-celebrate {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-18px) scale(1.15); }
+}
+@keyframes benny-sad-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-8px); }
+  40%      { transform: translateX(8px); }
+  60%      { transform: translateX(-6px); }
+  80%      { transform: translateX(6px); }
+}
+.benny-anim-idle      { animation: benny-idle-bounce 1.8s ease-in-out infinite; }
+.benny-anim-celebrate { animation: benny-celebrate    0.4s ease-in-out infinite; }
+.benny-anim-sad       { animation: benny-sad-shake    0.4s ease-in-out 3; }
+`;
+  document.head.appendChild(el);
 };
 
 export const BennyDog = ({
   mood = "idle",
-  size = 140,
+  size = 280,
   className,
   style,
 }: BennyDogProps) => {
-  const anim = ANIMATIONS[mood];
+  ensureKeyframes();
+
+  // Replay sad animation each time mood transitions back to "sad".
+  const [sadNonce, setSadNonce] = useState(0);
+  const prevMood = useRef<BennyMood>(mood);
+  useEffect(() => {
+    if (mood === "sad" && prevMood.current !== "sad") {
+      setSadNonce((n) => n + 1);
+    }
+    prevMood.current = mood;
+  }, [mood]);
+
   return (
-    <motion.div
-      key={mood}
-      animate={anim.animate}
-      transition={anim.transition}
+    <div
       className={className}
       style={{
+        position: "relative",
         width: size,
         height: size,
         pointerEvents: "none",
@@ -57,20 +83,33 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      <img
-        src={SOURCES[mood]}
-        alt="Benny the dog"
-        draggable={false}
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "contain",
-          display: "block",
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      />
-    </motion.div>
+      <div
+        key={mood === "sad" ? `sad-${sadNonce}` : mood}
+        className={`benny-anim-${mood}`}
+        style={{ position: "absolute", inset: 0 }}
+      >
+        {MOODS.map((m) => (
+          <img
+            key={m}
+            src={SOURCES[m]}
+            alt={m === mood ? "Benny the dog" : ""}
+            aria-hidden={m === mood ? undefined : true}
+            draggable={false}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              opacity: m === mood ? 1 : 0,
+              transition: "opacity 0.3s ease-in-out",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          />
+        ))}
+      </div>
+    </div>
   );
 };
 
