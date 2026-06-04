@@ -671,6 +671,37 @@ export const getItemsByRarity = (rarity: ItemRarity) =>
 export const getSkinsForCharacter = (character: SkinCharacter) =>
   STORE_ITEMS.filter(item => item.category === 'skin' && item.character === character);
 
+// Find a skin's catalog entry by its character + variant pair (the data we store at runtime).
+export const findSkinByVariant = (
+  character: SkinCharacter,
+  skinVariant: string,
+): StoreItem | undefined =>
+  STORE_ITEMS.find(
+    s => s.category === 'skin' && s.character === character && s.skinVariant === skinVariant,
+  );
+
+// Get a skin's art tier ('svg' | 'video'). Defaults to 'svg' for legacy entries.
+export const getSkinArtStyle = (
+  character: SkinCharacter,
+  skinVariant: string,
+): 'svg' | 'video' => findSkinByVariant(character, skinVariant)?.artStyle ?? 'svg';
+
+/**
+ * Browser capability probe — true iff the runtime can decode VP9 alpha WebM
+ * (which is what our realistic Sir Valor videos require for transparency).
+ * Safari without alpha-WebM support returns false, so we render the SVG hero
+ * instead of the white-boxed MP4 fallback.
+ */
+export const supportsAlphaWebm = (): boolean => {
+  if (typeof document === 'undefined') return true; // SSR: assume capable; client re-checks.
+  try {
+    const v = document.createElement('video');
+    return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
+  } catch {
+    return false;
+  }
+};
+
 // Generate coin drops from enemy
 export const generateCoinDrops = (
   sourceX: number, 
