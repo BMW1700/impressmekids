@@ -4,9 +4,8 @@
 // pattern to BennyDog. All three videos stay mounted and playing so switching
 // state is instantaneous and never shows a black first-frame.
 //
-// The source videos have a pure white background (no alpha in MP4). We knock
-// that out with `mix-blend-mode: multiply` so the knight sits cleanly on top
-// of whatever combat-arena background is behind him.
+// Modern browsers use transparent WebM clips rebuilt from the source MP4s with
+// a border-only alpha matte. MP4 remains as a graceful fallback for old Safari.
 //
 // Skins (future): drop a new entry into VALOR_VARIANTS with three new
 // .asset.json pointers and pass `variant="skinId"`. Nothing else changes.
