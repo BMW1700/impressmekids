@@ -67,7 +67,7 @@ const ground = {
 // ============================================================================
 
 const W101_L1: PreKAdventure = {
-  goal: "Help Nabu visit Grandma!",
+  goal: "Help Benny visit Grandma!",
   endingEmoji: "🏡",
   endingLine: "We made it to Grandma's!",
   endingSky: sky.morning,
