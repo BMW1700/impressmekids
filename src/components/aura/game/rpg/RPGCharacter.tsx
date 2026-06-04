@@ -5,7 +5,8 @@ import { RPGCharacter as RPGCharacterType, RPGEnemy } from "@/lib/rpgBattleData"
 import { RPGCharacterSprite } from "./RPGCharacterSprite";
 import { GoblinGuard, GoblinState } from "../characters/GoblinGuard";
 import { GrogTheKing, GrogState } from "../characters/GrogTheKing";
-import { SirValor, KnightState } from "../characters/SirValor";
+import { KnightState } from "../characters/SirValor";
+import { SirValorVideo } from "../characters/SirValorVideo";
 import { Elara, WizardState } from "../characters/Elara";
 import { PrincessElla, PrincessState } from "../characters/PrincessElla";
 import { DrakeTheDragon, DragonState } from "../characters/DrakeTheDragon";
@@ -759,19 +760,13 @@ export const RPGCharacter = ({
       );
     }
     
-    // For heroes
+    // For heroes — Sir Valor uses video-driven sprites.
     if (spriteType === 'knight') {
+      const ks = getKnightState(isAttacking, isTakingDamage, isDefending, currentHp, character.maxHp);
+      const valorMood: 'idle' | 'attack' | 'hit' =
+        ks === 'attacking' ? 'attack' : ks === 'hit' ? 'hit' : 'idle';
       return (
-        <SirValor
-          state={getKnightState(isAttacking, isTakingDamage, isDefending, currentHp, character.maxHp)}
-          healthPercent={hpPercentage}
-          currentHp={currentHp}
-          maxHp={character.maxHp}
-          size="medium"
-          currentStreak={currentStreak}
-          showHealthBar={showHealthBar}
-          skinVariant={skinVariant as any}
-        />
+        <SirValorVideo mood={valorMood} size={220} variant={(skinVariant as string) || 'default'} />
       );
     }
     

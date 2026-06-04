@@ -5,7 +5,8 @@ import { PlayerCharacter, PlayerState, PlayerGender } from "./PlayerCharacter";
 import { EnergyBeamEffect } from "./EnergyBeamEffect";
 import { useState, useEffect } from "react";
 import { GoblinGuard, GoblinState } from "./characters/GoblinGuard";
-import { SirValor, KnightState } from "./characters/SirValor";
+
+import { SirValorVideo, useTransientValorMood } from "./characters/SirValorVideo";
 import { ParticleBurst } from "./effects/ParticleBurst";
 import { ImpactFlash } from "./effects/ImpactFlash";
 import { VerbAnimationLayer } from "./effects/VerbAnimationLayer";
@@ -56,15 +57,6 @@ const mapToGoblinState = (state: GrogState): GoblinState => {
   }
 };
 
-const mapToKnightState = (state: PlayerState): KnightState => {
-  switch (state) {
-    case 'hit': return 'hit';
-    case 'attacking': return 'attacking';
-    case 'defeated': return 'defeated';
-    case 'victory': return 'victory';
-    default: return 'idle';
-  }
-};
 
 export const BattleArena = ({
   enemyType,
@@ -94,6 +86,10 @@ export const BattleArena = ({
   const verb = useVerbAnimation(triggerVerb);
   const verbTransform = verb?.descriptor.kind === 'transform' ? verb : null;
   const verbEmoji = verb?.descriptor.kind === 'emoji' ? verb : null;
+
+  // Drive Sir Valor's video mood from the same triggers used for beam effects.
+  // Hit beats attack if both fire on the same frame.
+  const valorMood = useTransientValorMood(triggerAttackBeam, triggerDamageBeam);
 
   // Trigger attack beam (player -> enemy)
   useEffect(() => {
@@ -169,12 +165,7 @@ export const BattleArena = ({
           transition={{ duration: 0.5 }}
         >
           {usePremiumSprites ? (
-            <SirValor
-              state={mapToKnightState(playerState)}
-              healthPercent={playerHealthPercent}
-              currentStreak={currentStreak}
-              size="medium"
-            />
+            <SirValorVideo mood={valorMood} size={220} />
           ) : (
             <PlayerCharacter
               state={playerState}
