@@ -50,13 +50,13 @@ const ensureKeyframes = () => {
   el.id = STYLE_ID;
   el.textContent = `
 @keyframes benny-idle-sprite-walk {
-  0%   { background-position: 0% 0%; }
-  72%  { background-position: -2900% 0%; }
-  100% { background-position: -2900% 0%; }
+  0%   { background-position-x: 0px; }
+  72%  { background-position-x: var(--benny-sprite-end, -8120px); }
+  100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-idle-sprite {
   background-repeat: no-repeat;
-  background-position: 0% 0%;
+  background-position: 0px 0px;
   animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
   will-change: background-position;
 }
@@ -74,7 +74,7 @@ const ensureKeyframes = () => {
 .benny-anim-celebrate { animation: benny-celebrate-bounce 0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite { animation: none; background-position: -1450% 0%; }
+  .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
@@ -135,8 +135,9 @@ export const BennyDog = ({
           style={{
             width: size,
             height: spriteH,
-            backgroundImage: `url(${bennySprite.url}), url(${IDLE_FALLBACK_PNG})`,
-            backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px, ${size}px ${spriteH}px`,
+            backgroundImage: `url(${bennySprite.url})`,
+            backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+            ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
           }}
           aria-label={mood === "idle" ? "Benny the puppy" : undefined}
           role={mood === "idle" ? "img" : undefined}

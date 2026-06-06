@@ -1,72 +1,29 @@
-# Benny + Sir Valor: CSS sprite-sheet animation (Safari-safe)
+I found the likely cause: the new CSS sprite-sheet animation is moving `background-position` to `-2900%`, which is not the same as moving exactly 29 cells on a 30-frame strip. In CSS percentage math, this can overshoot massively, so the background image spends most of the animation outside the visible box. That matches exactly what you’re seeing: characters flash in briefly, disappear, then flash again.
 
-## What shipped
+Plan to fix this cleanly:
 
-Both Benny (Pre-K Nabu scenes) and Sir Valor (RPG combat) now animate via CSS
-sprite-sheet steps instead of animated WebP / alpha-WebM video. Sprite sheets
-composite through the GPU and run identically on every browser including
-Safari/iOS, where the previous WebP and WebM approaches stuttered or rendered
-a white box.
+1. Correct the sprite frame stepping math
+   - Change Benny and Valor from percentage-based `background-position: -2900%` to exact pixel-based movement.
+   - Use CSS variables like `--sprite-end-x: -8120px` for 29 frames at the rendered size.
+   - Animate `background-position-x` from `0px` to `var(--sprite-end-x)` with `steps(29, end)`.
 
-## Pipeline
+2. Stop hidden Valor states from animating underneath
+   - Current Valor renders idle, attack, and hit layers all at once; even invisible layers are still animating.
+   - Replace that with one visible active sprite layer so Safari does not waste cycles decoding/compositing hidden sheets.
+   - Keep attack/hit replay behavior by changing a key when the mood changes.
 
-1. **Extract** frames from the source MP4s at 420×420 (Valor) / 420×480 (Benny)
-   using `ffmpeg -vf scale=...`.
-2. **Alpha-key** with PIL + scipy:
-   - Benny (dark background): luminance < 30, propagate from border,
-     fill holes, 1px erode, 0.8σ Gaussian, hard-zero outside mask.
-   - Valor (white background): luminance > 235 AND saturation < 18,
-     propagate from border, same fill/erode/feather.
-3. **Down-sample** to 30 frames evenly distributed across the source clip
-   (Benny 151 → 30, Valor idle/attack 151 → 30, hit 104 → 30).
-4. **Crop** Benny frames' bottom 30px of empty padding so feet sit on the
-   cell's bottom edge (Valor frames already framed tight, 420×420 kept).
-5. **Pack** into a single-row strip PNG (30 cells × 420px wide → 12600×450 for
-   Benny, 12600×420 for Valor states). Single row keeps CSS `steps()` clean.
-6. **Compress** with `pngquant --quality 60-85 --strip`. Final sizes:
-   - benny-idle-sprite.png: 822 KB
-   - valor-idle-sprite.png: 694 KB
-   - valor-attack-sprite.png: 858 KB
-   - valor-hit-sprite.png: 700 KB
-7. **Upload** via `lovable-assets create`, write the `.asset.json` pointers.
+3. Add safe image fallback behavior
+   - Add poster/still fallback for Valor while sprite assets load or if a sprite URL fails.
+   - Add the same safety for Benny inside the SVG scene so he never disappears completely.
 
-## Animation
+4. Keep Benny grounded and stationary
+   - Preserve the no-floating idle behavior.
+   - Keep the 2-second hold at the final frame after the idle cycle.
+   - Make sure the fallback still sits on the same ground baseline.
 
-Both characters use the same CSS pattern. Single-row strip means
-`background-position-x` walks from `0%` to `-2900%` in `steps(29, end)` —
-each step jumps exactly one cell.
+5. Verify with the preview after implementation
+   - Check console/network for missing asset or runtime errors.
+   - Check the Nabu/Benny scene and RPG character scene visually.
+   - If the preview requires private access and blocks direct testing, I’ll still validate through code inspection and asset request checks, then tell you exactly what could/couldn’t be preview-tested.
 
-- **Benny idle**: 7s loop, walks 0→-2900% in the first 72%, then holds the
-  last frame for the remaining 28% (≈2s) before restarting. Reads as
-  "breathe → settle → breathe".
-- **Valor idle**: 2.5s continuous loop.
-- **Valor attack/hit**: `forwards` once, freezes on last frame. The parent
-  `useTransientValorMood` reverts to idle after 1.6s (attack) / 1.2s (hit),
-  and the layer remounts via React `key` to replay from frame 0 next time.
-
-## Component changes
-
-- `src/components/BennyDog.tsx`: standalone component now stacks an idle
-  sprite layer + celebrate/sad PNG layers and crossfades opacity on mood
-  changes. Old `benny-idle.webp` import removed.
-- `src/components/aura/game/rpg/NabuScene.tsx`: `BennySvgImage` renders the
-  idle sprite inside `<foreignObject>` so it stays inside the SVG stage but
-  composites through the GPU. Bottom padding of source frames was cropped, so
-  the existing `y={-h + 10}` offset puts feet on `GROUND_Y = 380`. Idle
-  `motion.g` bobbing removed — the sprite IS the motion.
-- `src/components/aura/game/characters/SirValorVideo.tsx`: rewritten to use
-  the sprite-sheet stack (one layer per state, crossfade on mood change).
-  Old `<video>` element gone. `useTransientValorMood` retained.
-- `src/lib/gameEconomy.ts`: `supportsAlphaWebm()` now always returns `true`
-  since the realistic Valor works in every browser. Call-sites in
-  `RPGCharacter.tsx` and `usePlayerInventory.ts` no longer gate the realistic
-  variant on Safari.
-
-## Out of scope
-
-- Other characters (Elara, Princess Ella, goblins) — same sprite-sheet
-  treatment available if they hit similar Safari issues, but untouched here.
-- Old `benny-idle.webp`, `valor-idle.webm/mp4`, `valor-attack.webm/mp4`,
-  `valor-hit.webm/mp4` assets are still on CDN; their `.asset.json` pointer
-  files are no longer imported by any component, but kept committed for one
-  release cycle in case a published preview references them.
+This is a targeted emergency repair, not a redesign: fix disappearing/flashing first, preserve the better art only if it is stable.

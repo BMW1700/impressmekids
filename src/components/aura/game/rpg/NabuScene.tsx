@@ -185,18 +185,18 @@ const ensureBennySpriteKeyframes = () => {
   // Hold: keyframes pause at 100% for the final 28% of the cycle (≈2s of 7s).
   el.textContent = `
 @keyframes benny-idle-sprite-walk {
-  0%   { background-position: 0% 0%; }
-  72%  { background-position: -2900% 0%; }
-  100% { background-position: -2900% 0%; }
+  0%   { background-position-x: 0px; }
+  72%  { background-position-x: var(--benny-sprite-end, -8120px); }
+  100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-idle-sprite {
   background-repeat: no-repeat;
-  background-position: 0% 0%;
+  background-position: 0px 0px;
   animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
   will-change: background-position;
 }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite { animation: none; background-position: -1450% 0%; }
+  .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
 }
 `;
   document.head.appendChild(el);
@@ -225,6 +225,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               height: h,
               backgroundImage: `url(${bennySprite.url})`,
               backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
             }}
             aria-label="Benny the puppy"
             role="img"
