@@ -1,49 +1,36 @@
-## Two things to fix
+# Castle Swarm — Premium Background Swap
 
-### 1. Castle Shop — "Upgrade failed: Unlock this hero first" on Archer
+## What changes
 
-**Root cause (audited):** The `purchase_castle_hero_level` database function rejects any upgrade unless there is a row in `castle_unlocked_heroes` for that hero. But the **Archer is a starter hero** — starters are treated as implicitly unlocked on the client (`STARTER_HERO_IDS` in `heroRoster.ts`) and are never written to `castle_unlocked_heroes`. So the RPC can't see that you "own" it, and rejects the upgrade.
+Only the visual backdrop behind the Castle Swarm battle scene. No gameplay, speech, reading flow, HP, damage, sentence logic, buttons, DB, or castle positioning touched.
 
-The same bug would hit any future starter hero.
+The uploaded image already matches our layout perfectly: dark spiky enemy castle on the LEFT, blue-flagged hero castle on the RIGHT, open battlefield lane in the middle. No mirroring needed.
 
-**Fix:** Update the `purchase_castle_hero_level` database function so it skips the unlock check when the hero is a starter (`archer`). Everything else stays identical — gold balance check, level cap of 5, atomic deduction, upgrade row upsert.
+## Steps
 
-After the migration, the Archer upgrade button works immediately. No client code changes needed.
+1. **Upload the image to the CDN** using `lovable-assets` from `/mnt/user-uploads/76ae7448-87d5-4f54-bc26-7d9542288eeb.png`, writing the pointer to `src/assets/castle-swarm-bg.png.asset.json`. Keeps the repo lightweight and gives us a cached, optimized URL.
 
-### 2. Benny's 2-second idle pause
+2. **Rewrite `src/components/aura/game/castle/ArenaBackground.tsx`** — replace the current SVG mountains, gradient sky, fake torches, and perspective ground with:
+   - A single `<img>` element sized `absolute inset-0 w-full h-full object-cover` so the painting fills the scene and never stretches.
+   - `loading="eager"` + `decoding="async"` + `draggable={false}` for fast paint with no layout shift.
+   - `aria-hidden` and `pointer-events-none` (it's pure decoration).
+   - A very soft top-edge gradient (transparent → `bg-black/30`) **only behind the top HUD strip** and a matching one behind the bottom reading panel zone, so the HUD chips and word buttons stay readable. The middle of the battlefield stays untouched and crisp.
+   - Keep the component `memo`'d so it doesn't re-render on every battle tick.
 
-I'll **halve it** rather than remove it. Here's why:
+3. **No changes** to `CastleSwarmArena.tsx`, enemy sprites, castle components, HP bars, word buttons, HUD, sentence logic, speech, or any hook. `ArenaBackground` is already mounted as the bottom layer with `pointer-events-none`, so swapping its contents is the entire visual change.
 
-- **Removing entirely** = the loop becomes a continuous walk-cycle-style motion with no breath, which actually looks more robotic and "uncanny" because real characters pause to breathe/blink. It also means the browser is decoding video frames non-stop instead of holding a freeze frame — slightly *worse* for battery on iPad, not better.
-- **Halving** (2s → 1s) keeps the natural beat but removes the awkward "did it freeze?" feeling you're describing. That's the sweet spot.
-- **Quality:** The pause doesn't affect render quality either way — it's the same encoded video, just held on a frame. The only real trade-off is the *feel* of the timing, which is what you're describing.
+## Files touched
 
-**Fix:** Change Benny's idle pause from 2000ms to 1000ms in `BennyDog.tsx`. One number.
+- `src/assets/castle-swarm-bg.png.asset.json` *(new — CDN pointer)*
+- `src/components/aura/game/castle/ArenaBackground.tsx` *(rewritten — visual only)*
 
-### Technical details
+## Performance
 
-**Migration (CREATE OR REPLACE):**
-```sql
--- In purchase_castle_hero_level, replace the unlock check with:
-IF p_hero_id NOT IN ('archer') THEN
-  SELECT 1 INTO v_current_level
-  FROM public.castle_unlocked_heroes
-  WHERE user_id = v_user_id AND grade_mode = p_grade_mode AND hero_id = p_hero_id;
-  IF v_current_level IS NULL THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Unlock this hero first');
-  END IF;
-END IF;
--- (then reset v_current_level := NULL before the real level lookup)
-```
+- Image served from Lovable's CDN with aggressive caching.
+- Single `<img>` tag, no animations, no filters → cheaper than the current multi-SVG composition.
+- `object-cover` handles desktop/tablet/mobile/iPad without stretching.
+- No layout shift: absolutely positioned, fills parent.
 
-The starter list stays in sync with the client constant `STARTER_HERO_IDS = ['archer']`. If a starter is added later, we extend the `IN (...)` clause in the same place.
+## Confirmation after build
 
-**BennyDog.tsx:** find the `setTimeout(..., 2000)` controlling the idle gap and change to `1000`.
-
-### Order
-
-1. Run the migration to fix the upgrade RPC.
-2. Edit `BennyDog.tsx` to halve the pause.
-3. You verify: try upgrading Archer (should succeed and deduct 80 gold), and watch Benny's idle (should feel less stalled).
-
-Confirm and I'll execute.
+I'll summarize the diff and confirm gameplay/reading code was untouched (only `ArenaBackground.tsx` + the new asset pointer).
