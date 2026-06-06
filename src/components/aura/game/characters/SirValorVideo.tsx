@@ -109,16 +109,16 @@ const ensureValorKeyframes = () => {
   el.id = VALOR_STYLE_ID;
   el.textContent = `
 @keyframes valor-sprite-walk {
-  from { background-position: 0% 0%; }
-  to   { background-position: -2900% 0%; }
+  from { background-position-x: 0px; }
+  to   { background-position-x: var(--valor-sprite-end, -6090px); }
 }
 @keyframes valor-sprite-once {
-  from { background-position: 0% 0%; }
-  to   { background-position: -2900% 0%; }
+  from { background-position-x: 0px; }
+  to   { background-position-x: var(--valor-sprite-end, -6090px); }
 }
 .valor-sprite {
   background-repeat: no-repeat;
-  background-position: 0% 0%;
+  background-position: 0px 0px;
   will-change: background-position;
 }
 .valor-sprite-idle   { animation: valor-sprite-walk 2.5s steps(29, end) infinite; }
@@ -127,7 +127,7 @@ const ensureValorKeyframes = () => {
 @media (prefers-reduced-motion: reduce) {
   .valor-sprite-idle, .valor-sprite-attack, .valor-sprite-hit {
     animation: none;
-    background-position: 0% 0%;
+    background-position-x: 0px;
   }
 }
 @keyframes valor-sword-halo {
