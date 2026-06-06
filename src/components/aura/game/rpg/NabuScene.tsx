@@ -14,9 +14,10 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-// Idle Benny now uses an animated transparent WebP (works in <img> + SVG <image>
-// across Chrome/Firefox/Edge/Safari 14+/iOS 14+ — no Safari workaround needed).
-import idleAnimAsset from "@/assets/benny-idle.webp.asset.json";
+// Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
+// via background-position steps — identical performance on every browser
+// including Safari, where animated WebP decodes single-threaded and stutters.
+import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -24,8 +25,15 @@ type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 const BennyMoodContext = createContext<BennyMood | null>(null);
 
+// Sprite-sheet geometry — bottom 30px of every source frame was cropped so
+// Benny's feet sit flush with the bottom edge of each cell.
+const BENNY_SPRITE_FRAMES = 30;
+const BENNY_SPRITE_CELL_W = 420;
+const BENNY_SPRITE_CELL_H = 450;
+const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
+
 const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: idleAnimAsset.url,
+  idle: bennySprite.url, // unused for idle; sprite path renders <foreignObject>
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
