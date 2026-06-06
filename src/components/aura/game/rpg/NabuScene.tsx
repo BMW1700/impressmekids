@@ -14,7 +14,9 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
+// Idle Benny now uses an animated transparent WebP (works in <img> + SVG <image>
+// across Chrome/Firefox/Edge/Safari 14+/iOS 14+ — no Safari workaround needed).
+import idleAnimAsset from "@/assets/benny-idle.webp.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -23,7 +25,7 @@ type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 const BennyMoodContext = createContext<BennyMood | null>(null);
 
 const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: idleAsset.url,
+  idle: idleAnimAsset.url,
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
