@@ -74,7 +74,7 @@ const ensureKeyframes = () => {
 .benny-anim-celebrate { animation: benny-celebrate-bounce 0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite { animation: none; background-position: -1450% 0%; }
+  .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
