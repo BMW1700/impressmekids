@@ -50,13 +50,13 @@ const ensureKeyframes = () => {
   el.id = STYLE_ID;
   el.textContent = `
 @keyframes benny-idle-sprite-walk {
-  0%   { background-position: 0% 0%; }
-  72%  { background-position: -2900% 0%; }
-  100% { background-position: -2900% 0%; }
+  0%   { background-position-x: 0px; }
+  72%  { background-position-x: var(--benny-sprite-end, -8120px); }
+  100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-idle-sprite {
   background-repeat: no-repeat;
-  background-position: 0% 0%;
+  background-position: 0px 0px;
   animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
   will-change: background-position;
 }
