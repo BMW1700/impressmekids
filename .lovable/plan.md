@@ -1,61 +1,72 @@
-# Benny Idle: Animate → Hold Last Frame 2s → Repeat
+# Benny + Sir Valor: CSS sprite-sheet animation (Safari-safe)
 
-## What you're asking for
+## What shipped
 
-Right now `benny-idle.webp` is a 151-frame animated WebP that loops continuously at ~30fps. The "janky" feel comes from the loop point — the last frame snaps back to the first frame instantly, so any subtle position/pose difference reads as a hitch.
+Both Benny (Pre-K Nabu scenes) and Sir Valor (RPG combat) now animate via CSS
+sprite-sheet steps instead of animated WebP / alpha-WebM video. Sprite sheets
+composite through the GPU and run identically on every browser including
+Safari/iOS, where the previous WebP and WebM approaches stuttered or rendered
+a white box.
 
-The fix you proposed is exactly right and is 100% feasible: play the animation once, freeze on the final frame for 2 seconds, then loop. Animated WebP supports a **per-frame duration**, so we can give the last frame a 2000ms delay while all other frames stay at ~33ms. No code changes, no extra assets — just a re-encode of the same WebP. The browser handles the pause natively in `<img>` on every modern browser including Safari.
+## Pipeline
 
-## Honest take
+1. **Extract** frames from the source MP4s at 420×420 (Valor) / 420×480 (Benny)
+   using `ffmpeg -vf scale=...`.
+2. **Alpha-key** with PIL + scipy:
+   - Benny (dark background): luminance < 30, propagate from border,
+     fill holes, 1px erode, 0.8σ Gaussian, hard-zero outside mask.
+   - Valor (white background): luminance > 235 AND saturation < 18,
+     propagate from border, same fill/erode/feather.
+3. **Down-sample** to 30 frames evenly distributed across the source clip
+   (Benny 151 → 30, Valor idle/attack 151 → 30, hit 104 → 30).
+4. **Crop** Benny frames' bottom 30px of empty padding so feet sit on the
+   cell's bottom edge (Valor frames already framed tight, 420×420 kept).
+5. **Pack** into a single-row strip PNG (30 cells × 420px wide → 12600×450 for
+   Benny, 12600×420 for Valor states). Single row keeps CSS `steps()` clean.
+6. **Compress** with `pngquant --quality 60-85 --strip`. Final sizes:
+   - benny-idle-sprite.png: 822 KB
+   - valor-idle-sprite.png: 694 KB
+   - valor-attack-sprite.png: 858 KB
+   - valor-hit-sprite.png: 700 KB
+7. **Upload** via `lovable-assets create`, write the `.asset.json` pointers.
 
-This is the right call and it's a common professional technique (Lottie loops, sprite-sheet idles, and game character idles all do this). One small caveat: the **first** frame and the **last** frame of the current clip are not identical poses — the source video ends mid-motion. So after the 2s hold, the jump from "frame 151 pose" back to "frame 1 pose" will still be visible as a small pop.
+## Animation
 
-Two ways to handle that, pick one:
+Both characters use the same CSS pattern. Single-row strip means
+`background-position-x` walks from `0%` to `-2900%` in `steps(29, end)` —
+each step jumps exactly one cell.
 
-- **A. Hold + accept tiny pop** (fastest, ~5 min). Just add the 2s delay on the last frame. The pop is much less noticeable than the current continuous loop because the 2s pause resets the viewer's eye — by the time it loops, they're not tracking subpixel motion anymore. This is what 90% of pro character idles actually do.
-- **B. Hold + ping-pong** (cleanest, ~10 min). After the forward pass, append the same frames in reverse, then hold 2s on frame 1, then forward again. Zero pop because the animation always returns to its starting pose before pausing. Doubles file size from ~1.3MB to ~2.5MB. Worth it for a hero character.
+- **Benny idle**: 7s loop, walks 0→-2900% in the first 72%, then holds the
+  last frame for the remaining 28% (≈2s) before restarting. Reads as
+  "breathe → settle → breathe".
+- **Valor idle**: 2.5s continuous loop.
+- **Valor attack/hit**: `forwards` once, freezes on last frame. The parent
+  `useTransientValorMood` reverts to idle after 1.6s (attack) / 1.2s (hit),
+  and the layer remounts via React `key` to replay from frame 0 next time.
 
-I recommend **B** for Benny since he's meant to emotionally connect with kids — the seamless boomerang reads as "breathing" rather than "looping clip." But A is genuinely fine if you want to ship fast.
+## Component changes
 
-## Plan (assuming B — say the word if you want A)
-
-### 1. Re-encode `benny-idle.webp` with ping-pong + hold
-
-In `/tmp/`, using the 151 PNG frames already extracted from the last pass (re-extract from the source MP4 if they're gone):
-
-1. Build the frame sequence: `[f1, f2, ..., f151, f150, f149, ..., f2]` — 300 frames total, seamless boomerang.
-2. Build the per-frame delay list: `33ms` for every frame **except the very first**, which gets `2000ms`. (When the loop restarts at frame 1, that 2s hold plays before motion resumes.)
-3. Encode with `webpmux` (part of libwebp, already used in the previous pass):
-   ```
-   webpmux -frame f001.webp +2000+0+0+0-b \
-           -frame f002.webp +33+0+0+0-b \
-           ... (frames 2..151 forward, then 150..2 reverse) \
-           -loop 0 \
-           -bgcolor 0,0,0,0 \
-           -o /tmp/benny-idle-v3.webp
-   ```
-   (Each PNG gets converted to a per-frame WebP first with `cwebp -q 80 -alpha_q 100`.)
-4. Verify: `webpinfo /tmp/benny-idle-v3.webp` shows 300 frames, frame 1 duration = 2000ms, others = 33ms, loop count = 0 (infinite), canvas size 420×480.
-
-### 2. Sanity-check the alpha is still clean
-
-Same QA as last pass — sample frames 0, 75, 150, 225 with PIL, assert corners are `alpha=0` and histogram is bimodal. The reverse frames are the same PNGs as the forward frames, so if forward is clean, reverse is clean.
-
-### 3. Upload + swap the asset pointer
-
-`lovable-assets create --file /tmp/benny-idle-v3.webp --filename benny-idle.webp` → overwrite `src/assets/benny-idle.webp.asset.json`. New `asset_id` busts the CDN cache automatically.
-
-### 4. No component changes
-
-`BennyDog.tsx` and `NabuScene.tsx` already point at `@/assets/benny-idle.webp.asset.json`. The browser's `<img>` decoder reads the new per-frame timing for free.
+- `src/components/BennyDog.tsx`: standalone component now stacks an idle
+  sprite layer + celebrate/sad PNG layers and crossfades opacity on mood
+  changes. Old `benny-idle.webp` import removed.
+- `src/components/aura/game/rpg/NabuScene.tsx`: `BennySvgImage` renders the
+  idle sprite inside `<foreignObject>` so it stays inside the SVG stage but
+  composites through the GPU. Bottom padding of source frames was cropped, so
+  the existing `y={-h + 10}` offset puts feet on `GROUND_Y = 380`. Idle
+  `motion.g` bobbing removed — the sprite IS the motion.
+- `src/components/aura/game/characters/SirValorVideo.tsx`: rewritten to use
+  the sprite-sheet stack (one layer per state, crossfade on mood change).
+  Old `<video>` element gone. `useTransientValorMood` retained.
+- `src/lib/gameEconomy.ts`: `supportsAlphaWebm()` now always returns `true`
+  since the realistic Valor works in every browser. Call-sites in
+  `RPGCharacter.tsx` and `usePlayerInventory.ts` no longer gate the realistic
+  variant on Safari.
 
 ## Out of scope
 
-- Sir Valor video/Safari fallback (separate file, untouched)
-- Benny celebrate/sad sprites (still PNG, untouched)
-- Skin shop, inventory, economy (untouched)
-
-## Risk / open question
-
-- File size goes from ~1.3 MB to ~2.5 MB with ping-pong. Still well under any reasonable budget for a hero asset, and it's cached after first load.
-- If you prefer option **A** (hold-only, ~1.3 MB, small pop on loop), tell me and I'll skip the reverse pass.
+- Other characters (Elara, Princess Ella, goblins) — same sprite-sheet
+  treatment available if they hit similar Safari issues, but untouched here.
+- Old `benny-idle.webp`, `valor-idle.webm/mp4`, `valor-attack.webm/mp4`,
+  `valor-hit.webm/mp4` assets are still on CDN; their `.asset.json` pointer
+  files are no longer imported by any component, but kept committed for one
+  release cycle in case a published preview references them.
