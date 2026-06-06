@@ -14,9 +14,10 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-// Idle Benny now uses an animated transparent WebP (works in <img> + SVG <image>
-// across Chrome/Firefox/Edge/Safari 14+/iOS 14+ — no Safari workaround needed).
-import idleAnimAsset from "@/assets/benny-idle.webp.asset.json";
+// Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
+// via background-position steps — identical performance on every browser
+// including Safari, where animated WebP decodes single-threaded and stutters.
+import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -24,8 +25,15 @@ type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
 const BennyMoodContext = createContext<BennyMood | null>(null);
 
+// Sprite-sheet geometry — bottom 30px of every source frame was cropped so
+// Benny's feet sit flush with the bottom edge of each cell.
+const BENNY_SPRITE_FRAMES = 30;
+const BENNY_SPRITE_CELL_W = 420;
+const BENNY_SPRITE_CELL_H = 450;
+const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
+
 const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: idleAnimAsset.url,
+  idle: bennySprite.url, // unused for idle; sprite path renders <foreignObject>
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
@@ -155,13 +163,78 @@ const bennyMoodAnim = (mood: BennyMood) => {
       transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const },
     };
   }
+  // Idle: stationary. The sprite-sheet animation IS the motion — no wrapper bob.
   return {
-    animate: { y: [0, -6, 0], rotate: 0, scale: 1 },
-    transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
+    animate: { y: 0, x: 0, rotate: 0, scale: 1 },
+    transition: { duration: 0 },
   };
 };
 
+// Inject sprite keyframes once. Walks background-position right 30 steps then
+// holds the last frame for 2s before looping — gives Benny a "breathe → settle
+// → breathe" feel without a continuous wobble.
+const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes";
+const ensureBennySpriteKeyframes = () => {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
+  const el = document.createElement("style");
+  el.id = BENNY_SPRITE_STYLE_ID;
+  // 30 cells, total strip = 30 × 100% wide. Animate from 0 to -2900% (29 steps
+  // of -100%, since the last frame sits at -2900%). steps(29) advances frame
+  // by frame, no interpolation = no decode jitter.
+  // Hold: keyframes pause at 100% for the final 28% of the cycle (≈2s of 7s).
+  el.textContent = `
+@keyframes benny-idle-sprite-walk {
+  0%   { background-position: 0% 0%; }
+  72%  { background-position: -2900% 0%; }
+  100% { background-position: -2900% 0%; }
+}
+.benny-idle-sprite {
+  background-repeat: no-repeat;
+  background-position: 0% 0%;
+  animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
+  will-change: background-position;
+}
+@media (prefers-reduced-motion: reduce) {
+  .benny-idle-sprite { animation: none; background-position: -1450% 0%; }
+}
+`;
+  document.head.appendChild(el);
+};
+
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
+  // Idle: render the CSS sprite sheet inside <foreignObject> so it composites
+  // through the GPU and runs identically on Safari.
+  if (mood === "idle") {
+    ensureBennySpriteKeyframes();
+    const w = size;
+    const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
+    return (
+      <foreignObject
+        x={-w / 2}
+        y={-h + 10}
+        width={w}
+        height={h}
+        style={{ overflow: "visible", pointerEvents: "none" }}
+      >
+        <div style={{ width: w, height: h }}>
+          <div
+            className="benny-idle-sprite"
+            style={{
+              width: w,
+              height: h,
+              backgroundImage: `url(${bennySprite.url})`,
+              backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+            }}
+            aria-label="Benny the puppy"
+            role="img"
+          />
+        </div>
+      </foreignObject>
+    );
+  }
+
+  // Celebrate / sad: keep the still PNG + framer-motion CSS animation.
   const anim = bennyMoodAnim(mood);
   const src = BENNY_SOURCES[mood];
   return (
