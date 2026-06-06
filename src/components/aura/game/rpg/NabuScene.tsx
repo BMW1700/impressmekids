@@ -225,6 +225,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               height: h,
               backgroundImage: `url(${bennySprite.url})`,
               backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
             }}
             aria-label="Benny the puppy"
             role="img"
