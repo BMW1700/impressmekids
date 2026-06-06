@@ -692,24 +692,12 @@ export const getSkinArtStyle = (
 
 /**
  * Browser capability probe — true iff the runtime can decode VP9 alpha WebM
- * (which is what our realistic Sir Valor videos require for transparency).
- * Safari without alpha-WebM support returns false, so we render the SVG hero
- * instead of the white-boxed MP4 fallback.
+ * Historically gated the realistic Sir Valor on whether the browser could
+ * decode alpha-WebM. Realistic Valor now renders from a CSS sprite sheet,
+ * which works in every browser including Safari/iOS — so this always
+ * returns true. Kept exported for call-sites that still reference it.
  */
-export const supportsAlphaWebm = (): boolean => {
-  if (typeof document === 'undefined' || typeof navigator === 'undefined') return true; // SSR
-  try {
-    const ua = navigator.userAgent || '';
-    // Safari (desktop + iOS) reports `probably` for VP9 in WebM but has NO
-    // alpha-channel support, so the video renders opaque white. Force SVG.
-    const isSafari = /^((?!chrome|crios|fxios|android|edg).)*safari/i.test(ua);
-    if (isSafari) return false;
-    const v = document.createElement('video');
-    return v.canPlayType('video/webm; codecs="vp9"') === 'probably';
-  } catch {
-    return false;
-  }
-};
+export const supportsAlphaWebm = (): boolean => true;
 
 // Generate coin drops from enemy
 export const generateCoinDrops = (
