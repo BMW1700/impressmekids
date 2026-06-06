@@ -1,10 +1,12 @@
 // Benny the Dog — Pre-K adventure character.
-// Three moods crossfade smoothly; both images stay mounted to avoid flicker.
-// Idle mood also crossfades to a closed-eye blink frame every few seconds.
+// Idle is an animated transparent WebP (universal: Chrome/FF/Edge/Safari 14+
+// /iOS 14+). Celebrate / sad still use the PNG sprites with CSS bounce/shake
+// because we don't have video clips for those moods yet. All three layers stay
+// mounted so mood switches crossfade without flicker.
 
 import { useEffect, useRef, useState } from "react";
+import idleAnimAsset from "@/assets/benny-idle.webp.asset.json";
 import idleAsset from "@/assets/benny-idle.png.asset.json";
-import idleBlinkAsset from "@/assets/benny-idle-blink.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -17,11 +19,16 @@ interface BennyDogProps {
   style?: React.CSSProperties;
 }
 
+// Idle pulls the animated WebP — already has motion baked in, so we don't apply
+// the CSS bounce on top of it. Celebrate/sad still use stills + CSS animation.
 const SOURCES: Record<BennyMood, string> = {
-  idle: idleAsset.url,
+  idle: idleAnimAsset.url,
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
+
+// Fallback PNG used if the animated WebP fails to decode on a very old browser.
+const IDLE_FALLBACK_PNG = idleAsset.url;
 
 const MOODS: BennyMood[] = ["idle", "celebrate", "sad"];
 
@@ -123,10 +130,9 @@ export const BennyDog = ({
     >
       <div
         key={mood === "sad" ? `sad-${sadNonce}` : mood}
-        className={`benny-anim-${mood}`}
+        className={mood === "idle" ? undefined : `benny-anim-${mood}`}
         style={{ position: "absolute", inset: 0 }}
       >
-        {mood === "idle" && <span className="benny-tail-layer" aria-hidden />}
         {MOODS.map((m) => (
           <img
             key={m}
@@ -134,6 +140,13 @@ export const BennyDog = ({
             alt={m === mood ? "Benny the dog" : ""}
             aria-hidden={m === mood ? undefined : true}
             draggable={false}
+            onError={(e) => {
+              // Animated WebP failed (very old browser) — drop to still PNG.
+              if (m === "idle") {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.src !== IDLE_FALLBACK_PNG) img.src = IDLE_FALLBACK_PNG;
+              }
+            }}
             style={{
               position: "absolute",
               inset: 0,
@@ -147,32 +160,6 @@ export const BennyDog = ({
             }}
           />
         ))}
-        {/* Blink layer — only fades in while idle so it perfectly overlays the open-eye frame. */}
-        {mood === "idle" && (
-          <img
-            src={idleBlinkAsset.url}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="benny-blink-layer"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              opacity: 0,
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-          />
-        )}
-        {mood === "idle" && (
-          <>
-            <span className="benny-eye-blink benny-eye-blink-left" aria-hidden />
-            <span className="benny-eye-blink benny-eye-blink-right" aria-hidden />
-          </>
-        )}
       </div>
     </div>
   );
