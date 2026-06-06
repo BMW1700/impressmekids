@@ -135,8 +135,9 @@ export const BennyDog = ({
           style={{
             width: size,
             height: spriteH,
-            backgroundImage: `url(${bennySprite.url}), url(${IDLE_FALLBACK_PNG})`,
-            backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px, ${size}px ${spriteH}px`,
+            backgroundImage: `url(${bennySprite.url})`,
+            backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+            ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
           }}
           aria-label={mood === "idle" ? "Benny the puppy" : undefined}
           role={mood === "idle" ? "img" : undefined}
