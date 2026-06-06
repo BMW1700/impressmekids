@@ -1,10 +1,12 @@
 // Benny the Dog — Pre-K adventure character.
-// Three moods crossfade smoothly; both images stay mounted to avoid flicker.
-// Idle mood also crossfades to a closed-eye blink frame every few seconds.
+// Idle is an animated transparent WebP (universal: Chrome/FF/Edge/Safari 14+
+// /iOS 14+). Celebrate / sad still use the PNG sprites with CSS bounce/shake
+// because we don't have video clips for those moods yet. All three layers stay
+// mounted so mood switches crossfade without flicker.
 
 import { useEffect, useRef, useState } from "react";
+import idleAnimAsset from "@/assets/benny-idle.webp.asset.json";
 import idleAsset from "@/assets/benny-idle.png.asset.json";
-import idleBlinkAsset from "@/assets/benny-idle-blink.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -17,11 +19,16 @@ interface BennyDogProps {
   style?: React.CSSProperties;
 }
 
+// Idle pulls the animated WebP — already has motion baked in, so we don't apply
+// the CSS bounce on top of it. Celebrate/sad still use stills + CSS animation.
 const SOURCES: Record<BennyMood, string> = {
-  idle: idleAsset.url,
+  idle: idleAnimAsset.url,
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
+
+// Fallback PNG used if the animated WebP fails to decode on a very old browser.
+const IDLE_FALLBACK_PNG = idleAsset.url;
 
 const MOODS: BennyMood[] = ["idle", "celebrate", "sad"];
 
