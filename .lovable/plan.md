@@ -1,52 +1,61 @@
-# Replace Benny Idle with the New Video + Kill the Visible Box
+# Benny Idle: Animate → Hold Last Frame 2s → Repeat
 
-## What the user is seeing
+## What you're asking for
 
-The square outline around Benny in the screenshot is not a CSS border — it's the **current animated WebP's own pixels**. The previous chroma-key pass left a faint mint/teal residue across the full 420×420 frame, so on the scene's mint-green background you can see a square halo where the WebP's "transparent" pixels aren't actually fully transparent. We need to redo the transparency pass on the new, better source video and ship a clean WebP whose non-Benny pixels are 100% alpha=0.
+Right now `benny-idle.webp` is a 151-frame animated WebP that loops continuously at ~30fps. The "janky" feel comes from the loop point — the last frame snaps back to the first frame instantly, so any subtle position/pose difference reads as a hitch.
 
-## Plan
+The fix you proposed is exactly right and is 100% feasible: play the animation once, freeze on the final frame for 2 seconds, then loop. Animated WebP supports a **per-frame duration**, so we can give the last frame a 2000ms delay while all other frames stay at ~33ms. No code changes, no extra assets — just a re-encode of the same WebP. The browser handles the pause natively in `<img>` on every modern browser including Safari.
 
-### 1. Process the new uploaded video → clean transparent animated WebP
+## Honest take
 
-Source: `/mnt/user-uploads/Transparent_Character_Cutout-2.mp4` (2880×2880, H.264, yuv420p, 30fps, ~5s, black background).
+This is the right call and it's a common professional technique (Lottie loops, sprite-sheet idles, and game character idles all do this). One small caveat: the **first** frame and the **last** frame of the current clip are not identical poses — the source video ends mid-motion. So after the 2s hold, the jump from "frame 151 pose" back to "frame 1 pose" will still be visible as a small pop.
 
-Pipeline (Python + ffmpeg, run in `/tmp/`):
+Two ways to handle that, pick one:
 
-1. Extract all 151 frames as PNG at full res via ffmpeg.
-2. For each frame, in Python with PIL + numpy + scipy:
-   - Compute a luminance map; mark "background" as pixels where luminance < threshold **AND** the pixel is connected (via flood-fill from the four image edges) to the outer black region. This is what protects Benny's black eyes/nose/outline — they're internal black, not edge-connected, so they stay opaque.
-   - Use `scipy.ndimage.binary_fill_holes` on the foreground mask so any tiny interior gaps are closed.
-   - Feather the mask edge by 1px (erode by 1, then 1px Gaussian blur on alpha) to kill the hard-edge halo without eating Benny's outline.
-   - **Hard-zero** alpha everywhere the mask says background — no "almost transparent" pixels at all, which is what was causing the visible square.
-3. Downscale each frame from 2880 → 480 with Lanczos (sharper than the old 420), preserving alpha.
-4. Re-encode as animated WebP with `img2webp -lossy -q 80 -d 33 -loop 0` (≈30fps, infinite loop). Target final size < 1.5 MB.
+- **A. Hold + accept tiny pop** (fastest, ~5 min). Just add the 2s delay on the last frame. The pop is much less noticeable than the current continuous loop because the 2s pause resets the viewer's eye — by the time it loops, they're not tracking subpixel motion anymore. This is what 90% of pro character idles actually do.
+- **B. Hold + ping-pong** (cleanest, ~10 min). After the forward pass, append the same frames in reverse, then hold 2s on frame 1, then forward again. Zero pop because the animation always returns to its starting pose before pausing. Doubles file size from ~1.3MB to ~2.5MB. Worth it for a hero character.
 
-### 2. Upload + swap the asset pointer
+I recommend **B** for Benny since he's meant to emotionally connect with kids — the seamless boomerang reads as "breathing" rather than "looping clip." But A is genuinely fine if you want to ship fast.
 
-- `lovable-assets create --file /tmp/benny-idle-v2.webp --filename benny-idle.webp` → write the new pointer to `src/assets/benny-idle.webp.asset.json` (overwriting the existing pointer). Because asset URLs are immutable, this gives a new `asset_id` and bypasses any CDN cache.
-- Delete the old asset pointer's stale entry via `delete_asset` on the prior `.asset.json` only after confirming nothing else references it (it's only referenced by `BennyDog.tsx` and `NabuScene.tsx`, both of which we're updating in lockstep).
+## Plan (assuming B — say the word if you want A)
 
-### 3. Sanity-check `BennyDog.tsx` and `NabuScene.tsx`
+### 1. Re-encode `benny-idle.webp` with ping-pong + hold
 
-No code changes needed in `BennyDog.tsx` — it already points at `@/assets/benny-idle.webp.asset.json`, so swapping the pointer file is enough. Same for `NabuScene.tsx` (`BENNY_SOURCES.idle` → same asset).
+In `/tmp/`, using the 151 PNG frames already extracted from the last pass (re-extract from the source MP4 if they're gone):
 
-Quick audit pass to confirm there is no leftover CSS `border`, `outline`, `box-shadow`, or `background` on the Benny `<img>` wrapper or its parent in the Map scene that could itself draw a square. From the current code (`BennyDog.tsx` lines 119–164), the wrapper is `position: relative` with no border/background, and `<img>` has `objectFit: "contain"` with no background — so once the WebP itself is clean, the box is gone.
+1. Build the frame sequence: `[f1, f2, ..., f151, f150, f149, ..., f2]` — 300 frames total, seamless boomerang.
+2. Build the per-frame delay list: `33ms` for every frame **except the very first**, which gets `2000ms`. (When the loop restarts at frame 1, that 2s hold plays before motion resumes.)
+3. Encode with `webpmux` (part of libwebp, already used in the previous pass):
+   ```
+   webpmux -frame f001.webp +2000+0+0+0-b \
+           -frame f002.webp +33+0+0+0-b \
+           ... (frames 2..151 forward, then 150..2 reverse) \
+           -loop 0 \
+           -bgcolor 0,0,0,0 \
+           -o /tmp/benny-idle-v3.webp
+   ```
+   (Each PNG gets converted to a per-frame WebP first with `cwebp -q 80 -alpha_q 100`.)
+4. Verify: `webpinfo /tmp/benny-idle-v3.webp` shows 300 frames, frame 1 duration = 2000ms, others = 33ms, loop count = 0 (infinite), canvas size 420×480.
 
-### 4. QA before reporting done
+### 2. Sanity-check the alpha is still clean
 
-- Open the new WebP in `code--view` to visually confirm the corners and edges are fully transparent (checkerboard, not mint).
-- Sample 3 frames (0, 75, 150) via ffmpeg + PIL and assert `alpha.min() == 0` at the four corners and `alpha` histogram is bimodal (mostly 0 or 255, very little mid-range). If mid-range alpha > 2% of pixels, tighten the mask and re-encode.
-- Spot the running preview on the Map route to visually confirm no square halo.
+Same QA as last pass — sample frames 0, 75, 150, 225 with PIL, assert corners are `alpha=0` and histogram is bimodal. The reverse frames are the same PNGs as the forward frames, so if forward is clean, reverse is clean.
 
-## Out of scope (explicitly **not** changing)
+### 3. Upload + swap the asset pointer
 
-- Celebrate / sad sprites — still PNG, untouched.
-- `BennyDog.tsx` animation logic, blink overlays, tail wag.
-- Sir Valor video / SVG / Safari fallback logic — totally separate file, not touched.
-- Skin shop, inventory, economy, pricing — untouched.
-- Adding video for celebrate/sad — separate future task.
+`lovable-assets create --file /tmp/benny-idle-v3.webp --filename benny-idle.webp` → overwrite `src/assets/benny-idle.webp.asset.json`. New `asset_id` busts the CDN cache automatically.
 
-## Risk / open questions
+### 4. No component changes
 
-- The new source is still yuv420p with a hard black background (no real alpha channel), so the chroma/luma key is the only way to recover transparency. If Benny himself has very dark shadows near his silhouette edge, the edge-connectivity rule protects them — but if any dark shadow pixel **touches** the border, it'll get keyed out. I'll inspect a mid-clip frame first and raise the luminance threshold conservatively if needed.
-- Animated WebP encoder choice: `img2webp` (libwebp) is already on the sandbox path. If it isn't, fall back to `ffmpeg -c:v libwebp_anim` which produces the same format.
+`BennyDog.tsx` and `NabuScene.tsx` already point at `@/assets/benny-idle.webp.asset.json`. The browser's `<img>` decoder reads the new per-frame timing for free.
+
+## Out of scope
+
+- Sir Valor video/Safari fallback (separate file, untouched)
+- Benny celebrate/sad sprites (still PNG, untouched)
+- Skin shop, inventory, economy (untouched)
+
+## Risk / open question
+
+- File size goes from ~1.3 MB to ~2.5 MB with ping-pong. Still well under any reasonable budget for a hero asset, and it's cached after first load.
+- If you prefer option **A** (hold-only, ~1.3 MB, small pop on loop), tell me and I'll skip the reverse pass.
