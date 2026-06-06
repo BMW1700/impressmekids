@@ -377,6 +377,7 @@ const ValorSpriteLayer = ({
         height: "100%",
         backgroundImage: `url(${SPRITE_URLS[mood]})`,
         backgroundSize: `${width * SPRITE_FRAMES}px ${height}px`,
+        ["--valor-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * width}px`,
         opacity: active ? 1 : 0,
         transition: "opacity 0.2s ease-in-out",
         filter,
