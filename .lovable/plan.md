@@ -1,29 +1,49 @@
-I found the likely cause: the new CSS sprite-sheet animation is moving `background-position` to `-2900%`, which is not the same as moving exactly 29 cells on a 30-frame strip. In CSS percentage math, this can overshoot massively, so the background image spends most of the animation outside the visible box. That matches exactly what you’re seeing: characters flash in briefly, disappear, then flash again.
+## Two things to fix
 
-Plan to fix this cleanly:
+### 1. Castle Shop — "Upgrade failed: Unlock this hero first" on Archer
 
-1. Correct the sprite frame stepping math
-   - Change Benny and Valor from percentage-based `background-position: -2900%` to exact pixel-based movement.
-   - Use CSS variables like `--sprite-end-x: -8120px` for 29 frames at the rendered size.
-   - Animate `background-position-x` from `0px` to `var(--sprite-end-x)` with `steps(29, end)`.
+**Root cause (audited):** The `purchase_castle_hero_level` database function rejects any upgrade unless there is a row in `castle_unlocked_heroes` for that hero. But the **Archer is a starter hero** — starters are treated as implicitly unlocked on the client (`STARTER_HERO_IDS` in `heroRoster.ts`) and are never written to `castle_unlocked_heroes`. So the RPC can't see that you "own" it, and rejects the upgrade.
 
-2. Stop hidden Valor states from animating underneath
-   - Current Valor renders idle, attack, and hit layers all at once; even invisible layers are still animating.
-   - Replace that with one visible active sprite layer so Safari does not waste cycles decoding/compositing hidden sheets.
-   - Keep attack/hit replay behavior by changing a key when the mood changes.
+The same bug would hit any future starter hero.
 
-3. Add safe image fallback behavior
-   - Add poster/still fallback for Valor while sprite assets load or if a sprite URL fails.
-   - Add the same safety for Benny inside the SVG scene so he never disappears completely.
+**Fix:** Update the `purchase_castle_hero_level` database function so it skips the unlock check when the hero is a starter (`archer`). Everything else stays identical — gold balance check, level cap of 5, atomic deduction, upgrade row upsert.
 
-4. Keep Benny grounded and stationary
-   - Preserve the no-floating idle behavior.
-   - Keep the 2-second hold at the final frame after the idle cycle.
-   - Make sure the fallback still sits on the same ground baseline.
+After the migration, the Archer upgrade button works immediately. No client code changes needed.
 
-5. Verify with the preview after implementation
-   - Check console/network for missing asset or runtime errors.
-   - Check the Nabu/Benny scene and RPG character scene visually.
-   - If the preview requires private access and blocks direct testing, I’ll still validate through code inspection and asset request checks, then tell you exactly what could/couldn’t be preview-tested.
+### 2. Benny's 2-second idle pause
 
-This is a targeted emergency repair, not a redesign: fix disappearing/flashing first, preserve the better art only if it is stable.
+I'll **halve it** rather than remove it. Here's why:
+
+- **Removing entirely** = the loop becomes a continuous walk-cycle-style motion with no breath, which actually looks more robotic and "uncanny" because real characters pause to breathe/blink. It also means the browser is decoding video frames non-stop instead of holding a freeze frame — slightly *worse* for battery on iPad, not better.
+- **Halving** (2s → 1s) keeps the natural beat but removes the awkward "did it freeze?" feeling you're describing. That's the sweet spot.
+- **Quality:** The pause doesn't affect render quality either way — it's the same encoded video, just held on a frame. The only real trade-off is the *feel* of the timing, which is what you're describing.
+
+**Fix:** Change Benny's idle pause from 2000ms to 1000ms in `BennyDog.tsx`. One number.
+
+### Technical details
+
+**Migration (CREATE OR REPLACE):**
+```sql
+-- In purchase_castle_hero_level, replace the unlock check with:
+IF p_hero_id NOT IN ('archer') THEN
+  SELECT 1 INTO v_current_level
+  FROM public.castle_unlocked_heroes
+  WHERE user_id = v_user_id AND grade_mode = p_grade_mode AND hero_id = p_hero_id;
+  IF v_current_level IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Unlock this hero first');
+  END IF;
+END IF;
+-- (then reset v_current_level := NULL before the real level lookup)
+```
+
+The starter list stays in sync with the client constant `STARTER_HERO_IDS = ['archer']`. If a starter is added later, we extend the `IN (...)` clause in the same place.
+
+**BennyDog.tsx:** find the `setTimeout(..., 2000)` controlling the idle gap and change to `1000`.
+
+### Order
+
+1. Run the migration to fix the upgrade RPC.
+2. Edit `BennyDog.tsx` to halve the pause.
+3. You verify: try upgrading Archer (should succeed and deduct 80 gold), and watch Benny's idle (should feel less stalled).
+
+Confirm and I'll execute.

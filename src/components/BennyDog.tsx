@@ -40,9 +40,9 @@ const STILL_SOURCES: Record<Exclude<BennyMood, "idle">, string> = {
 const IDLE_FALLBACK_PNG = idleAsset.url;
 
 // Inject keyframes once. The animation walks background-position right 30
-// steps, then holds the last frame for ~2s before looping — "breathe →
+// steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v3";
+const STYLE_ID = "benny-dog-sprite-keyframes-v4";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -51,7 +51,7 @@ const ensureKeyframes = () => {
   el.textContent = `
 @keyframes benny-idle-sprite-walk {
   0%   { background-position-x: 0px; }
-  72%  { background-position-x: var(--benny-sprite-end, -8120px); }
+  86%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-idle-sprite {
