@@ -130,10 +130,9 @@ export const BennyDog = ({
     >
       <div
         key={mood === "sad" ? `sad-${sadNonce}` : mood}
-        className={`benny-anim-${mood}`}
+        className={mood === "idle" ? undefined : `benny-anim-${mood}`}
         style={{ position: "absolute", inset: 0 }}
       >
-        {mood === "idle" && <span className="benny-tail-layer" aria-hidden />}
         {MOODS.map((m) => (
           <img
             key={m}
@@ -141,6 +140,13 @@ export const BennyDog = ({
             alt={m === mood ? "Benny the dog" : ""}
             aria-hidden={m === mood ? undefined : true}
             draggable={false}
+            onError={(e) => {
+              // Animated WebP failed (very old browser) — drop to still PNG.
+              if (m === "idle") {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.src !== IDLE_FALLBACK_PNG) img.src = IDLE_FALLBACK_PNG;
+              }
+            }}
             style={{
               position: "absolute",
               inset: 0,
@@ -154,32 +160,6 @@ export const BennyDog = ({
             }}
           />
         ))}
-        {/* Blink layer — only fades in while idle so it perfectly overlays the open-eye frame. */}
-        {mood === "idle" && (
-          <img
-            src={idleBlinkAsset.url}
-            alt=""
-            aria-hidden
-            draggable={false}
-            className="benny-blink-layer"
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              opacity: 0,
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-          />
-        )}
-        {mood === "idle" && (
-          <>
-            <span className="benny-eye-blink benny-eye-blink-left" aria-hidden />
-            <span className="benny-eye-blink benny-eye-blink-right" aria-hidden />
-          </>
-        )}
       </div>
     </div>
   );
