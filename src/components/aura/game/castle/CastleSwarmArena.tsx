@@ -46,6 +46,8 @@ interface Enemy {
   dying: boolean;
   flying: boolean;
   hitFlashUntil: number;
+  attacking?: boolean;
+  attackingUntil?: number;
 }
 interface Knight {
   id: number; x: number; hp: number; maxHp: number; spawnedAt: number;
