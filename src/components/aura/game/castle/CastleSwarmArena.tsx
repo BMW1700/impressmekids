@@ -904,16 +904,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         className="absolute inset-x-0 top-10 bottom-32 z-10"
       >
         <div className="relative w-full h-full">
-          {/* Player castle (right) */}
-          <div className="absolute right-2 bottom-2 z-10">
-            <PlayerCastle
-              hp={castleHpHud}
-              maxHp={CASTLE_HP_MAX}
-              variant={gradeMode === "6to12" ? "agent" : "classic"}
+          {/* Hero castle anchor (right) — HP label + damage overlays over the painted castle */}
+          <CastleAnchor
+            side="right"
+            hp={castleHpHud}
+            maxHp={CASTLE_HP_MAX}
+            label={gradeMode === "6to12" ? "AGENT BASE" : "YOUR CASTLE"}
+          />
+          {/* Enemy keep anchor (left) — campaign only */}
+          {mode.kind === "campaign" && (
+            <CastleAnchor
+              side="left"
+              hp={enemyCastleHpHud}
+              maxHp={enemyCastleMax}
+              label="ENEMY KEEP"
             />
-          </div>
-          {/* Enemy castle (left) — campaign only */}
-          {mode.kind === "campaign" && <EnemyCastle hp={enemyCastleHpHud} maxHp={enemyCastleMax} />}
+          )}
 
           {/* Enemies */}
           {enemies.map(e => {
@@ -932,6 +938,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   maxHp={e.maxHp}
                   flying={e.flying}
                   takingDamage={performance.now() < e.hitFlashUntil}
+                  attacking={e.attacking}
                 />
               </motion.div>
             );
