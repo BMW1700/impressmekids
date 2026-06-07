@@ -405,24 +405,45 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
       )}
       <NabuSprite phase={phase} anim={bouncyWalkAnim} />
 
-      {/* boots on Nabu (follow nabu position) */}
+      {/* boots on Nabu — chunky, painted, with highlights so they read at 5ft */}
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y, opacity: 0 }}
+          initial={{ x: NABU_START.x, y: NABU_START.y, opacity: 0, scale: 0.6 }}
           animate={{
             x: phase === "transition" ? NABU_EXIT.x : NABU_START.x,
             y: phase === "transition" ? NABU_EXIT.y : NABU_START.y,
             opacity: 1,
+            scale: 1,
           }}
-          transition={{ duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" }}
+          transition={{
+            x: { duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" },
+            y: { duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" },
+            opacity: { duration: 0.35 },
+            scale: { duration: 0.45, ease: "backOut" },
+          }}
         >
-          <g transform="translate(-22,-2)">
-            <rect x="0" y="0" width="18" height="22" rx="3" fill="#dc2626" />
-            <rect x="-4" y="18" width="26" height="8" rx="2" fill="#991b1b" />
+          <defs>
+            <linearGradient id="boot-red" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fb7185" />
+              <stop offset="55%" stopColor="#dc2626" />
+              <stop offset="100%" stopColor="#7f1d1d" />
+            </linearGradient>
+          </defs>
+          {/* Left boot */}
+          <g transform="translate(-58, -8)">
+            <path d="M0 0 h36 q8 0 8 8 v40 q0 6 -6 6 h-10 l-2 12 h-36 l4 -14 h-2 q-6 0 -6 -6 v-38 q0 -8 8 -8 z"
+                  fill="url(#boot-red)" stroke="#581c87" strokeOpacity="0.35" strokeWidth="2" />
+            <rect x="-12" y="46" width="58" height="14" rx="4" fill="#7f1d1d" />
+            <ellipse cx="10" cy="10" rx="14" ry="4" fill="#fecaca" opacity="0.55" />
+            <circle cx="36" cy="22" r="3" fill="#fde68a" />
           </g>
-          <g transform="translate(4,-2)">
-            <rect x="0" y="0" width="18" height="22" rx="3" fill="#dc2626" />
-            <rect x="-4" y="18" width="26" height="8" rx="2" fill="#991b1b" />
+          {/* Right boot */}
+          <g transform="translate(14, -8)">
+            <path d="M0 0 h36 q8 0 8 8 v40 q0 6 -6 6 h-10 l-2 12 h-36 l4 -14 h-2 q-6 0 -6 -6 v-38 q0 -8 8 -8 z"
+                  fill="url(#boot-red)" stroke="#581c87" strokeOpacity="0.35" strokeWidth="2" />
+            <rect x="-12" y="46" width="58" height="14" rx="4" fill="#7f1d1d" />
+            <ellipse cx="10" cy="10" rx="14" ry="4" fill="#fecaca" opacity="0.55" />
+            <circle cx="36" cy="22" r="3" fill="#fde68a" />
           </g>
         </motion.g>
       )}
@@ -463,17 +484,39 @@ const KeyScene = ({ phase }: { phase: ScenePhase }) => {
         <circle cx="500" cy={GROUND_Y - 95} r="14" fill={solved ? "#22c55e" : "#facc15"} stroke="#78350f" strokeWidth="3" />
         <rect x="496" y={GROUND_Y - 92} width="8" height="10" fill="#78350f" />
       </motion.g>
-      {/* key flying to lock */}
+      {/* key flying to lock — big golden hero prop */}
       {phase === "solved" && (
         <motion.g
-          initial={{ x: 200, y: GROUND_Y - 200, rotate: -20, opacity: 0 }}
-          animate={{ x: 500, y: GROUND_Y - 95, rotate: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ x: 180, y: GROUND_Y - 220, rotate: -25, opacity: 0, scale: 0.6 }}
+          animate={{ x: 500, y: GROUND_Y - 95, rotate: 0, opacity: 1, scale: 1 }}
+          transition={{
+            x: { duration: 0.9, ease: "easeOut" },
+            y: { duration: 0.9, ease: "easeOut" },
+            rotate: { duration: 0.9, ease: "easeOut" },
+            opacity: { duration: 0.35 },
+            scale: { duration: 0.6, ease: "backOut" },
+          }}
         >
-          <circle cx="0" cy="0" r="10" fill="none" stroke="#eab308" strokeWidth="4" />
-          <rect x="6" y="-3" width="22" height="6" fill="#eab308" />
-          <rect x="22" y="3" width="3" height="6" fill="#eab308" />
-          <rect x="26" y="3" width="3" height="6" fill="#eab308" />
+          <defs>
+            <linearGradient id="key-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fde68a" />
+              <stop offset="55%" stopColor="#eab308" />
+              <stop offset="100%" stopColor="#854d0e" />
+            </linearGradient>
+            <radialGradient id="key-shine" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stopColor="#fffbeb" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#fffbeb" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {/* bow (the round handle) */}
+          <circle cx="0" cy="0" r="28" fill="url(#key-gold)" stroke="#713f12" strokeWidth="3" />
+          <circle cx="0" cy="0" r="14" fill="none" stroke="#713f12" strokeWidth="3" />
+          <ellipse cx="-8" cy="-8" rx="10" ry="6" fill="url(#key-shine)" />
+          {/* shaft */}
+          <rect x="22" y="-6" width="60" height="12" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2.5" />
+          {/* teeth */}
+          <rect x="62" y="6" width="8" height="14" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2" />
+          <rect x="74" y="6" width="8" height="10" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2" />
         </motion.g>
       )}
       <NabuSprite phase={phase} anim={walkToAnim(860)} />
@@ -1287,22 +1330,29 @@ export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: Na
     </BennyMoodContext.Provider>
   );
   switch (w) {
-    case "JUMP":   return wrap(<JumpScene phase={phase} />);
+    case "JUMP":
+    case "HOP":    return wrap(<JumpScene phase={phase} />);
     case "BOOTS":  return wrap(<BootsScene phase={phase} />);
     case "KEY":    return wrap(<KeyScene phase={phase} />);
-    case "AXE":    return wrap(<AxeScene phase={phase} />);
+    case "AXE":
+    case "CHOP":
+    case "BASH":   return wrap(<AxeScene phase={phase} />);
     case "BONE":   return wrap(<BoneScene phase={phase} />);
-    case "LADDER": return wrap(<LadderScene phase={phase} />);
-    case "UMBRELLA": return wrap(<UmbrellaScene phase={phase} />);
+    case "LADDER":
+    case "STEPS":  return wrap(<LadderScene phase={phase} />);
+    case "UMBRELLA":
+    case "HOOD":
+    case "COAT":   return wrap(<UmbrellaScene phase={phase} />);
     case "SUN":    return wrap(<SunScene phase={phase} />);
     case "STAR":
     case "LAMP":
     case "TORCH":
     case "FIRE":   return wrap(<LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} />);
     case "ROOSTER":
+    case "HEN":
     case "BELL":
     case "DRUM":
-    case "FAN":    return wrap(<SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
+    case "FAN":    return wrap(<SoundScene phase={phase} kind={(w === "HEN" ? "ROOSTER" : w) as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
     case "BALLOON":
     case "KITE":
     case "WINGS":
