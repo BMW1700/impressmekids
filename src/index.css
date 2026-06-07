@@ -1055,23 +1055,47 @@ All colors MUST be HSL.
    Castle Swarm — castle damage overlays + enemy attack loop
    ============================================================ */
 @keyframes castle-smoke {
-  0%   { transform: translateY(0)    scale(0.85); opacity: 0; }
-  20%  { opacity: 0.7; }
-  100% { transform: translateY(-40px) scale(1.4);  opacity: 0; }
+  0%   { transform: translateY(0)    scale(0.7);  opacity: 0; }
+  15%  { opacity: 0.55; }
+  100% { transform: translateY(-70px) scale(1.6);  opacity: 0; }
 }
 .castle-smoke {
   animation-name: castle-smoke;
   animation-iteration-count: infinite;
   animation-timing-function: ease-out;
+  filter: blur(3px);
   will-change: transform, opacity;
 }
 
 @keyframes castle-glow {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.95; }
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.55; }
 }
 .castle-glow {
-  animation: castle-glow 1.4s ease-in-out infinite;
+  animation: castle-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes castle-ember {
+  0%   { transform: translateY(0)    scale(1);   opacity: 0; }
+  20%  { opacity: 1; }
+  60%  { opacity: 0.8; }
+  100% { transform: translateY(-90px) scale(0.4); opacity: 0; }
+}
+.castle-ember {
+  animation-name: castle-ember;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+  will-change: transform, opacity;
+}
+
+@keyframes castle-heat {
+  0%, 100% { transform: translateY(0)    scaleY(1);    opacity: 0.35; }
+  50%      { transform: translateY(-4px) scaleY(1.08); opacity: 0.55; }
+}
+.castle-heat {
+  animation: castle-heat 2.6s ease-in-out infinite;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
 }
 
 @keyframes enemy-attack-swing {
