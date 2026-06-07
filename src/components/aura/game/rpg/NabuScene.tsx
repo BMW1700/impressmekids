@@ -1330,22 +1330,29 @@ export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: Na
     </BennyMoodContext.Provider>
   );
   switch (w) {
-    case "JUMP":   return wrap(<JumpScene phase={phase} />);
+    case "JUMP":
+    case "HOP":    return wrap(<JumpScene phase={phase} />);
     case "BOOTS":  return wrap(<BootsScene phase={phase} />);
     case "KEY":    return wrap(<KeyScene phase={phase} />);
-    case "AXE":    return wrap(<AxeScene phase={phase} />);
+    case "AXE":
+    case "CHOP":
+    case "BASH":   return wrap(<AxeScene phase={phase} />);
     case "BONE":   return wrap(<BoneScene phase={phase} />);
-    case "LADDER": return wrap(<LadderScene phase={phase} />);
-    case "UMBRELLA": return wrap(<UmbrellaScene phase={phase} />);
+    case "LADDER":
+    case "STEPS":  return wrap(<LadderScene phase={phase} />);
+    case "UMBRELLA":
+    case "HOOD":
+    case "COAT":   return wrap(<UmbrellaScene phase={phase} />);
     case "SUN":    return wrap(<SunScene phase={phase} />);
     case "STAR":
     case "LAMP":
     case "TORCH":
     case "FIRE":   return wrap(<LightScene phase={phase} kind={w as "STAR" | "LAMP" | "TORCH" | "FIRE"} />);
     case "ROOSTER":
+    case "HEN":
     case "BELL":
     case "DRUM":
-    case "FAN":    return wrap(<SoundScene phase={phase} kind={w as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
+    case "FAN":    return wrap(<SoundScene phase={phase} kind={(w === "HEN" ? "ROOSTER" : w) as "ROOSTER" | "BELL" | "DRUM" | "FAN"} />);
     case "BALLOON":
     case "KITE":
     case "WINGS":
