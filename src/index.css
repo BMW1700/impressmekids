@@ -1050,3 +1050,37 @@ All colors MUST be HSL.
     padding-right: env(safe-area-inset-right);
   }
 }
+
+/* ============================================================
+   Castle Swarm — castle damage overlays + enemy attack loop
+   ============================================================ */
+@keyframes castle-smoke {
+  0%   { transform: translateY(0)    scale(0.85); opacity: 0; }
+  20%  { opacity: 0.7; }
+  100% { transform: translateY(-40px) scale(1.4);  opacity: 0; }
+}
+.castle-smoke {
+  animation-name: castle-smoke;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-out;
+  will-change: transform, opacity;
+}
+
+@keyframes castle-glow {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.95; }
+}
+.castle-glow {
+  animation: castle-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes enemy-attack-swing {
+  0%   { transform: translateX(0)   rotate(0deg); }
+  35%  { transform: translateX(-6px) rotate(-8deg); }
+  60%  { transform: translateX(4px)  rotate(6deg); }
+  100% { transform: translateX(0)   rotate(0deg); }
+}
+.enemy-attacking {
+  animation: enemy-attack-swing 0.6s ease-in-out infinite;
+  transform-origin: 50% 80%;
+}
