@@ -614,15 +614,23 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           }
         });
 
-        // 3. Move enemies (stop at gate attack zone, play attack loop, then despawn)
+        // 3. Move enemies (stop at gate, then keep attacking on a tick until killed)
         const ENEMY_ATTACK_X = 70;
+        const ATTACK_INTERVAL_MS = 1200;
         enemiesRef.current.forEach(e => {
           if (e.dying) return;
-          // If already attacking the castle, hold position; despawn after the swing loop finishes.
+          // Already at the gate — hold position, deal periodic damage. Never auto-die.
           if (e.attacking) {
             e.x = ENEMY_ATTACK_X;
             if (e.attackingUntil && now >= e.attackingUntil) {
-              e.dying = true;
+              const raw = ENEMY_TYPES[e.type].castleDamage;
+              const absorbed = Math.min(shieldRef.current, raw);
+              shieldRef.current -= absorbed;
+              if (absorbed > 0) setShieldHud(shieldRef.current);
+              const dmg = raw - absorbed;
+              if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
+              e.attackingUntil = now + ATTACK_INTERVAL_MS;
+              setShake(s => s + 1);
             }
             return;
           }
@@ -637,12 +645,13 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             if (absorbed > 0) setShieldHud(shieldRef.current);
             const dmg = raw - absorbed;
             if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
-            // Linger at the gate, playing an attack loop, before being cleaned up.
+            // Enter persistent attack loop — next hit lands ATTACK_INTERVAL_MS from now.
             e.attacking = true;
-            e.attackingUntil = now + 1200;
+            e.attackingUntil = now + ATTACK_INTERVAL_MS;
             setShake(s => s + 1);
           }
         });
+
 
         // 4. Move/engage knights
         knightsRef.current.forEach(k => {
