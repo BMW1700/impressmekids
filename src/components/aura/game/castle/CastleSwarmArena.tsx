@@ -13,8 +13,7 @@ import {
 } from "./WaveDirector";
 import { ENEMY_TYPES, EnemyType } from "./enemyTypes";
 import { SwarmEnemy } from "./SwarmEnemy";
-import { EnemyCastle } from "./EnemyCastle";
-import { PlayerCastle } from "./sprites/PlayerCastle";
+import { CastleAnchor } from "./CastleAnchor";
 import { ArenaBackground } from "./ArenaBackground";
 import { WaveInterstitial } from "./WaveInterstitial";
 import { WaveSurvivedCard, RunSummary } from "./WaveSurvivedCard";
