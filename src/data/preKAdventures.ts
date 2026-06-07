@@ -2,9 +2,12 @@
 // Each level is a small mission for Benny the Dog. The CHILD reads the word
 // that names the tool Benny needs to solve the obstacle in front of him.
 //
-// Rules for authors (kept tight on purpose):
-//  - Every word must be the literal SOLUTION to a visible obstacle.
-//  - Every word must map to a single, picturable noun (emoji-friendly).
+// Authoring rules (Pre-K cloze style):
+//  - askLine MUST be a sentence STEM that the target `word` literally completes.
+//    Example: word "JUMP" → askLine "I need to..." (so Benny "asks" and the
+//    child says JUMP). The trailing ellipsis matters — TTS pauses on it.
+//  - Words must be decodable Pre-K vocabulary (CVC, CVCC, or common sight
+//    nouns). No multi-syllable schwas like LADDER, no silent-E like AXE.
 //  - 4–6 obstacles per level. One ending celebration.
 //  - Keep Benny's lines under ~8 words each — these are 3–4 year olds.
 
@@ -15,11 +18,11 @@ export interface PreKObstacle {
   sky: string;                   // e.g. "from-sky-200 via-cyan-200 to-emerald-200"
   ground: string;                // e.g. "from-emerald-300 to-emerald-500"
   /** What Benny sees / why he's stuck — spoken aloud. */
-  problemLine: string;           // "Oh no! A river! I can't cross!"
-  /** The hint that prompts the child to help. */
-  askLine: string;               // "I need something to cross with..."
-  /** The single word the child must read. */
-  word: string;                  // "BRIDGE"
+  problemLine: string;           // "Oh no! A river!"
+  /** Sentence STEM the target word completes. Ends with "..." so TTS pauses. */
+  askLine: string;               // "I need to..."
+  /** The single word the child must read — completes askLine. */
+  word: string;                  // "JUMP"
   /** Emoji for the solution that appears after the word is read. */
   solutionEmoji: string;         // "🌉"
   /** Where the solution sits relative to the obstacle. */
@@ -74,36 +77,36 @@ const W101_L1: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "🌊", sky: sky.meadow, ground: ground.grass,
-      problemLine: "Oh no! A river is in the way!",
-      askLine: "I need to leap over it...",
+      problemLine: "Oh no! A river!",
+      askLine: "I need to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
       successLine: "Whoosh! Over we go!",
     },
     {
       sceneEmoji: "🟫", sky: sky.meadow, ground: ground.mud,
-      problemLine: "Ew! Squishy mud everywhere!",
-      askLine: "My feet need help...",
+      problemLine: "Ew! Squishy mud!",
+      askLine: "My feet need big...",
       word: "BOOTS", solutionEmoji: "🥾", solutionPlacement: "onNabu",
       successLine: "Big boots! Splish splash!",
     },
     {
       sceneEmoji: "🚪", sky: sky.forest, ground: ground.dirt,
       problemLine: "A locked gate! Hmm...",
-      askLine: "I need something to open it...",
+      askLine: "To open it I need a...",
       word: "KEY", solutionEmoji: "🔑", solutionPlacement: "over",
       successLine: "Click! The gate is open!",
     },
     {
       sceneEmoji: "🌳", sky: sky.forest, ground: ground.grass,
-      problemLine: "A tree is blocking the path!",
-      askLine: "We need to chop it...",
-      word: "AXE", solutionEmoji: "🪓", solutionPlacement: "onNabu",
-      successLine: "Chop chop! Path is clear!",
+      problemLine: "A log on the path!",
+      askLine: "Help me jump and...",
+      word: "HOP", solutionEmoji: "🦘", solutionPlacement: "over",
+      successLine: "Hop hop! Path is clear!",
     },
     {
       sceneEmoji: "🐶", sky: sky.morning, ground: ground.grass,
       problemLine: "A puppy won't move!",
-      askLine: "Maybe a yummy treat?",
+      askLine: "Give the puppy a...",
       word: "BONE", solutionEmoji: "🦴", solutionPlacement: "over",
       successLine: "Yum! The puppy runs to play!",
     },
@@ -119,29 +122,29 @@ const W101_L2: PreKAdventure = {
     {
       sceneEmoji: "🐣", sky: sky.morning, ground: ground.grass,
       problemLine: "A baby bird fell down!",
-      askLine: "It needs a cozy home...",
+      askLine: "Birds live in a...",
       word: "NEST", solutionEmoji: "🪺", solutionPlacement: "over",
       successLine: "A soft nest! So cozy!",
     },
     {
       sceneEmoji: "😢", sky: sky.morning, ground: ground.grass,
       problemLine: "Baby bird is hungry!",
-      askLine: "Birds love wiggly snacks...",
+      askLine: "Birds love a wiggly...",
       word: "WORM", solutionEmoji: "🪱", solutionPlacement: "over",
       successLine: "Yum! All gone!",
     },
     {
       sceneEmoji: "🌳", sky: sky.forest, ground: ground.grass,
-      problemLine: "The nest goes way up high!",
-      askLine: "I need a long way up...",
-      word: "LADDER", solutionEmoji: "🪜", solutionPlacement: "over",
+      problemLine: "The nest is up high!",
+      askLine: "To climb up I need...",
+      word: "STEPS", solutionEmoji: "🪜", solutionPlacement: "over",
       successLine: "Up we go!",
     },
     {
       sceneEmoji: "💧", sky: sky.storm, ground: ground.grass,
       problemLine: "Rain! Baby bird is cold!",
-      askLine: "We need to stay dry...",
-      word: "UMBRELLA", solutionEmoji: "☂️", solutionPlacement: "onNabu",
+      askLine: "To stay dry I need a...",
+      word: "HOOD", solutionEmoji: "🧥", solutionPlacement: "onNabu",
       successLine: "Nice and dry!",
     },
     {
@@ -163,35 +166,35 @@ const W101_L3: PreKAdventure = {
     {
       sceneEmoji: "🌑", sky: sky.night, ground: ground.grass,
       problemLine: "It's too dark to see!",
-      askLine: "We need a light in the sky...",
+      askLine: "We need the...",
       word: "SUN", solutionEmoji: "☀️", solutionPlacement: "over",
       successLine: "Sunrise! So warm!",
     },
     {
       sceneEmoji: "💤", sky: sky.morning, ground: ground.grass,
-      problemLine: "Everyone is still sleeping!",
-      askLine: "A loud bird can wake them...",
-      word: "ROOSTER", solutionEmoji: "🐓", solutionPlacement: "over",
-      successLine: "Cock-a-doodle-doo!",
+      problemLine: "Everyone is sleeping!",
+      askLine: "A loud bird, the...",
+      word: "HEN", solutionEmoji: "🐔", solutionPlacement: "over",
+      successLine: "Cluck cluck! Wake up!",
     },
     {
       sceneEmoji: "🏠", sky: sky.morning, ground: ground.grass,
-      problemLine: "The houses are still quiet!",
-      askLine: "Ding ding ding...",
+      problemLine: "The houses are quiet!",
+      askLine: "Ring the...",
       word: "BELL", solutionEmoji: "🔔", solutionPlacement: "over",
       successLine: "The bell rings out!",
     },
     {
       sceneEmoji: "🥱", sky: sky.morning, ground: ground.grass,
       problemLine: "Villagers are sleepy!",
-      askLine: "Time for a yummy drink...",
-      word: "JUICE", solutionEmoji: "🧃", solutionPlacement: "over",
-      successLine: "Slurp! Wide awake!",
+      askLine: "Cook breakfast in a...",
+      word: "POT", solutionEmoji: "🍲", solutionPlacement: "over",
+      successLine: "Yum! Wide awake!",
     },
     {
       sceneEmoji: "🎵", sky: sky.morning, ground: ground.grass,
-      problemLine: "Let's celebrate the morning!",
-      askLine: "Bang it to make music...",
+      problemLine: "Time to celebrate!",
+      askLine: "Bang the...",
       word: "DRUM", solutionEmoji: "🥁", solutionPlacement: "over",
       successLine: "Boom boom! Everyone dances!",
     },
@@ -207,28 +210,28 @@ const W101_L4: PreKAdventure = {
     {
       sceneEmoji: "🐕", sky: sky.meadow, ground: ground.grass,
       problemLine: "A lost puppy! He runs too fast!",
-      askLine: "I need to hold onto him...",
-      word: "LEASH", solutionEmoji: "🪢", solutionPlacement: "over",
+      askLine: "Hold him with a...",
+      word: "ROPE", solutionEmoji: "🪢", solutionPlacement: "over",
       successLine: "Got him! Good puppy!",
     },
     {
       sceneEmoji: "😋", sky: sky.meadow, ground: ground.grass,
       problemLine: "Puppy is hungry!",
-      askLine: "Dogs love...",
+      askLine: "Dogs love a...",
       word: "BONE", solutionEmoji: "🦴", solutionPlacement: "over",
       successLine: "Chomp chomp! Yummy!",
     },
     {
       sceneEmoji: "🚧", sky: sky.meadow, ground: ground.dirt,
       problemLine: "A fence is in the way!",
-      askLine: "Time to climb...",
-      word: "LADDER", solutionEmoji: "🪜", solutionPlacement: "over",
+      askLine: "To climb up I need...",
+      word: "STEPS", solutionEmoji: "🪜", solutionPlacement: "over",
       successLine: "Up and over!",
     },
     {
       sceneEmoji: "🦴", sky: sky.morning, ground: ground.grass,
-      problemLine: "Puppy is sleepy now!",
-      askLine: "He needs a cozy spot...",
+      problemLine: "Puppy is sleepy!",
+      askLine: "He needs a cozy...",
       word: "BED", solutionEmoji: "🛏️", solutionPlacement: "over",
       successLine: "Sweet dreams, puppy!",
     },
@@ -243,43 +246,43 @@ const W101_L5: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "🫐", sky: sky.forest, ground: ground.grass,
-      problemLine: "So many berries! Where to put them?",
-      askLine: "We need to carry them...",
-      word: "BASKET", solutionEmoji: "🧺", solutionPlacement: "onNabu",
+      problemLine: "So many berries!",
+      askLine: "Put them in a...",
+      word: "CUP", solutionEmoji: "🥤", solutionPlacement: "onNabu",
       successLine: "Plop plop! Berries inside!",
     },
     {
       sceneEmoji: "🌳", sky: sky.forest, ground: ground.grass,
-      problemLine: "The best berries are high up!",
-      askLine: "We need to climb...",
-      word: "LADDER", solutionEmoji: "🪜", solutionPlacement: "over",
+      problemLine: "The best berries are up high!",
+      askLine: "To go up I need...",
+      word: "STEPS", solutionEmoji: "🪜", solutionPlacement: "over",
       successLine: "Up to the top!",
     },
     {
       sceneEmoji: "☀️", sky: sky.morning, ground: ground.grass,
       problemLine: "The sun is so hot!",
-      askLine: "My head needs shade...",
+      askLine: "My head needs a...",
       word: "HAT", solutionEmoji: "👒", solutionPlacement: "onNabu",
       successLine: "Ahh, much cooler!",
     },
     {
       sceneEmoji: "🌊", sky: sky.meadow, ground: ground.grass,
       problemLine: "A stream is blocking us!",
-      askLine: "Let's leap across...",
+      askLine: "Time to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
       successLine: "Big leap! We did it!",
     },
     {
       sceneEmoji: "🐝", sky: sky.forest, ground: ground.grass,
       problemLine: "Bees! Buzz buzz!",
-      askLine: "Bees love sweet things, not us...",
+      askLine: "Bees love sweet...",
       word: "HONEY", solutionEmoji: "🍯", solutionPlacement: "over",
       successLine: "The bees are happy!",
     },
     {
       sceneEmoji: "🍓", sky: sky.morning, ground: ground.grass,
-      problemLine: "Berries everywhere!",
-      askLine: "Let's mix them up to bake...",
+      problemLine: "Time to bake!",
+      askLine: "Mix them with a...",
       word: "SPOON", solutionEmoji: "🥄", solutionPlacement: "onNabu",
       successLine: "Stir stir stir!",
     },
@@ -298,36 +301,36 @@ const W102_L1: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "☁️", sky: sky.sky, ground: ground.clouds,
-      problemLine: "The clouds are too high!",
-      askLine: "Something to lift me up...",
+      problemLine: "The clouds are high!",
+      askLine: "Lift me with a...",
       word: "BALLOON", solutionEmoji: "🎈", solutionPlacement: "over",
       successLine: "Up up up!",
     },
     {
       sceneEmoji: "💨", sky: sky.sky, ground: ground.clouds,
-      problemLine: "Wind is blowing me back!",
-      askLine: "I need wings...",
+      problemLine: "Wind blows me back!",
+      askLine: "I need a super...",
       word: "CAPE", solutionEmoji: "🦸", solutionPlacement: "onNabu",
       successLine: "Whoosh! Super Benny!",
     },
     {
       sceneEmoji: "⭐", sky: sky.dusk, ground: ground.clouds,
       problemLine: "It's getting dark!",
-      askLine: "Something shiny to guide us...",
+      askLine: "Light the way with a...",
       word: "STAR", solutionEmoji: "⭐", solutionPlacement: "over",
       successLine: "A bright star!",
     },
     {
       sceneEmoji: "🌌", sky: sky.night, ground: ground.clouds,
       problemLine: "So far to the moon!",
-      askLine: "We need a fast ride...",
+      askLine: "We need a fast...",
       word: "ROCKET", solutionEmoji: "🚀", solutionPlacement: "onNabu",
       successLine: "3... 2... 1... BLAST OFF!",
     },
     {
       sceneEmoji: "🌑", sky: sky.night, ground: ground.clouds,
       problemLine: "The moon is hiding!",
-      askLine: "Shine a light on it...",
+      askLine: "Shine a...",
       word: "LAMP", solutionEmoji: "🏮", solutionPlacement: "onNabu",
       successLine: "There it is!",
     },
@@ -343,28 +346,28 @@ const W102_L2: PreKAdventure = {
     {
       sceneEmoji: "☁️", sky: sky.sky, ground: ground.grass,
       problemLine: "Clouds are floating away!",
-      askLine: "I need to catch one...",
+      askLine: "Catch one with a...",
       word: "NET", solutionEmoji: "🥅", solutionPlacement: "onNabu",
       successLine: "Got one!",
     },
     {
       sceneEmoji: "🌬️", sky: sky.sky, ground: ground.grass,
       problemLine: "I'm not high enough!",
-      askLine: "Something that flies on a string...",
+      askLine: "Send up a...",
       word: "KITE", solutionEmoji: "🪁", solutionPlacement: "over",
       successLine: "Up I go!",
     },
     {
       sceneEmoji: "💨", sky: sky.sky, ground: ground.clouds,
       problemLine: "No wind today!",
-      askLine: "Something to blow...",
+      askLine: "Turn on a...",
       word: "FAN", solutionEmoji: "🌬️", solutionPlacement: "over",
       successLine: "Whoosh! Wind!",
     },
     {
       sceneEmoji: "☁️", sky: sky.sky, ground: ground.clouds,
       problemLine: "Cloud is shy!",
-      askLine: "A treat to share...",
+      askLine: "Share a yummy...",
       word: "CAKE", solutionEmoji: "🍰", solutionPlacement: "over",
       successLine: "Cloud loves cake!",
     },
@@ -380,35 +383,35 @@ const W102_L3: PreKAdventure = {
     {
       sceneEmoji: "🌧️", sky: sky.storm, ground: ground.grass,
       problemLine: "Rain is pouring down!",
-      askLine: "I need to stay dry...",
-      word: "UMBRELLA", solutionEmoji: "☂️", solutionPlacement: "onNabu",
+      askLine: "To stay dry I need a...",
+      word: "HOOD", solutionEmoji: "🧥", solutionPlacement: "onNabu",
       successLine: "Pitter patter — but dry!",
     },
     {
       sceneEmoji: "🟫", sky: sky.storm, ground: ground.mud,
       problemLine: "Puddles everywhere!",
-      askLine: "My feet need help...",
+      askLine: "My feet need big...",
       word: "BOOTS", solutionEmoji: "🥾", solutionPlacement: "onNabu",
       successLine: "Splash splash!",
     },
     {
       sceneEmoji: "🌑", sky: sky.storm, ground: ground.grass,
       problemLine: "It's too dark!",
-      askLine: "We need light...",
+      askLine: "We need a...",
       word: "LAMP", solutionEmoji: "🏮", solutionPlacement: "onNabu",
       successLine: "I can see now!",
     },
     {
       sceneEmoji: "❄️", sky: sky.storm, ground: ground.grass,
       problemLine: "Brrr, so cold!",
-      askLine: "Something warm and soft...",
-      word: "BLANKET", solutionEmoji: "🧣", solutionPlacement: "onNabu",
+      askLine: "Something warm — a...",
+      word: "COAT", solutionEmoji: "🧥", solutionPlacement: "onNabu",
       successLine: "Toasty warm!",
     },
     {
       sceneEmoji: "⛈️", sky: sky.storm, ground: ground.grass,
       problemLine: "Thunder! BOOM!",
-      askLine: "A safe place to hide...",
+      askLine: "Hide inside a...",
       word: "TENT", solutionEmoji: "⛺", solutionPlacement: "over",
       successLine: "Safe and cozy!",
     },
@@ -423,8 +426,8 @@ const W102_L4: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "📄", sky: sky.sky, ground: ground.grass,
-      problemLine: "I need to start the kite!",
-      askLine: "Something flat and light...",
+      problemLine: "Start the kite!",
+      askLine: "Something flat — a piece of...",
       word: "PAPER", solutionEmoji: "📄", solutionPlacement: "over",
       successLine: "Perfect!",
     },
@@ -438,8 +441,8 @@ const W102_L4: PreKAdventure = {
     {
       sceneEmoji: "✂️", sky: sky.sky, ground: ground.grass,
       problemLine: "Paper is too big!",
-      askLine: "Snip snip...",
-      word: "SCISSORS", solutionEmoji: "✂️", solutionPlacement: "onNabu",
+      askLine: "Time to...",
+      word: "CUT", solutionEmoji: "✂️", solutionPlacement: "onNabu",
       successLine: "Just the right size!",
     },
     {
@@ -461,21 +464,21 @@ const W102_L5: PreKAdventure = {
     {
       sceneEmoji: "🚀", sky: sky.dusk, ground: ground.clouds,
       problemLine: "How do we get to space?",
-      askLine: "Something fast and zoomy...",
+      askLine: "Hop in the fast...",
       word: "ROCKET", solutionEmoji: "🚀", solutionPlacement: "over",
       successLine: "BLAST OFF!",
     },
     {
       sceneEmoji: "🌬️", sky: sky.night, ground: ground.clouds,
       problemLine: "No air in space!",
-      askLine: "Something for my head...",
-      word: "HELMET", solutionEmoji: "🪖", solutionPlacement: "onNabu",
+      askLine: "On my head, a...",
+      word: "HAT", solutionEmoji: "🪖", solutionPlacement: "onNabu",
       successLine: "Now I can breathe!",
     },
     {
       sceneEmoji: "❓", sky: sky.night, ground: ground.clouds,
-      problemLine: "Where is the picnic spot?",
-      askLine: "We need directions...",
+      problemLine: "Where is the spot?",
+      askLine: "Find it on a...",
       word: "MAP", solutionEmoji: "🗺️", solutionPlacement: "onNabu",
       successLine: "Found it!",
     },
@@ -483,7 +486,7 @@ const W102_L5: PreKAdventure = {
       sceneEmoji: "😋", sky: sky.night, ground: ground.clouds,
       problemLine: "I'm hungry!",
       askLine: "Bring a yummy...",
-      word: "SANDWICH", solutionEmoji: "🥪", solutionPlacement: "over",
+      word: "SNACK", solutionEmoji: "🥪", solutionPlacement: "over",
       successLine: "Nom nom!",
     },
     {
@@ -515,35 +518,35 @@ const W103_L1: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "🌊", sky: sky.ocean, ground: ground.sand,
-      problemLine: "I can't swim across the sea!",
-      askLine: "Something that floats...",
+      problemLine: "I can't swim across!",
+      askLine: "Float in a...",
       word: "BOAT", solutionEmoji: "⛵", solutionPlacement: "over",
       successLine: "All aboard!",
     },
     {
       sceneEmoji: "💧", sky: sky.ocean, ground: ground.ocean,
-      problemLine: "I need to look underwater!",
-      askLine: "Goggles for my eyes...",
+      problemLine: "I need to look down!",
+      askLine: "On my eyes — a...",
       word: "MASK", solutionEmoji: "🥽", solutionPlacement: "onNabu",
       successLine: "I can see fishies!",
     },
     {
       sceneEmoji: "❓", sky: sky.ocean, ground: ground.ocean,
       problemLine: "Where's the treasure?",
-      askLine: "Time to read a...",
+      askLine: "Read a...",
       word: "MAP", solutionEmoji: "🗺️", solutionPlacement: "onNabu",
       successLine: "X marks the spot!",
     },
     {
       sceneEmoji: "📦", sky: sky.ocean, ground: ground.sand,
       problemLine: "A locked chest!",
-      askLine: "I need to open it...",
+      askLine: "Open it with a...",
       word: "KEY", solutionEmoji: "🔑", solutionPlacement: "over",
       successLine: "Click! Open!",
     },
     {
       sceneEmoji: "✨", sky: sky.ocean, ground: ground.sand,
-      problemLine: "What's inside? It's shiny!",
+      problemLine: "It's shiny!",
       askLine: "Look at the...",
       word: "GOLD", solutionEmoji: "🪙", solutionPlacement: "over",
       successLine: "Gold coins! Hooray!",
@@ -560,14 +563,14 @@ const W103_L2: PreKAdventure = {
     {
       sceneEmoji: "🐢", sky: sky.ocean, ground: ground.sand,
       problemLine: "A turtle is stuck!",
-      askLine: "I need to pull it...",
+      askLine: "Pull with a...",
       word: "ROPE", solutionEmoji: "🪢", solutionPlacement: "over",
       successLine: "Heave ho!",
     },
     {
       sceneEmoji: "🪨", sky: sky.ocean, ground: ground.sand,
-      problemLine: "A big rock is in the way!",
-      askLine: "Help me dig around it...",
+      problemLine: "A big rock!",
+      askLine: "Dig with a...",
       word: "SHOVEL", solutionEmoji: "🪏", solutionPlacement: "onNabu",
       successLine: "Dig dig dig!",
     },
@@ -580,7 +583,7 @@ const W103_L2: PreKAdventure = {
     },
     {
       sceneEmoji: "🌊", sky: sky.ocean, ground: ground.sand,
-      problemLine: "Time to go back to the sea!",
+      problemLine: "Time to go home!",
       askLine: "Ride a big...",
       word: "WAVE", solutionEmoji: "🌊", solutionPlacement: "over",
       successLine: "Whee! Bye turtle!",
@@ -596,28 +599,28 @@ const W103_L3: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "🐟", sky: sky.ocean, ground: ground.sand,
-      problemLine: "Fish are too quick to grab!",
-      askLine: "I need a long stick...",
+      problemLine: "Fish are quick!",
+      askLine: "Grab the fishing...",
       word: "ROD", solutionEmoji: "🎣", solutionPlacement: "onNabu",
       successLine: "Ready to fish!",
     },
     {
       sceneEmoji: "🪱", sky: sky.ocean, ground: ground.sand,
       problemLine: "Fish won't bite!",
-      askLine: "I need yummy bait...",
+      askLine: "Use a wiggly...",
       word: "WORM", solutionEmoji: "🪱", solutionPlacement: "over",
       successLine: "Wiggly snack!",
     },
     {
       sceneEmoji: "🐠", sky: sky.ocean, ground: ground.sand,
-      problemLine: "So many fish! Hard to catch!",
-      askLine: "Scoop them with a...",
+      problemLine: "So many fish!",
+      askLine: "Scoop with a...",
       word: "NET", solutionEmoji: "🥅", solutionPlacement: "onNabu",
       successLine: "Got them all!",
     },
     {
       sceneEmoji: "🔥", sky: sky.dusk, ground: ground.sand,
-      problemLine: "Fish needs to cook!",
+      problemLine: "Time to cook!",
       askLine: "Make a warm...",
       word: "FIRE", solutionEmoji: "🔥", solutionPlacement: "over",
       successLine: "Crackle pop!",
@@ -625,7 +628,7 @@ const W103_L3: PreKAdventure = {
     {
       sceneEmoji: "🍳", sky: sky.dusk, ground: ground.sand,
       problemLine: "Where do I cook it?",
-      askLine: "We need a...",
+      askLine: "Cook in a...",
       word: "PAN", solutionEmoji: "🍳", solutionPlacement: "over",
       successLine: "Sizzle sizzle!",
     },
@@ -640,30 +643,30 @@ const W103_L4: PreKAdventure = {
   obstacles: [
     {
       sceneEmoji: "🌑", sky: sky.cave, ground: ground.rock,
-      problemLine: "It's pitch dark in here!",
-      askLine: "I need a flame...",
+      problemLine: "It's pitch dark!",
+      askLine: "Light a...",
       word: "TORCH", solutionEmoji: "🔦", solutionPlacement: "onNabu",
       successLine: "Bright!",
     },
     {
       sceneEmoji: "⬇️", sky: sky.cave, ground: ground.rock,
-      problemLine: "A big drop! Yikes!",
-      askLine: "I need to climb down...",
+      problemLine: "A big drop!",
+      askLine: "Climb down a...",
       word: "ROPE", solutionEmoji: "🪢", solutionPlacement: "over",
       successLine: "Down I go!",
     },
     {
       sceneEmoji: "🦇", sky: sky.cave, ground: ground.rock,
       problemLine: "Bats! Eek!",
-      askLine: "Cover my head...",
+      askLine: "Cover my head with a...",
       word: "HAT", solutionEmoji: "🎩", solutionPlacement: "onNabu",
       successLine: "Safe now!",
     },
     {
       sceneEmoji: "🚧", sky: sky.cave, ground: ground.rock,
-      problemLine: "A big rock blocks the way!",
-      askLine: "Break it with a...",
-      word: "PICK", solutionEmoji: "⛏️", solutionPlacement: "onNabu",
+      problemLine: "A rock blocks the way!",
+      askLine: "Break it — time to...",
+      word: "BASH", solutionEmoji: "💥", solutionPlacement: "over",
       successLine: "Smash! Path open!",
     },
   ],
@@ -678,7 +681,7 @@ const W103_L5: PreKAdventure = {
     {
       sceneEmoji: "🗑️", sky: sky.reef, ground: ground.ocean,
       problemLine: "Trash in the water!",
-      askLine: "Scoop it with a...",
+      askLine: "Scoop with a...",
       word: "NET", solutionEmoji: "🥅", solutionPlacement: "onNabu",
       successLine: "All cleaned up!",
     },
@@ -713,7 +716,7 @@ const W103_L5: PreKAdventure = {
     {
       sceneEmoji: "💎", sky: sky.reef, ground: ground.ocean,
       problemLine: "A shiny treasure!",
-      askLine: "Pick up the pretty...",
+      askLine: "Pick up the...",
       word: "PEARL", solutionEmoji: "🫧", solutionPlacement: "over",
       successLine: "So pretty!",
     },
