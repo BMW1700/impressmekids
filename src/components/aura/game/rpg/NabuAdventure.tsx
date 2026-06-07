@@ -159,7 +159,9 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     }
     if (phase === "ask") {
       speak(current.askLine, BENNY);
-      queue(() => setPhase("reading"), 1900);
+      // Tight gap so the WORD card appears right after the cloze stem and
+      // the child can complete the sentence without losing it.
+      queue(() => setPhase("reading"), 900);
       return;
     }
     if (phase === "reading") {
