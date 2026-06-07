@@ -405,24 +405,45 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
       )}
       <NabuSprite phase={phase} anim={bouncyWalkAnim} />
 
-      {/* boots on Nabu (follow nabu position) */}
+      {/* boots on Nabu — chunky, painted, with highlights so they read at 5ft */}
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y, opacity: 0 }}
+          initial={{ x: NABU_START.x, y: NABU_START.y, opacity: 0, scale: 0.6 }}
           animate={{
             x: phase === "transition" ? NABU_EXIT.x : NABU_START.x,
             y: phase === "transition" ? NABU_EXIT.y : NABU_START.y,
             opacity: 1,
+            scale: 1,
           }}
-          transition={{ duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" }}
+          transition={{
+            x: { duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" },
+            y: { duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" },
+            opacity: { duration: 0.35 },
+            scale: { duration: 0.45, ease: "backOut" },
+          }}
         >
-          <g transform="translate(-22,-2)">
-            <rect x="0" y="0" width="18" height="22" rx="3" fill="#dc2626" />
-            <rect x="-4" y="18" width="26" height="8" rx="2" fill="#991b1b" />
+          <defs>
+            <linearGradient id="boot-red" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fb7185" />
+              <stop offset="55%" stopColor="#dc2626" />
+              <stop offset="100%" stopColor="#7f1d1d" />
+            </linearGradient>
+          </defs>
+          {/* Left boot */}
+          <g transform="translate(-58, -8)">
+            <path d="M0 0 h36 q8 0 8 8 v40 q0 6 -6 6 h-10 l-2 12 h-36 l4 -14 h-2 q-6 0 -6 -6 v-38 q0 -8 8 -8 z"
+                  fill="url(#boot-red)" stroke="#581c87" strokeOpacity="0.35" strokeWidth="2" />
+            <rect x="-12" y="46" width="58" height="14" rx="4" fill="#7f1d1d" />
+            <ellipse cx="10" cy="10" rx="14" ry="4" fill="#fecaca" opacity="0.55" />
+            <circle cx="36" cy="22" r="3" fill="#fde68a" />
           </g>
-          <g transform="translate(4,-2)">
-            <rect x="0" y="0" width="18" height="22" rx="3" fill="#dc2626" />
-            <rect x="-4" y="18" width="26" height="8" rx="2" fill="#991b1b" />
+          {/* Right boot */}
+          <g transform="translate(14, -8)">
+            <path d="M0 0 h36 q8 0 8 8 v40 q0 6 -6 6 h-10 l-2 12 h-36 l4 -14 h-2 q-6 0 -6 -6 v-38 q0 -8 8 -8 z"
+                  fill="url(#boot-red)" stroke="#581c87" strokeOpacity="0.35" strokeWidth="2" />
+            <rect x="-12" y="46" width="58" height="14" rx="4" fill="#7f1d1d" />
+            <ellipse cx="10" cy="10" rx="14" ry="4" fill="#fecaca" opacity="0.55" />
+            <circle cx="36" cy="22" r="3" fill="#fde68a" />
           </g>
         </motion.g>
       )}
