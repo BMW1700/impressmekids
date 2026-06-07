@@ -13,8 +13,7 @@ import {
 } from "./WaveDirector";
 import { ENEMY_TYPES, EnemyType } from "./enemyTypes";
 import { SwarmEnemy } from "./SwarmEnemy";
-import { EnemyCastle } from "./EnemyCastle";
-import { PlayerCastle } from "./sprites/PlayerCastle";
+import { CastleAnchor } from "./CastleAnchor";
 import { ArenaBackground } from "./ArenaBackground";
 import { WaveInterstitial } from "./WaveInterstitial";
 import { WaveSurvivedCard, RunSummary } from "./WaveSurvivedCard";
@@ -46,6 +45,8 @@ interface Enemy {
   dying: boolean;
   flying: boolean;
   hitFlashUntil: number;
+  attacking?: boolean;
+  attackingUntil?: number;
 }
 interface Knight {
   id: number; x: number; hp: number; maxHp: number; spawnedAt: number;
@@ -613,12 +614,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           }
         });
 
-        // 3. Move enemies
+        // 3. Move enemies (stop at gate attack zone, play attack loop, then despawn)
+        const ENEMY_ATTACK_X = 70;
         enemiesRef.current.forEach(e => {
           if (e.dying) return;
+          // If already attacking the castle, hold position; despawn after the swing loop finishes.
+          if (e.attacking) {
+            e.x = ENEMY_ATTACK_X;
+            if (e.attackingUntil && now >= e.attackingUntil) {
+              e.dying = true;
+            }
+            return;
+          }
           const slowed = now < e.slowUntil;
           e.x -= e.speed * dt * (slowed ? 0.4 : 1);
-          if (e.x <= 0) {
+          if (e.x <= ENEMY_ATTACK_X) {
+            e.x = ENEMY_ATTACK_X;
             const raw = ENEMY_TYPES[e.type].castleDamage;
             // Resolve shield absorbs up to its current value, point-for-point.
             const absorbed = Math.min(shieldRef.current, raw);
@@ -626,7 +637,9 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             if (absorbed > 0) setShieldHud(shieldRef.current);
             const dmg = raw - absorbed;
             if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
-            e.dying = true;
+            // Linger at the gate, playing an attack loop, before being cleaned up.
+            e.attacking = true;
+            e.attackingUntil = now + 1200;
             setShake(s => s + 1);
           }
         });
@@ -891,16 +904,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
         className="absolute inset-x-0 top-10 bottom-32 z-10"
       >
         <div className="relative w-full h-full">
-          {/* Player castle (right) */}
-          <div className="absolute right-2 bottom-2 z-10">
-            <PlayerCastle
-              hp={castleHpHud}
-              maxHp={CASTLE_HP_MAX}
-              variant={gradeMode === "6to12" ? "agent" : "classic"}
+          {/* Hero castle anchor (right) — HP label + damage overlays over the painted castle */}
+          <CastleAnchor
+            side="right"
+            hp={castleHpHud}
+            maxHp={CASTLE_HP_MAX}
+            label={gradeMode === "6to12" ? "AGENT BASE" : "YOUR CASTLE"}
+          />
+          {/* Enemy keep anchor (left) — campaign only */}
+          {mode.kind === "campaign" && (
+            <CastleAnchor
+              side="left"
+              hp={enemyCastleHpHud}
+              maxHp={enemyCastleMax}
+              label="ENEMY KEEP"
             />
-          </div>
-          {/* Enemy castle (left) — campaign only */}
-          {mode.kind === "campaign" && <EnemyCastle hp={enemyCastleHpHud} maxHp={enemyCastleMax} />}
+          )}
 
           {/* Enemies */}
           {enemies.map(e => {
@@ -919,6 +938,7 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
                   maxHp={e.maxHp}
                   flying={e.flying}
                   takingDamage={performance.now() < e.hitFlashUntil}
+                  attacking={e.attacking}
                 />
               </motion.div>
             );
