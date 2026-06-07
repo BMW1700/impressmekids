@@ -614,12 +614,22 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
           }
         });
 
-        // 3. Move enemies
+        // 3. Move enemies (stop at gate attack zone, play attack loop, then despawn)
+        const ENEMY_ATTACK_X = 70;
         enemiesRef.current.forEach(e => {
           if (e.dying) return;
+          // If already attacking the castle, hold position; despawn after the swing loop finishes.
+          if (e.attacking) {
+            e.x = ENEMY_ATTACK_X;
+            if (e.attackingUntil && now >= e.attackingUntil) {
+              e.dying = true;
+            }
+            return;
+          }
           const slowed = now < e.slowUntil;
           e.x -= e.speed * dt * (slowed ? 0.4 : 1);
-          if (e.x <= 0) {
+          if (e.x <= ENEMY_ATTACK_X) {
+            e.x = ENEMY_ATTACK_X;
             const raw = ENEMY_TYPES[e.type].castleDamage;
             // Resolve shield absorbs up to its current value, point-for-point.
             const absorbed = Math.min(shieldRef.current, raw);
@@ -627,7 +637,9 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
             if (absorbed > 0) setShieldHud(shieldRef.current);
             const dmg = raw - absorbed;
             if (dmg > 0) castleHpRef.current = Math.max(0, castleHpRef.current - dmg);
-            e.dying = true;
+            // Linger at the gate, playing an attack loop, before being cleaned up.
+            e.attacking = true;
+            e.attackingUntil = now + 1200;
             setShake(s => s + 1);
           }
         });
