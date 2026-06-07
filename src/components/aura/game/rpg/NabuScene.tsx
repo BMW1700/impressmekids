@@ -61,64 +61,90 @@ const NABU_EXIT = { x: 860, y: GROUND_Y - 10 };
 
 const nabuAnim = (phase: ScenePhase) => {
   if (phase === "transition") {
-    return { x: NABU_EXIT.x, y: NABU_EXIT.y, transition: { duration: 1.6, ease: "easeInOut" as const } };
+    return {
+      x: NABU_EXIT.x,
+      y: NABU_EXIT.y,
+      scaleY: 1, scaleX: 1, rotate: 0,
+      transition: { duration: 1.6, ease: "easeInOut" as const },
+    };
   }
   if (phase === "solved") {
+    // Joyful triple-hop with squash-and-stretch + small spin on each apex.
     return {
       x: NABU_START.x,
-      y: [NABU_START.y, NABU_START.y - 22, NABU_START.y, NABU_START.y - 14, NABU_START.y],
-      transition: { duration: 1.4 },
+      y: [NABU_START.y, NABU_START.y - 38, NABU_START.y, NABU_START.y - 26, NABU_START.y, NABU_START.y - 18, NABU_START.y],
+      scaleY: [1, 1.12, 0.88, 1.10, 0.92, 1.06, 1],
+      scaleX: [1, 0.92, 1.08, 0.94, 1.06, 0.96, 1],
+      rotate: [0, -6, 0, 6, 0, -3, 0],
+      transition: { duration: 1.6, ease: "easeOut" as const },
     };
   }
   if (phase === "problem") {
+    // Worried sway — leans left/right looking for help with a small head bob.
     return {
-      x: [NABU_START.x, NABU_START.x - 8, NABU_START.x],
-      y: NABU_START.y,
-      transition: { duration: 1.4, repeat: Infinity, ease: "easeInOut" as const },
+      x: [NABU_START.x, NABU_START.x - 10, NABU_START.x + 6, NABU_START.x],
+      y: [NABU_START.y, NABU_START.y - 4, NABU_START.y - 2, NABU_START.y],
+      rotate: [0, -4, 3, 0],
+      scaleY: 1, scaleX: 1,
+      transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
     };
   }
+  // ask / reading: alert breathing-in stance — subtle pulse, no drift.
   return {
     x: NABU_START.x,
-    y: [NABU_START.y, NABU_START.y - 5, NABU_START.y],
-    transition: { duration: 2, repeat: Infinity, ease: "easeInOut" as const },
+    y: [NABU_START.y, NABU_START.y - 4, NABU_START.y],
+    scaleY: [1, 1.03, 1],
+    scaleX: [1, 0.985, 1],
+    rotate: 0,
+    transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const },
   };
 };
 
 // ── Scene-specific Nabu motion helpers ─────────────────────────────────────
 // All return a framer-motion `animate` object for the <motion.g> wrapper.
 
-// High-bouncing walk across — for muddy / squishy ground (BOOTS).
+// High-bouncing walk across — for muddy / squishy ground (BOOTS). Adds
+// squash on landings and stretch on rises so feet feel weighty.
 const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [370, 330, 370, 330, 370, 370],
+      y: [370, 320, 370, 320, 370, 370],
+      scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
+      scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
+      rotate: [0, -4, 0, 4, 0, 0],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
   return nabuAnim(phase);
 };
 
-// Hop over an obstacle centered at obstacleX, then continue to NABU_EXIT.
+// Hop over an obstacle centered at obstacleX — anticipation crouch, big arc,
+// squash on landing, then trot off. Reads as a real jump, not a slide-up.
 const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
-      x: [140, obstacleX - 80, obstacleX, obstacleX + 80, 860],
-      y: [370, 370, 280, 370, 370],
-      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.3, 0.5, 0.7, 1] },
+      x: [140, obstacleX - 90, obstacleX - 70, obstacleX, obstacleX + 70, obstacleX + 90, 860],
+      y: [370, 380, 380, 250, 380, 380, 370],
+      scaleY: [1, 0.82, 1.18, 1.05, 1.18, 0.82, 1],
+      scaleX: [1, 1.12, 0.90, 0.96, 0.90, 1.12, 1],
+      rotate: [0, 0, -8, -4, 4, 0, 0],
+      transition: { duration: 2.0, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
     };
   }
   return nabuAnim(phase);
 };
 
-// Walk forward and stop at a target (use for arriving at nest, bed, tent, etc.).
+// Walk forward and stop at a target — adds a small settle-bob on arrival.
 const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
-        x: targetX,
-        y: targetY,
-        transition: { duration: 1.4, ease: "easeInOut" },
+        x: [140, (140 + targetX) / 2, targetX, targetX],
+        y: [370, 366, targetY - 6, targetY],
+        scaleY: [1, 1.02, 0.96, 1],
+        scaleX: [1, 0.99, 1.04, 1],
+        transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
     return nabuAnim(phase);
