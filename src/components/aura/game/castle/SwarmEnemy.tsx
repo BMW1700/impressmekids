@@ -8,12 +8,14 @@ interface Props {
   maxHp: number;
   flying?: boolean;
   takingDamage?: boolean;
+  attacking?: boolean;
 }
 
 /**
  * Renders one enemy with HP bar + label using dedicated SVG sprites.
+ * When `attacking` is true (enemy reached the castle gate), plays a swing loop.
  */
-export const SwarmEnemy = memo(({ type, hp, maxHp, flying, takingDamage }: Props) => {
+export const SwarmEnemy = memo(({ type, hp, maxHp, flying, takingDamage, attacking }: Props) => {
   const def = ENEMY_TYPES[type];
   const size = Math.round(56 * def.scale);
   return (
@@ -27,7 +29,9 @@ export const SwarmEnemy = memo(({ type, hp, maxHp, flying, takingDamage }: Props
       <div className="text-[9px] text-rose-100 leading-none mb-0.5 font-bold drop-shadow">
         {Math.max(0, Math.ceil(hp))} HP
       </div>
-      <SwarmEnemySprite type={type} size={size} takingDamage={takingDamage} />
+      <div className={attacking ? "enemy-attacking" : undefined}>
+        <SwarmEnemySprite type={type} size={size} takingDamage={takingDamage} />
+      </div>
       <div className="text-[9px] text-slate-200 mt-0.5 leading-none drop-shadow">{def.label}</div>
     </div>
   );
