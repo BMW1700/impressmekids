@@ -261,27 +261,24 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     );
   }
 
-  // Celebrate / sad: keep the still PNG + framer-motion CSS animation.
-  const anim = bennyMoodAnim(mood);
-  const src = BENNY_SOURCES[mood];
+  // Celebrate / sad: render the rigged two-layer Benny so the head pivots
+  // independently of the body — way more alive than a still PNG with a CSS
+  // bounce. We keep idle on the sprite-sheet because that's its strength.
+  const pose: "cheer" | "sad" = mood === "celebrate" ? "cheer" : "sad";
+  const w = size;
+  const h = Math.round(size * BENNY_SPRITE_ASPECT);
   return (
-    <motion.g
-      key={mood}
-      animate={anim.animate}
-      transition={anim.transition}
-      style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
+    <foreignObject
+      x={-w / 2}
+      y={-h + 10}
+      width={w}
+      height={h}
+      style={{ overflow: "visible", pointerEvents: "none" }}
     >
-      <image
-        href={src}
-        xlinkHref={src}
-        x={-size / 2}
-        y={-size + 10}
-        width={size}
-        height={size}
-        style={{ pointerEvents: "none" }}
-        preserveAspectRatio="xMidYMax meet"
-      />
-    </motion.g>
+      <div style={{ width: w, height: h }}>
+        <BennyRigged pose={pose} size={w} />
+      </div>
+    </foreignObject>
   );
 };
 
