@@ -484,17 +484,39 @@ const KeyScene = ({ phase }: { phase: ScenePhase }) => {
         <circle cx="500" cy={GROUND_Y - 95} r="14" fill={solved ? "#22c55e" : "#facc15"} stroke="#78350f" strokeWidth="3" />
         <rect x="496" y={GROUND_Y - 92} width="8" height="10" fill="#78350f" />
       </motion.g>
-      {/* key flying to lock */}
+      {/* key flying to lock — big golden hero prop */}
       {phase === "solved" && (
         <motion.g
-          initial={{ x: 200, y: GROUND_Y - 200, rotate: -20, opacity: 0 }}
-          animate={{ x: 500, y: GROUND_Y - 95, rotate: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
+          initial={{ x: 180, y: GROUND_Y - 220, rotate: -25, opacity: 0, scale: 0.6 }}
+          animate={{ x: 500, y: GROUND_Y - 95, rotate: 0, opacity: 1, scale: 1 }}
+          transition={{
+            x: { duration: 0.9, ease: "easeOut" },
+            y: { duration: 0.9, ease: "easeOut" },
+            rotate: { duration: 0.9, ease: "easeOut" },
+            opacity: { duration: 0.35 },
+            scale: { duration: 0.6, ease: "backOut" },
+          }}
         >
-          <circle cx="0" cy="0" r="10" fill="none" stroke="#eab308" strokeWidth="4" />
-          <rect x="6" y="-3" width="22" height="6" fill="#eab308" />
-          <rect x="22" y="3" width="3" height="6" fill="#eab308" />
-          <rect x="26" y="3" width="3" height="6" fill="#eab308" />
+          <defs>
+            <linearGradient id="key-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fde68a" />
+              <stop offset="55%" stopColor="#eab308" />
+              <stop offset="100%" stopColor="#854d0e" />
+            </linearGradient>
+            <radialGradient id="key-shine" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stopColor="#fffbeb" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#fffbeb" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          {/* bow (the round handle) */}
+          <circle cx="0" cy="0" r="28" fill="url(#key-gold)" stroke="#713f12" strokeWidth="3" />
+          <circle cx="0" cy="0" r="14" fill="none" stroke="#713f12" strokeWidth="3" />
+          <ellipse cx="-8" cy="-8" rx="10" ry="6" fill="url(#key-shine)" />
+          {/* shaft */}
+          <rect x="22" y="-6" width="60" height="12" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2.5" />
+          {/* teeth */}
+          <rect x="62" y="6" width="8" height="14" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2" />
+          <rect x="74" y="6" width="8" height="10" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2" />
         </motion.g>
       )}
       <NabuSprite phase={phase} anim={walkToAnim(860)} />
