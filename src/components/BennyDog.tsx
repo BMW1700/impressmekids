@@ -108,8 +108,8 @@ const ensureKeyframes = () => {
   0%, 100% { transform: translate(68%, 0) rotate(18deg) scaleY(0.86); }
   50%      { transform: translate(68%, 0) rotate(-14deg) scaleY(1); }
 }
-.benny-rig-climb .benny-rig-leg-l { animation: benny-leg-climb-l 0.7s ease-in-out infinite; }
-.benny-rig-climb .benny-rig-leg-r { animation: benny-leg-climb-r 0.7s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-left { animation: benny-leg-walk-l 0.62s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-right { animation: benny-leg-walk-r 0.62s ease-in-out infinite; }
 @keyframes benny-body-bob {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
   50%      { transform: translateY(-4%) rotate(1deg); }
@@ -137,7 +137,7 @@ const ensureKeyframes = () => {
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-rig, .benny-rig-leg { animation: none !important; }
+  .benny-rig, .benny-leg-layer { animation: none !important; }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
