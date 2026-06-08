@@ -32,12 +32,6 @@ const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
 
-const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: bennySprite.url, // unused for idle; sprite path renders <foreignObject>
-  celebrate: celebrateAsset.url,
-  sad: sadAsset.url,
-};
-
 interface NabuSceneProps {
   word: string;
   phase: ScenePhase;
@@ -160,19 +154,19 @@ const NabuSprite = ({
   phase,
   size = 280,
   anim,
+  action,
 }: {
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
+  action?: "idle" | "walk" | "jump";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  // During movement (solved/transition) we MUST keep the animated sprite
-  // sheet running — switching to the still celebrate PNG kills all leg
-  // motion and Benny becomes a generic floating picture. The wrapper
-  // <motion.g> already provides the bounce/arc/hop; the sprite sheet
-  // provides the actual leg animation underneath.
-  // Only "sad" overrides the sprite (and only briefly, when stationary).
-  const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : "idle";
+  const isMovingPhase = phase === "solved" || phase === "transition";
+  const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
+  // Never use the static celebrate PNG for gameplay motion. If Benny is
+  // moving, force a sprite-backed action state with an explicit paw cycle.
+  const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <BennySvgImage mood={bennyMood} size={size} />
@@ -203,7 +197,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 // Inject sprite keyframes once. Walks background-position right 30 steps then
 // holds the last frame for 2s before looping — gives Benny a "breathe → settle
 // → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes";
+const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes-v2-action-paws";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -219,26 +213,62 @@ const ensureBennySpriteKeyframes = () => {
   72%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
+.benny-sprite-action-idle { animation-duration: 3.2s; }
+.benny-sprite-action-walk { animation-duration: 0.48s; }
+.benny-sprite-action-jump { animation-duration: 0.34s; }
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
+  animation-name: benny-idle-sprite-walk;
+  animation-timing-function: steps(29, end);
+  animation-iteration-count: infinite;
   will-change: background-position;
 }
+@keyframes benny-paw-left-walk {
+  0%, 100% { transform: translate(0, 0) rotate(-5deg) scale(1); }
+  50%      { transform: translate(30%, -18%) rotate(9deg) scale(0.94); }
+}
+@keyframes benny-paw-right-walk {
+  0%, 100% { transform: translate(0, 0) rotate(5deg) scale(1); }
+  50%      { transform: translate(-30%, -18%) rotate(-9deg) scale(0.94); }
+}
+.benny-action-paws { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.benny-action-paw {
+  position: absolute;
+  bottom: 1.5%;
+  width: 18%;
+  height: 12%;
+  border-radius: 48% 48% 40% 40%;
+  background: radial-gradient(circle at 48% 22%, #fff7dc 0 34%, #f4b25a 36% 68%, #d98b2e 100%);
+  box-shadow: inset 0 -0.18em 0 rgba(126, 65, 18, 0.18), 0 0.12em 0.18em rgba(0,0,0,0.12);
+}
+.benny-action-paw-left { left: 31%; transform-origin: 50% 20%; }
+.benny-action-paw-right { right: 31%; transform-origin: 50% 20%; }
+.benny-action-walk, .benny-action-jump { opacity: 1; }
+.benny-action-walk .benny-action-paw-left,
+.benny-action-jump .benny-action-paw-left { animation: benny-paw-left-walk 0.42s steps(2, end) infinite; }
+.benny-action-walk .benny-action-paw-right,
+.benny-action-jump .benny-action-paw-right { animation: benny-paw-right-walk 0.42s steps(2, end) infinite; }
+.benny-action-idle { opacity: 0.75; }
+.benny-action-idle .benny-action-paw-left { animation: benny-paw-left-walk 1.2s steps(2, end) infinite; }
+.benny-action-idle .benny-action-paw-right { animation: benny-paw-right-walk 1.2s steps(2, end) infinite; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
+  .benny-action-paw { animation: none !important; }
 }
 `;
   document.head.appendChild(el);
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle: render the CSS sprite sheet inside <foreignObject> so it composites
-  // through the GPU and runs identically on Safari.
-  if (mood === "idle") {
+  // Idle / walk / jump: render the CSS sprite sheet inside <foreignObject> so
+  // Benny never becomes a static PNG during movement. The paw overlay makes
+  // leg motion unmistakable in the current front-facing art.
+  if (mood === "idle" || mood === "walk" || mood === "jump") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
+    const action = mood;
     return (
       <foreignObject
         x={-w / 2}
@@ -247,9 +277,9 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
         height={h}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: h }}>
+        <div style={{ width: w, height: h, position: "relative" }}>
           <div
-            className="benny-idle-sprite"
+            className={`benny-idle-sprite benny-sprite-action-${action}`}
             style={{
               width: w,
               height: h,
@@ -260,6 +290,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             aria-label="Benny the puppy"
             role="img"
           />
+          <div className={`benny-action-paws benny-action-${action}`}>
+            <span className="benny-action-paw benny-action-paw-left" />
+            <span className="benny-action-paw benny-action-paw-right" />
+          </div>
         </div>
       </foreignObject>
     );
@@ -415,7 +449,7 @@ const JumpScene = ({ phase }: { phase: ScenePhase }) => {
         transition={{ duration: 2, repeat: Infinity }}
       />
 
-      <NabuSprite phase={phase} anim={jumpArcAnim} />
+      <NabuSprite phase={phase} anim={jumpArcAnim} action="jump" />
     </Stage>
   );
 };
@@ -598,7 +632,7 @@ const AxeScene = ({ phase }: { phase: ScenePhase }) => {
           <path d="M-14 -4 L18 -4 L24 12 L-8 12 Z" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );
@@ -994,7 +1028,7 @@ const RocketScene = ({ phase }: { phase: ScenePhase }) => {
             style={{ originY: 100 }} />
         )}
       </motion.g>
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );

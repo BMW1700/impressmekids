@@ -5,8 +5,9 @@
 // WebP single-threaded on the main thread, causing visible stutter. Sprite
 // sheets composite through the GPU and run identically on every browser.
 //
-// Celebrate / sad keep their still PNGs with a CSS bounce/shake on top — we
-// don't have animated source clips for those moods.
+// Walk / jump reuse the sprite sheet at faster timing and add a small paw
+// cycle overlay so Benny's legs visibly move even when the source frame is
+// mostly front-facing. Celebrate / sad keep their still PNGs with CSS motion.
 
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
@@ -14,7 +15,7 @@ import idleAsset from "@/assets/benny-idle.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
-export type BennyMood = "idle" | "celebrate" | "sad";
+export type BennyMood = "idle" | "walk" | "jump" | "celebrate" | "sad";
 
 interface BennyDogProps {
   mood?: BennyMood;
@@ -31,7 +32,7 @@ const SPRITE_CELL_W = 420;
 const SPRITE_CELL_H = 450;
 const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 
-const STILL_SOURCES: Record<Exclude<BennyMood, "idle">, string> = {
+const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
 };
@@ -42,7 +43,7 @@ const IDLE_FALLBACK_PNG = idleAsset.url;
 // Inject keyframes once. The animation walks background-position right 30
 // steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v4";
+const STYLE_ID = "benny-dog-sprite-keyframes-v5-action-paws";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -54,12 +55,45 @@ const ensureKeyframes = () => {
   86%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
+.benny-sprite-action-idle { animation-duration: 3.2s; }
+.benny-sprite-action-walk { animation-duration: 0.48s; }
+.benny-sprite-action-jump { animation-duration: 0.34s; }
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
+  animation-name: benny-idle-sprite-walk;
+  animation-timing-function: steps(29, end);
+  animation-iteration-count: infinite;
   will-change: background-position;
 }
+@keyframes benny-paw-left-walk {
+  0%, 100% { transform: translate(0, 0) rotate(-5deg) scale(1); }
+  50%      { transform: translate(30%, -18%) rotate(9deg) scale(0.94); }
+}
+@keyframes benny-paw-right-walk {
+  0%, 100% { transform: translate(0, 0) rotate(5deg) scale(1); }
+  50%      { transform: translate(-30%, -18%) rotate(-9deg) scale(0.94); }
+}
+.benny-action-paws { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.benny-action-paw {
+  position: absolute;
+  bottom: 1.5%;
+  width: 18%;
+  height: 12%;
+  border-radius: 48% 48% 40% 40%;
+  background: radial-gradient(circle at 48% 22%, #fff7dc 0 34%, #f4b25a 36% 68%, #d98b2e 100%);
+  box-shadow: inset 0 -0.18em 0 rgba(126, 65, 18, 0.18), 0 0.12em 0.18em rgba(0,0,0,0.12);
+}
+.benny-action-paw-left { left: 31%; transform-origin: 50% 20%; }
+.benny-action-paw-right { right: 31%; transform-origin: 50% 20%; }
+.benny-action-walk, .benny-action-jump { opacity: 1; }
+.benny-action-walk .benny-action-paw-left,
+.benny-action-jump .benny-action-paw-left { animation: benny-paw-left-walk 0.42s steps(2, end) infinite; }
+.benny-action-walk .benny-action-paw-right,
+.benny-action-jump .benny-action-paw-right { animation: benny-paw-right-walk 0.42s steps(2, end) infinite; }
+.benny-action-idle { opacity: 0.75; }
+.benny-action-idle .benny-action-paw-left { animation: benny-paw-left-walk 1.2s steps(2, end) infinite; }
+.benny-action-idle .benny-action-paw-right { animation: benny-paw-right-walk 1.2s steps(2, end) infinite; }
 @keyframes benny-celebrate-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-18px) scale(1.15); }
@@ -75,6 +109,7 @@ const ensureKeyframes = () => {
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
+  .benny-action-paw { animation: none !important; }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
@@ -117,7 +152,7 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Idle sprite — always mounted, fades when another mood is active. */}
+      {/* Sprite-backed Benny — idle/walk/jump all keep visible leg motion. */}
       <div
         style={{
           position: "absolute",
@@ -126,12 +161,12 @@ export const BennyDog = ({
           bottom: 0,
           width: size,
           height: spriteH,
-          opacity: mood === "idle" ? 1 : 0,
+          opacity: mood === "idle" || mood === "walk" || mood === "jump" ? 1 : 0,
           transition: "opacity 0.3s ease-in-out",
         }}
       >
         <div
-          className="benny-idle-sprite"
+          className={`benny-idle-sprite benny-sprite-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}
           style={{
             width: size,
             height: spriteH,
@@ -139,9 +174,13 @@ export const BennyDog = ({
             backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
             ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
           }}
-          aria-label={mood === "idle" ? "Benny the puppy" : undefined}
-          role={mood === "idle" ? "img" : undefined}
+          aria-label={mood === "idle" || mood === "walk" || mood === "jump" ? "Benny the puppy" : undefined}
+          role={mood === "idle" || mood === "walk" || mood === "jump" ? "img" : undefined}
         />
+        <div className={`benny-action-paws benny-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}>
+          <span className="benny-action-paw benny-action-paw-left" />
+          <span className="benny-action-paw benny-action-paw-right" />
+        </div>
       </div>
 
       {/* Celebrate / sad stills with their own CSS animation wrapper. */}
