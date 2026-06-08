@@ -243,8 +243,6 @@ const ensureBennySpriteKeyframes = () => {
   transform-origin: 0 0;
   will-change: transform;
 }
-.benny-walk-strip-jump { animation-duration: 1.6s; }
-.benny-walk-strip-climb { animation-duration: 2.8s; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-strip, .benny-walk-strip { animation: none; }
 }
