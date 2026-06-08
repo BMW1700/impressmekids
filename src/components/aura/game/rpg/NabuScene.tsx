@@ -104,10 +104,10 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [370, 320, 370, 320, 370, 370],
-      scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
-      scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
-      rotate: [0, -4, 0, 4, 0, 0],
+      y: [370, 366, 370, 366, 370, 370],
+      scaleY: [1, 1.03, 0.97, 1.03, 0.97, 1],
+      scaleX: [1, 0.99, 1.03, 0.99, 1.03, 1],
+      rotate: [0, -2, 0, 2, 0, 0],
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
@@ -234,14 +234,15 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
+  const visualMood: BennyMood = mood === "jump" || mood === "climb" ? "idle" : mood;
   // Idle: original sprite-sheet still pose (breathing).
-  // Walk / jump / climb: real walking video as a transparent sprite sheet —
-  // legs visibly cycle. Anchored so feet sit at the same ground baseline.
-  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
+  // Walk: real walking video as a transparent sprite sheet. Jump / climb are
+  // rendered as idle so Benny does not run his feet while airborne or vertical.
+  if (visualMood === "idle" || visualMood === "walk") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const isMoving = mood !== "idle";
+    const isMoving = visualMood === "walk";
     // Walk sprite cells are square (1:1). Render at the same width and align
     // its bottom to the idle sprite's bottom so the ground line stays put.
     const walkH = w;
@@ -273,7 +274,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           )}
           {isMoving && (
             <div
-              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              className="benny-walk-sprite"
               style={{
                 position: "absolute",
                 left: 0,
@@ -282,7 +283,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
                 height: walkH,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
                 backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
               }}
               aria-label="Benny walking"
               role="img"
