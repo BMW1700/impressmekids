@@ -15,7 +15,7 @@ import idleAsset from "@/assets/benny-idle.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
-export type BennyMood = "idle" | "walk" | "jump" | "celebrate" | "sad";
+export type BennyMood = "idle" | "walk" | "jump" | "climb" | "celebrate" | "sad";
 
 interface BennyDogProps {
   mood?: BennyMood;
