@@ -43,7 +43,7 @@ const IDLE_FALLBACK_PNG = idleAsset.url;
 // Inject keyframes once. The animation walks background-position right 30
 // steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v4";
+const STYLE_ID = "benny-dog-sprite-keyframes-v5-action-paws";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
