@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
+import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import idleAsset from "@/assets/benny-idle.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
@@ -32,6 +33,11 @@ const SPRITE_CELL_W = 420;
 const SPRITE_CELL_H = 450;
 const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 
+// Walking sprite sheet (transparent cutout from real walking video).
+const WALK_FRAMES = 24;
+const WALK_ASPECT = 1; // 360×360 cells
+
+
 const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
   celebrate: celebrateAsset.url,
   sad: sadAsset.url,
@@ -40,10 +46,8 @@ const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
 // Fallback used if the sprite sheet itself fails to load on a very old browser.
 const IDLE_FALLBACK_PNG = idleAsset.url;
 
-// Inject keyframes once. The animation walks background-position right 30
-// steps, then holds the last frame for ~1s before looping — "breathe →
-// settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v6-rigged-legs";
+// Inject keyframes once.
+const STYLE_ID = "benny-dog-sprite-keyframes-v7-walk-video";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -55,71 +59,24 @@ const ensureKeyframes = () => {
   86%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
-.benny-sprite-action-idle { animation-duration: 3.2s; }
-.benny-sprite-action-walk { animation-duration: 0.6s; }
-.benny-sprite-action-jump { animation-duration: 0.5s; }
-.benny-sprite-action-climb { animation-duration: 0.6s; }
+@keyframes benny-walk-cycle {
+  0%   { background-position-x: 0px; }
+  100% { background-position-x: var(--benny-walk-end, -8640px); }
+}
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation-name: benny-idle-sprite-walk;
-  animation-timing-function: steps(29, end);
-  animation-iteration-count: infinite;
+  animation: benny-idle-sprite-walk 3.2s steps(29, end) infinite;
   will-change: background-position;
 }
-.benny-legs {
-  position: absolute;
-  left: 0; right: 0; bottom: -2%;
-  height: 30%;
-  pointer-events: none;
-  opacity: 0;
+.benny-walk-sprite {
+  background-repeat: no-repeat;
+  background-position: 0px 0px;
+  animation: benny-walk-cycle 1.5s steps(${WALK_FRAMES}, end) infinite;
+  will-change: background-position;
 }
-.benny-legs-walk, .benny-legs-jump, .benny-legs-climb { opacity: 1; }
-.benny-leg {
-  position: absolute;
-  bottom: 14%;
-  width: 17%;
-  height: 60%;
-  border-radius: 42% 42% 50% 50% / 28% 28% 60% 60%;
-  background: linear-gradient(180deg, #f6b86b 0%, #e29142 60%, #c97623 100%);
-  box-shadow:
-    inset 0 -0.35em 0 rgba(120, 60, 12, 0.22),
-    inset 0 0.18em 0 rgba(255, 232, 188, 0.35),
-    0 0.18em 0.25em rgba(0,0,0,0.18);
-  transform-origin: 50% 6%;
-}
-.benny-leg-paw {
-  position: absolute;
-  left: -14%; right: -14%; bottom: -22%;
-  height: 42%;
-  border-radius: 50% 50% 48% 48% / 40% 40% 60% 60%;
-  background: radial-gradient(ellipse at 50% 30%, #fff3d6 0 18%, #f4b25a 38% 70%, #a85e1c 100%);
-  box-shadow: 0 0.18em 0.22em rgba(0,0,0,0.2);
-}
-.benny-leg-left  { left: 30%; }
-.benny-leg-right { right: 30%; }
-@keyframes benny-leg-swing-a {
-  0%, 100% { transform: rotate(-30deg); }
-  50%      { transform: rotate(30deg); }
-}
-@keyframes benny-leg-swing-b {
-  0%, 100% { transform: rotate(30deg); }
-  50%      { transform: rotate(-30deg); }
-}
-.benny-legs-walk .benny-leg-left  { animation: benny-leg-swing-a 0.5s ease-in-out infinite; }
-.benny-legs-walk .benny-leg-right { animation: benny-leg-swing-b 0.5s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-left  { animation: benny-leg-swing-a 0.38s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-right { animation: benny-leg-swing-b 0.38s ease-in-out infinite; }
-@keyframes benny-leg-climb-a {
-  0%, 100% { transform: rotate(-8deg) translateY(0); }
-  50%      { transform: rotate(-18deg) translateY(-22%); }
-}
-@keyframes benny-leg-climb-b {
-  0%, 100% { transform: rotate(8deg) translateY(-22%); }
-  50%      { transform: rotate(18deg) translateY(0); }
-}
-.benny-legs-climb .benny-leg-left  { animation: benny-leg-climb-a 0.7s ease-in-out infinite; }
-.benny-legs-climb .benny-leg-right { animation: benny-leg-climb-b 0.7s ease-in-out infinite; }
+.benny-walk-sprite-jump { animation-duration: 1.0s; }
+.benny-walk-sprite-climb { animation-duration: 1.8s; }
 @keyframes benny-celebrate-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-18px) scale(1.15); }
@@ -134,8 +91,7 @@ const ensureKeyframes = () => {
 .benny-anim-celebrate { animation: benny-celebrate-bounce 0.4s ease-in-out infinite; }
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-leg { animation: none !important; }
+  .benny-idle-sprite, .benny-walk-sprite { animation: none; }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
@@ -178,47 +134,61 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Sprite-backed Benny body. Rigged legs render only during movement. */}
+      {/* Idle Benny: original sprite sheet (still pose breathing). */}
       {(() => {
-        const isSprite = mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb";
-        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
-        const spriteAction = mood === "climb" ? "walk" : mood;
+        const isIdle = mood === "idle";
         return (
           <div
             style={{
               position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: size,
-              height: spriteH,
-              opacity: isSprite ? 1 : 0,
+              left: 0, right: 0, bottom: 0,
+              width: size, height: spriteH,
+              opacity: isIdle ? 1 : 0,
               transition: "opacity 0.3s ease-in-out",
             }}
           >
             <div
-              className={`benny-idle-sprite benny-sprite-action-${isSprite ? spriteAction : "idle"}`}
+              className="benny-idle-sprite"
               style={{
                 width: size,
                 height: spriteH,
                 backgroundImage: `url(${bennySprite.url})`,
                 backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
                 ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
-                clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
               }}
-              aria-label={isSprite ? "Benny the puppy" : undefined}
-              role={isSprite ? "img" : undefined}
+              aria-label={isIdle ? "Benny the puppy" : undefined}
+              role={isIdle ? "img" : undefined}
             />
-            {isMoving && (
-              <div className={`benny-legs benny-legs-${mood}`} aria-hidden="true">
-                <span className="benny-leg benny-leg-left">
-                  <span className="benny-leg-paw" />
-                </span>
-                <span className="benny-leg benny-leg-right">
-                  <span className="benny-leg-paw" />
-                </span>
-              </div>
-            )}
+          </div>
+        );
+      })()}
+
+      {/* Walking Benny (real video-cutout sprite): plays for walk/jump/climb. */}
+      {(() => {
+        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
+        const walkSize = size;
+        return (
+          <div
+            style={{
+              position: "absolute",
+              left: 0, right: 0, bottom: 0,
+              width: walkSize, height: walkSize,
+              opacity: isMoving ? 1 : 0,
+              transition: "opacity 0.2s ease-in-out",
+            }}
+          >
+            <div
+              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              style={{
+                width: walkSize,
+                height: walkSize,
+                backgroundImage: `url(${bennyWalkSprite.url})`,
+                backgroundSize: `${walkSize * WALK_FRAMES}px ${walkSize}px`,
+                ["--benny-walk-end" as any]: `${-WALK_FRAMES * walkSize}px`,
+              }}
+              aria-label={isMoving ? "Benny walking" : undefined}
+              role={isMoving ? "img" : undefined}
+            />
           </div>
         );
       })()}

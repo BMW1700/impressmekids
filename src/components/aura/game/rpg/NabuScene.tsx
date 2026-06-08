@@ -18,6 +18,7 @@ import { type BennyMood } from "@/components/BennyDog";
 // via background-position steps — identical performance on every browser
 // including Safari, where animated WebP decodes single-threaded and stutters.
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
+import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
@@ -194,10 +195,9 @@ const bennyMoodAnim = (mood: BennyMood) => {
   };
 };
 
-// Inject sprite keyframes once. Walks background-position right 30 steps then
-// holds the last frame for 2s before looping — gives Benny a "breathe → settle
-// → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v6-rigged-legs";
+// Inject sprite keyframes once.
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v7-walk-video";
+const BENNY_WALK_FRAMES = 24;
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -209,122 +209,85 @@ const ensureBennySpriteKeyframes = () => {
   72%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
-.benny-sprite-action-idle { animation-duration: 3.2s; }
-.benny-sprite-action-walk { animation-duration: 0.6s; }
-.benny-sprite-action-jump { animation-duration: 0.5s; }
-.benny-sprite-action-climb { animation-duration: 0.6s; }
+@keyframes benny-walk-cycle {
+  0%   { background-position-x: 0px; }
+  100% { background-position-x: var(--benny-walk-end, -8640px); }
+}
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation-name: benny-idle-sprite-walk;
-  animation-timing-function: steps(29, end);
-  animation-iteration-count: infinite;
+  animation: benny-idle-sprite-walk 3.2s steps(29, end) infinite;
   will-change: background-position;
 }
-/* ---- Rigged legs: only appear during walk/jump/climb ---- */
-.benny-legs {
-  position: absolute;
-  left: 0; right: 0; bottom: -2%;
-  height: 30%;
-  pointer-events: none;
-  opacity: 0;
+.benny-walk-sprite {
+  background-repeat: no-repeat;
+  background-position: 0px 0px;
+  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  will-change: background-position;
 }
-.benny-legs-walk, .benny-legs-jump, .benny-legs-climb { opacity: 1; }
-.benny-leg {
-  position: absolute;
-  bottom: 14%;
-  width: 17%;
-  height: 60%;
-  border-radius: 42% 42% 50% 50% / 28% 28% 60% 60%;
-  background: linear-gradient(180deg, #f6b86b 0%, #e29142 60%, #c97623 100%);
-  box-shadow:
-    inset 0 -0.35em 0 rgba(120, 60, 12, 0.22),
-    inset 0 0.18em 0 rgba(255, 232, 188, 0.35),
-    0 0.18em 0.25em rgba(0,0,0,0.18);
-  transform-origin: 50% 6%;
-}
-.benny-leg-paw {
-  position: absolute;
-  left: -14%; right: -14%; bottom: -22%;
-  height: 42%;
-  border-radius: 50% 50% 48% 48% / 40% 40% 60% 60%;
-  background: radial-gradient(ellipse at 50% 30%, #fff3d6 0 18%, #f4b25a 38% 70%, #a85e1c 100%);
-  box-shadow: 0 0.18em 0.22em rgba(0,0,0,0.2);
-}
-.benny-leg-left  { left: 30%; }
-.benny-leg-right { right: 30%; }
-@keyframes benny-leg-swing-a {
-  0%, 100% { transform: rotate(-30deg); }
-  50%      { transform: rotate(30deg); }
-}
-@keyframes benny-leg-swing-b {
-  0%, 100% { transform: rotate(30deg); }
-  50%      { transform: rotate(-30deg); }
-}
-.benny-legs-walk .benny-leg-left  { animation: benny-leg-swing-a 0.5s ease-in-out infinite; }
-.benny-legs-walk .benny-leg-right { animation: benny-leg-swing-b 0.5s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-left  { animation: benny-leg-swing-a 0.38s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-right { animation: benny-leg-swing-b 0.38s ease-in-out infinite; }
-@keyframes benny-leg-climb-a {
-  0%, 100% { transform: rotate(-8deg) translateY(0); }
-  50%      { transform: rotate(-18deg) translateY(-22%); }
-}
-@keyframes benny-leg-climb-b {
-  0%, 100% { transform: rotate(8deg) translateY(-22%); }
-  50%      { transform: rotate(18deg) translateY(0); }
-}
-.benny-legs-climb .benny-leg-left  { animation: benny-leg-climb-a 0.7s ease-in-out infinite; }
-.benny-legs-climb .benny-leg-right { animation: benny-leg-climb-b 0.7s ease-in-out infinite; }
+.benny-walk-sprite-jump { animation-duration: 1.0s; }
+.benny-walk-sprite-climb { animation-duration: 1.8s; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-leg { animation: none !important; }
+  .benny-idle-sprite, .benny-walk-sprite { animation: none; }
 }
 `;
   document.head.appendChild(el);
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle / walk / jump / climb: render Benny's body via the sprite sheet.
-  // For movement actions we hide the painted feet (clip-path bottom band) and
-  // draw a real rigged set of legs underneath that swing in opposite phase.
+  // Idle: original sprite-sheet still pose (breathing).
+  // Walk / jump / climb: real walking video as a transparent sprite sheet —
+  // legs visibly cycle. Anchored so feet sit at the same ground baseline.
   if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const action = mood;
-    const isMoving = action !== "idle";
+    const isMoving = mood !== "idle";
+    // Walk sprite cells are square (1:1). Render at the same width and align
+    // its bottom to the idle sprite's bottom so the ground line stays put.
+    const walkH = w;
     return (
       <foreignObject
         x={-w / 2}
         y={-h + 10}
         width={w}
-        height={h}
+        height={Math.max(h, walkH)}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: h, position: "relative" }}>
-          <div
-            className={`benny-idle-sprite benny-sprite-action-${action === "climb" ? "walk" : action}`}
-            style={{
-              width: w,
-              height: h,
-              backgroundImage: `url(${bennySprite.url})`,
-              backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
-              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
-              // Hide painted feet so our rigged legs are the only feet visible.
-              clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
-            }}
-            aria-label="Benny the puppy"
-            role="img"
-          />
+        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
+          {!isMoving && (
+            <div
+              className="benny-idle-sprite"
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 0,
+                width: w,
+                height: h,
+                backgroundImage: `url(${bennySprite.url})`,
+                backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+                ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              }}
+              aria-label="Benny the puppy"
+              role="img"
+            />
+          )}
           {isMoving && (
-            <div className={`benny-legs benny-legs-${action}`} aria-hidden="true">
-              <span className="benny-leg benny-leg-left">
-                <span className="benny-leg-paw" />
-              </span>
-              <span className="benny-leg benny-leg-right">
-                <span className="benny-leg-paw" />
-              </span>
-            </div>
+            <div
+              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 0,
+                width: w,
+                height: walkH,
+                backgroundImage: `url(${bennyWalkSprite.url})`,
+                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
+                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+              }}
+              aria-label="Benny walking"
+              role="img"
+            />
           )}
         </div>
       </foreignObject>
