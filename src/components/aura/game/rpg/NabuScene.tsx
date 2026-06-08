@@ -415,7 +415,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
     return {
       x: xs,
       y: ys,
-      transition: { duration: 1.8, ease: "linear" },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "linear" },
     };
   }
   if (phase === "solved") {
@@ -728,7 +728,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
         <motion.g
           initial={{ x: NABU_START.x, y: NABU_START.y }}
           animate={{ x: 612, y: GROUND_Y - 260 }}
-          transition={{ duration: 1.6, ease: "easeInOut" }}
+          transition={{ duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" }}
         >
           <BennySvgImage mood="climb" size={280} />
         </motion.g>
@@ -1297,7 +1297,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
       <motion.g
         initial={{ x: NABU_START.x, y: NABU_START.y }}
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
-        transition={{ duration: flyUp ? 1.6 : 0.8 }}
+        transition={{ duration: flyUp ? BENNY_TRANSITION_SECONDS : 0.8 }}
       >
         <BennySvgImage mood="idle" size={280} />
         {/* attached lift element */}
