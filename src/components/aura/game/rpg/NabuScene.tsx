@@ -1028,7 +1028,7 @@ const RocketScene = ({ phase }: { phase: ScenePhase }) => {
             style={{ originY: 100 }} />
         )}
       </motion.g>
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );
