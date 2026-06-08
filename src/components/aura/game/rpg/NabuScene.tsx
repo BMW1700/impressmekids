@@ -196,7 +196,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 // Inject sprite keyframes once. Walks background-position right 30 steps then
 // holds the last frame for 2s before looping — gives Benny a "breathe → settle
 // → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes";
+const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes-v2-action-paws";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
