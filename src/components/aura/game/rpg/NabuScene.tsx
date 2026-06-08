@@ -104,10 +104,10 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [370, 366, 370, 366, 370, 370],
-      scaleY: [1, 1.03, 0.97, 1.03, 0.97, 1],
-      scaleX: [1, 0.99, 1.03, 0.99, 1.03, 1],
-      rotate: [0, -2, 0, 2, 0, 0],
+      y: [370, 370, 370, 370, 370, 370],
+      scaleY: 1,
+      scaleX: 1,
+      rotate: 0,
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
@@ -136,9 +136,9 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
     if (phase === "transition") {
       return {
         x: [140, (140 + targetX) / 2, targetX, targetX],
-        y: [370, 366, targetY - 6, targetY],
-        scaleY: [1, 1.02, 0.96, 1],
-        scaleX: [1, 0.99, 1.04, 1],
+        y: [370, (370 + targetY) / 2, targetY, targetY],
+        scaleY: 1,
+        scaleX: 1,
         transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
