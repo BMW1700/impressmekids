@@ -139,7 +139,7 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
         y: [NABU_START.y, targetY, targetY, targetY],
         scaleY: [1, 1, 1, 1],
         scaleX: [1, 1, 1, 1],
-        transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
+        transition: { duration: 2.4, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
     return nabuAnim(phase);
