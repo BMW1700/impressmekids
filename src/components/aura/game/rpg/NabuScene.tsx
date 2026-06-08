@@ -255,10 +255,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
         x={-w / 2}
         y={-h + 10}
         width={w}
-        height={Math.max(h, walkH)}
+        height={Math.max(h, walkSize)}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
+        <div style={{ width: w, height: Math.max(h, walkSize), position: "relative" }}>
           {!isMoving && (
             <div
               className="benny-idle-sprite"
@@ -281,13 +281,14 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               className="benny-walk-sprite"
               style={{
                 position: "absolute",
-                left: 0,
+                left: "50%",
                 bottom: 0,
-                width: w,
-                height: walkH,
+                transform: "translateX(-50%)",
+                width: walkSize,
+                height: walkSize,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
-                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
+                backgroundSize: `${walkSize * BENNY_WALK_FRAMES}px ${walkSize}px`,
+                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * walkSize}px`,
               }}
               aria-label="Benny walking"
               role="img"
