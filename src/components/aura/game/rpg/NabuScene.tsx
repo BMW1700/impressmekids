@@ -235,10 +235,10 @@ const ensureBennySpriteKeyframes = () => {
 .benny-cutout-mask {
   position: absolute;
   z-index: 2;
-  left: 39.5%;
-  top: 70.5%;
-  width: 21%;
-  height: 23%;
+  left: 36.8%;
+  top: 67.2%;
+  width: 27.4%;
+  height: 30.8%;
   pointer-events: none;
   background: linear-gradient(180deg, #f8b34b 0%, #efa443 38%, #df8426 100%);
   border-radius: 45% 45% 30% 30% / 20% 20% 58% 58%;
