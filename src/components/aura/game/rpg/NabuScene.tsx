@@ -761,7 +761,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <BennySvgImage mood="idle" size={280} />
+          <BennySvgImage mood="climb" size={280} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
