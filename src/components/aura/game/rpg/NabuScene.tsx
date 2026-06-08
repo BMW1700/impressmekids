@@ -14,10 +14,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-// Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
-// via background-position steps — identical performance on every browser
-// including Safari, where animated WebP decodes single-threaded and stutters.
-import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
+import idleAsset from "@/assets/benny-idle.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
@@ -28,7 +25,6 @@ const BennyMoodContext = createContext<BennyMood | null>(null);
 
 // Sprite-sheet geometry — bottom 30px of every source frame was cropped so
 // Benny's feet sit flush with the bottom edge of each cell.
-const BENNY_SPRITE_FRAMES = 30;
 const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
@@ -51,11 +47,20 @@ interface NabuSceneProps {
 const VB_W = 1000;
 const VB_H = 500;
 const GROUND_Y = 380;
+const BENNY_SCENE_SIZE = 240;
 
 // ── Nabu positions through the scene ──────────────────────────────────────
 // y anchors at GROUND_Y so the sprite's bottom edge sits exactly on the ground line.
 const NABU_START = { x: 140, y: GROUND_Y };
 const NABU_EXIT = { x: 860, y: GROUND_Y };
+const NABU_IDLE_ANIM = {
+  x: NABU_START.x,
+  y: NABU_START.y,
+  scaleY: 1,
+  scaleX: 1,
+  rotate: 0,
+  transition: { duration: 0 },
+};
 
 
 const nabuAnim = (phase: ScenePhase) => {
@@ -78,25 +83,9 @@ const nabuAnim = (phase: ScenePhase) => {
       transition: { duration: 1.6, ease: "easeOut" as const },
     };
   }
-  if (phase === "problem") {
-    // Worried sway — leans left/right looking for help with a small head bob.
-    return {
-      x: [NABU_START.x, NABU_START.x - 10, NABU_START.x + 6, NABU_START.x],
-      y: [NABU_START.y, NABU_START.y - 4, NABU_START.y - 2, NABU_START.y],
-      rotate: [0, -4, 3, 0],
-      scaleY: 1, scaleX: 1,
-      transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
-    };
-  }
-  // ask / reading: alert breathing-in stance — subtle pulse, no drift.
-  return {
-    x: NABU_START.x,
-    y: [NABU_START.y, NABU_START.y - 4, NABU_START.y],
-    scaleY: [1, 1.03, 1],
-    scaleX: [1, 0.985, 1],
-    rotate: 0,
-    transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const },
-  };
+  // problem / ask / reading: completely still idle. The pre-word motion was
+  // the remaining visible glitch; walking stays separate and untouched.
+  return NABU_IDLE_ANIM;
 };
 
 // ── Scene-specific Nabu motion helpers ─────────────────────────────────────
@@ -157,7 +146,7 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 190,
+  size = BENNY_SCENE_SIZE,
   anim,
   action,
 }: {
@@ -263,39 +252,63 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle: original sprite-sheet still pose (breathing).
+  // Idle: static original pose. No sprite-sheet animation here — the pre-word
+  // idle was the remaining glitch. Walking remains unchanged below.
   // Walk / jump / climb: real walking video as a transparent sprite sheet —
   // legs visibly cycle. Anchored so feet sit at the same ground baseline.
-  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
+  if (mood === "idle") {
+    const w = size;
+    const h = Math.round(size * BENNY_SPRITE_ASPECT);
+    const stillY = -h;
+    return (
+      <g aria-label="Benny the puppy" role="img">
+        <svg
+          x={-w / 2}
+          y={stillY}
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          overflow="visible"
+        >
+          <image
+            href={idleAsset.url}
+            x="0"
+            y="0"
+            width={w}
+            height={h}
+            preserveAspectRatio="xMidYMax meet"
+          />
+        </svg>
+      </g>
+    );
+  }
+
+  if (mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
-    const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const isMoving = mood !== "idle";
     const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
     // Anchor at parent's (NABU_START.y == GROUND_Y). Sprite bottom edge sits
     // on the ground; walking sheet adds its transparent bottom pad back.
     const walkY = -w + walkPad;
-    const stillY = -h;
     return (
-      <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
+      <g aria-label="Benny walking" role="img">
         <svg
           x={-w / 2}
-          y={isMoving ? walkY : stillY}
+          y={walkY}
           width={w}
-          height={isMoving ? w : h}
-          viewBox={`0 0 ${w} ${isMoving ? w : h}`}
+          height={w}
+          viewBox={`0 0 ${w} ${w}`}
           overflow="hidden"
         >
           <image
-            className={isMoving ? `benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}` : "benny-idle-strip"}
-            href={isMoving ? bennyWalkSprite.url : bennySprite.url}
+            className={`benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}`}
+            href={bennyWalkSprite.url}
             x="0"
             y="0"
-            width={isMoving ? w * BENNY_WALK_FRAMES : w * BENNY_SPRITE_FRAMES}
-            height={isMoving ? w : h}
+            width={w * BENNY_WALK_FRAMES}
+            height={w}
             preserveAspectRatio="none"
             style={{
-              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
               ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
             }}
           />
@@ -734,7 +747,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" }}
         >
-          <BennySvgImage mood="climb" size={280} />
+          <BennySvgImage mood="climb" size={BENNY_SCENE_SIZE} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
@@ -1303,7 +1316,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? BENNY_TRANSITION_SECONDS : 0.8 }}
       >
-        <BennySvgImage mood="idle" size={280} />
+        <BennySvgImage mood="idle" size={BENNY_SCENE_SIZE} />
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
           <g>
