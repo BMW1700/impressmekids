@@ -238,7 +238,7 @@ const ensureBennySpriteKeyframes = () => {
   will-change: transform;
 }
 .benny-walk-strip {
-  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) 1 both;
+  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES - 1}, end) 1 both;
   transform-box: fill-box;
   transform-origin: 0 0;
   will-change: transform;
@@ -282,7 +282,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             preserveAspectRatio="none"
             style={{
               ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
-              ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
             }}
           />
         </svg>
