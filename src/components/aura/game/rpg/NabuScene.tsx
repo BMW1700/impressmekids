@@ -11,7 +11,7 @@
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
 // Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
@@ -53,8 +53,9 @@ const VB_H = 500;
 const GROUND_Y = 380;
 
 // ── Nabu positions through the scene ──────────────────────────────────────
-const NABU_START = { x: 140, y: GROUND_Y - 10 };
-const NABU_EXIT = { x: 860, y: GROUND_Y - 10 };
+// y anchors at GROUND_Y so the sprite's bottom edge sits exactly on the ground line.
+const NABU_START = { x: 140, y: GROUND_Y };
+const NABU_EXIT = { x: 860, y: GROUND_Y };
 
 
 const nabuAnim = (phase: ScenePhase) => {
@@ -156,7 +157,7 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 280,
+  size = 190,
   anim,
   action,
 }: {
@@ -172,8 +173,19 @@ const NabuSprite = ({
   const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
+  // Memoize the animate object so framer-motion doesn't restart the loop on
+  // every parent re-render (that was the "spazz"). Key the motion.g on phase
+  // so phase changes intentionally restart the animation cleanly.
+  const animateValue = useMemo(
+    () => (anim ? anim(phase) : nabuAnim(phase)),
+    [anim, phase]
+  );
   return (
-    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
+    <motion.g
+      key={phase}
+      initial={{ x: NABU_START.x, y: NABU_START.y }}
+      animate={animateValue}
+    >
       <BennySvgImage mood={bennyMood} size={size} />
     </motion.g>
   );
@@ -260,8 +272,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = mood !== "idle";
     const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
-    const walkY = -w + walkPad + 10;
-    const stillY = -h + 10;
+    // Anchor at parent's (NABU_START.y == GROUND_Y). Sprite bottom edge sits
+    // on the ground; walking sheet adds its transparent bottom pad back.
+    const walkY = -w + walkPad;
+    const stillY = -h;
     return (
       <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
         <svg
