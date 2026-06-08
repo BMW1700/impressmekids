@@ -5,9 +5,9 @@
 // WebP single-threaded on the main thread, causing visible stutter. Sprite
 // sheets composite through the GPU and run identically on every browser.
 //
-// Walk / jump reuse the sprite sheet at faster timing and add a small paw
-// cycle overlay so Benny's legs visibly move even when the source frame is
-// mostly front-facing. Celebrate / sad keep their still PNGs with CSS motion.
+// Walk / jump reuse the sprite sheet and replace the visible front-leg area
+// with clipped sprite copies so Benny never shows extra pasted-on legs.
+// Celebrate / sad keep their still PNGs with CSS motion.
 
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
@@ -43,7 +43,7 @@ const IDLE_FALLBACK_PNG = idleAsset.url;
 // Inject keyframes once. The animation walks background-position right 30
 // steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v8-visible-attached-legs";
+const STYLE_ID = "benny-dog-sprite-keyframes-v9-cutout-leg-copies";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -64,57 +64,45 @@ const ensureKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
+.benny-rig-moving .benny-idle-sprite { animation: none; background-position-x: 0px; }
 .benny-rig { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; }
 .benny-rig-body { position: relative; z-index: 1; width: 100%; height: 100%; }
-.benny-rig-hips { position: absolute; z-index: 3; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
-.benny-rig-leg {
-  position: absolute; left: 50%; top: 72%;
-  width: 8.5%; height: 21%; margin-left: -4.25%;
-  border-radius: 46% 46% 42% 42% / 18% 18% 55% 55%;
-  background: linear-gradient(180deg, #f8b64f 0%, #e88d27 58%, #bd6419 100%);
-  box-shadow: inset -0.22em 0 0 rgba(151, 79, 13, 0.22), inset 0.16em 0.12em 0 rgba(255, 235, 188, 0.28), 0 0.12em 0.18em rgba(0,0,0,0.12);
-  transform-origin: 50% 0%;
-  opacity: 0;
+.benny-cutout-mask {
+  position: absolute; z-index: 2; left: 36.8%; top: 67.2%; width: 27.4%; height: 30.8%; pointer-events: none;
+  background: linear-gradient(180deg, #f8b34b 0%, #efa443 38%, #df8426 100%);
+  border-radius: 45% 45% 30% 30% / 20% 20% 58% 58%;
+  box-shadow: inset 0.18em 0.1em 0 rgba(255, 232, 176, 0.26), inset -0.18em -0.05em 0 rgba(156, 82, 17, 0.14);
 }
-.benny-rig-leg::after {
-  content: ""; position: absolute; left: -45%; bottom: -20%; width: 190%; height: 42%;
-  border-radius: 48% 52% 55% 45%;
-  background: radial-gradient(ellipse at 42% 35%, #fff0cf 0 24%, #f6ba6b 48% 78%, #b35e17 100%);
-  box-shadow: inset 0 -0.12em 0 rgba(139, 69, 12, 0.22), 0 0.12em 0.18em rgba(0,0,0,0.16);
+.benny-cutout-mask::after {
+  content: ""; position: absolute; left: 18%; right: 18%; top: 5%; height: 100%;
+  background: linear-gradient(180deg, #fff5d8 0%, #fee7aa 52%, #f2ba67 100%);
+  border-radius: 50% 50% 42% 42% / 20% 20% 70% 70%; opacity: 0.72;
 }
-.benny-rig-moving .benny-rig-leg { opacity: 1; }
-.benny-rig-leg-l { transform: translate(-155%, 0) rotate(0deg); }
-.benny-rig-leg-r { transform: translate(68%, 0) rotate(0deg); }
+.benny-leg-layer { position: absolute; z-index: 3; pointer-events: none; opacity: 0; overflow: hidden; transform-origin: 50% 3%; }
+.benny-rig-moving .benny-leg-layer { opacity: 1; }
+.benny-leg-copy { position: absolute; background-repeat: no-repeat; background-position: 0 0; }
+.benny-leg-left { left: 38.6%; top: 67.6%; width: 12.2%; height: 27.6%; }
+.benny-leg-right { left: 49.2%; top: 67.9%; width: 12.8%; height: 27.8%; }
+.benny-leg-left .benny-leg-copy { width: 819.7%; height: 362.3%; left: -316%; top: -244.5%; }
+.benny-leg-right .benny-leg-copy { width: 781.3%; height: 359.7%; left: -384.5%; top: -243.9%; }
 @keyframes benny-leg-walk-l {
-  0%, 100% { transform: translate(-155%, 0) rotate(-18deg) scaleY(1); }
-  50%      { transform: translate(-155%, 0) rotate(24deg) scaleY(0.96); }
+  0%, 100% { transform: rotate(-13deg) translateY(0); }
+  50%      { transform: rotate(16deg) translateY(1.5%); }
 }
 @keyframes benny-leg-walk-r {
-  0%, 100% { transform: translate(68%, 0) rotate(24deg) scaleY(0.96); }
-  50%      { transform: translate(68%, 0) rotate(-18deg) scaleY(1); }
+  0%, 100% { transform: rotate(15deg) translateY(1.5%); }
+  50%      { transform: rotate(-12deg) translateY(0); }
 }
-.benny-rig-walk .benny-rig-leg-l { animation: benny-leg-walk-l 0.36s ease-in-out infinite; }
-.benny-rig-walk .benny-rig-leg-r { animation: benny-leg-walk-r 0.36s ease-in-out infinite; }
+.benny-rig-walk .benny-leg-left { animation: benny-leg-walk-l 0.42s ease-in-out infinite; }
+.benny-rig-walk .benny-leg-right { animation: benny-leg-walk-r 0.42s ease-in-out infinite; }
 @keyframes benny-leg-jump-pair {
-  0%, 100% { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(1); }
-  50%      { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(0.72); }
+  0%, 100% { transform: rotate(var(--lr,0deg)) scaleY(1); }
+  50%      { transform: rotate(var(--lr,0deg)) scaleY(0.82) translateY(-4%); }
 }
-.benny-rig-jump .benny-rig-leg-l { --lx: -155%; --lr: -10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
-.benny-rig-jump .benny-rig-leg-r { --lx:   68%; --lr:  10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
-@keyframes benny-leg-climb-l {
-  0%, 100% { transform: translate(-155%, 0) rotate(-14deg) scaleY(1); }
-  50%      { transform: translate(-155%, 0) rotate(18deg) scaleY(0.86); }
-}
-@keyframes benny-leg-climb-r {
-  0%, 100% { transform: translate(68%, 0) rotate(18deg) scaleY(0.86); }
-  50%      { transform: translate(68%, 0) rotate(-14deg) scaleY(1); }
-}
-.benny-rig-climb .benny-rig-leg-l { animation: benny-leg-climb-l 0.7s ease-in-out infinite; }
-.benny-rig-climb .benny-rig-leg-r { animation: benny-leg-climb-r 0.7s ease-in-out infinite; }
-@keyframes benny-body-bob {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50%      { transform: translateY(-4%) rotate(1deg); }
-}
+.benny-rig-jump .benny-leg-left { --lr: -8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-leg-right { --lr: 8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-left { animation: benny-leg-walk-l 0.62s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-right { animation: benny-leg-walk-r 0.62s ease-in-out infinite; }
 @keyframes benny-body-jump {
   0%, 100% { transform: translateY(0)    scaleY(1); }
   35%      { transform: translateY(-12%) scaleY(1.04); }
@@ -138,7 +126,7 @@ const ensureKeyframes = () => {
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-rig, .benny-rig-leg { animation: none !important; }
+  .benny-rig, .benny-leg-layer { animation: none !important; }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
@@ -181,9 +169,9 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Sprite-backed Benny body wrapped in an attached leg rig. Body stays
-          whole and bobs as a unit; hind legs swing past the silhouette only
-          during walk/jump/climb. */}
+      {/* Sprite-backed Benny body wrapped in a cutout leg rig. During movement,
+          the original leg area is covered and two clipped copies of the real
+          sprite legs swing in the exact original positions. */}
       {(() => {
         const isSprite = mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb";
         const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
@@ -202,12 +190,6 @@ export const BennyDog = ({
             }}
           >
             <div className={rigClass}>
-              {isMoving && (
-                <div className="benny-rig-hips" aria-hidden="true">
-                  <span className="benny-rig-leg benny-rig-leg-l" />
-                  <span className="benny-rig-leg benny-rig-leg-r" />
-                </div>
-              )}
               <div
                 className="benny-idle-sprite benny-rig-body benny-sprite-action-idle"
                 style={{
@@ -218,6 +200,29 @@ export const BennyDog = ({
                 aria-label={isSprite ? "Benny the puppy" : undefined}
                 role={isSprite ? "img" : undefined}
               />
+              {isMoving && (
+                <>
+                  <span className="benny-cutout-mask" aria-hidden="true" />
+                  <span className="benny-leg-layer benny-leg-left" aria-hidden="true">
+                    <span
+                      className="benny-leg-copy"
+                      style={{
+                        backgroundImage: `url(${bennySprite.url})`,
+                        backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+                      }}
+                    />
+                  </span>
+                  <span className="benny-leg-layer benny-leg-right" aria-hidden="true">
+                    <span
+                      className="benny-leg-copy"
+                      style={{
+                        backgroundImage: `url(${bennySprite.url})`,
+                        backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+                      }}
+                    />
+                  </span>
+                </>
+              )}
             </div>
           </div>
         );

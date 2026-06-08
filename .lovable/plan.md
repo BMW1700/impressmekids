@@ -1,50 +1,51 @@
-## Actual issue
+## Goal
 
-Benny is still reading as unprofessional because the current “legs” are just extra oval shapes placed under the existing image. They are not structurally attached to his body, so they look like pasted-on blobs instead of independently rigged limbs.
+Fix Benny’s movement without adding extra fake legs or bounce.
 
-Do I know what the issue is? Yes: the rendering needs to become a layered character rig, like the previous head/body approach, not decorative CSS feet.
+Brutally honest: yes, the right fix is not more blob legs. The current issue is that the original sprite legs are still visible, then extra legs are being drawn on top, so he reads as having four legs. I will switch to the same kind of layered cutout approach used for the head: hide the original leg area and place two separated leg layers exactly over the original leg positions.
 
 ## Plan
 
-1. **Remove the current fake leg implementation**
-   - Delete the oversized `.benny-leg` / `.benny-leg-paw` blob styling from both Benny render paths.
-   - Stop clipping the character in a way that makes the lower body look chopped off or detached.
+1. **Remove the current added-leg rig**
+   - Delete the visible overlay leg blobs from `BennyDog.tsx` and `NabuScene.tsx`.
+   - Remove the walking body bounce so Benny does not do the annoying repeated hop.
 
-2. **Create a proper attached lower-body rig**
-   - Build Benny as layered pieces:
-     ```text
-     head/body image layer
-       fixed hip socket area
-         left upper leg + lower paw
-         right upper leg + lower paw
-       subtle belly/hip cover layer
-     ```
-   - The hip cover will sit above the leg joints so the legs look inserted into the body, not floating below it.
-   - The legs will use Benny-matched colors, shading, and rounded paw shapes, but sized and anchored to his existing seated body proportions.
+2. **Mask out the original front legs**
+   - Add a lower-body cover/mask layer over the original sprite legs.
+   - Match Benny’s belly/fur coloring so the original legs disappear instead of showing behind the animated copies.
+   - Keep the paws/body baseline clean so he does not look chopped up.
 
-3. **Anchor legs to the body, not the ground**
-   - Each leg’s `transform-origin` will be at the hip socket.
-   - The parent leg layer will move with Benny’s body so the legs cannot drift away during scene translation.
-   - Foot contact will be simulated with a small two-part rotation, not separate disconnected paw blobs.
+3. **Create two copied leg layers from the sprite area**
+   - Render duplicated sprite layers clipped to the original left/right leg rectangles.
+   - Position them exactly where the original legs were before masking.
+   - Set transform origins at the top hip area so they swing while staying attached.
 
-4. **Animate only after the word is spoken correctly**
-   - `problem`, `ask`, and `reading`: Benny stays idle with no walking leg animation.
-   - `solved` and `transition`: legs animate based on the scene action.
-   - Walking starts only when the game has accepted the spoken word and Benny is actually moving.
+   ```text
+   body sprite
+     + lower-body mask hides original legs
+     + left leg cutout, same original position
+     + right leg cutout, same original position
+   ```
 
-5. **Use action-specific leg motion**
-   - **Walk:** left/right legs swing opposite each other from the hips, with paws following the shin.
-   - **Jump:** both legs crouch/tuck/extend together so it looks like a jump, not a walk cycle in the air.
-   - **Climb:** alternating vertical leg bends while attached to the same hip sockets.
+4. **Animate only during actual movement**
+   - `problem`, `ask`, `reading`, `solved`: legs stay still, no walk cycle.
+   - `transition`: two cutout legs swing opposite each other in a simple walking cycle.
+   - No extra bounce unless the scene is explicitly a jump scene.
 
-6. **Apply the same rig consistently**
-   - Update `src/components/BennyDog.tsx` so standalone Benny uses the same attached leg rig.
-   - Update `src/components/aura/game/rpg/NabuScene.tsx` so the adventure scene uses the same attached rig and only activates it during `solved` / `transition`.
-   - Keep `NabuAdventure.tsx` phase logic limited to movement states; no extra unrelated changes.
+5. **Fallback if the cutout is not visually clean**
+   - If the clipped leg copies look worse than a still character, I will remove the animated leg layers entirely.
+   - Benny will move as one polished intact sprite with no fake legs and no bounce.
+   - This avoids wasting more time on a bad-looking half-solution.
+
+## Files to change
+
+- `src/components/aura/game/rpg/NabuScene.tsx`
+- `src/components/BennyDog.tsx`
 
 ## Acceptance check
 
-- In the screenshot state before movement, Benny should look clean and still.
-- After the word is spoken and accepted, the legs should visibly move on their own.
-- The legs must remain attached to the body throughout the whole motion.
-- No floating feet, no pasted-on blobs, no movement while the child is still reading.
+- Benny does not show four legs at rest or during movement.
+- Original legs are hidden before animated copies are shown.
+- The copied legs sit in the original leg positions.
+- During walking, only the two copied legs swing back and forth.
+- No annoying repeated body bounce during normal walking.
