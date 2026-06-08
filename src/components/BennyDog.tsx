@@ -178,36 +178,50 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Sprite-backed Benny — idle/walk/jump all keep visible leg motion. */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: size,
-          height: spriteH,
-          opacity: mood === "idle" || mood === "walk" || mood === "jump" ? 1 : 0,
-          transition: "opacity 0.3s ease-in-out",
-        }}
-      >
-        <div
-          className={`benny-idle-sprite benny-sprite-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}
-          style={{
-            width: size,
-            height: spriteH,
-            backgroundImage: `url(${bennySprite.url})`,
-            backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
-            ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
-          }}
-          aria-label={mood === "idle" || mood === "walk" || mood === "jump" ? "Benny the puppy" : undefined}
-          role={mood === "idle" || mood === "walk" || mood === "jump" ? "img" : undefined}
-        />
-        <div className={`benny-action-paws benny-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}>
-          <span className="benny-action-paw benny-action-paw-left" />
-          <span className="benny-action-paw benny-action-paw-right" />
-        </div>
-      </div>
+      {/* Sprite-backed Benny body. Rigged legs render only during movement. */}
+      {(() => {
+        const isSprite = mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb";
+        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
+        const spriteAction = mood === "climb" ? "walk" : mood;
+        return (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: size,
+              height: spriteH,
+              opacity: isSprite ? 1 : 0,
+              transition: "opacity 0.3s ease-in-out",
+            }}
+          >
+            <div
+              className={`benny-idle-sprite benny-sprite-action-${isSprite ? spriteAction : "idle"}`}
+              style={{
+                width: size,
+                height: spriteH,
+                backgroundImage: `url(${bennySprite.url})`,
+                backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+                ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
+                clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
+              }}
+              aria-label={isSprite ? "Benny the puppy" : undefined}
+              role={isSprite ? "img" : undefined}
+            />
+            {isMoving && (
+              <div className={`benny-legs benny-legs-${mood}`} aria-hidden="true">
+                <span className="benny-leg benny-leg-left">
+                  <span className="benny-leg-paw" />
+                </span>
+                <span className="benny-leg benny-leg-right">
+                  <span className="benny-leg-paw" />
+                </span>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Celebrate / sad stills with their own CSS animation wrapper. */}
       {(["celebrate", "sad"] as const).map((m) => (
