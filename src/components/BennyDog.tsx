@@ -36,6 +36,10 @@ const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 // Walking sprite sheet (transparent cutout from real walking video).
 const WALK_FRAMES = 24;
 const WALK_ASPECT = 1; // 360×360 cells
+// The walking video has safe transparent padding inside each square cell. Scale
+// the rendered cell up so Benny's body matches the idle sprite height while the
+// feet stay pinned to the same bottom baseline.
+const WALK_RENDER_SCALE = 1.28;
 
 
 const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
@@ -47,7 +51,7 @@ const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
 const IDLE_FALLBACK_PNG = idleAsset.url;
 
 // Inject keyframes once.
-const STYLE_ID = "benny-dog-sprite-keyframes-v8-grounded-walk";
+const STYLE_ID = "benny-dog-sprite-keyframes-v9-visible-grounded-walk";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -72,7 +76,7 @@ const ensureKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${WALK_FRAMES - 1}, end) infinite;
+  animation: benny-walk-cycle 0.8s steps(${WALK_FRAMES - 1}, end) infinite;
   will-change: background-position;
 }
 @keyframes benny-celebrate-bounce {
@@ -165,12 +169,14 @@ export const BennyDog = ({
       {/* Walking Benny (real video-cutout sprite): plays only for grounded walk. */}
       {(() => {
         const isMoving = renderMood === "walk";
-        const walkSize = size;
+        const walkSize = Math.round(size * WALK_RENDER_SCALE);
         return isMoving ? (
           <div
             style={{
               position: "absolute",
-              left: 0, right: 0, bottom: 0,
+              left: "50%",
+              bottom: 0,
+              transform: "translateX(-50%)",
               width: walkSize, height: walkSize,
               opacity: 1,
             }}
