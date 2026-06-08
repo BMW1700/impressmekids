@@ -266,22 +266,22 @@ const ensureBennySpriteKeyframes = () => {
 .benny-leg-right .benny-leg-copy { width: 781.3%; height: 359.7%; transform: translate(-384.5%, -243.9%); }
 
 @keyframes benny-leg-walk-l {
-  0%, 100% { transform: translate(-155%, 0) rotate(-18deg) scaleY(1); }
-  50%      { transform: translate(-155%, 0) rotate(24deg) scaleY(0.96); }
+  0%, 100% { transform: rotate(-13deg) translateY(0); }
+  50%      { transform: rotate(16deg) translateY(1.5%); }
 }
 @keyframes benny-leg-walk-r {
-  0%, 100% { transform: translate(68%, 0) rotate(24deg) scaleY(0.96); }
-  50%      { transform: translate(68%, 0) rotate(-18deg) scaleY(1); }
+  0%, 100% { transform: rotate(15deg) translateY(1.5%); }
+  50%      { transform: rotate(-12deg) translateY(0); }
 }
-.benny-rig-walk .benny-rig-leg-l { animation: benny-leg-walk-l 0.36s ease-in-out infinite; }
-.benny-rig-walk .benny-rig-leg-r { animation: benny-leg-walk-r 0.36s ease-in-out infinite; }
+.benny-rig-walk .benny-leg-left { animation: benny-leg-walk-l 0.42s ease-in-out infinite; }
+.benny-rig-walk .benny-leg-right { animation: benny-leg-walk-r 0.42s ease-in-out infinite; }
 
 @keyframes benny-leg-jump-pair {
-  0%, 100% { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(1); }
-  50%      { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(0.72); }
+  0%, 100% { transform: rotate(var(--lr,0deg)) scaleY(1); }
+  50%      { transform: rotate(var(--lr,0deg)) scaleY(0.82) translateY(-4%); }
 }
-.benny-rig-jump .benny-rig-leg-l { --lx: -155%; --lr: -10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
-.benny-rig-jump .benny-rig-leg-r { --lx:   68%; --lr:  10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-leg-left { --lr: -8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-leg-right { --lr: 8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
 
 @keyframes benny-leg-climb-l {
   0%, 100% { transform: translate(-155%, 0) rotate(-14deg) scaleY(1); }
@@ -291,8 +291,8 @@ const ensureBennySpriteKeyframes = () => {
   0%, 100% { transform: translate(68%, 0) rotate(18deg) scaleY(0.86); }
   50%      { transform: translate(68%, 0) rotate(-14deg) scaleY(1); }
 }
-.benny-rig-climb .benny-rig-leg-l { animation: benny-leg-climb-l 0.7s ease-in-out infinite; }
-.benny-rig-climb .benny-rig-leg-r { animation: benny-leg-climb-r 0.7s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-left { animation: benny-leg-walk-l 0.62s ease-in-out infinite; }
+.benny-rig-climb .benny-leg-right { animation: benny-leg-walk-r 0.62s ease-in-out infinite; }
 
 /* No walk bounce: the body translates through the scene while only the legs cycle. */
 @keyframes benny-body-bob {
@@ -310,7 +310,7 @@ const ensureBennySpriteKeyframes = () => {
 
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-rig, .benny-rig-leg { animation: none !important; }
+  .benny-rig, .benny-leg-layer { animation: none !important; }
 }
 `;
   document.head.appendChild(el);
