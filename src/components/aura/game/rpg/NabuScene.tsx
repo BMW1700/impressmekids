@@ -198,7 +198,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 // Inject sprite keyframes once. Walks background-position right 30 steps then
 // holds the last frame for 2s before looping — gives Benny a "breathe → settle
 // → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-visible-attached-legs";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v9-cutout-leg-copies";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -219,7 +219,7 @@ const ensureBennySpriteKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
-/* ---- Visible attached leg rig: legs sit ON the body and pivot from fixed hip sockets. */
+/* ---- Cutout leg rig: hide original legs, then swing clipped copies of the real sprite legs. */
 .benny-rig {
   position: relative;
   width: 100%;
@@ -232,46 +232,38 @@ const ensureBennySpriteKeyframes = () => {
   width: 100%;
   height: 100%;
 }
-.benny-rig-hips {
+.benny-cutout-mask {
   position: absolute;
-  z-index: 3;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
+  z-index: 2;
+  left: 39.5%;
+  top: 70.5%;
+  width: 21%;
+  height: 23%;
   pointer-events: none;
-}
-.benny-rig-leg {
-  position: absolute;
-  left: 50%;
-  top: 72%;
-  width: 8.5%;
-  height: 21%;
-  margin-left: -4.25%;
-  border-radius: 46% 46% 42% 42% / 18% 18% 55% 55%;
-  background: linear-gradient(180deg, #f8b64f 0%, #e88d27 58%, #bd6419 100%);
+  background: linear-gradient(180deg, #f8b34b 0%, #efa443 38%, #df8426 100%);
+  border-radius: 45% 45% 30% 30% / 20% 20% 58% 58%;
   box-shadow:
-    inset -0.22em 0 0 rgba(151, 79, 13, 0.22),
-    inset 0.16em 0.12em 0 rgba(255, 235, 188, 0.28),
-    0 0.12em 0.18em rgba(0,0,0,0.12);
-  transform-origin: 50% 0%;
-  opacity: 0;
+    inset 0.18em 0.1em 0 rgba(255, 232, 176, 0.26),
+    inset -0.18em -0.05em 0 rgba(156, 82, 17, 0.14);
 }
-.benny-rig-leg::after {
+.benny-cutout-mask::after {
   content: "";
   position: absolute;
-  left: -45%;
-  bottom: -20%;
-  width: 190%;
-  height: 42%;
-  border-radius: 48% 52% 55% 45%;
-  background: radial-gradient(ellipse at 42% 35%, #fff0cf 0 24%, #f6ba6b 48% 78%, #b35e17 100%);
-  box-shadow: inset 0 -0.12em 0 rgba(139, 69, 12, 0.22), 0 0.12em 0.18em rgba(0,0,0,0.16);
+  left: 18%;
+  right: 18%;
+  top: 5%;
+  height: 100%;
+  background: linear-gradient(180deg, #fff5d8 0%, #fee7aa 52%, #f2ba67 100%);
+  border-radius: 50% 50% 42% 42% / 20% 20% 70% 70%;
+  opacity: 0.72;
 }
-.benny-rig-moving .benny-rig-leg { opacity: 1; }
-/* Hip sockets match the two front legs in the source art. */
-.benny-rig-leg-l { transform: translate(-155%, 0) rotate(0deg); }
-.benny-rig-leg-r { transform: translate(68%, 0) rotate(0deg); }
+.benny-leg-layer { position: absolute; z-index: 3; pointer-events: none; opacity: 0; overflow: hidden; transform-origin: 50% 3%; }
+.benny-rig-moving .benny-leg-layer { opacity: 1; }
+.benny-leg-copy { position: absolute; left: 0; top: 0; background-repeat: no-repeat; background-position: 0 0; }
+.benny-leg-left { left: 38.6%; top: 67.6%; width: 12.2%; height: 27.6%; }
+.benny-leg-right { left: 49.2%; top: 67.9%; width: 12.8%; height: 27.8%; }
+.benny-leg-left .benny-leg-copy { width: 819.7%; height: 362.3%; transform: translate(-316%, -244.5%); }
+.benny-leg-right .benny-leg-copy { width: 781.3%; height: 359.7%; transform: translate(-384.5%, -243.9%); }
 
 @keyframes benny-leg-walk-l {
   0%, 100% { transform: translate(-155%, 0) rotate(-18deg) scaleY(1); }
