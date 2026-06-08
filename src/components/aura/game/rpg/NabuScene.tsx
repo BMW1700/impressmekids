@@ -235,47 +235,59 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle / walk / jump / climb: render Benny's body via the sprite sheet.
-  // For movement actions we hide the painted feet (clip-path bottom band) and
-  // draw a real rigged set of legs underneath that swing in opposite phase.
+  // Idle: original sprite-sheet still pose (breathing).
+  // Walk / jump / climb: real walking video as a transparent sprite sheet —
+  // legs visibly cycle. Anchored so feet sit at the same ground baseline.
   if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const action = mood;
-    const isMoving = action !== "idle";
+    const isMoving = mood !== "idle";
+    // Walk sprite cells are square (1:1). Render at the same width and align
+    // its bottom to the idle sprite's bottom so the ground line stays put.
+    const walkH = w;
     return (
       <foreignObject
         x={-w / 2}
         y={-h + 10}
         width={w}
-        height={h}
+        height={Math.max(h, walkH)}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: h, position: "relative" }}>
-          <div
-            className={`benny-idle-sprite benny-sprite-action-${action === "climb" ? "walk" : action}`}
-            style={{
-              width: w,
-              height: h,
-              backgroundImage: `url(${bennySprite.url})`,
-              backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
-              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
-              // Hide painted feet so our rigged legs are the only feet visible.
-              clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
-            }}
-            aria-label="Benny the puppy"
-            role="img"
-          />
+        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
+          {!isMoving && (
+            <div
+              className="benny-idle-sprite"
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 0,
+                width: w,
+                height: h,
+                backgroundImage: `url(${bennySprite.url})`,
+                backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+                ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              }}
+              aria-label="Benny the puppy"
+              role="img"
+            />
+          )}
           {isMoving && (
-            <div className={`benny-legs benny-legs-${action}`} aria-hidden="true">
-              <span className="benny-leg benny-leg-left">
-                <span className="benny-leg-paw" />
-              </span>
-              <span className="benny-leg benny-leg-right">
-                <span className="benny-leg-paw" />
-              </span>
-            </div>
+            <div
+              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              style={{
+                position: "absolute",
+                left: 0,
+                bottom: 0,
+                width: w,
+                height: walkH,
+                backgroundImage: `url(${bennyWalkSprite.url})`,
+                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
+                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+              }}
+              aria-label="Benny walking"
+              role="img"
+            />
           )}
         </div>
       </foreignObject>
