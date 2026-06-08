@@ -18,6 +18,7 @@ import { type BennyMood } from "@/components/BennyDog";
 // via background-position steps — identical performance on every browser
 // including Safari, where animated WebP decodes single-threaded and stutters.
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
+import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
 
