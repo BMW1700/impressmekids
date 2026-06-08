@@ -283,14 +283,6 @@ const ensureBennySpriteKeyframes = () => {
 .benny-rig-jump .benny-leg-left { --lr: -8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
 .benny-rig-jump .benny-leg-right { --lr: 8deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
 
-@keyframes benny-leg-climb-l {
-  0%, 100% { transform: translate(-155%, 0) rotate(-14deg) scaleY(1); }
-  50%      { transform: translate(-155%, 0) rotate(18deg) scaleY(0.86); }
-}
-@keyframes benny-leg-climb-r {
-  0%, 100% { transform: translate(68%, 0) rotate(18deg) scaleY(0.86); }
-  50%      { transform: translate(68%, 0) rotate(-14deg) scaleY(1); }
-}
 .benny-rig-climb .benny-leg-left { animation: benny-leg-walk-l 0.62s ease-in-out infinite; }
 .benny-rig-climb .benny-leg-right { animation: benny-leg-walk-r 0.62s ease-in-out infinite; }
 
