@@ -163,10 +163,11 @@ const NabuSprite = ({
   action?: "idle" | "walk" | "jump" | "climb";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  const isMovingPhase = phase === "solved" || phase === "transition";
+  // Walking sprite ONLY during actual travel (`transition`). During `solved`,
+  // Benny is celebrating in place — show idle/celebrate, not legs running in
+  // place. This eliminates the ~1s of running-in-place before he moves.
+  const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
-  // Never use the static celebrate PNG for gameplay motion. If Benny is
-  // moving, force a sprite-backed action state with an explicit paw cycle.
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
