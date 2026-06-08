@@ -223,11 +223,11 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle 2.4s steps(${BENNY_WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite-jump { animation-duration: 1.0s; }
-.benny-walk-sprite-climb { animation-duration: 1.8s; }
+.benny-walk-sprite-jump { animation-duration: 1.6s; }
+.benny-walk-sprite-climb { animation-duration: 2.8s; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite, .benny-walk-sprite { animation: none; }
 }
