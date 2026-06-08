@@ -280,7 +280,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               style={{
                 position: "absolute",
                 left: 0,
-                bottom: 0,
+                bottom: -walkGroundCorrection,
                 width: w,
                 height: walkH,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
