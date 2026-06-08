@@ -231,12 +231,6 @@ const ensureBennySpriteKeyframes = () => {
   animation: benny-idle-sprite-walk 3.2s steps(29, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite {
-  background-repeat: no-repeat;
-  background-position: 0px 0px;
-  animation: benny-walk-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) infinite;
-  will-change: background-position;
-}
 .benny-idle-strip {
   animation: benny-idle-svg-cycle 3.2s steps(29, end) infinite;
   transform-box: fill-box;
@@ -244,17 +238,15 @@ const ensureBennySpriteKeyframes = () => {
   will-change: transform;
 }
 .benny-walk-strip {
-  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) 1 both;
   transform-box: fill-box;
   transform-origin: 0 0;
   will-change: transform;
 }
-.benny-walk-sprite-jump { animation-duration: 1.6s; }
-.benny-walk-sprite-climb { animation-duration: 2.8s; }
 .benny-walk-strip-jump { animation-duration: 1.6s; }
 .benny-walk-strip-climb { animation-duration: 2.8s; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite, .benny-walk-sprite, .benny-idle-strip, .benny-walk-strip { animation: none; }
+  .benny-idle-strip, .benny-walk-strip { animation: none; }
 }
 `;
   document.head.appendChild(el);
