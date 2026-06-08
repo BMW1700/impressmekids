@@ -5,9 +5,9 @@
 // WebP single-threaded on the main thread, causing visible stutter. Sprite
 // sheets composite through the GPU and run identically on every browser.
 //
-// Walk / jump reuse the sprite sheet at faster timing and add a small paw
-// cycle overlay so Benny's legs visibly move even when the source frame is
-// mostly front-facing. Celebrate / sad keep their still PNGs with CSS motion.
+// Walk / jump reuse the sprite sheet and replace the visible front-leg area
+// with clipped sprite copies so Benny never shows extra pasted-on legs.
+// Celebrate / sad keep their still PNGs with CSS motion.
 
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
@@ -43,7 +43,7 @@ const IDLE_FALLBACK_PNG = idleAsset.url;
 // Inject keyframes once. The animation walks background-position right 30
 // steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v8-visible-attached-legs";
+const STYLE_ID = "benny-dog-sprite-keyframes-v9-cutout-leg-copies";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
