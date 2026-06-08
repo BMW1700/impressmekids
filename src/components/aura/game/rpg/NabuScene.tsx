@@ -216,6 +216,15 @@ const ensureBennySpriteKeyframes = () => {
   0%   { background-position-x: 0px; }
   100% { background-position-x: var(--benny-walk-end, -8640px); }
 }
+@keyframes benny-idle-svg-cycle {
+  0%   { transform: translateX(0px); }
+  86%  { transform: translateX(var(--benny-sprite-end, -8120px)); }
+  100% { transform: translateX(var(--benny-sprite-end, -8120px)); }
+}
+@keyframes benny-walk-svg-cycle {
+  0%   { transform: translateX(0px); }
+  100% { transform: translateX(var(--benny-walk-end, -8640px)); }
+}
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
@@ -228,10 +237,24 @@ const ensureBennySpriteKeyframes = () => {
   animation: benny-walk-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
+.benny-idle-strip {
+  animation: benny-idle-svg-cycle 3.2s steps(29, end) infinite;
+  transform-box: fill-box;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+.benny-walk-strip {
+  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  transform-box: fill-box;
+  transform-origin: 0 0;
+  will-change: transform;
+}
 .benny-walk-sprite-jump { animation-duration: 1.6s; }
 .benny-walk-sprite-climb { animation-duration: 2.8s; }
+.benny-walk-strip-jump { animation-duration: 1.6s; }
+.benny-walk-strip-climb { animation-duration: 2.8s; }
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite, .benny-walk-sprite { animation: none; }
+  .benny-idle-sprite, .benny-walk-sprite, .benny-idle-strip, .benny-walk-strip { animation: none; }
 }
 `;
   document.head.appendChild(el);
@@ -246,55 +269,33 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = mood !== "idle";
-    // Walk sprite cells have a small transparent bottom pad. Drop only the
-    // walking sheet by that pad so the visible paws touch the ground line.
-    const walkH = w;
-    const walkGroundCorrection = Math.round(w * 10 / 360);
+    const clipId = `benny-clip-${useId().replace(/:/g, "")}`;
+    const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
+    const walkY = -w + walkPad + 10;
+    const stillY = -h + 10;
     return (
-      <foreignObject
-        x={-w / 2}
-        y={-h + 10}
-        width={w}
-        height={Math.max(h, walkH)}
-        style={{ overflow: "visible", pointerEvents: "none" }}
-      >
-        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
-          {!isMoving && (
-            <div
-              className="benny-idle-sprite"
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: -walkGroundCorrection,
-                width: w,
-                height: h,
-                backgroundImage: `url(${bennySprite.url})`,
-                backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
-                ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
-              }}
-              aria-label="Benny the puppy"
-              role="img"
-            />
-          )}
-          {isMoving && (
-            <div
-              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: -walkGroundCorrection,
-                width: w,
-                height: walkH,
-                backgroundImage: `url(${bennyWalkSprite.url})`,
-                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
-              }}
-              aria-label="Benny walking"
-              role="img"
-            />
-          )}
-        </div>
-      </foreignObject>
+      <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
+        <defs>
+          <clipPath id={clipId}>
+            <rect x="0" y="0" width={w} height={isMoving ? w : h} />
+          </clipPath>
+        </defs>
+        <g transform={`translate(${-w / 2} ${isMoving ? walkY : stillY})`} clipPath={`url(#${clipId})`}>
+          <image
+            className={isMoving ? `benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}` : "benny-idle-strip"}
+            href={isMoving ? bennyWalkSprite.url : bennySprite.url}
+            x="0"
+            y="0"
+            width={isMoving ? w * BENNY_WALK_FRAMES : w * BENNY_SPRITE_FRAMES}
+            height={isMoving ? w : h}
+            preserveAspectRatio="none"
+            style={{
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+            }}
+          />
+        </g>
+      </g>
     );
   }
 
