@@ -135,10 +135,10 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
-        x: [140, (140 + targetX) / 2, targetX, targetX],
-        y: [370, 366, targetY - 6, targetY],
-        scaleY: [1, 1.02, 0.96, 1],
-        scaleX: [1, 0.99, 1.04, 1],
+        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX, targetX],
+        y: [NABU_START.y, targetY, targetY, targetY],
+        scaleY: [1, 1, 1, 1],
+        scaleX: [1, 1, 1, 1],
         transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
@@ -197,7 +197,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v7-walk-video";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-walk-grounded-face";
 const BENNY_WALK_FRAMES = 24;
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
@@ -244,9 +244,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = mood !== "idle";
-    // Walk sprite cells are square (1:1). Render at the same width and align
-    // its bottom to the idle sprite's bottom so the ground line stays put.
+    // Walk sprite cells have a small transparent bottom pad. Drop only the
+    // walking sheet by that pad so the visible paws touch the ground line.
     const walkH = w;
+    const walkGroundCorrection = Math.round(w * 10 / 360);
     return (
       <foreignObject
         x={-w / 2}
@@ -262,7 +263,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               style={{
                 position: "absolute",
                 left: 0,
-                bottom: 0,
+                bottom: -walkGroundCorrection,
                 width: w,
                 height: h,
                 backgroundImage: `url(${bennySprite.url})`,

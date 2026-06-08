@@ -47,7 +47,7 @@ const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
 const IDLE_FALLBACK_PNG = idleAsset.url;
 
 // Inject keyframes once.
-const STYLE_ID = "benny-dog-sprite-keyframes-v7-walk-video";
+const STYLE_ID = "benny-dog-sprite-keyframes-v8-walk-grounded-face";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -167,11 +167,12 @@ export const BennyDog = ({
       {(() => {
         const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
         const walkSize = size;
+        const walkGroundCorrection = Math.round(walkSize * 10 / 360);
         return (
           <div
             style={{
               position: "absolute",
-              left: 0, right: 0, bottom: 0,
+              left: 0, right: 0, bottom: -walkGroundCorrection,
               width: walkSize, height: walkSize,
               opacity: isMoving ? 1 : 0,
               transition: "opacity 0.2s ease-in-out",
