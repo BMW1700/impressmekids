@@ -162,7 +162,8 @@ const NabuSprite = ({
   action?: "idle" | "walk" | "jump";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  const movementAction: BennyMood = action ?? (phase === "solved" || phase === "transition" ? "walk" : "idle");
+  const isMovingPhase = phase === "solved" || phase === "transition";
+  const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   // Never use the static celebrate PNG for gameplay motion. If Benny is
   // moving, force a sprite-backed action state with an explicit paw cycle.
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
@@ -448,7 +449,7 @@ const JumpScene = ({ phase }: { phase: ScenePhase }) => {
         transition={{ duration: 2, repeat: Infinity }}
       />
 
-      <NabuSprite phase={phase} anim={jumpArcAnim} />
+      <NabuSprite phase={phase} anim={jumpArcAnim} action="jump" />
     </Stage>
   );
 };
@@ -631,7 +632,7 @@ const AxeScene = ({ phase }: { phase: ScenePhase }) => {
           <path d="M-14 -4 L18 -4 L24 12 L-8 12 Z" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} />
+      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );
