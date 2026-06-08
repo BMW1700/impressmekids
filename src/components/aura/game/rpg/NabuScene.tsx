@@ -60,7 +60,7 @@ const nabuAnim = (phase: ScenePhase) => {
       x: NABU_EXIT.x,
       y: NABU_EXIT.y,
       scaleY: 1, scaleX: 1, rotate: 0,
-      transition: { duration: 1.6, ease: "easeInOut" as const },
+      transition: { duration: 2.6, ease: "easeInOut" as const },
     };
   }
   if (phase === "solved") {
