@@ -25,7 +25,6 @@ const BennyMoodContext = createContext<BennyMood | null>(null);
 
 // Sprite-sheet geometry — bottom 30px of every source frame was cropped so
 // Benny's feet sit flush with the bottom edge of each cell.
-const BENNY_SPRITE_FRAMES = 30;
 const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
@@ -287,7 +286,6 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   if (mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
-    const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
     // Anchor at parent's (NABU_START.y == GROUND_Y). Sprite bottom edge sits
     // on the ground; walking sheet adds its transparent bottom pad back.
@@ -311,7 +309,6 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             height={w}
             preserveAspectRatio="none"
             style={{
-              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
               ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
             }}
           />
