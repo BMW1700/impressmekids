@@ -1,48 +1,54 @@
-# Fix Benny: real walk & jump animations
+## Plan: make Benny move professionally
 
-## The problem
-The two-layer head/body rig looks wrong — the head pivots independently of the body, the neckline shows seams, and there is still no actual leg movement. You're right: this is not professional. Static PNGs with floating heads are not how kids' game characters move.
+The screenshot is happening because the Pre-K scene currently switches Benny to the static `benny-celebrate.png` during `solved` and `transition`. That kills the sprite animation, so he becomes a generic still image while he is supposed to be walking/jumping.
 
-## The fix: sprite-sheet animation (same technique Mario, Paw Patrol games, etc. use)
-We already use this technique successfully for Benny's idle (30-frame `benny-idle-sprite.png` driven by CSS `steps()` animation). We'll extend the same proven pattern to **walk** and **jump**, then retire the head/body rig entirely.
+## What I will change
 
-### 1. Generate two new sprite sheets (matching existing Benny art style)
-Using imagegen (premium tier, locked to the existing Benny look) we produce:
+1. **Stop using the static celebrate PNG for movement**
+   - During `transition`, Benny will no longer render `celebrate`.
+   - He will render an actual animated action state: `walk`, `jump`, or `idle`.
 
-- **`benny-walk-sprite.png`** — 12-frame side-view walk cycle. Legs alternate front/back, tail wags, head bobs, ears sway. Single row, 420×450 cells, transparent background, identical proportions to current idle sprite so they swap cleanly.
-- **`benny-jump-sprite.png`** — 8-frame jump (crouch → launch → airborne with legs tucked → land squash → settle). Same cell size.
+2. **Add explicit Benny action states**
+   - Extend Benny mood/action handling from:
+     - `idle | celebrate | sad`
+   - To:
+     - `idle | walk | jump | celebrate | sad`
 
-Both sheets are QA'd by rendering each frame as a contact sheet image and visually inspecting for: consistent character, feet-on-baseline, no clipping, smooth tweens between adjacent frames. If a frame is off, we regenerate just that pose.
+3. **Use the existing 30-frame Benny sprite sheet for leg motion**
+   - The app already has `benny-idle-sprite.png`, a 30-frame strip.
+   - I will reuse it as the walking/action sprite instead of swapping to the still celebration image.
+   - Walk transitions will animate the sprite sheet quickly with `steps()` so the feet/legs visibly move while Benny crosses the scene.
 
-### 2. Extend `BennyDog.tsx` with new moods
-Add `walk` and `jump` to `BennyMood`. Each mood maps to its sprite sheet and a tuned CSS `steps()` animation:
-- `walk`: 12 steps, ~0.8s loop, infinite
-- `jump`: 8 steps, ~0.7s, runs once with `forwards` fill, then auto-returns to idle
+4. **Make jumps read like a real character jump**
+   - For `JUMP` / `HOP` scenes, Benny will use the animated sprite while following a clean arc.
+   - Add crouch → stretch → airborne → landing squash using the existing motion wrapper.
+   - No detached head/body rig, no Frankenstein split, no generic still pose.
 
-Same baseline alignment math the idle already uses — feet stay planted on the ground line.
+5. **Scene-specific routing**
+   - `JumpScene`, `HOP`, obstacle hops: render `jump` during transition.
+   - Walk-to-target scenes: render `walk` during transition.
+   - Problem/ask/reading: render `idle` sprite.
+   - Only brief success flashes may use `celebrate`; not the movement phase.
 
-### 3. Wire it into `NabuScene.tsx`
-- Remove all `BennyRigged` imports and `<foreignObject>` overlays.
-- When Benny needs to walk across the scene (`walkToAnim`, `bouncyWalkAnim`), the sprite plays the **walk** cycle while Framer Motion translates his x position. Legs move because the sheet animates — not because we squish the whole image.
-- When he hops (`hopOverAnim` / correct-word celebration), play the **jump** sheet while Motion arcs him up and back down.
-- Idle phase keeps the existing 30-frame idle sprite.
-- Sad phase keeps the existing sad PNG with the shake (it's brief and reads fine).
+6. **Polish the visible layout in the screenshots**
+   - Keep Benny grounded on the same baseline so he does not float.
+   - Reduce the oversized static-center look by letting motion/action drive focus.
+   - Preserve iPad-safe CSS sprite animation with `prefers-reduced-motion` fallback.
 
-### 4. Delete the broken rig
-Remove `BennyRigged.tsx` and the two rig PNG assets (`benny-rig-head`, `benny-rig-body`) via `delete_asset` so we don't keep paying CDN storage for art we won't use.
+## Files to update
 
-## Technical details
-- Sprite sheets composite on the GPU via `background-position` — zero JS per frame, identical performance on iPad Safari (the K-5 target device).
-- CSS `steps(n, end)` gives crisp frame transitions, no blur.
-- `prefers-reduced-motion` honored: walk/jump fall back to a single mid-cycle frame.
-- Total added asset weight: ~1.6 MB across both sheets, served from R2 CDN.
-- No backend, DB, or auth changes. Pure frontend + new image assets.
+- `src/components/BennyDog.tsx`
+  - Add `walk` and `jump` actions.
+  - Add separate CSS keyframes for faster walk and jump/action playback.
 
-## Files
-- New: `src/assets/benny-walk-sprite.png.asset.json`, `src/assets/benny-jump-sprite.png.asset.json`
-- Edit: `src/components/BennyDog.tsx` (add walk/jump moods)
-- Edit: `src/components/aura/game/rpg/NabuScene.tsx` (swap rig usage → sprite moods)
-- Delete: `src/components/BennyRigged.tsx`, `benny-rig-head.png.asset.json`, `benny-rig-body.png.asset.json`
+- `src/components/aura/game/rpg/NabuScene.tsx`
+  - Stop defaulting to `celebrate` during transition.
+  - Pass the correct action state into `BennySvgImage`.
+  - Replace static transition rendering with sprite-backed walk/jump rendering.
 
-## What this gets you for the Patrick demo
-Benny actually walks across the screen with his legs moving, and actually jumps over obstacles with a squash-and-stretch landing — same animation quality bar as commercial preschool apps (Khan Kids, Endless Alphabet, PBS Kids games). No more floating-head Frankenstein.
+- `src/components/aura/game/rpg/NabuAdventure.tsx`
+  - Update mood/action typing so the new states are valid.
+
+## Result
+
+Benny will no longer snap into the static generic picture during action. He will visibly animate from the sprite sheet while walking and jumping, with the movement phase looking like a real game character instead of a still PNG sliding around.

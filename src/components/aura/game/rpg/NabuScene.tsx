@@ -166,9 +166,13 @@ const NabuSprite = ({
   anim?: (phase: ScenePhase) => NabuAnim;
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  const bennyMood: BennyMood =
-    ctxMood ??
-    (phase === "solved" || phase === "transition" ? "celebrate" : "idle");
+  // During movement (solved/transition) we MUST keep the animated sprite
+  // sheet running — switching to the still celebrate PNG kills all leg
+  // motion and Benny becomes a generic floating picture. The wrapper
+  // <motion.g> already provides the bounce/arc/hop; the sprite sheet
+  // provides the actual leg animation underneath.
+  // Only "sad" overrides the sprite (and only briefly, when stationary).
+  const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : "idle";
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <BennySvgImage mood={bennyMood} size={size} />
@@ -690,7 +694,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <BennySvgImage mood="celebrate" size={280} />
+          <BennySvgImage mood="idle" size={280} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
@@ -1259,7 +1263,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <BennySvgImage mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={280} />
+        <BennySvgImage mood="idle" size={280} />
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
           <g>
