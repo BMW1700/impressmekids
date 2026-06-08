@@ -189,7 +189,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           setIndex(next);
           setPhase("problem");
         }
-      }, 2700);
+      }, 2600);
       return;
     }
     if (phase === "ending") {
