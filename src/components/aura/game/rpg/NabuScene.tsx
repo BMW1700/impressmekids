@@ -51,11 +51,20 @@ interface NabuSceneProps {
 const VB_W = 1000;
 const VB_H = 500;
 const GROUND_Y = 380;
+const BENNY_SCENE_SIZE = 240;
 
 // ── Nabu positions through the scene ──────────────────────────────────────
 // y anchors at GROUND_Y so the sprite's bottom edge sits exactly on the ground line.
 const NABU_START = { x: 140, y: GROUND_Y };
 const NABU_EXIT = { x: 860, y: GROUND_Y };
+const NABU_IDLE_ANIM = {
+  x: NABU_START.x,
+  y: NABU_START.y,
+  scaleY: 1,
+  scaleX: 1,
+  rotate: 0,
+  transition: { duration: 0 },
+};
 
 
 const nabuAnim = (phase: ScenePhase) => {
@@ -78,25 +87,9 @@ const nabuAnim = (phase: ScenePhase) => {
       transition: { duration: 1.6, ease: "easeOut" as const },
     };
   }
-  if (phase === "problem") {
-    // Worried sway — leans left/right looking for help with a small head bob.
-    return {
-      x: [NABU_START.x, NABU_START.x - 10, NABU_START.x + 6, NABU_START.x],
-      y: [NABU_START.y, NABU_START.y - 4, NABU_START.y - 2, NABU_START.y],
-      rotate: [0, -4, 3, 0],
-      scaleY: 1, scaleX: 1,
-      transition: { duration: 2.2, repeat: Infinity, ease: "easeInOut" as const },
-    };
-  }
-  // ask / reading: alert breathing-in stance — subtle pulse, no drift.
-  return {
-    x: NABU_START.x,
-    y: [NABU_START.y, NABU_START.y - 4, NABU_START.y],
-    scaleY: [1, 1.03, 1],
-    scaleX: [1, 0.985, 1],
-    rotate: 0,
-    transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const },
-  };
+  // problem / ask / reading: completely still idle. The pre-word motion was
+  // the remaining visible glitch; walking stays separate and untouched.
+  return NABU_IDLE_ANIM;
 };
 
 // ── Scene-specific Nabu motion helpers ─────────────────────────────────────
@@ -157,7 +150,7 @@ type NabuAnim = any;
 
 const NabuSprite = ({
   phase,
-  size = 190,
+  size = BENNY_SCENE_SIZE,
   anim,
   action,
 }: {
