@@ -318,9 +318,9 @@ const ensureBennySpriteKeyframes = () => {
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
   // Idle / walk / jump / climb: render Benny's body via the sprite sheet. The
-  // body stays intact (no chopping) and animates as a whole with a bob/squash.
-  // Two hind-leg shapes are anchored to the body's hip area so they swing past
-  // the silhouette without ever detaching.
+    // body stays intact. During movement, the original front-leg area is masked
+    // and replaced by two clipped copies from the sprite, positioned exactly
+    // over the original legs so Benny never grows extra pasted-on limbs.
   if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
@@ -338,12 +338,6 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       >
         <div style={{ width: w, height: h, position: "relative" }}>
           <div className={rigClass}>
-            {isMoving && (
-              <div className="benny-rig-hips" aria-hidden="true">
-                <span className="benny-rig-leg benny-rig-leg-l" />
-                <span className="benny-rig-leg benny-rig-leg-r" />
-              </div>
-            )}
             <div
               className="benny-idle-sprite benny-rig-body benny-sprite-action-idle"
               style={{
@@ -354,6 +348,29 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               aria-label="Benny the puppy"
               role="img"
             />
+            {isMoving && (
+              <>
+                <span className="benny-cutout-mask" aria-hidden="true" />
+                <span className="benny-leg-layer benny-leg-left" aria-hidden="true">
+                  <span
+                    className="benny-leg-copy"
+                    style={{
+                      backgroundImage: `url(${bennySprite.url})`,
+                      backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+                    }}
+                  />
+                </span>
+                <span className="benny-leg-layer benny-leg-right" aria-hidden="true">
+                  <span
+                    className="benny-leg-copy"
+                    style={{
+                      backgroundImage: `url(${bennySprite.url})`,
+                      backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
+                    }}
+                  />
+                </span>
+              </>
+            )}
           </div>
         </div>
       </foreignObject>
