@@ -108,7 +108,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("intro");
   const [correct, setCorrect] = useState(0);
-  const [bennyMood, setBennyMood] = useState<"idle" | "celebrate" | "sad" | null>(null);
+  const [bennyMood, setBennyMood] = useState<"idle" | "walk" | "jump" | "celebrate" | "sad" | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [showSparkle, setShowSparkle] = useState(false);
   const wasAutoPassedRef = useRef(false);

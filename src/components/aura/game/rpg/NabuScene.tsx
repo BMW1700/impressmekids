@@ -276,7 +276,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
         height={h}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: h }}>
+        <div style={{ width: w, height: h, position: "relative" }}>
           <div
             className={`benny-idle-sprite benny-sprite-action-${action}`}
             style={{
