@@ -162,7 +162,7 @@ export const BennyDog = ({
         );
       })()}
 
-      {/* Walking Benny (real video-cutout sprite): plays for walk/jump/climb. */}
+      {/* Walking Benny (real video-cutout sprite): plays only for grounded walk. */}
       {(() => {
         const isMoving = renderMood === "walk";
         const walkSize = size;
