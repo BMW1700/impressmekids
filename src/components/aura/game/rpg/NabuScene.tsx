@@ -32,6 +32,9 @@ const BENNY_SPRITE_FRAMES = 30;
 const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
+const BENNY_WALK_FRAMES = 24;
+const BENNY_WALK_VISIBLE_BOTTOM_PAD = 38; // source px hidden below paws after watermark removal
+const BENNY_TRANSITION_SECONDS = 2.6;
 
 interface NabuSceneProps {
   word: string;
@@ -60,7 +63,7 @@ const nabuAnim = (phase: ScenePhase) => {
       x: NABU_EXIT.x,
       y: NABU_EXIT.y,
       scaleY: 1, scaleX: 1, rotate: 0,
-      transition: { duration: 2.6, ease: "easeInOut" as const },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" as const },
     };
   }
   if (phase === "solved") {
@@ -108,7 +111,7 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
       scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
       scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
       rotate: [0, -4, 0, 4, 0, 0],
-      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
   return nabuAnim(phase);
@@ -124,7 +127,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
       scaleY: [1, 0.82, 1.18, 1.05, 1.18, 0.82, 1],
       scaleX: [1, 1.12, 0.90, 0.96, 0.90, 1.12, 1],
       rotate: [0, 0, -8, -4, 4, 0, 0],
-      transition: { duration: 2.0, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
     };
   }
   return nabuAnim(phase);
@@ -135,11 +138,11 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
-        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX, targetX],
-        y: [NABU_START.y, targetY, targetY, targetY],
-        scaleY: [1, 1, 1, 1],
-        scaleX: [1, 1, 1, 1],
-        transition: { duration: 2.4, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
+        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX],
+        y: [NABU_START.y, targetY, targetY],
+        scaleY: [1, 1, 1],
+        scaleX: [1, 1, 1],
+        transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.55, 1] },
       };
     }
     return nabuAnim(phase);
@@ -197,8 +200,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-walk-grounded-face";
-const BENNY_WALK_FRAMES = 24;
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v9-svg-walk-grounded";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -214,22 +216,35 @@ const ensureBennySpriteKeyframes = () => {
   0%   { background-position-x: 0px; }
   100% { background-position-x: var(--benny-walk-end, -8640px); }
 }
+@keyframes benny-idle-svg-cycle {
+  0%   { transform: translateX(0px); }
+  86%  { transform: translateX(var(--benny-sprite-end, -8120px)); }
+  100% { transform: translateX(var(--benny-sprite-end, -8120px)); }
+}
+@keyframes benny-walk-svg-cycle {
+  0%   { transform: translateX(0px); }
+  100% { transform: translateX(var(--benny-walk-end, -8640px)); }
+}
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
   animation: benny-idle-sprite-walk 3.2s steps(29, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite {
-  background-repeat: no-repeat;
-  background-position: 0px 0px;
-  animation: benny-walk-cycle 2.4s steps(${BENNY_WALK_FRAMES}, end) infinite;
-  will-change: background-position;
+.benny-idle-strip {
+  animation: benny-idle-svg-cycle 3.2s steps(29, end) infinite;
+  transform-box: fill-box;
+  transform-origin: 0 0;
+  will-change: transform;
 }
-.benny-walk-sprite-jump { animation-duration: 1.6s; }
-.benny-walk-sprite-climb { animation-duration: 2.8s; }
+.benny-walk-strip {
+  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES - 1}, end) 1 both;
+  transform-box: fill-box;
+  transform-origin: 0 0;
+  will-change: transform;
+}
 @media (prefers-reduced-motion: reduce) {
-  .benny-idle-sprite, .benny-walk-sprite { animation: none; }
+  .benny-idle-strip, .benny-walk-strip { animation: none; }
 }
 `;
   document.head.appendChild(el);
@@ -244,55 +259,34 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = mood !== "idle";
-    // Walk sprite cells have a small transparent bottom pad. Drop only the
-    // walking sheet by that pad so the visible paws touch the ground line.
-    const walkH = w;
-    const walkGroundCorrection = Math.round(w * 10 / 360);
+    const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
+    const walkY = -w + walkPad + 10;
+    const stillY = -h + 10;
     return (
-      <foreignObject
-        x={-w / 2}
-        y={-h + 10}
-        width={w}
-        height={Math.max(h, walkH)}
-        style={{ overflow: "visible", pointerEvents: "none" }}
-      >
-        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
-          {!isMoving && (
-            <div
-              className="benny-idle-sprite"
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: -walkGroundCorrection,
-                width: w,
-                height: h,
-                backgroundImage: `url(${bennySprite.url})`,
-                backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
-                ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
-              }}
-              aria-label="Benny the puppy"
-              role="img"
-            />
-          )}
-          {isMoving && (
-            <div
-              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
-              style={{
-                position: "absolute",
-                left: 0,
-                bottom: -walkGroundCorrection,
-                width: w,
-                height: walkH,
-                backgroundImage: `url(${bennyWalkSprite.url})`,
-                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
-              }}
-              aria-label="Benny walking"
-              role="img"
-            />
-          )}
-        </div>
-      </foreignObject>
+      <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
+        <svg
+          x={-w / 2}
+          y={isMoving ? walkY : stillY}
+          width={w}
+          height={isMoving ? w : h}
+          viewBox={`0 0 ${w} ${isMoving ? w : h}`}
+          overflow="hidden"
+        >
+          <image
+            className={isMoving ? `benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}` : "benny-idle-strip"}
+            href={isMoving ? bennyWalkSprite.url : bennySprite.url}
+            x="0"
+            y="0"
+            width={isMoving ? w * BENNY_WALK_FRAMES : w * BENNY_SPRITE_FRAMES}
+            height={isMoving ? w : h}
+            preserveAspectRatio="none"
+            style={{
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
+            }}
+          />
+        </svg>
+      </g>
     );
   }
 
@@ -411,7 +405,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
     return {
       x: xs,
       y: ys,
-      transition: { duration: 1.8, ease: "linear" },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "linear" },
     };
   }
   if (phase === "solved") {
@@ -724,7 +718,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
         <motion.g
           initial={{ x: NABU_START.x, y: NABU_START.y }}
           animate={{ x: 612, y: GROUND_Y - 260 }}
-          transition={{ duration: 1.6, ease: "easeInOut" }}
+          transition={{ duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" }}
         >
           <BennySvgImage mood="climb" size={280} />
         </motion.g>
@@ -1293,7 +1287,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
       <motion.g
         initial={{ x: NABU_START.x, y: NABU_START.y }}
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
-        transition={{ duration: flyUp ? 1.6 : 0.8 }}
+        transition={{ duration: flyUp ? BENNY_TRANSITION_SECONDS : 0.8 }}
       >
         <BennySvgImage mood="idle" size={280} />
         {/* attached lift element */}
