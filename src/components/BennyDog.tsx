@@ -73,7 +73,7 @@ const ensureKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 2.6s steps(${WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle 2.6s steps(${WALK_FRAMES - 1}, end) infinite;
   will-change: background-position;
 }
 .benny-walk-sprite-jump { animation-duration: 1.6s; }
@@ -186,7 +186,7 @@ export const BennyDog = ({
                 height: walkSize,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
                 backgroundSize: `${walkSize * WALK_FRAMES}px ${walkSize}px`,
-                ["--benny-walk-end" as any]: `${-WALK_FRAMES * walkSize}px`,
+                ["--benny-walk-end" as any]: `${-(WALK_FRAMES - 1) * walkSize}px`,
               }}
               aria-label={isMoving ? "Benny walking" : undefined}
               role={isMoving ? "img" : undefined}
