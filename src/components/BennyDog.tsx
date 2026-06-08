@@ -43,7 +43,7 @@ const IDLE_FALLBACK_PNG = idleAsset.url;
 // Inject keyframes once. The animation walks background-position right 30
 // steps, then holds the last frame for ~1s before looping — "breathe →
 // settle → breathe" without a continuous wobble.
-const STYLE_ID = "benny-dog-sprite-keyframes-v6-rigged-legs";
+const STYLE_ID = "benny-dog-sprite-keyframes-v7-attached-rig";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -56,9 +56,6 @@ const ensureKeyframes = () => {
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-sprite-action-idle { animation-duration: 3.2s; }
-.benny-sprite-action-walk { animation-duration: 0.6s; }
-.benny-sprite-action-jump { animation-duration: 0.5s; }
-.benny-sprite-action-climb { animation-duration: 0.6s; }
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
@@ -67,59 +64,65 @@ const ensureKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
-.benny-legs {
-  position: absolute;
-  left: 0; right: 0; bottom: -2%;
-  height: 30%;
-  pointer-events: none;
+.benny-rig { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; }
+.benny-rig-body { position: relative; z-index: 2; width: 100%; height: 100%; }
+.benny-rig-hips { position: absolute; z-index: 1; left: 50%; bottom: 8%; width: 0; height: 0; pointer-events: none; }
+.benny-rig-leg {
+  position: absolute; left: 0; top: 0;
+  width: 14%; height: 22%; margin-left: -7%;
+  border-radius: 42% 42% 50% 50% / 30% 30% 70% 70%;
+  background: linear-gradient(180deg, #f0a458 0%, #d98538 70%, #b96a20 100%);
+  box-shadow: inset 0 -0.25em 0 rgba(120, 60, 12, 0.25), inset 0 0.15em 0 rgba(255, 232, 188, 0.3), 0 0.15em 0.2em rgba(0,0,0,0.18);
+  transform-origin: 50% 0%;
   opacity: 0;
 }
-.benny-legs-walk, .benny-legs-jump, .benny-legs-climb { opacity: 1; }
-.benny-leg {
-  position: absolute;
-  bottom: 14%;
-  width: 17%;
-  height: 60%;
-  border-radius: 42% 42% 50% 50% / 28% 28% 60% 60%;
-  background: linear-gradient(180deg, #f6b86b 0%, #e29142 60%, #c97623 100%);
-  box-shadow:
-    inset 0 -0.35em 0 rgba(120, 60, 12, 0.22),
-    inset 0 0.18em 0 rgba(255, 232, 188, 0.35),
-    0 0.18em 0.25em rgba(0,0,0,0.18);
-  transform-origin: 50% 6%;
+.benny-rig-leg::after {
+  content: ""; position: absolute; left: -18%; right: -18%; bottom: -28%; height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 35%, #fff1d4 0 22%, #f3b266 42% 75%, #a85e1c 100%);
+  box-shadow: 0 0.15em 0.2em rgba(0,0,0,0.22);
 }
-.benny-leg-paw {
-  position: absolute;
-  left: -14%; right: -14%; bottom: -22%;
-  height: 42%;
-  border-radius: 50% 50% 48% 48% / 40% 40% 60% 60%;
-  background: radial-gradient(ellipse at 50% 30%, #fff3d6 0 18%, #f4b25a 38% 70%, #a85e1c 100%);
-  box-shadow: 0 0.18em 0.22em rgba(0,0,0,0.2);
+.benny-rig-moving .benny-rig-leg { opacity: 1; }
+.benny-rig-leg-l { transform: translate(-90%, 0) rotate(0deg); }
+.benny-rig-leg-r { transform: translate(-10%, 0) rotate(0deg); }
+@keyframes benny-leg-walk-l {
+  0%, 100% { transform: translate(-90%, 0) rotate(-28deg); }
+  50%      { transform: translate(-90%, -10%) rotate(28deg); }
 }
-.benny-leg-left  { left: 30%; }
-.benny-leg-right { right: 30%; }
-@keyframes benny-leg-swing-a {
-  0%, 100% { transform: rotate(-30deg); }
-  50%      { transform: rotate(30deg); }
+@keyframes benny-leg-walk-r {
+  0%, 100% { transform: translate(-10%, -10%) rotate(28deg); }
+  50%      { transform: translate(-10%, 0) rotate(-28deg); }
 }
-@keyframes benny-leg-swing-b {
-  0%, 100% { transform: rotate(30deg); }
-  50%      { transform: rotate(-30deg); }
+.benny-rig-walk .benny-rig-leg-l { animation: benny-leg-walk-l 0.5s ease-in-out infinite; }
+.benny-rig-walk .benny-rig-leg-r { animation: benny-leg-walk-r 0.5s ease-in-out infinite; }
+@keyframes benny-leg-jump-pair {
+  0%, 100% { transform: translate(var(--lx,-90%), 0) rotate(var(--lr,-10deg)) scaleY(1); }
+  50%      { transform: translate(var(--lx,-90%), -18%) rotate(var(--lr,-10deg)) scaleY(0.7); }
 }
-.benny-legs-walk .benny-leg-left  { animation: benny-leg-swing-a 0.5s ease-in-out infinite; }
-.benny-legs-walk .benny-leg-right { animation: benny-leg-swing-b 0.5s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-left  { animation: benny-leg-swing-a 0.38s ease-in-out infinite; }
-.benny-legs-jump .benny-leg-right { animation: benny-leg-swing-b 0.38s ease-in-out infinite; }
-@keyframes benny-leg-climb-a {
-  0%, 100% { transform: rotate(-8deg) translateY(0); }
-  50%      { transform: rotate(-18deg) translateY(-22%); }
+.benny-rig-jump .benny-rig-leg-l { --lx: -90%; --lr: -12deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-rig-leg-r { --lx: -10%; --lr:  12deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+@keyframes benny-leg-climb-l {
+  0%, 100% { transform: translate(-90%, 0)   rotate(-6deg); }
+  50%      { transform: translate(-90%, -25%) rotate(-18deg); }
 }
-@keyframes benny-leg-climb-b {
-  0%, 100% { transform: rotate(8deg) translateY(-22%); }
-  50%      { transform: rotate(18deg) translateY(0); }
+@keyframes benny-leg-climb-r {
+  0%, 100% { transform: translate(-10%, -25%) rotate(6deg); }
+  50%      { transform: translate(-10%, 0)    rotate(18deg); }
 }
-.benny-legs-climb .benny-leg-left  { animation: benny-leg-climb-a 0.7s ease-in-out infinite; }
-.benny-legs-climb .benny-leg-right { animation: benny-leg-climb-b 0.7s ease-in-out infinite; }
+.benny-rig-climb .benny-rig-leg-l { animation: benny-leg-climb-l 0.7s ease-in-out infinite; }
+.benny-rig-climb .benny-rig-leg-r { animation: benny-leg-climb-r 0.7s ease-in-out infinite; }
+@keyframes benny-body-bob {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50%      { transform: translateY(-4%) rotate(1deg); }
+}
+@keyframes benny-body-jump {
+  0%, 100% { transform: translateY(0)    scaleY(1); }
+  35%      { transform: translateY(-12%) scaleY(1.04); }
+  60%      { transform: translateY(-12%) scaleY(1.04); }
+}
+.benny-rig-walk  { animation: benny-body-bob  0.5s ease-in-out infinite; }
+.benny-rig-jump  { animation: benny-body-jump 0.45s ease-in-out infinite; }
+.benny-rig-climb { animation: benny-body-bob  0.7s ease-in-out infinite; }
 @keyframes benny-celebrate-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-18px) scale(1.15); }
@@ -135,7 +138,7 @@ const ensureKeyframes = () => {
 .benny-anim-sad       { animation: benny-sad-shake       0.4s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-leg { animation: none !important; }
+  .benny-rig, .benny-rig-leg { animation: none !important; }
   .benny-anim-celebrate, .benny-anim-sad { animation: none; }
 }
 `;
