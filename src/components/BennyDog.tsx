@@ -181,11 +181,13 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Sprite-backed Benny body. Rigged legs render only during movement. */}
+      {/* Sprite-backed Benny body wrapped in an attached leg rig. Body stays
+          whole and bobs as a unit; hind legs swing past the silhouette only
+          during walk/jump/climb. */}
       {(() => {
         const isSprite = mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb";
         const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
-        const spriteAction = mood === "climb" ? "walk" : mood;
+        const rigClass = isMoving ? `benny-rig benny-rig-moving benny-rig-${mood}` : "benny-rig";
         return (
           <div
             style={{
@@ -199,29 +201,24 @@ export const BennyDog = ({
               transition: "opacity 0.3s ease-in-out",
             }}
           >
-            <div
-              className={`benny-idle-sprite benny-sprite-action-${isSprite ? spriteAction : "idle"}`}
-              style={{
-                width: size,
-                height: spriteH,
-                backgroundImage: `url(${bennySprite.url})`,
-                backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
-                ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
-                clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
-              }}
-              aria-label={isSprite ? "Benny the puppy" : undefined}
-              role={isSprite ? "img" : undefined}
-            />
-            {isMoving && (
-              <div className={`benny-legs benny-legs-${mood}`} aria-hidden="true">
-                <span className="benny-leg benny-leg-left">
-                  <span className="benny-leg-paw" />
-                </span>
-                <span className="benny-leg benny-leg-right">
-                  <span className="benny-leg-paw" />
-                </span>
-              </div>
-            )}
+            <div className={rigClass}>
+              {isMoving && (
+                <div className="benny-rig-hips" aria-hidden="true">
+                  <span className="benny-rig-leg benny-rig-leg-l" />
+                  <span className="benny-rig-leg benny-rig-leg-r" />
+                </div>
+              )}
+              <div
+                className="benny-idle-sprite benny-rig-body benny-sprite-action-idle"
+                style={{
+                  backgroundImage: `url(${bennySprite.url})`,
+                  backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
+                  ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
+                }}
+                aria-label={isSprite ? "Benny the puppy" : undefined}
+                role={isSprite ? "img" : undefined}
+              />
+            </div>
           </div>
         );
       })()}
