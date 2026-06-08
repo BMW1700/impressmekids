@@ -14,7 +14,6 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-import { BennyRigged } from "@/components/BennyRigged";
 // Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
 // via background-position steps — identical performance on every browser
 // including Safari, where animated WebP decodes single-threaded and stutters.
