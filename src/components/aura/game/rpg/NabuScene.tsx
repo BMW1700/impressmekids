@@ -32,12 +32,6 @@ const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
 
-const BENNY_SOURCES: Record<BennyMood, string> = {
-  idle: bennySprite.url, // unused for idle; sprite path renders <foreignObject>
-  celebrate: celebrateAsset.url,
-  sad: sadAsset.url,
-};
-
 interface NabuSceneProps {
   word: string;
   phase: ScenePhase;
@@ -160,19 +154,18 @@ const NabuSprite = ({
   phase,
   size = 280,
   anim,
+  action,
 }: {
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
+  action?: "idle" | "walk" | "jump";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  // During movement (solved/transition) we MUST keep the animated sprite
-  // sheet running — switching to the still celebrate PNG kills all leg
-  // motion and Benny becomes a generic floating picture. The wrapper
-  // <motion.g> already provides the bounce/arc/hop; the sprite sheet
-  // provides the actual leg animation underneath.
-  // Only "sad" overrides the sprite (and only briefly, when stationary).
-  const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : "idle";
+  const movementAction: BennyMood = action ?? (phase === "solved" || phase === "transition" ? "walk" : "idle");
+  // Never use the static celebrate PNG for gameplay motion. If Benny is
+  // moving, force a sprite-backed action state with an explicit paw cycle.
+  const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <BennySvgImage mood={bennyMood} size={size} />
