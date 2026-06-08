@@ -260,12 +260,14 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle: render the CSS sprite sheet inside <foreignObject> so it composites
-  // through the GPU and runs identically on Safari.
-  if (mood === "idle") {
+  // Idle / walk / jump: render the CSS sprite sheet inside <foreignObject> so
+  // Benny never becomes a static PNG during movement. The paw overlay makes
+  // leg motion unmistakable in the current front-facing art.
+  if (mood === "idle" || mood === "walk" || mood === "jump") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
+    const action = mood;
     return (
       <foreignObject
         x={-w / 2}
@@ -276,7 +278,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       >
         <div style={{ width: w, height: h }}>
           <div
-            className="benny-idle-sprite"
+            className={`benny-idle-sprite benny-sprite-action-${action}`}
             style={{
               width: w,
               height: h,
@@ -287,6 +289,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             aria-label="Benny the puppy"
             role="img"
           />
+          <div className={`benny-action-paws benny-action-${action}`}>
+            <span className="benny-action-paw benny-action-paw-left" />
+            <span className="benny-action-paw benny-action-paw-right" />
+          </div>
         </div>
       </foreignObject>
     );
