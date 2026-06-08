@@ -14,10 +14,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-// Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
-// via background-position steps — identical performance on every browser
-// including Safari, where animated WebP decodes single-threaded and stutters.
-import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
+import idleAsset from "@/assets/benny-idle.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
@@ -256,36 +253,62 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle: original sprite-sheet still pose (breathing).
+  // Idle: static original pose. No sprite-sheet animation here — the pre-word
+  // idle was the remaining glitch. Walking remains unchanged below.
   // Walk / jump / climb: real walking video as a transparent sprite sheet —
   // legs visibly cycle. Anchored so feet sit at the same ground baseline.
-  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
+  if (mood === "idle") {
+    const w = size;
+    const h = Math.round(size * BENNY_SPRITE_ASPECT);
+    const stillY = -h;
+    return (
+      <g aria-label="Benny the puppy" role="img">
+        <svg
+          x={-w / 2}
+          y={stillY}
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          overflow="visible"
+        >
+          <image
+            href={idleAsset.url}
+            x="0"
+            y="0"
+            width={w}
+            height={h}
+            preserveAspectRatio="xMidYMax meet"
+          />
+        </svg>
+      </g>
+    );
+  }
+
+  if (mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const isMoving = mood !== "idle";
     const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
     // Anchor at parent's (NABU_START.y == GROUND_Y). Sprite bottom edge sits
     // on the ground; walking sheet adds its transparent bottom pad back.
     const walkY = -w + walkPad;
-    const stillY = -h;
     return (
-      <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
+      <g aria-label="Benny walking" role="img">
         <svg
           x={-w / 2}
-          y={isMoving ? walkY : stillY}
+          y={walkY}
           width={w}
-          height={isMoving ? w : h}
-          viewBox={`0 0 ${w} ${isMoving ? w : h}`}
+          height={w}
+          viewBox={`0 0 ${w} ${w}`}
           overflow="hidden"
         >
           <image
-            className={isMoving ? `benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}` : "benny-idle-strip"}
-            href={isMoving ? bennyWalkSprite.url : bennySprite.url}
+            className={`benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}`}
+            href={bennyWalkSprite.url}
             x="0"
             y="0"
-            width={isMoving ? w * BENNY_WALK_FRAMES : w * BENNY_SPRITE_FRAMES}
-            height={isMoving ? w : h}
+            width={w * BENNY_WALK_FRAMES}
+            height={w}
             preserveAspectRatio="none"
             style={{
               ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
