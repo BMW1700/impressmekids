@@ -60,7 +60,7 @@ const nabuAnim = (phase: ScenePhase) => {
       x: NABU_EXIT.x,
       y: NABU_EXIT.y,
       scaleY: 1, scaleX: 1, rotate: 0,
-      transition: { duration: 1.6, ease: "easeInOut" as const },
+      transition: { duration: 2.6, ease: "easeInOut" as const },
     };
   }
   if (phase === "solved") {
@@ -139,7 +139,7 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
         y: [NABU_START.y, targetY, targetY, targetY],
         scaleY: [1, 1, 1, 1],
         scaleX: [1, 1, 1, 1],
-        transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
+        transition: { duration: 2.4, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
     return nabuAnim(phase);
@@ -223,11 +223,11 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle 2.4s steps(${BENNY_WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite-jump { animation-duration: 1.0s; }
-.benny-walk-sprite-climb { animation-duration: 1.8s; }
+.benny-walk-sprite-jump { animation-duration: 1.6s; }
+.benny-walk-sprite-climb { animation-duration: 2.8s; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite, .benny-walk-sprite { animation: none; }
 }
@@ -280,7 +280,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               style={{
                 position: "absolute",
                 left: 0,
-                bottom: 0,
+                bottom: -walkGroundCorrection,
                 width: w,
                 height: walkH,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
