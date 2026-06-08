@@ -219,6 +219,7 @@ const ensureBennySpriteKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
+.benny-rig-moving .benny-idle-sprite { animation: none; background-position-x: 0px; }
 /* ---- Cutout leg rig: hide original legs, then swing clipped copies of the real sprite legs. */
 .benny-rig {
   position: relative;
