@@ -11,7 +11,7 @@
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
-import { createContext, useContext, useId } from "react";
+import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
 // Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
@@ -269,18 +269,19 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = mood !== "idle";
-    const clipId = `benny-clip-${useId().replace(/:/g, "")}`;
     const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
     const walkY = -w + walkPad + 10;
     const stillY = -h + 10;
     return (
       <g aria-label={isMoving ? "Benny walking" : "Benny the puppy"} role="img">
-        <defs>
-          <clipPath id={clipId}>
-            <rect x="0" y="0" width={w} height={isMoving ? w : h} />
-          </clipPath>
-        </defs>
-        <g transform={`translate(${-w / 2} ${isMoving ? walkY : stillY})`} clipPath={`url(#${clipId})`}>
+        <svg
+          x={-w / 2}
+          y={isMoving ? walkY : stillY}
+          width={w}
+          height={isMoving ? w : h}
+          viewBox={`0 0 ${w} ${isMoving ? w : h}`}
+          overflow="hidden"
+        >
           <image
             className={isMoving ? `benny-walk-strip${mood === "jump" ? " benny-walk-strip-jump" : ""}${mood === "climb" ? " benny-walk-strip-climb" : ""}` : "benny-idle-strip"}
             href={isMoving ? bennyWalkSprite.url : bennySprite.url}
@@ -294,7 +295,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
             }}
           />
-        </g>
+        </svg>
       </g>
     );
   }

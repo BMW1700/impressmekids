@@ -36,6 +36,7 @@ const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 // Walking sprite sheet (transparent cutout from real walking video).
 const WALK_FRAMES = 24;
 const WALK_ASPECT = 1; // 360×360 cells
+const WALK_VISIBLE_BOTTOM_PAD = 38;
 
 
 const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
@@ -72,11 +73,11 @@ const ensureKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle 2.6s steps(${WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite-jump { animation-duration: 1.0s; }
-.benny-walk-sprite-climb { animation-duration: 1.8s; }
+.benny-walk-sprite-jump { animation-duration: 1.6s; }
+.benny-walk-sprite-climb { animation-duration: 2.8s; }
 @keyframes benny-celebrate-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-18px) scale(1.15); }
@@ -167,7 +168,7 @@ export const BennyDog = ({
       {(() => {
         const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
         const walkSize = size;
-        const walkGroundCorrection = Math.round(walkSize * 10 / 360);
+        const walkGroundCorrection = Math.round(walkSize * WALK_VISIBLE_BOTTOM_PAD / 360);
         return (
           <div
             style={{
