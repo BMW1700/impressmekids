@@ -219,8 +219,7 @@ const ensureBennySpriteKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
-/* ---- Attached hind-leg rig: legs sit BEHIND the body, anchored to the hips,
-   so they swing past the body silhouette during movement without ever detaching. */
+/* ---- Visible attached leg rig: legs sit ON the body and pivot from fixed hip sockets. */
 .benny-rig {
   position: relative;
   width: 100%;
@@ -229,78 +228,81 @@ const ensureBennySpriteKeyframes = () => {
 }
 .benny-rig-body {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   width: 100%;
   height: 100%;
 }
 .benny-rig-hips {
   position: absolute;
-  z-index: 1;
-  left: 50%;
-  bottom: 8%;
-  width: 0;
-  height: 0;
+  z-index: 3;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 .benny-rig-leg {
   position: absolute;
-  left: 0; top: 0;
-  width: 14%;
-  height: 22%;
-  margin-left: -7%;
-  border-radius: 42% 42% 50% 50% / 30% 30% 70% 70%;
-  background: linear-gradient(180deg, #f0a458 0%, #d98538 70%, #b96a20 100%);
+  left: 50%;
+  top: 72%;
+  width: 8.5%;
+  height: 21%;
+  margin-left: -4.25%;
+  border-radius: 46% 46% 42% 42% / 18% 18% 55% 55%;
+  background: linear-gradient(180deg, #f8b64f 0%, #e88d27 58%, #bd6419 100%);
   box-shadow:
-    inset 0 -0.25em 0 rgba(120, 60, 12, 0.25),
-    inset 0 0.15em 0 rgba(255, 232, 188, 0.3),
-    0 0.15em 0.2em rgba(0,0,0,0.18);
+    inset -0.22em 0 0 rgba(151, 79, 13, 0.22),
+    inset 0.16em 0.12em 0 rgba(255, 235, 188, 0.28),
+    0 0.12em 0.18em rgba(0,0,0,0.12);
   transform-origin: 50% 0%;
   opacity: 0;
 }
 .benny-rig-leg::after {
   content: "";
   position: absolute;
-  left: -18%; right: -18%; bottom: -28%;
-  height: 55%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 35%, #fff1d4 0 22%, #f3b266 42% 75%, #a85e1c 100%);
-  box-shadow: 0 0.15em 0.2em rgba(0,0,0,0.22);
+  left: -45%;
+  bottom: -20%;
+  width: 190%;
+  height: 42%;
+  border-radius: 48% 52% 55% 45%;
+  background: radial-gradient(ellipse at 42% 35%, #fff0cf 0 24%, #f6ba6b 48% 78%, #b35e17 100%);
+  box-shadow: inset 0 -0.12em 0 rgba(139, 69, 12, 0.22), 0 0.12em 0.18em rgba(0,0,0,0.16);
 }
 .benny-rig-moving .benny-rig-leg { opacity: 1; }
-/* Width relative to body — sits at ~38%/62% horizontally on the hips line */
-.benny-rig-leg-l { transform: translate(-90%, 0) rotate(0deg); }
-.benny-rig-leg-r { transform: translate( -10%, 0) rotate(0deg); }
+/* Hip sockets match the two front legs in the source art. */
+.benny-rig-leg-l { transform: translate(-155%, 0) rotate(0deg); }
+.benny-rig-leg-r { transform: translate(68%, 0) rotate(0deg); }
 
 @keyframes benny-leg-walk-l {
-  0%, 100% { transform: translate(-90%, 0) rotate(-28deg); }
-  50%      { transform: translate(-90%, -10%) rotate(28deg); }
+  0%, 100% { transform: translate(-155%, 0) rotate(-18deg) scaleY(1); }
+  50%      { transform: translate(-155%, 0) rotate(24deg) scaleY(0.96); }
 }
 @keyframes benny-leg-walk-r {
-  0%, 100% { transform: translate(-10%, -10%) rotate(28deg); }
-  50%      { transform: translate(-10%, 0) rotate(-28deg); }
+  0%, 100% { transform: translate(68%, 0) rotate(24deg) scaleY(0.96); }
+  50%      { transform: translate(68%, 0) rotate(-18deg) scaleY(1); }
 }
-.benny-rig-walk .benny-rig-leg-l { animation: benny-leg-walk-l 0.5s ease-in-out infinite; }
-.benny-rig-walk .benny-rig-leg-r { animation: benny-leg-walk-r 0.5s ease-in-out infinite; }
+.benny-rig-walk .benny-rig-leg-l { animation: benny-leg-walk-l 0.36s ease-in-out infinite; }
+.benny-rig-walk .benny-rig-leg-r { animation: benny-leg-walk-r 0.36s ease-in-out infinite; }
 
 @keyframes benny-leg-jump-pair {
-  0%, 100% { transform: translate(var(--lx,-90%), 0) rotate(var(--lr,-10deg)) scaleY(1); }
-  50%      { transform: translate(var(--lx,-90%), -18%) rotate(var(--lr,-10deg)) scaleY(0.7); }
+  0%, 100% { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(1); }
+  50%      { transform: translate(var(--lx,-155%), 0) rotate(var(--lr,-8deg)) scaleY(0.72); }
 }
-.benny-rig-jump .benny-rig-leg-l { --lx: -90%; --lr: -12deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
-.benny-rig-jump .benny-rig-leg-r { --lx: -10%; --lr:  12deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-rig-leg-l { --lx: -155%; --lr: -10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
+.benny-rig-jump .benny-rig-leg-r { --lx:   68%; --lr:  10deg; animation: benny-leg-jump-pair 0.45s ease-in-out infinite; }
 
 @keyframes benny-leg-climb-l {
-  0%, 100% { transform: translate(-90%, 0)   rotate(-6deg); }
-  50%      { transform: translate(-90%, -25%) rotate(-18deg); }
+  0%, 100% { transform: translate(-155%, 0) rotate(-14deg) scaleY(1); }
+  50%      { transform: translate(-155%, 0) rotate(18deg) scaleY(0.86); }
 }
 @keyframes benny-leg-climb-r {
-  0%, 100% { transform: translate(-10%, -25%) rotate(6deg); }
-  50%      { transform: translate(-10%, 0)    rotate(18deg); }
+  0%, 100% { transform: translate(68%, 0) rotate(18deg) scaleY(0.86); }
+  50%      { transform: translate(68%, 0) rotate(-14deg) scaleY(1); }
 }
 .benny-rig-climb .benny-rig-leg-l { animation: benny-leg-climb-l 0.7s ease-in-out infinite; }
 .benny-rig-climb .benny-rig-leg-r { animation: benny-leg-climb-r 0.7s ease-in-out infinite; }
 
-/* Body bob ties the rig together so legs feel attached to a moving body */
+/* No walk bounce: the body translates through the scene while only the legs cycle. */
 @keyframes benny-body-bob {
   0%, 100% { transform: translateY(0) rotate(-1deg); }
   50%      { transform: translateY(-4%) rotate(1deg); }
@@ -310,9 +312,9 @@ const ensureBennySpriteKeyframes = () => {
   35%      { transform: translateY(-12%) scaleY(1.04); }
   60%      { transform: translateY(-12%) scaleY(1.04); }
 }
-.benny-rig-walk  { animation: benny-body-bob  0.5s ease-in-out infinite; }
+.benny-rig-walk  { animation: none; }
 .benny-rig-jump  { animation: benny-body-jump 0.45s ease-in-out infinite; }
-.benny-rig-climb { animation: benny-body-bob  0.7s ease-in-out infinite; }
+.benny-rig-climb { animation: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
