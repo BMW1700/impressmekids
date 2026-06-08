@@ -152,7 +152,7 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Idle sprite — always mounted, fades when another mood is active. */}
+      {/* Sprite-backed Benny — idle/walk/jump all keep visible leg motion. */}
       <div
         style={{
           position: "absolute",
@@ -161,12 +161,12 @@ export const BennyDog = ({
           bottom: 0,
           width: size,
           height: spriteH,
-          opacity: mood === "idle" ? 1 : 0,
+          opacity: mood === "idle" || mood === "walk" || mood === "jump" ? 1 : 0,
           transition: "opacity 0.3s ease-in-out",
         }}
       >
         <div
-          className="benny-idle-sprite"
+          className={`benny-idle-sprite benny-sprite-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}
           style={{
             width: size,
             height: spriteH,
@@ -174,9 +174,13 @@ export const BennyDog = ({
             backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
             ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
           }}
-          aria-label={mood === "idle" ? "Benny the puppy" : undefined}
-          role={mood === "idle" ? "img" : undefined}
+          aria-label={mood === "idle" || mood === "walk" || mood === "jump" ? "Benny the puppy" : undefined}
+          role={mood === "idle" || mood === "walk" || mood === "jump" ? "img" : undefined}
         />
+        <div className={`benny-action-paws benny-action-${mood === "walk" || mood === "jump" ? mood : "idle"}`}>
+          <span className="benny-action-paw benny-action-paw-left" />
+          <span className="benny-action-paw benny-action-paw-right" />
+        </div>
       </div>
 
       {/* Celebrate / sad stills with their own CSS animation wrapper. */}
