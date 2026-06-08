@@ -159,7 +159,7 @@ const NabuSprite = ({
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
-  action?: "idle" | "walk" | "jump";
+  action?: "idle" | "walk" | "jump" | "climb";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
   const isMovingPhase = phase === "solved" || phase === "transition";
