@@ -33,17 +33,10 @@ const SPRITE_CELL_W = 420;
 const SPRITE_CELL_H = 450;
 const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 
-const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
-  celebrate: celebrateAsset.url,
-  sad: sadAsset.url,
-};
-
-// Fallback used if the sprite sheet itself fails to load on a very old browser.
-const IDLE_FALLBACK_PNG = idleAsset.url;
-
-// Walking sprite sheet (transparent cutout from video).
+// Walking sprite sheet (transparent cutout from real walking video).
 const WALK_FRAMES = 24;
 const WALK_ASPECT = 1; // 360×360 cells
+
 
 const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
   celebrate: celebrateAsset.url,
