@@ -159,7 +159,7 @@ const NabuSprite = ({
   phase: ScenePhase;
   size?: number;
   anim?: (phase: ScenePhase) => NabuAnim;
-  action?: "idle" | "walk" | "jump";
+  action?: "idle" | "walk" | "jump" | "climb";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
   const isMovingPhase = phase === "solved" || phase === "transition";
@@ -197,16 +197,12 @@ const bennyMoodAnim = (mood: BennyMood) => {
 // Inject sprite keyframes once. Walks background-position right 30 steps then
 // holds the last frame for 2s before looping — gives Benny a "breathe → settle
 // → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-idle-sprite-keyframes-v2-action-paws";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v6-rigged-legs";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
   const el = document.createElement("style");
   el.id = BENNY_SPRITE_STYLE_ID;
-  // 30 cells, total strip = 30 × 100% wide. Animate from 0 to -2900% (29 steps
-  // of -100%, since the last frame sits at -2900%). steps(29) advances frame
-  // by frame, no interpolation = no decode jitter.
-  // Hold: keyframes pause at 100% for the final 28% of the cycle (≈2s of 7s).
   el.textContent = `
 @keyframes benny-idle-sprite-walk {
   0%   { background-position-x: 0px; }
@@ -214,8 +210,9 @@ const ensureBennySpriteKeyframes = () => {
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
 .benny-sprite-action-idle { animation-duration: 3.2s; }
-.benny-sprite-action-walk { animation-duration: 0.48s; }
-.benny-sprite-action-jump { animation-duration: 0.34s; }
+.benny-sprite-action-walk { animation-duration: 0.6s; }
+.benny-sprite-action-jump { animation-duration: 0.5s; }
+.benny-sprite-action-climb { animation-duration: 0.6s; }
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
@@ -224,51 +221,78 @@ const ensureBennySpriteKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
-@keyframes benny-paw-left-walk {
-  0%, 100% { transform: translate(0, 0) rotate(-5deg) scale(1); }
-  50%      { transform: translate(30%, -18%) rotate(9deg) scale(0.94); }
-}
-@keyframes benny-paw-right-walk {
-  0%, 100% { transform: translate(0, 0) rotate(5deg) scale(1); }
-  50%      { transform: translate(-30%, -18%) rotate(-9deg) scale(0.94); }
-}
-.benny-action-paws { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
-.benny-action-paw {
+/* ---- Rigged legs: only appear during walk/jump/climb ---- */
+.benny-legs {
   position: absolute;
-  bottom: 1.5%;
-  width: 18%;
-  height: 12%;
-  border-radius: 48% 48% 40% 40%;
-  background: radial-gradient(circle at 48% 22%, #fff7dc 0 34%, #f4b25a 36% 68%, #d98b2e 100%);
-  box-shadow: inset 0 -0.18em 0 rgba(126, 65, 18, 0.18), 0 0.12em 0.18em rgba(0,0,0,0.12);
+  left: 0; right: 0; bottom: -2%;
+  height: 30%;
+  pointer-events: none;
+  opacity: 0;
 }
-.benny-action-paw-left { left: 31%; transform-origin: 50% 20%; }
-.benny-action-paw-right { right: 31%; transform-origin: 50% 20%; }
-.benny-action-walk, .benny-action-jump { opacity: 1; }
-.benny-action-walk .benny-action-paw-left,
-.benny-action-jump .benny-action-paw-left { animation: benny-paw-left-walk 0.42s steps(2, end) infinite; }
-.benny-action-walk .benny-action-paw-right,
-.benny-action-jump .benny-action-paw-right { animation: benny-paw-right-walk 0.42s steps(2, end) infinite; }
-.benny-action-idle { opacity: 0.75; }
-.benny-action-idle .benny-action-paw-left { animation: benny-paw-left-walk 1.2s steps(2, end) infinite; }
-.benny-action-idle .benny-action-paw-right { animation: benny-paw-right-walk 1.2s steps(2, end) infinite; }
+.benny-legs-walk, .benny-legs-jump, .benny-legs-climb { opacity: 1; }
+.benny-leg {
+  position: absolute;
+  bottom: 14%;
+  width: 17%;
+  height: 60%;
+  border-radius: 42% 42% 50% 50% / 28% 28% 60% 60%;
+  background: linear-gradient(180deg, #f6b86b 0%, #e29142 60%, #c97623 100%);
+  box-shadow:
+    inset 0 -0.35em 0 rgba(120, 60, 12, 0.22),
+    inset 0 0.18em 0 rgba(255, 232, 188, 0.35),
+    0 0.18em 0.25em rgba(0,0,0,0.18);
+  transform-origin: 50% 6%;
+}
+.benny-leg-paw {
+  position: absolute;
+  left: -14%; right: -14%; bottom: -22%;
+  height: 42%;
+  border-radius: 50% 50% 48% 48% / 40% 40% 60% 60%;
+  background: radial-gradient(ellipse at 50% 30%, #fff3d6 0 18%, #f4b25a 38% 70%, #a85e1c 100%);
+  box-shadow: 0 0.18em 0.22em rgba(0,0,0,0.2);
+}
+.benny-leg-left  { left: 30%; }
+.benny-leg-right { right: 30%; }
+@keyframes benny-leg-swing-a {
+  0%, 100% { transform: rotate(-30deg); }
+  50%      { transform: rotate(30deg); }
+}
+@keyframes benny-leg-swing-b {
+  0%, 100% { transform: rotate(30deg); }
+  50%      { transform: rotate(-30deg); }
+}
+.benny-legs-walk .benny-leg-left  { animation: benny-leg-swing-a 0.5s ease-in-out infinite; }
+.benny-legs-walk .benny-leg-right { animation: benny-leg-swing-b 0.5s ease-in-out infinite; }
+.benny-legs-jump .benny-leg-left  { animation: benny-leg-swing-a 0.38s ease-in-out infinite; }
+.benny-legs-jump .benny-leg-right { animation: benny-leg-swing-b 0.38s ease-in-out infinite; }
+@keyframes benny-leg-climb-a {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  50%      { transform: rotate(-18deg) translateY(-22%); }
+}
+@keyframes benny-leg-climb-b {
+  0%, 100% { transform: rotate(8deg) translateY(-22%); }
+  50%      { transform: rotate(18deg) translateY(0); }
+}
+.benny-legs-climb .benny-leg-left  { animation: benny-leg-climb-a 0.7s ease-in-out infinite; }
+.benny-legs-climb .benny-leg-right { animation: benny-leg-climb-b 0.7s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
-  .benny-action-paw { animation: none !important; }
+  .benny-leg { animation: none !important; }
 }
 `;
   document.head.appendChild(el);
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle / walk / jump: render the CSS sprite sheet inside <foreignObject> so
-  // Benny never becomes a static PNG during movement. The paw overlay makes
-  // leg motion unmistakable in the current front-facing art.
-  if (mood === "idle" || mood === "walk" || mood === "jump") {
+  // Idle / walk / jump / climb: render Benny's body via the sprite sheet.
+  // For movement actions we hide the painted feet (clip-path bottom band) and
+  // draw a real rigged set of legs underneath that swing in opposite phase.
+  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const action = mood;
+    const isMoving = action !== "idle";
     return (
       <foreignObject
         x={-w / 2}
@@ -279,25 +303,34 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       >
         <div style={{ width: w, height: h, position: "relative" }}>
           <div
-            className={`benny-idle-sprite benny-sprite-action-${action}`}
+            className={`benny-idle-sprite benny-sprite-action-${action === "climb" ? "walk" : action}`}
             style={{
               width: w,
               height: h,
               backgroundImage: `url(${bennySprite.url})`,
               backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
               ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              // Hide painted feet so our rigged legs are the only feet visible.
+              clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
             }}
             aria-label="Benny the puppy"
             role="img"
           />
-          <div className={`benny-action-paws benny-action-${action}`}>
-            <span className="benny-action-paw benny-action-paw-left" />
-            <span className="benny-action-paw benny-action-paw-right" />
-          </div>
+          {isMoving && (
+            <div className={`benny-legs benny-legs-${action}`} aria-hidden="true">
+              <span className="benny-leg benny-leg-left">
+                <span className="benny-leg-paw" />
+              </span>
+              <span className="benny-leg benny-leg-right">
+                <span className="benny-leg-paw" />
+              </span>
+            </div>
+          )}
         </div>
       </foreignObject>
     );
   }
+
 
   // Celebrate / sad: render the still PNG inside a motion wrapper. The
   // sprite-sheet has no celebrate/sad frames, and the rigged head/body split
@@ -728,7 +761,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           animate={{ x: 612, y: GROUND_Y - 260 }}
           transition={{ duration: 1.6, ease: "easeInOut" }}
         >
-          <BennySvgImage mood="idle" size={280} />
+          <BennySvgImage mood="climb" size={280} />
         </motion.g>
       ) : (
         <NabuSprite phase={phase} />
