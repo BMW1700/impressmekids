@@ -1263,7 +1263,7 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
         animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
         transition={{ duration: flyUp ? 1.6 : 0.8 }}
       >
-        <BennySvgImage mood={phase === "solved" || phase === "transition" ? "celebrate" : "idle"} size={280} />
+        <BennySvgImage mood="idle" size={280} />
         {/* attached lift element */}
         {solved && kind === "BALLOON" && (
           <g>
