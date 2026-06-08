@@ -170,7 +170,7 @@ const NabuSprite = ({
   const movementAction: BennyMood = isMovingPhase && (action ?? "walk") === "walk" ? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
   return (
-    <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
+    <motion.g key={phase} initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
       <BennySvgImage mood={bennyMood} size={size} />
     </motion.g>
   );
