@@ -63,14 +63,15 @@ const nabuAnim = (phase: ScenePhase) => {
     };
   }
   if (phase === "solved") {
-    // Joyful triple-hop with squash-and-stretch + small spin on each apex.
+    // Word accepted: hold steady while the solution appears. Actual leg motion
+    // happens only when Benny starts traveling in the transition phase.
     return {
       x: NABU_START.x,
-      y: [NABU_START.y, NABU_START.y - 38, NABU_START.y, NABU_START.y - 26, NABU_START.y, NABU_START.y - 18, NABU_START.y],
-      scaleY: [1, 1.12, 0.88, 1.10, 0.92, 1.06, 1],
-      scaleX: [1, 0.92, 1.08, 0.94, 1.06, 0.96, 1],
-      rotate: [0, -6, 0, 6, 0, -3, 0],
-      transition: { duration: 1.6, ease: "easeOut" as const },
+      y: NABU_START.y,
+      scaleY: 1,
+      scaleX: 1,
+      rotate: 0,
+      transition: { duration: 0.15, ease: "easeOut" as const },
     };
   }
   if (phase === "problem") {
@@ -162,7 +163,7 @@ const NabuSprite = ({
   action?: "idle" | "walk" | "jump" | "climb";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
-  const isMovingPhase = phase === "solved" || phase === "transition";
+  const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   // Never use the static celebrate PNG for gameplay motion. If Benny is
   // moving, force a sprite-backed action state with an explicit paw cycle.
@@ -197,7 +198,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 // Inject sprite keyframes once. Walks background-position right 30 steps then
 // holds the last frame for 2s before looping — gives Benny a "breathe → settle
 // → breathe" feel without a continuous wobble.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v7-attached-rig";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-visible-attached-legs";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
