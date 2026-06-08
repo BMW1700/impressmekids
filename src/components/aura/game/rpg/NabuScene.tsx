@@ -197,8 +197,12 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-grounded-walk";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v9-visible-grounded-walk";
 const BENNY_WALK_FRAMES = 24;
+// Walk cells are square and include transparent safety padding from the source
+// video. Render them larger than the CSS box, centered and bottom-anchored, so
+// Benny visibly walks at the same scale as idle without floating.
+const BENNY_WALK_RENDER_SCALE = 1.28;
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -223,7 +227,7 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
+  animation: benny-walk-cycle 0.8s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
   will-change: background-position;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -243,18 +247,18 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = visualMood === "walk";
-    // Walk sprite cells are square (1:1). Render at the same width and align
-    // its bottom to the idle sprite's bottom so the ground line stays put.
-    const walkH = w;
+    // Walk sprite cells are square (1:1) but have transparent source padding.
+    // Scale them up inside the same anchored box so the dog visibly moves.
+    const walkSize = Math.round(w * BENNY_WALK_RENDER_SCALE);
     return (
       <foreignObject
         x={-w / 2}
         y={-h + 10}
         width={w}
-        height={Math.max(h, walkH)}
+        height={Math.max(h, walkSize)}
         style={{ overflow: "visible", pointerEvents: "none" }}
       >
-        <div style={{ width: w, height: Math.max(h, walkH), position: "relative" }}>
+        <div style={{ width: w, height: Math.max(h, walkSize), position: "relative" }}>
           {!isMoving && (
             <div
               className="benny-idle-sprite"
@@ -277,13 +281,14 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
               className="benny-walk-sprite"
               style={{
                 position: "absolute",
-                left: 0,
+                left: "50%",
                 bottom: 0,
-                width: w,
-                height: walkH,
+                transform: "translateX(-50%)",
+                width: walkSize,
+                height: walkSize,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
-                backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
+                backgroundSize: `${walkSize * BENNY_WALK_FRAMES}px ${walkSize}px`,
+                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * walkSize}px`,
               }}
               aria-label="Benny walking"
               role="img"
