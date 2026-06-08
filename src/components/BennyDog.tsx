@@ -134,47 +134,61 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Sprite-backed Benny body. Rigged legs render only during movement. */}
+      {/* Idle Benny: original sprite sheet (still pose breathing). */}
       {(() => {
-        const isSprite = mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb";
-        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
-        const spriteAction = mood === "climb" ? "walk" : mood;
+        const isIdle = mood === "idle";
         return (
           <div
             style={{
               position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: 0,
-              width: size,
-              height: spriteH,
-              opacity: isSprite ? 1 : 0,
+              left: 0, right: 0, bottom: 0,
+              width: size, height: spriteH,
+              opacity: isIdle ? 1 : 0,
               transition: "opacity 0.3s ease-in-out",
             }}
           >
             <div
-              className={`benny-idle-sprite benny-sprite-action-${isSprite ? spriteAction : "idle"}`}
+              className="benny-idle-sprite"
               style={{
                 width: size,
                 height: spriteH,
                 backgroundImage: `url(${bennySprite.url})`,
                 backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
                 ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
-                clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
               }}
-              aria-label={isSprite ? "Benny the puppy" : undefined}
-              role={isSprite ? "img" : undefined}
+              aria-label={isIdle ? "Benny the puppy" : undefined}
+              role={isIdle ? "img" : undefined}
             />
-            {isMoving && (
-              <div className={`benny-legs benny-legs-${mood}`} aria-hidden="true">
-                <span className="benny-leg benny-leg-left">
-                  <span className="benny-leg-paw" />
-                </span>
-                <span className="benny-leg benny-leg-right">
-                  <span className="benny-leg-paw" />
-                </span>
-              </div>
-            )}
+          </div>
+        );
+      })()}
+
+      {/* Walking Benny (real video-cutout sprite): plays for walk/jump/climb. */}
+      {(() => {
+        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
+        const walkSize = size;
+        return (
+          <div
+            style={{
+              position: "absolute",
+              left: 0, right: 0, bottom: 0,
+              width: walkSize, height: walkSize,
+              opacity: isMoving ? 1 : 0,
+              transition: "opacity 0.2s ease-in-out",
+            }}
+          >
+            <div
+              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              style={{
+                width: walkSize,
+                height: walkSize,
+                backgroundImage: `url(${bennyWalkSprite.url})`,
+                backgroundSize: `${walkSize * WALK_FRAMES}px ${walkSize}px`,
+                ["--benny-walk-end" as any]: `${-WALK_FRAMES * walkSize}px`,
+              }}
+              aria-label={isMoving ? "Benny walking" : undefined}
+              role={isMoving ? "img" : undefined}
+            />
           </div>
         );
       })()}
