@@ -200,8 +200,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-walk-grounded-face";
-const BENNY_WALK_FRAMES = 24;
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v9-svg-walk-grounded";
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -226,7 +225,7 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 2.4s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
 .benny-walk-sprite-jump { animation-duration: 1.6s; }
