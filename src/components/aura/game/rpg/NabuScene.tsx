@@ -14,7 +14,6 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-import { BennyRigged } from "@/components/BennyRigged";
 // Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
 // via background-position steps — identical performance on every browser
 // including Safari, where animated WebP decodes single-threaded and stutters.
@@ -262,12 +261,14 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     );
   }
 
-  // Celebrate / sad: render the rigged two-layer Benny so the head pivots
-  // independently of the body — way more alive than a still PNG with a CSS
-  // bounce. We keep idle on the sprite-sheet because that's its strength.
-  const pose: "cheer" | "sad" = mood === "celebrate" ? "cheer" : "sad";
+  // Celebrate / sad: render the still PNG inside a motion wrapper. The
+  // sprite-sheet has no celebrate/sad frames, and the rigged head/body split
+  // looked unprofessional (floating head). A clean still + Motion bounce
+  // reads as a single coherent character.
+  const src = mood === "celebrate" ? celebrateAsset.url : sadAsset.url;
   const w = size;
   const h = Math.round(size * BENNY_SPRITE_ASPECT);
+  const anim = bennyMoodAnim(mood);
   return (
     <foreignObject
       x={-w / 2}
@@ -276,8 +277,22 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       height={h}
       style={{ overflow: "visible", pointerEvents: "none" }}
     >
-      <div style={{ width: w, height: h }}>
-        <BennyRigged pose={pose} size={w} />
+      <div style={{ width: w, height: h, transformOrigin: "50% 100%" }}>
+        <motion.img
+          src={src}
+          alt={`Benny ${mood}`}
+          draggable={false}
+          animate={anim.animate}
+          transition={anim.transition}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            transformOrigin: "50% 100%",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        />
       </div>
     </foreignObject>
   );
