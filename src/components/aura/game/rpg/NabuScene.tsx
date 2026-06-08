@@ -212,14 +212,48 @@ const ensureBennySpriteKeyframes = () => {
   72%  { background-position-x: var(--benny-sprite-end, -8120px); }
   100% { background-position-x: var(--benny-sprite-end, -8120px); }
 }
+.benny-sprite-action-idle { animation-duration: 3.2s; }
+.benny-sprite-action-walk { animation-duration: 0.48s; }
+.benny-sprite-action-jump { animation-duration: 0.34s; }
 .benny-idle-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-idle-sprite-walk 7s steps(29, end) infinite;
+  animation-name: benny-idle-sprite-walk;
+  animation-timing-function: steps(29, end);
+  animation-iteration-count: infinite;
   will-change: background-position;
 }
+@keyframes benny-paw-left-walk {
+  0%, 100% { transform: translate(0, 0) rotate(-5deg) scale(1); }
+  50%      { transform: translate(30%, -18%) rotate(9deg) scale(0.94); }
+}
+@keyframes benny-paw-right-walk {
+  0%, 100% { transform: translate(0, 0) rotate(5deg) scale(1); }
+  50%      { transform: translate(-30%, -18%) rotate(-9deg) scale(0.94); }
+}
+.benny-action-paws { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.benny-action-paw {
+  position: absolute;
+  bottom: 1.5%;
+  width: 18%;
+  height: 12%;
+  border-radius: 48% 48% 40% 40%;
+  background: radial-gradient(circle at 48% 22%, #fff7dc 0 34%, #f4b25a 36% 68%, #d98b2e 100%);
+  box-shadow: inset 0 -0.18em 0 rgba(126, 65, 18, 0.18), 0 0.12em 0.18em rgba(0,0,0,0.12);
+}
+.benny-action-paw-left { left: 31%; transform-origin: 50% 20%; }
+.benny-action-paw-right { right: 31%; transform-origin: 50% 20%; }
+.benny-action-walk, .benny-action-jump { opacity: 1; }
+.benny-action-walk .benny-action-paw-left,
+.benny-action-jump .benny-action-paw-left { animation: benny-paw-left-walk 0.42s steps(2, end) infinite; }
+.benny-action-walk .benny-action-paw-right,
+.benny-action-jump .benny-action-paw-right { animation: benny-paw-right-walk 0.42s steps(2, end) infinite; }
+.benny-action-idle { opacity: 0.75; }
+.benny-action-idle .benny-action-paw-left { animation: benny-paw-left-walk 1.2s steps(2, end) infinite; }
+.benny-action-idle .benny-action-paw-right { animation: benny-paw-right-walk 1.2s steps(2, end) infinite; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite { animation: none; background-position-x: calc(var(--benny-sprite-end, -8120px) / 2); }
+  .benny-action-paw { animation: none !important; }
 }
 `;
   document.head.appendChild(el);
