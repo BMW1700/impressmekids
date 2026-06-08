@@ -64,6 +64,7 @@ const ensureKeyframes = () => {
   animation-iteration-count: infinite;
   will-change: background-position;
 }
+.benny-rig-moving .benny-idle-sprite { animation: none; background-position-x: 0px; }
 .benny-rig { position: relative; width: 100%; height: 100%; transform-origin: 50% 100%; }
 .benny-rig-body { position: relative; z-index: 1; width: 100%; height: 100%; }
 .benny-cutout-mask {
