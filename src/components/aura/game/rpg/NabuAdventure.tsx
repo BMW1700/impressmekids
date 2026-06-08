@@ -176,8 +176,8 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
       const line = wasAutoPassedRef.current
         ? "Nice try! Let's keep going!"
         : current.successLine;
-      queue(() => speak(line, BENNY), 250);
-      queue(() => setPhase("transition"), 650);
+      queue(() => speak(line, BENNY), 350);
+      queue(() => setPhase("transition"), 2000);
       return;
     }
     if (phase === "transition") {
@@ -189,7 +189,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           setIndex(next);
           setPhase("problem");
         }
-      }, 2200);
+      }, 1700);
       return;
     }
     if (phase === "ending") {

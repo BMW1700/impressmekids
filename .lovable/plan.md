@@ -1,46 +1,23 @@
-## Goal
-Make Benny look clean on any background and keep his feet behavior believable:
-- No visible background/matte/halo/watermark around Benny.
-- No running legs while he is airborne or climbing upward.
-- Walking legs only play when Benny is actually traveling along the ground.
-- Feet stay planted on the scene baseline during grounded transitions.
+## Plan
 
-## Implementation Plan
+1. **Remove the one-second run-in-place delay**
+   - Change Benny’s scene logic so the walking sprite only appears during actual travel, not during the full `solved` pause.
+   - Keep Benny idle/celebrating while the success state displays, then switch to walk exactly when the `transition` movement begins.
+   - Reset the walk cycle at the start of each transition so it starts on an active stride instead of visually idling.
 
-1. **Rebuild the walking sprite correctly**
-   - Reprocess the uploaded Benny walk video with the same successful transparent-sprite approach used for the other realistic character.
-   - Remove the black/white matte fringe and the visible lower-right “runway” watermark/text from every frame.
-   - Re-anchor each frame so Benny’s lowest visible foot pixel sits on the bottom baseline of the sprite cell.
-   - Keep the output as a transparent PNG sprite sheet for Safari/iPad compatibility.
+2. **Reprocess the walking asset for clean edges on any background**
+   - Regenerate the walk sprite from the uploaded video with the same background-removal approach used successfully for the other Benny videos.
+   - Remove white/gray matte fringing around Benny so he looks clean over light skies, white UI, space scenes, and dark backgrounds.
+   - Crop/anchor the frames consistently so his feet stay planted and the sprite does not wobble or shift.
 
-2. **QA the asset before wiring it in**
-   - Generate quick test composites over:
-     - white/light background
-     - yellow scene background
-     - dark background
-   - Check that there is no box, halo, gray outline, leftover watermark, or floating-foot padding.
+3. **Replace the current bad sprite pointer**
+   - Upload the corrected transparent sprite via Lovable Assets.
+   - Point both Benny render paths (`BennyDog` and `NabuScene`) at the corrected asset.
 
-3. **Update Benny’s animation state logic**
-   - Ground movement: use the walking-leg sprite only for horizontal/grounded travel.
-   - Airborne movement: use Benny’s idle/tail-wag/blink sprite while the whole character follows the jump arc.
-   - Climb/upward movement: use the still/idle sprite instead of running legs.
-   - This matches your instruction: if he is up in the air, he can move as a still animated Benny, but his feet should not run.
+4. **Tighten animation timing**
+   - Match the walk-cycle speed to the scene’s travel duration so his legs move while his body moves, not before.
+   - Keep jump/climb special movement, but do not let the walking loop show while he is stationary.
 
-4. **Fix the baseline/feet placement**
-   - Add a single baseline anchor for the walk sprite in both render paths:
-     - standalone `BennyDog`
-     - `NabuScene`’s SVG/foreignObject render
-   - Ensure walk frames do not rise above the ground because of transparent padding inside the sprite cell.
-
-5. **Replace the asset pointer only after the new sprite passes QA**
-   - Upload the corrected transparent sprite through Lovable Assets.
-   - Replace `src/assets/benny-walk-sprite.png.asset.json` with the new pointer.
-   - Do not touch unrelated game logic.
-
-## Technical Details
-- The main code changes will be in:
-  - `src/components/BennyDog.tsx`
-  - `src/components/aura/game/rpg/NabuScene.tsx`
-  - `src/assets/benny-walk-sprite.png.asset.json`
-- I’ll change jump/hop/climb scene calls so `action="jump"` / `action="climb"` no longer display cycling running legs.
-- The walking sprite animation will restart cleanly when entering a grounded transition, but will not play during the solved pause.
+5. **Verify against the screenshots’ failure cases**
+   - Check Benny over a bright/white background and a dark/space background.
+   - Confirm no square/matte/halo is visible and no running-in-place happens before movement starts.

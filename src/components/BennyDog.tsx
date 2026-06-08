@@ -5,9 +5,9 @@
 // WebP single-threaded on the main thread, causing visible stutter. Sprite
 // sheets composite through the GPU and run identically on every browser.
 //
-// Walk uses the real transparent video-cutout sprite. Jump / climb intentionally
-// use the idle/tail-wag sprite so Benny never runs his feet while airborne.
-// Celebrate / sad keep their still PNGs with CSS motion.
+// Walk / jump reuse the sprite sheet at faster timing and add a small paw
+// cycle overlay so Benny's legs visibly move even when the source frame is
+// mostly front-facing. Celebrate / sad keep their still PNGs with CSS motion.
 
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
@@ -36,10 +36,6 @@ const SPRITE_ASPECT = SPRITE_CELL_H / SPRITE_CELL_W; // ≈1.0714
 // Walking sprite sheet (transparent cutout from real walking video).
 const WALK_FRAMES = 24;
 const WALK_ASPECT = 1; // 360×360 cells
-// The walking video has safe transparent padding inside each square cell. Scale
-// the rendered cell up so Benny's body matches the idle sprite height while the
-// feet stay pinned to the same bottom baseline.
-const WALK_RENDER_SCALE = 1.28;
 
 
 const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
@@ -51,7 +47,7 @@ const STILL_SOURCES: Record<Extract<BennyMood, "celebrate" | "sad">, string> = {
 const IDLE_FALLBACK_PNG = idleAsset.url;
 
 // Inject keyframes once.
-const STYLE_ID = "benny-dog-sprite-keyframes-v9-visible-grounded-walk";
+const STYLE_ID = "benny-dog-sprite-keyframes-v7-walk-video";
 const ensureKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(STYLE_ID)) return;
@@ -65,7 +61,7 @@ const ensureKeyframes = () => {
 }
 @keyframes benny-walk-cycle {
   0%   { background-position-x: 0px; }
-  100% { background-position-x: var(--benny-walk-end, -8280px); }
+  100% { background-position-x: var(--benny-walk-end, -8640px); }
 }
 .benny-idle-sprite {
   background-repeat: no-repeat;
@@ -76,9 +72,11 @@ const ensureKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 0.8s steps(${WALK_FRAMES - 1}, end) infinite;
+  animation: benny-walk-cycle 1.5s steps(${WALK_FRAMES}, end) infinite;
   will-change: background-position;
 }
+.benny-walk-sprite-jump { animation-duration: 1.0s; }
+.benny-walk-sprite-climb { animation-duration: 1.8s; }
 @keyframes benny-celebrate-bounce {
   0%, 100% { transform: translateY(0) scale(1); }
   50%      { transform: translateY(-18px) scale(1.15); }
@@ -107,7 +105,6 @@ export const BennyDog = ({
   style,
 }: BennyDogProps) => {
   ensureKeyframes();
-  const renderMood: BennyMood = mood === "jump" || mood === "climb" ? "idle" : mood;
 
   // Replay sad animation each time mood transitions back to "sad".
   const [sadNonce, setSadNonce] = useState(0);
@@ -139,7 +136,7 @@ export const BennyDog = ({
     >
       {/* Idle Benny: original sprite sheet (still pose breathing). */}
       {(() => {
-        const isIdle = renderMood === "idle";
+        const isIdle = mood === "idle";
         return (
           <div
             style={{
@@ -166,35 +163,34 @@ export const BennyDog = ({
         );
       })()}
 
-      {/* Walking Benny (real video-cutout sprite): plays only for grounded walk. */}
+      {/* Walking Benny (real video-cutout sprite): plays for walk/jump/climb. */}
       {(() => {
-        const isMoving = renderMood === "walk";
-        const walkSize = Math.round(size * WALK_RENDER_SCALE);
-        return isMoving ? (
+        const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
+        const walkSize = size;
+        return (
           <div
             style={{
               position: "absolute",
-              left: "50%",
-              bottom: 0,
-              transform: "translateX(-50%)",
+              left: 0, right: 0, bottom: 0,
               width: walkSize, height: walkSize,
-              opacity: 1,
+              opacity: isMoving ? 1 : 0,
+              transition: "opacity 0.2s ease-in-out",
             }}
           >
             <div
-              className="benny-walk-sprite"
+              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
               style={{
                 width: walkSize,
                 height: walkSize,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
                 backgroundSize: `${walkSize * WALK_FRAMES}px ${walkSize}px`,
-                ["--benny-walk-end" as any]: `${-(WALK_FRAMES - 1) * walkSize}px`,
+                ["--benny-walk-end" as any]: `${-WALK_FRAMES * walkSize}px`,
               }}
               aria-label={isMoving ? "Benny walking" : undefined}
               role={isMoving ? "img" : undefined}
             />
           </div>
-        ) : null;
+        );
       })()}
 
       {/* Celebrate / sad stills with their own CSS animation wrapper. */}
@@ -205,7 +201,7 @@ export const BennyDog = ({
           style={{
             position: "absolute",
             inset: 0,
-            opacity: m === renderMood ? 1 : 0,
+            opacity: m === mood ? 1 : 0,
             transition: "opacity 0.3s ease-in-out",
           }}
         >
