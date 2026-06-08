@@ -11,7 +11,7 @@
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useId } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
 // Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
@@ -32,6 +32,9 @@ const BENNY_SPRITE_FRAMES = 30;
 const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
+const BENNY_WALK_FRAMES = 24;
+const BENNY_WALK_VISIBLE_BOTTOM_PAD = 38; // source px hidden below paws after watermark removal
+const BENNY_TRANSITION_SECONDS = 2.6;
 
 interface NabuSceneProps {
   word: string;
@@ -60,7 +63,7 @@ const nabuAnim = (phase: ScenePhase) => {
       x: NABU_EXIT.x,
       y: NABU_EXIT.y,
       scaleY: 1, scaleX: 1, rotate: 0,
-      transition: { duration: 2.6, ease: "easeInOut" as const },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" as const },
     };
   }
   if (phase === "solved") {
@@ -108,7 +111,7 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
       scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
       scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
       rotate: [0, -4, 0, 4, 0, 0],
-      transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
   return nabuAnim(phase);
@@ -124,7 +127,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
       scaleY: [1, 0.82, 1.18, 1.05, 1.18, 0.82, 1],
       scaleX: [1, 1.12, 0.90, 0.96, 0.90, 1.12, 1],
       rotate: [0, 0, -8, -4, 4, 0, 0],
-      transition: { duration: 2.0, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
+      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
     };
   }
   return nabuAnim(phase);
@@ -135,11 +138,11 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
-        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX, targetX],
-        y: [NABU_START.y, targetY, targetY, targetY],
-        scaleY: [1, 1, 1, 1],
-        scaleX: [1, 1, 1, 1],
-        transition: { duration: 2.4, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
+        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX],
+        y: [NABU_START.y, targetY, targetY],
+        scaleY: [1, 1, 1],
+        scaleX: [1, 1, 1],
+        transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.55, 1] },
       };
     }
     return nabuAnim(phase);
