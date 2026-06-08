@@ -197,8 +197,12 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-grounded-walk";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v9-visible-grounded-walk";
 const BENNY_WALK_FRAMES = 24;
+// Walk cells are square and include transparent safety padding from the source
+// video. Render them larger than the CSS box, centered and bottom-anchored, so
+// Benny visibly walks at the same scale as idle without floating.
+const BENNY_WALK_RENDER_SCALE = 1.28;
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
   if (document.getElementById(BENNY_SPRITE_STYLE_ID)) return;
@@ -223,7 +227,7 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
+  animation: benny-walk-cycle 0.8s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
   will-change: background-position;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -243,9 +247,9 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const isMoving = visualMood === "walk";
-    // Walk sprite cells are square (1:1). Render at the same width and align
-    // its bottom to the idle sprite's bottom so the ground line stays put.
-    const walkH = w;
+    // Walk sprite cells are square (1:1) but have transparent source padding.
+    // Scale them up inside the same anchored box so the dog visibly moves.
+    const walkSize = Math.round(w * BENNY_WALK_RENDER_SCALE);
     return (
       <foreignObject
         x={-w / 2}
