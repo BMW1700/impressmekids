@@ -284,14 +284,15 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle / walk / jump: render the CSS sprite sheet inside <foreignObject> so
-  // Benny never becomes a static PNG during movement. The paw overlay makes
-  // leg motion unmistakable in the current front-facing art.
-  if (mood === "idle" || mood === "walk" || mood === "jump") {
+  // Idle / walk / jump / climb: render Benny's body via the sprite sheet.
+  // For movement actions we hide the painted feet (clip-path bottom band) and
+  // draw a real rigged set of legs underneath that swing in opposite phase.
+  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
     const action = mood;
+    const isMoving = action !== "idle";
     return (
       <foreignObject
         x={-w / 2}
@@ -302,25 +303,34 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       >
         <div style={{ width: w, height: h, position: "relative" }}>
           <div
-            className={`benny-idle-sprite benny-sprite-action-${action}`}
+            className={`benny-idle-sprite benny-sprite-action-${action === "climb" ? "walk" : action}`}
             style={{
               width: w,
               height: h,
               backgroundImage: `url(${bennySprite.url})`,
               backgroundSize: `${w * BENNY_SPRITE_FRAMES}px ${h}px`,
               ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+              // Hide painted feet so our rigged legs are the only feet visible.
+              clipPath: isMoving ? "inset(0 0 18% 0)" : undefined,
             }}
             aria-label="Benny the puppy"
             role="img"
           />
-          <div className={`benny-action-paws benny-action-${action}`}>
-            <span className="benny-action-paw benny-action-paw-left" />
-            <span className="benny-action-paw benny-action-paw-right" />
-          </div>
+          {isMoving && (
+            <div className={`benny-legs benny-legs-${action}`} aria-hidden="true">
+              <span className="benny-leg benny-leg-left">
+                <span className="benny-leg-paw" />
+              </span>
+              <span className="benny-leg benny-leg-right">
+                <span className="benny-leg-paw" />
+              </span>
+            </div>
+          )}
         </div>
       </foreignObject>
     );
   }
+
 
   // Celebrate / sad: render the still PNG inside a motion wrapper. The
   // sprite-sheet has no celebrate/sad frames, and the rigged head/body split
