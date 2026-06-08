@@ -79,11 +79,11 @@ const ensureKeyframes = () => {
 }
 .benny-leg-layer { position: absolute; z-index: 3; pointer-events: none; opacity: 0; overflow: hidden; transform-origin: 50% 3%; }
 .benny-rig-moving .benny-leg-layer { opacity: 1; }
-.benny-leg-copy { position: absolute; left: 0; top: 0; background-repeat: no-repeat; background-position: 0 0; }
+.benny-leg-copy { position: absolute; background-repeat: no-repeat; background-position: 0 0; }
 .benny-leg-left { left: 38.6%; top: 67.6%; width: 12.2%; height: 27.6%; }
 .benny-leg-right { left: 49.2%; top: 67.9%; width: 12.8%; height: 27.8%; }
-.benny-leg-left .benny-leg-copy { width: 819.7%; height: 362.3%; transform: translate(-316%, -244.5%); }
-.benny-leg-right .benny-leg-copy { width: 781.3%; height: 359.7%; transform: translate(-384.5%, -243.9%); }
+.benny-leg-left .benny-leg-copy { width: 819.7%; height: 362.3%; left: -316%; top: -244.5%; }
+.benny-leg-right .benny-leg-copy { width: 781.3%; height: 359.7%; left: -384.5%; top: -243.9%; }
 @keyframes benny-leg-walk-l {
   0%, 100% { transform: rotate(-13deg) translateY(0); }
   50%      { transform: rotate(16deg) translateY(1.5%); }
@@ -110,10 +110,6 @@ const ensureKeyframes = () => {
 }
 .benny-rig-climb .benny-leg-left { animation: benny-leg-walk-l 0.62s ease-in-out infinite; }
 .benny-rig-climb .benny-leg-right { animation: benny-leg-walk-r 0.62s ease-in-out infinite; }
-@keyframes benny-body-bob {
-  0%, 100% { transform: translateY(0) rotate(-1deg); }
-  50%      { transform: translateY(-4%) rotate(1deg); }
-}
 @keyframes benny-body-jump {
   0%, 100% { transform: translateY(0)    scaleY(1); }
   35%      { transform: translateY(-12%) scaleY(1.04); }
