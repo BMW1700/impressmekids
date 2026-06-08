@@ -14,9 +14,9 @@
 import { createContext, useContext } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-// Idle Benny uses a CSS sprite sheet (30 frames, single row). GPU-composited
-// via background-position steps — identical performance on every browser
-// including Safari, where animated WebP decodes single-threaded and stutters.
+// Idle Benny uses a CSS sprite sheet (30 frames, single row). Walk uses a real
+// transparent video-cutout sprite only during grounded travel; jump/climb/fly
+// keep the idle/tail-wag sprite so Benny never runs his feet in the air.
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
@@ -104,10 +104,10 @@ const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, 280, 420, 560, 700, 860],
-      y: [370, 320, 370, 320, 370, 370],
-      scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
-      scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
-      rotate: [0, -4, 0, 4, 0, 0],
+      y: [370, 370, 370, 370, 370, 370],
+      scaleY: 1,
+      scaleX: 1,
+      rotate: 0,
       transition: { duration: 1.9, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
     };
   }
@@ -136,9 +136,9 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
     if (phase === "transition") {
       return {
         x: [140, (140 + targetX) / 2, targetX, targetX],
-        y: [370, 366, targetY - 6, targetY],
-        scaleY: [1, 1.02, 0.96, 1],
-        scaleX: [1, 0.99, 1.04, 1],
+        y: [370, (370 + targetY) / 2, targetY, targetY],
+        scaleY: 1,
+        scaleX: 1,
         transition: { duration: 1.5, ease: "easeInOut", times: [0, 0.5, 0.85, 1] },
       };
     }
@@ -167,7 +167,7 @@ const NabuSprite = ({
   // Benny is celebrating in place — show idle/celebrate, not legs running in
   // place. This eliminates the ~1s of running-in-place before he moves.
   const isMovingPhase = phase === "transition";
-  const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
+  const movementAction: BennyMood = isMovingPhase && (action ?? "walk") === "walk" ? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
   return (
     <motion.g initial={{ x: NABU_START.x, y: NABU_START.y }} animate={anim ? anim(phase) : nabuAnim(phase)}>
@@ -197,7 +197,7 @@ const bennyMoodAnim = (mood: BennyMood) => {
 };
 
 // Inject sprite keyframes once.
-const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v7-walk-video";
+const BENNY_SPRITE_STYLE_ID = "benny-sprite-keyframes-v8-grounded-walk";
 const BENNY_WALK_FRAMES = 24;
 const ensureBennySpriteKeyframes = () => {
   if (typeof document === "undefined") return;
@@ -212,7 +212,7 @@ const ensureBennySpriteKeyframes = () => {
 }
 @keyframes benny-walk-cycle {
   0%   { background-position-x: 0px; }
-  100% { background-position-x: var(--benny-walk-end, -8640px); }
+  100% { background-position-x: var(--benny-walk-end, -8280px); }
 }
 .benny-idle-sprite {
   background-repeat: no-repeat;
@@ -223,11 +223,9 @@ const ensureBennySpriteKeyframes = () => {
 .benny-walk-sprite {
   background-repeat: no-repeat;
   background-position: 0px 0px;
-  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES}, end) infinite;
+  animation: benny-walk-cycle 1.5s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
   will-change: background-position;
 }
-.benny-walk-sprite-jump { animation-duration: 1.0s; }
-.benny-walk-sprite-climb { animation-duration: 1.8s; }
 @media (prefers-reduced-motion: reduce) {
   .benny-idle-sprite, .benny-walk-sprite { animation: none; }
 }
@@ -236,14 +234,15 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
+  const visualMood: BennyMood = mood === "jump" || mood === "climb" ? "idle" : mood;
   // Idle: original sprite-sheet still pose (breathing).
-  // Walk / jump / climb: real walking video as a transparent sprite sheet —
-  // legs visibly cycle. Anchored so feet sit at the same ground baseline.
-  if (mood === "idle" || mood === "walk" || mood === "jump" || mood === "climb") {
+  // Walk: real walking video as a transparent sprite sheet. Jump / climb are
+  // rendered as idle so Benny does not run his feet while airborne or vertical.
+  if (visualMood === "idle" || visualMood === "walk") {
     ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT); // ≈ 300 for size=280
-    const isMoving = mood !== "idle";
+    const isMoving = visualMood === "walk";
     // Walk sprite cells are square (1:1). Render at the same width and align
     // its bottom to the idle sprite's bottom so the ground line stays put.
     const walkH = w;
@@ -275,7 +274,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           )}
           {isMoving && (
             <div
-              className={`benny-walk-sprite${mood === "jump" ? " benny-walk-sprite-jump" : ""}${mood === "climb" ? " benny-walk-sprite-climb" : ""}`}
+              className="benny-walk-sprite"
               style={{
                 position: "absolute",
                 left: 0,
@@ -284,7 +283,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
                 height: walkH,
                 backgroundImage: `url(${bennyWalkSprite.url})`,
                 backgroundSize: `${w * BENNY_WALK_FRAMES}px ${walkH}px`,
-                ["--benny-walk-end" as any]: `${-BENNY_WALK_FRAMES * w}px`,
+                ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
               }}
               aria-label="Benny walking"
               role="img"
@@ -990,7 +989,7 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} />
+      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} action="idle" />
 
     </Stage>
   );
