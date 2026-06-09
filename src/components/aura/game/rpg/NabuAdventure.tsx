@@ -273,22 +273,25 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
       <div className={`absolute inset-0 bg-gradient-to-b ${skyClass}`} />
 
       {scene?.backgroundVideo === "riverStream" && phase !== "ending" && (
-        <video
-          key="river-stream-bg"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-          src={riverStreamVideo.url}
-          poster={riverStreamPoster.url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          controls={false}
-          disablePictureInPicture
-          aria-hidden
-          tabIndex={-1}
-          draggable={false}
-        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <video
+            key="river-stream-bg"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ transform: "scale(1.14)", transformOrigin: "top right" }}
+            src={riverStreamVideo.url}
+            poster={riverStreamPoster.url}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            controls={false}
+            disablePictureInPicture
+            aria-hidden
+            tabIndex={-1}
+            draggable={false}
+          />
+        </div>
       )}
 
 
@@ -300,6 +303,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
           index={index}
           mood={bennyMood}
           solutionEmoji={scene.solutionEmoji}
+          hideBackdrop={!!scene.backgroundVideo}
         />
       )}
 

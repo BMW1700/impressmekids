@@ -40,6 +40,7 @@ interface NabuSceneProps {
   index: number;
   mood?: BennyMood | null;
   solutionEmoji?: string;
+  hideBackdrop?: boolean;
 }
 
 
@@ -435,28 +436,32 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
   return nabuAnim(phase);
 };
 
-const JumpScene = ({ phase }: { phase: ScenePhase }) => {
+const JumpScene = ({ phase, hideBackdrop = false }: { phase: ScenePhase; hideBackdrop?: boolean }) => {
   return (
     <Stage>
-      <Sky from="#bae6fd" to="#a7f3d0" />
-      <Clouds />
-      <Grass />
-      {/* far hills */}
-      <ellipse cx="850" cy={GROUND_Y + 10} rx="220" ry="60" fill="#4ade80" opacity="0.6" />
-      <ellipse cx="950" cy={GROUND_Y + 20} rx="180" ry="50" fill="#22c55e" opacity="0.5" />
-      {/* river — cuts through ground */}
-      <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L640 ${VB_H} L360 ${VB_H} Z`} fill="#3b82f6" />
-      <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L630 ${GROUND_Y + 20} L370 ${GROUND_Y + 20} Z`} fill="#60a5fa" />
-      {/* river banks */}
-      <rect x="360" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
-      <rect x="616" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
-      {/* shimmer */}
-      <motion.path
-        d={`M395 ${GROUND_Y + 35} q40 -8 80 0 q40 8 80 0 q40 -8 70 0`}
-        stroke="#ffffff" strokeWidth="3" fill="none" opacity="0.6"
-        animate={{ x: [-4, 4, -4] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
+      {!hideBackdrop && (
+        <>
+          <Sky from="#bae6fd" to="#a7f3d0" />
+          <Clouds />
+          <Grass />
+          {/* far hills */}
+          <ellipse cx="850" cy={GROUND_Y + 10} rx="220" ry="60" fill="#4ade80" opacity="0.6" />
+          <ellipse cx="950" cy={GROUND_Y + 20} rx="180" ry="50" fill="#22c55e" opacity="0.5" />
+          {/* river — cuts through ground */}
+          <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L640 ${VB_H} L360 ${VB_H} Z`} fill="#3b82f6" />
+          <path d={`M380 ${GROUND_Y} L620 ${GROUND_Y} L630 ${GROUND_Y + 20} L370 ${GROUND_Y + 20} Z`} fill="#60a5fa" />
+          {/* river banks */}
+          <rect x="360" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
+          <rect x="616" y={GROUND_Y - 4} width="24" height="8" rx="2" fill="#65a30d" />
+          {/* shimmer */}
+          <motion.path
+            d={`M395 ${GROUND_Y + 35} q40 -8 80 0 q40 8 80 0 q40 -8 70 0`}
+            stroke="#ffffff" strokeWidth="3" fill="none" opacity="0.6"
+            animate={{ x: [-4, 4, -4] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+        </>
+      )}
 
       <NabuSprite phase={phase} anim={jumpArcAnim} action="jump" />
     </Stage>
@@ -1397,7 +1402,7 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: NabuSceneProps) => {
+export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji, hideBackdrop = false }: NabuSceneProps) => {
   const w = word.toUpperCase();
   const k = `${w}-${index}`;
   const wrap = (children: React.ReactNode) => (
@@ -1407,7 +1412,7 @@ export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: Na
   );
   switch (w) {
     case "JUMP":
-    case "HOP":    return wrap(<JumpScene phase={phase} />);
+    case "HOP":    return wrap(<JumpScene phase={phase} hideBackdrop={hideBackdrop} />);
     case "BOOTS":  return wrap(<BootsScene phase={phase} />);
     case "KEY":    return wrap(<KeyScene phase={phase} />);
     case "AXE":
