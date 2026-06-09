@@ -47,6 +47,8 @@ interface RPGWordReaderProps {
   /** Auto-start the mic on mount (used when chaining obstacles so the child
    *  doesn't have to press "Start Reading" every time). */
   autoStart?: boolean;
+  /** Hide the small word queue when a parent screen renders its own word card. */
+  hideWordQueue?: boolean;
 }
 
 
@@ -128,6 +130,7 @@ export const RPGWordReader = ({
   mode = 'normal',
   compact = false,
   autoStart = false,
+  hideWordQueue = false,
 }: RPGWordReaderProps) => {
 
   // Core state
@@ -1349,7 +1352,7 @@ export const RPGWordReader = ({
       )}
       
       {/* Multi-Word Queue Display with Color Coding */}
-      <div ref={wordQueueRef} className={`flex flex-wrap justify-center ${compact ? 'max-w-full gap-1' : 'max-w-md gap-2'}`}>
+      {!hideWordQueue && <div ref={wordQueueRef} className={`flex flex-wrap justify-center ${compact ? 'max-w-full gap-1' : 'max-w-md gap-2'}`}>
         {currentBatch.map((word, index) => {
           const clean = word.replace(/[^a-zA-Z']/g, '');
           const isActiveWord = index === currentIndex;
@@ -1395,7 +1398,7 @@ export const RPGWordReader = ({
             </motion.div>
           );
         })}
-      </div>
+      </div>}
 
       {/* Current Word - Large Display */}
       {!compact && <motion.div
