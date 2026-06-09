@@ -259,6 +259,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   // Walk / jump / climb: real walking video as a transparent sprite sheet —
   // legs visibly cycle. Anchored so feet sit at the same ground baseline.
   if (mood === "idle") {
+    ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT);
     const stillY = -h;
@@ -270,15 +271,19 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           width={w}
           height={h}
           viewBox={`0 0 ${w} ${h}`}
-          overflow="visible"
+          overflow="hidden"
         >
           <image
-            href={idleAsset.url}
+            className="benny-idle-strip"
+            href={bennyIdleSprite.url}
             x="0"
             y="0"
-            width={w}
+            width={w * BENNY_SPRITE_FRAMES}
             height={h}
-            preserveAspectRatio="xMidYMax meet"
+            preserveAspectRatio="none"
+            style={{
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+            }}
           />
         </svg>
       </g>
