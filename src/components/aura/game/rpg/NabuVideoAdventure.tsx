@@ -359,7 +359,10 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         video.muted = false;
         video.volume = 1;
         video.currentTime = 0;
-        void video.play();
+        const playPromise = video.play();
+        if (playPromise) {
+          playPromise.catch((err) => console.warn("[NabuVideo] initial video play failed:", err));
+        }
       } catch (err) {
         console.warn("[NabuVideo] initial video play failed:", err);
       }
