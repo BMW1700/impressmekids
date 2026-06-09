@@ -14,10 +14,12 @@
 import { createContext, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
+import bennyIdleSprite from "@/assets/benny-idle-sprite.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
+
+const BENNY_SPRITE_FRAMES = 30;
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
@@ -257,6 +259,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   // Walk / jump / climb: real walking video as a transparent sprite sheet —
   // legs visibly cycle. Anchored so feet sit at the same ground baseline.
   if (mood === "idle") {
+    ensureBennySpriteKeyframes();
     const w = size;
     const h = Math.round(size * BENNY_SPRITE_ASPECT);
     const stillY = -h;
@@ -268,15 +271,19 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           width={w}
           height={h}
           viewBox={`0 0 ${w} ${h}`}
-          overflow="visible"
+          overflow="hidden"
         >
           <image
-            href={idleAsset.url}
+            className="benny-idle-strip"
+            href={bennyIdleSprite.url}
             x="0"
             y="0"
-            width={w}
+            width={w * BENNY_SPRITE_FRAMES}
             height={h}
-            preserveAspectRatio="xMidYMax meet"
+            preserveAspectRatio="none"
+            style={{
+              ["--benny-sprite-end" as any]: `${-(BENNY_SPRITE_FRAMES - 1) * w}px`,
+            }}
           />
         </svg>
       </g>
@@ -499,7 +506,7 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
           ))}
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={bouncyWalkAnim} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
 
       {/* boots on Nabu — chunky, painted, with highlights so they read at 5ft */}
       {solved && (
