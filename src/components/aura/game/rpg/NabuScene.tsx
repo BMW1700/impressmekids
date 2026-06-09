@@ -317,7 +317,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       {isStill && stillAnim && (
         <foreignObject
           x={-w / 2}
-          y={-h + 10}
+          y={-h}
           width={w}
           height={h}
           style={{ overflow: "visible", pointerEvents: "none" }}
@@ -986,7 +986,7 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
 
     </Stage>
   );
