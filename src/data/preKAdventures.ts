@@ -27,6 +27,8 @@ export interface PreKObstacle {
   solutionEmoji: string;         // "🌉"
   /** Where the solution sits relative to the obstacle. */
   solutionPlacement?: "over" | "replace" | "onNabu";
+  /** Optional looping video background for special scenes (e.g. flowing river). */
+  backgroundVideo?: "riverStream";
   /** Benny's cheer after success. */
   successLine: string;           // "We did it! Thank you!"
 }
@@ -80,6 +82,7 @@ const W101_L1: PreKAdventure = {
       problemLine: "Oh no! A river!",
       askLine: "I need to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
+      backgroundVideo: "riverStream",
       successLine: "Whoosh! Over we go!",
     },
     {
@@ -270,6 +273,7 @@ const W101_L5: PreKAdventure = {
       problemLine: "A stream is blocking us!",
       askLine: "Time to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
+      backgroundVideo: "riverStream",
       successLine: "Big leap! We did it!",
     },
     {
