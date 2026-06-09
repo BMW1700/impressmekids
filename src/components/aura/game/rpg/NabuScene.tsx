@@ -117,6 +117,21 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y) =>
     return nabuAnim(phase);
   };
 
+const climbToAnim = (targetX: number, targetY: number) =>
+  (phase: ScenePhase): NabuAnim => {
+    if (phase === "transition") {
+      return {
+        x: targetX,
+        y: targetY,
+        scaleY: 1,
+        scaleX: 1,
+        rotate: 0,
+        transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" },
+      };
+    }
+    return nabuAnim(phase);
+  };
+
 
 // Loose type — framer-motion accepts many shapes here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -709,18 +724,8 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           <rect key={i} x="595" y={GROUND_Y - 30 - i * 30} width="36" height="5" fill="#92400e" />
         ))}
       </motion.g>
-      {/* Nabu — special: climb up instead of walking right */}
-      {phase === "transition" ? (
-        <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y }}
-          animate={{ x: 612, y: GROUND_Y - 260 }}
-          transition={{ duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" }}
-        >
-          <BennySvgImage mood="climb" size={BENNY_SCENE_SIZE} />
-        </motion.g>
-      ) : (
-        <NabuSprite phase={phase} />
-      )}
+      {/* Benny climbs up without swapping/remounting the character tree. */}
+      <NabuSprite phase={phase} anim={climbToAnim(612, GROUND_Y - 260)} action="climb" />
     </Stage>
   );
 };
