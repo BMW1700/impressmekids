@@ -1,32 +1,92 @@
-## Goal
-On any obstacle whose problem is a river (today: the first obstacle of "Help Benny visit Grandma!" — `sceneEmoji: "🌊"`, problemLine "Oh no! A river!"), replace the flat sky/ground gradient with the uploaded looping stream video. Benny's sprite, idle layer, walk layer, ground anchor, and all motion timing are not changed.
+## The whole thing in one sentence
 
-## Why video over a still
-The scene is literally a flowing stream — a static painting reads as a screenshot. The video sells the obstacle. Benny is an SVG overlay rendered above the background layer, so the background swap is fully isolated from his rendering.
+**Play a video. Pause for one word. Play the next video. Repeat until the level is done.**
 
-## What changes
+That's it. No emojis, no dog sprite, no gradient skies, no "scene objects." A level is just a list of video clips with word prompts in between. The kid sees video the whole time — except for the brief pauses where the world freezes on the last frame, the word card pops up, and the kid says the word into the mic. The moment they say it, the next clip plays.
 
-1. **Upload the video as a Lovable asset**
-   - `lovable-assets create --file /mnt/user-uploads/Gen-4_Turbo_-_make_the_stream_flow.mp4 --filename river-stream-bg.mp4 > src/assets/river-stream-bg.mp4.asset.json`
-   - Capture one poster frame with ffmpeg at ~0.5s, then upload it the same way:
-     - `ffmpeg -ss 0.5 -i /mnt/user-uploads/Gen-4_Turbo_-_make_the_stream_flow.mp4 -frames:v 1 -q:v 2 /tmp/river-stream-poster.jpg`
-     - `lovable-assets create --file /tmp/river-stream-poster.jpg --filename river-stream-poster.jpg > src/assets/river-stream-poster.jpg.asset.json`
+## The data — as simple as it gets
 
-2. **Mark river obstacles in data** (`src/data/preKAdventures.ts`)
-   - Add optional `backgroundVideo?: "riverStream"` to the `Obstacle` type.
-   - Set it on the existing river obstacle in `W101_L1`. Any future river obstacle can opt in the same way.
+A level is a flat list of **steps**. A step is one of three things:
 
-3. **Render the video background** (`src/components/aura/game/rpg/NabuAdventure.tsx`, around line 271)
-   - Keep `bg-gradient-to-b ${skyClass}` div as the fallback layer underneath.
-   - When `scene?.backgroundVideo === "riverStream"` AND `phase !== "ending"`, render a `<video>` absolutely positioned `inset-0 w-full h-full object-cover` ABOVE the gradient and BELOW `<NabuScene>`/HUD.
-   - Attributes: `autoPlay`, `loop`, `muted`, `playsInline`, `preload="auto"`, `poster={riverStreamPoster.url}`, `aria-hidden`, `tabIndex={-1}`, `disablePictureInPicture`, `controls={false}`, `draggable={false}`.
-   - `pointer-events-none` so it never intercepts taps.
+- `{ kind: "clip", video }` — play a video, advance when it ends.
+- `{ kind: "word", word, askLine }` — freeze the world on the last frame of the previous clip, narrate the cloze stem ("I need to..."), show the word card, listen on the mic, advance when the kid says the word.
+- `{ kind: "say", line }` — let Benny's voiceover play over the frozen frame (used for the success line *during* the next clip, optional; we may not even need this).
 
-4. **Nothing else touched**
-   - `NabuScene.tsx` — not modified. Benny's idle sprite, walk sprite, ground anchor, opacity crossfade, and motion timing stay exactly as they are.
-   - HUD chrome, progress dots, header pill, animated clouds, grass blades — unchanged.
+For the trial level "Help Benny visit Grandma!", the steps for the **JUMP** segment become:
 
-## Risk callouts (honest)
-- File size: the MP4 will be a few MB. Acceptable — it only loads on river scenes and is CDN-cached.
-- iOS Low Power Mode can suppress autoplay even with `muted` + `playsInline`. The poster image is the fallback so the user still sees a stream scene, just not animated. No code path depends on the video playing.
-- The video has its own baked-in horizon/sky/grass. The existing cloud and grass-blade overlays inside `NabuScene` will still draw on top. If they clash visually, the cleanest follow-up is to suppress those overlays only when `backgroundVideo` is set — happy to do that in the same change if you want it.
+```ts
+{ kind: "clip", video: L1_clip1 },        // Benny walks up, looks at river
+{ kind: "word", word: "JUMP", askLine: "I need to..." },
+{ kind: "clip", video: L1_clip2 },        // Benny jumps the river
+// ... next pair when you film it ...
+{ kind: "clip", video: L1_clip3 },        // Benny sees mud
+{ kind: "word", word: "BOOTS", askLine: "My feet need big..." },
+{ kind: "clip", video: L1_clip4 },        // Benny stomps through in boots
+// ... and so on, then the closing clip ...
+```
+
+That's the entire level. Authoring a new level is: film clips, drop them in, list them in order. No engineering.
+
+For this turn, the level array will have the JUMP pair (real clips) followed by four more word prompts (BOOTS, KEY, HOP, BONE) with no clips between them yet — the screen stays on the frozen river last-frame for those prompts until you film more. The AURA grading still runs on every word read.
+
+## The runner — one component, one state machine
+
+`src/components/aura/game/rpg/NabuVideoAdventure.tsx` (new file). One `<video>` element. One state machine that walks the steps array. That's it.
+
+```
+loop:
+  step = steps[i]
+  if step.kind === "clip":  play video, wait for onEnded
+  if step.kind === "word":  freeze last frame, speak askLine, show word card,
+                            mic listens, submit audio to analyze-aura,
+                            advance when accepted (or after 3-strike auto-pass)
+  i++
+end: call onComplete
+```
+
+The video element never unmounts — we just swap `src` and call `play()`. Eliminates black flashes between clips.
+
+## The AURA backend wiring (the non-negotiable part)
+
+Every word read goes through the **same** `analyze-aura` edge function that K-12 uses. The mic captures with `MediaRecorder`, the audio blob is uploaded to the existing `aura-audio` storage bucket, and `analyze-aura` is invoked with `expected_word` + `context: { mode: "prek_video", level_id, step_index }`.
+
+All 4 ML models (phoneme transfer, risk scoring, next-best-action, Bloom's) pick it up automatically because they all consume `aura_recordings` — the same table the rest of the platform writes to. No parallel pipeline. No second source of truth. Parents see the same phoneme heatmap. Teachers see the same risk alerts. This is the unique data spine no competitor has for under-fives.
+
+To keep the kid from waiting 1-3 seconds for the ML round-trip: **optimistic advance**. The instant Web Speech says "yep, that sounded like JUMP," clipB starts playing. `analyze-aura` runs in the background and writes the truthful result to `aura_recordings`. If it later disagrees with Web Speech, we don't undo clipB — we just record the truth. The kid never gets penalized for ML latency; the data is still honest.
+
+COPPA guard: if the student's `aura_recording_consent` is false, we skip the `MediaRecorder` capture and fall back to Web-Speech-only matching for that session. Same guard the rest of the platform uses.
+
+## What I'm building this turn
+
+1. **Transcode the two HEVC `.MOV` uploads to H.264 `.mp4`** (Chrome on Android + many Windows browsers can't play HEVC) — `ffmpeg -an -c:v libx264 -pix_fmt yuv420p -preset slow -crf 22 -movflags +faststart`. Drop audio (TTS narrates).
+2. **Upload to CDN** via `lovable-assets create`, write three `.asset.json` pointers (two videos + one last-frame poster).
+3. **New file `src/data/preKAdventuresVideo.ts`** — defines `Step` + the W101_L1 level as a steps array.
+4. **New file `src/components/aura/game/rpg/NabuVideoAdventure.tsx`** — the steps runner described above, with the AURA pipeline + COPPA guard + optimistic advance.
+5. **One-line edit to `NabuEpisodeWrapper.tsx`** — route Pre-K worlds to `NabuVideoAdventure` instead of `NabuAdventure`.
+
+HUD on top of the video:
+- back arrow (top-left), level goal pill (top-center), skip (top-right, only during a word step)
+- speech bubble for the askLine, only while the cloze stem narrates
+- word card + mic + "Hear it" button + 3-strike "Tap to continue" fallback, only during a word step
+- progress dots along the bottom
+
+Sparkle ✨ + chime on a correct read. Everything else from the old Pre-K runner is gone.
+
+## Files left untouched (easy revert)
+
+`NabuAdventure.tsx`, `NabuScene.tsx`, `preKAdventures.ts`, the old `river-stream-bg` assets. Nothing else in the app changes — not the world map, not the level select, not the campaign progress, not the Nabu the Owl intro shell, not a single K-12 path.
+
+## Risk callouts (short version)
+
+1. **iOS Low Power Mode** can block muted autoplay. Mitigation: a one-time "Tap to begin" gesture on the very first clip satisfies the user-gesture requirement for the rest of the session.
+2. **`MediaRecorder` missing on old iPad Safari** — fall back to Web-Speech-only on those devices (same fallback `AuraPractice` uses today). Game still plays; data quality on those devices is lower.
+3. **Clip seams.** Benny needs to be in the same screen position at the cut from clip 1's last frame to clip 2's first frame. I'll eyeball it post-transcode and flag if there's a visible jump.
+4. **Bundle weight.** ~6 MB per clip pair. CDN-cached. Fine on wifi/CDN; cellular first-load may want a "Loading the story…" splash later (not this turn).
+
+## Confirmed answers from your last message
+
+- **All 5 word prompts stay in this level** — we'll fill in the missing video clips as you film them, no code change required, just add to the steps array.
+- **Every word goes through `analyze-aura` + the 4 ML models** — same pipeline as every other mode. Pre-K is now a first-class citizen of the AURA data spine.
+- **Authoring a new level is "film clips, drop them in the steps array, ship"** — non-engineers can produce content. That's the unlock that makes this a real curriculum.
+
+That's it. One video element, one steps array, one state machine, full AURA backend. Ready when you are.
