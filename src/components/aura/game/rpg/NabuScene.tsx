@@ -258,8 +258,12 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   const w = size;
   const h = Math.round(size * BENNY_SPRITE_ASPECT);
   const stillY = -h;
-  const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
-  const walkY = -w + walkPad;
+  // Walk sprite art occupies less of its cell than idle art, so scale the walk
+  // layer up so the visible dog matches the idle dog's on-screen size.
+  const WALK_SCALE = 1.4;
+  const wW = w * WALK_SCALE;
+  const walkPad = Math.round((wW * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
+  const walkY = -wW + walkPad;
   const isWalking = mood === "walk" || mood === "jump" || mood === "climb";
   const isIdle = mood === "idle";
   const isStill = mood === "celebrate" || mood === "sad";
