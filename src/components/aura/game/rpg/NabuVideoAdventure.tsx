@@ -110,6 +110,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const recordingStartRef = useRef<number>(0);
   const wasAutoPassedRef = useRef(false);
   const advancedRef = useRef(false);
+  const askedStepRef = useRef<number>(-1);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
@@ -235,20 +236,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
+      // Guard: only speak the cloze stem once per step (StrictMode safe).
+      if (askedStepRef.current === stepIndex) return;
+      askedStepRef.current = stepIndex;
       advancedRef.current = false;
       clearTimers();
-      // Freeze on the previous clip's last frame (the <video> just naturally
-      // stays paused at its current frame). Narrate stem, then start listening.
       setAttempts(0);
       wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      speak(current.askLine, BENNY_VOICE);
+      speak(current.askLine, { ...BENNY_VOICE, interrupt: true });
       queue(() => {
         setPhase("reading");
-        // Kick off mic capture + Web Speech.
         startMicCapture();
         startListening(current.word);
-      }, 1100);
+      }, 1400);
       return;
     }
   }, [stepIndex, phase, adventure]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -625,6 +626,27 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
                   <Volume2 className="h-4 w-4" />
                 </button>
               </motion.div>
+
+              {/* Listening indicator — mirrors the Reading UI from regular levels */}
+              <div className="mx-auto flex items-center justify-center gap-2 text-sm font-semibold text-emerald-600">
+                <Mic className="h-4 w-4" />
+                <span>Listening… Say the word!</span>
+                <div className="flex items-end gap-0.5 h-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="w-1 rounded-full bg-emerald-500"
+                      animate={{ height: ["30%", "100%", "50%", "80%", "30%"] }}
+                      transition={{
+                        duration: 0.9,
+                        repeat: Infinity,
+                        delay: i * 0.12,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
 
               {showTapFallback && (
                 <Button
