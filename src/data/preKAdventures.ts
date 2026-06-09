@@ -273,6 +273,7 @@ const W101_L5: PreKAdventure = {
       problemLine: "A stream is blocking us!",
       askLine: "Time to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
+      backgroundVideo: "riverStream",
       successLine: "Big leap! We did it!",
     },
     {
