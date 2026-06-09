@@ -207,20 +207,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
-      // Guard: only speak the cloze stem once per step (StrictMode safe).
+      // Guard: only open each cloze prompt once per step (StrictMode safe).
+      // The prompt audio is already inside the video clip; do NOT play TTS here.
       if (askedStepRef.current === stepIndex) return;
       askedStepRef.current = stepIndex;
       advancedRef.current = false;
       clearTimers();
+      cancelSpeech();
       setAttempts(0);
       wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      speak(current.askLine, { ...BENNY_VOICE, interrupt: true });
       queue(() => {
-        cancelSpeech();
         setPhase("reading");
         startMicCapture();
-      }, 1400);
+      }, 250);
       return;
     }
   }, [stepIndex, phase, adventure]); // eslint-disable-line react-hooks/exhaustive-deps
