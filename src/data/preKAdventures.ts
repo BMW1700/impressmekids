@@ -27,6 +27,8 @@ export interface PreKObstacle {
   solutionEmoji: string;         // "🌉"
   /** Where the solution sits relative to the obstacle. */
   solutionPlacement?: "over" | "replace" | "onNabu";
+  /** Optional looping video background for special scenes (e.g. flowing river). */
+  backgroundVideo?: "riverStream";
   /** Benny's cheer after success. */
   successLine: string;           // "We did it! Thank you!"
 }
