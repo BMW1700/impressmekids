@@ -33,7 +33,6 @@ interface Props {
 
 type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending";
 
-const MAX_ATTEMPTS = 3;
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
@@ -277,49 +276,25 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     [current, stepIndex, steps, adventure, attempts, stopMicCapture]
   );
 
-  const handleMatch = useCallback(
-    (spokenWord: string) => {
-      advanceFromWord(true, spokenWord, false);
+  const handleReaderResult = useCallback(
+    (matched: boolean, spokenWord: string) => {
+      setAttempts((a) => a + 1);
+      advanceFromWord(matched, spokenWord, !matched);
     },
     [advanceFromWord]
   );
 
-  const handleMiss = useCallback(
-    (spokenWord: string) => {
-      if (!current || current.kind !== "word") return;
-      setAttempts((a) => {
-        const next = a + 1;
-        if (next >= MAX_ATTEMPTS) {
-          wasAutoPassedRef.current = true;
-          window.setTimeout(() => {
-            advanceFromWord(false, spokenWord, true);
-            speak("Nice try! Let's keep going!", BENNY_VOICE);
-          }, 500);
-        } else if (next === 2) {
-          // Scaffold on 2nd miss — model the word for them to echo.
-          window.setTimeout(() => speakWordPolite(current.word, 1200), 400);
-        }
-        return next;
-      });
-    },
-    [current, advanceFromWord]
-  );
+  const handleReaderMiss = useCallback(() => {
+    setAttempts((a) => a + 1);
+  }, []);
 
   const handleSkip = () => {
     if (!current || current.kind !== "word") return;
     wasAutoPassedRef.current = true;
     advanceFromWord(false, "", true);
   };
-  const handleTapContinue = () => {
-    if (!current || current.kind !== "word") return;
-    wasAutoPassedRef.current = true;
-    advanceFromWord(false, "", true);
-  };
   const handleHearWord = () => {
     if (current && current.kind === "word") speakWordPolite(current.word, 300);
-  };
-  const handleReplayBubble = () => {
-    if (current && current.kind === "word") speak(current.askLine, BENNY_VOICE);
   };
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
