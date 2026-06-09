@@ -1402,7 +1402,7 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: NabuSceneProps) => {
+export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji, hideBackdrop = false }: NabuSceneProps) => {
   const w = word.toUpperCase();
   const k = `${w}-${index}`;
   const wrap = (children: React.ReactNode) => (
@@ -1412,7 +1412,7 @@ export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji }: Na
   );
   switch (w) {
     case "JUMP":
-    case "HOP":    return wrap(<JumpScene phase={phase} />);
+    case "HOP":    return wrap(<JumpScene phase={phase} hideBackdrop={hideBackdrop} />);
     case "BOOTS":  return wrap(<BootsScene phase={phase} />);
     case "KEY":    return wrap(<KeyScene phase={phase} />);
     case "AXE":
