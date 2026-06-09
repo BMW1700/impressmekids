@@ -18,10 +18,9 @@ import { ArrowLeft, Mic, SkipForward, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getVideoLevel, type VideoLevel, type VideoStep } from "@/data/preKAdventuresVideo";
-import { speak, speakWordPolite, cancelSpeech } from "@/lib/tts";
-import { isWordMatchLenient } from "@/lib/wordMatchingModes";
+import { speak, cancelSpeech } from "@/lib/tts";
 import { submitPreKAuraReading } from "@/lib/preKAuraSubmit";
-import { speechManager } from "@/lib/speechRecognitionManager";
+import { RPGWordReader } from "./RPGWordReader";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
 
@@ -34,7 +33,6 @@ interface Props {
 
 type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending";
 
-const MAX_ATTEMPTS = 3;
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
@@ -108,7 +106,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
-  const wasAutoPassedRef = useRef(false);
   const advancedRef = useRef(false);
   const askedStepRef = useRef<number>(-1);
 
@@ -126,7 +123,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     clearTimers();
     cancelSpeech();
     stopMicCapture();
-    speechManager.forceStop();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── current step & lookahead ───────────────────────────────────────────────
@@ -187,33 +183,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     return { blob, durationSec };
   }, []);
 
-  // ── Web Speech listener for the current word step ──────────────────────────
-  const startListening = useCallback((expectedWord: string) => {
-    speechManager.start({
-      owner: "reader",
-      continuous: true,
-      interimResults: true,
-      onResult: (transcript, alternatives, isFinal) => {
-        if (!isFinal) return;
-        const candidates = [transcript, ...alternatives];
-        const matched = candidates.some((c) => isWordMatchLenient(c, expectedWord));
-        if (matched) {
-          handleMatch(transcript || expectedWord);
-        } else {
-          // Only count finals as misses (avoid interim noise)
-          handleMiss(transcript);
-        }
-      },
-      onError: (e) => {
-        console.warn("[NabuVideo] speech error:", e);
-      },
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const stopListening = useCallback(() => {
-    speechManager.stop("reader");
-  }, []);
-
   // ── phase driver ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!adventure) return;
@@ -236,20 +205,19 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
-      // Guard: only speak the cloze stem once per step (StrictMode safe).
+      // Guard: only open each cloze prompt once per step (StrictMode safe).
+      // The prompt audio is already inside the video clip; do NOT play TTS here.
       if (askedStepRef.current === stepIndex) return;
       askedStepRef.current = stepIndex;
       advancedRef.current = false;
       clearTimers();
+      cancelSpeech();
       setAttempts(0);
-      wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      speak(current.askLine, { ...BENNY_VOICE, interrupt: true });
       queue(() => {
         setPhase("reading");
         startMicCapture();
-        startListening(current.word);
-      }, 1400);
+      }, 250);
       return;
     }
   }, [stepIndex, phase, adventure]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -261,7 +229,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       advancedRef.current = true;
       if (!current || current.kind !== "word") return;
 
-      stopListening();
       const { blob, durationSec } = stopMicCapture();
 
       // Fire-and-forget AURA submission so every Pre-K read hits the same
@@ -304,54 +271,25 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         }
       }, 600);
     },
-    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture]
+    [current, stepIndex, steps, adventure, attempts, stopMicCapture]
   );
 
-  const handleMatch = useCallback(
-    (spokenWord: string) => {
-      advanceFromWord(true, spokenWord, false);
+  const handleReaderResult = useCallback(
+    (matched: boolean, spokenWord: string) => {
+      setAttempts((a) => a + 1);
+      advanceFromWord(matched, spokenWord, !matched);
     },
     [advanceFromWord]
   );
 
-  const handleMiss = useCallback(
-    (spokenWord: string) => {
-      if (!current || current.kind !== "word") return;
-      setAttempts((a) => {
-        const next = a + 1;
-        if (next >= MAX_ATTEMPTS) {
-          wasAutoPassedRef.current = true;
-          window.setTimeout(() => {
-            advanceFromWord(false, spokenWord, true);
-            speak("Nice try! Let's keep going!", BENNY_VOICE);
-          }, 500);
-        } else if (next === 2) {
-          // Scaffold on 2nd miss — model the word for them to echo.
-          window.setTimeout(() => speakWordPolite(current.word, 1200), 400);
-        }
-        return next;
-      });
-    },
-    [current, advanceFromWord]
-  );
+  const handleReaderMiss = useCallback(() => {
+    setAttempts((a) => a + 1);
+  }, []);
 
   const handleSkip = () => {
     if (!current || current.kind !== "word") return;
-    wasAutoPassedRef.current = true;
     advanceFromWord(false, "", true);
   };
-  const handleTapContinue = () => {
-    if (!current || current.kind !== "word") return;
-    wasAutoPassedRef.current = true;
-    advanceFromWord(false, "", true);
-  };
-  const handleHearWord = () => {
-    if (current && current.kind === "word") speakWordPolite(current.word, 300);
-  };
-  const handleReplayBubble = () => {
-    if (current && current.kind === "word") speak(current.askLine, BENNY_VOICE);
-  };
-
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
     const video = videoRef.current;
@@ -416,7 +354,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const isWordPhase = phase === "ask" || phase === "reading";
   const wordStep = isWordPhase && current && current.kind === "word" ? current : null;
   const clipStep = current && current.kind === "clip" ? current : null;
-  const showTapFallback = phase === "reading" && attempts >= 1;
 
   // Find the "active video" src — current clip, or last clip we played
   // (so during word phases we hold the frozen last frame).
@@ -554,24 +491,22 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
               </motion.div>
             )}
 
-            {/* askLine bubble */}
+            {/* askLine bubble — text stays visible; audio lives in the video clip. */}
             <AnimatePresence mode="wait">
               {wordStep && (
-                <motion.button
+                <motion.div
                   key={`bubble-${stepIndex}`}
                   initial={{ opacity: 0, y: 12, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -8, scale: 0.95 }}
                   transition={{ duration: 0.3 }}
-                  onClick={handleReplayBubble}
-                  className="absolute top-3 left-1/2 -translate-x-1/2 w-[min(540px,82%)] cursor-pointer"
-                  aria-label="Replay line"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 w-[min(540px,82%)]"
                 >
                   <div className="relative flex items-center gap-2 rounded-2xl bg-white/95 px-4 py-2.5 text-center text-base sm:text-lg font-bold text-slate-800 shadow-xl">
                     <Volume2 className="h-4 w-4 flex-shrink-0 text-slate-500" />
                     <span className="flex-1">{wordStep.askLine}</span>
                   </div>
-                </motion.button>
+                </motion.div>
               )}
             </AnimatePresence>
 
@@ -618,45 +553,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
                 <div className="mt-1 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-600">
                   <Mic className="h-3 w-3" /> Your turn!
                 </div>
-                <button
-                  onClick={handleHearWord}
-                  className="absolute right-2 top-2 rounded-full bg-amber-100 p-1.5 text-amber-700 shadow hover:bg-amber-200"
-                  aria-label="Hear the word"
-                >
-                  <Volume2 className="h-4 w-4" />
-                </button>
               </motion.div>
 
-              {/* Listening indicator — mirrors the Reading UI from regular levels */}
-              <div className="mx-auto flex items-center justify-center gap-2 text-sm font-semibold text-emerald-600">
-                <Mic className="h-4 w-4" />
-                <span>Listening… Say the word!</span>
-                <div className="flex items-end gap-0.5 h-4">
-                  {[0, 1, 2, 3].map((i) => (
-                    <motion.span
-                      key={i}
-                      className="w-1 rounded-full bg-emerald-500"
-                      animate={{ height: ["30%", "100%", "50%", "80%", "30%"] }}
-                      transition={{
-                        duration: 0.9,
-                        repeat: Infinity,
-                        delay: i * 0.12,
-                        ease: "easeInOut",
-                      }}
-                    />
-                  ))}
-                </div>
+              <div className="mx-auto rounded-2xl bg-white/90 px-3 py-2 shadow-xl backdrop-blur-sm">
+                <RPGWordReader
+                  key={`reader-${stepIndex}-${wordStep.word}`}
+                  words={[wordStep.word]}
+                  batchSize={1}
+                  compact
+                  autoStart
+                  hideWordQueue
+                  enableEchoRetry={false}
+                  onResult={handleReaderResult}
+                  onMiss={(_, __) => handleReaderMiss()}
+                />
               </div>
-
-              {showTapFallback && (
-                <Button
-                  size="lg"
-                  onClick={handleTapContinue}
-                  className="mx-auto w-full max-w-md bg-rose-500 text-white shadow-xl hover:bg-rose-600"
-                >
-                  Tap to continue →
-                </Button>
-              )}
             </div>
           )}
         </div>
