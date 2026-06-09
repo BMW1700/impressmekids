@@ -82,6 +82,7 @@ const W101_L1: PreKAdventure = {
       problemLine: "Oh no! A river!",
       askLine: "I need to...",
       word: "JUMP", solutionEmoji: "💨", solutionPlacement: "over",
+      backgroundVideo: "riverStream",
       successLine: "Whoosh! Over we go!",
     },
     {
