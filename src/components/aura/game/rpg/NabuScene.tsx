@@ -40,6 +40,7 @@ interface NabuSceneProps {
   index: number;
   mood?: BennyMood | null;
   solutionEmoji?: string;
+  hideBackdrop?: boolean;
 }
 
 
