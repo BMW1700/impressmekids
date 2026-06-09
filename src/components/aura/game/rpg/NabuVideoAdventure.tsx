@@ -110,6 +110,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const recordingStartRef = useRef<number>(0);
   const wasAutoPassedRef = useRef(false);
   const advancedRef = useRef(false);
+  const askedStepRef = useRef<number>(-1);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
