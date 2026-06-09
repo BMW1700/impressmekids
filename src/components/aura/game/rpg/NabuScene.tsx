@@ -14,10 +14,12 @@
 import { createContext, useContext, useMemo } from "react";
 import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
+import bennyIdleSprite from "@/assets/benny-idle-sprite.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
 import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
 import sadAsset from "@/assets/benny-sad.png.asset.json";
+
+const BENNY_SPRITE_FRAMES = 30;
 
 type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 
