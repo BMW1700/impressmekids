@@ -353,6 +353,17 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.muted = false;
+        video.volume = 1;
+        video.currentTime = 0;
+        void video.play();
+      } catch (err) {
+        console.warn("[NabuVideo] initial video play failed:", err);
+      }
+    }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
@@ -418,14 +429,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
       {/* ── Video layer ─────────────────────────────────────────────────── */}
-      {activeVideoSrc && phase !== "tap-to-begin" && phase !== "ending" && (
+      {activeVideoSrc && phase !== "ending" && (
         <video
           ref={videoRef}
           key={activeVideoSrc}
           className="absolute inset-0 h-full w-full object-cover"
           src={activeVideoSrc}
           poster={lastClipPoster}
-          autoPlay={!!clipStep}
+          autoPlay={phase === "clip" && !!clipStep}
           playsInline
           preload="auto"
           controls={false}
