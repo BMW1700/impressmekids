@@ -159,7 +159,10 @@ const NabuSprite = ({
   // re-render. Do NOT key by phase: that remount caused the pre-walk glitch.
   const animateValue = useMemo(
     () => (anim ? anim(phase) : nabuAnim(phase)),
-    [anim, phase]
+    // `anim` is scene-stable for a single obstacle; depending on its inline
+    // function identity would rebuild the same motion target on parent re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phase]
   );
   return (
     <motion.g
