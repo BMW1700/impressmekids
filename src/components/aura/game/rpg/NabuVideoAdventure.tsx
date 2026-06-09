@@ -233,12 +233,12 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
 
     if (current.kind === "word") {
+      if (phase !== "ask") return;
       // Freeze on the previous clip's last frame (the <video> just naturally
       // stays paused at its current frame). Narrate stem, then start listening.
       setAttempts(0);
       wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      setPhase("ask");
       speak(current.askLine, BENNY_VOICE);
       queue(() => {
         setPhase("reading");
@@ -288,11 +288,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         window.setTimeout(() => setShowSparkle(false), 700);
       }
 
-      if (current.successLine) {
-        // Speak success line over the start of the next clip.
-        queue(() => speak(current.successLine!, BENNY_VOICE), 300);
-      }
-
+      cancelSpeech();
       setPhase("advancing");
       queue(() => {
         const next = stepIndex + 1;
@@ -427,7 +423,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           src={activeVideoSrc}
           poster={lastClipPoster}
           autoPlay={!!clipStep}
-          muted
           playsInline
           preload="auto"
           controls={false}
