@@ -627,6 +627,27 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
                 </button>
               </motion.div>
 
+              {/* Listening indicator — mirrors the Reading UI from regular levels */}
+              <div className="mx-auto flex items-center justify-center gap-2 text-sm font-semibold text-emerald-600">
+                <Mic className="h-4 w-4" />
+                <span>Listening… Say the word!</span>
+                <div className="flex items-end gap-0.5 h-4">
+                  {[0, 1, 2, 3].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="w-1 rounded-full bg-emerald-500"
+                      animate={{ height: ["30%", "100%", "50%", "80%", "30%"] }}
+                      transition={{
+                        duration: 0.9,
+                        repeat: Infinity,
+                        delay: i * 0.12,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
               {showTapFallback && (
                 <Button
                   size="lg"
