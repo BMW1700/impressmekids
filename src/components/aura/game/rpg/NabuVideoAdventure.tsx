@@ -36,6 +36,7 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 
 const MAX_ATTEMPTS = 3;
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
+const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
 let audioCtx: AudioContext | null = null;
@@ -90,7 +91,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     [world.id, level.id]
   );
 
-  const steps = adventure?.steps ?? [];
+  const steps = adventure?.steps ?? EMPTY_VIDEO_STEPS;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("tap-to-begin");
@@ -217,15 +218,15 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     if (!adventure) return;
     if (phase === "tap-to-begin") return;
 
-    advancedRef.current = false;
-    clearTimers();
-
     if (!current) {
       setPhase("ending");
       return;
     }
 
     if (current.kind === "clip") {
+      if (phase !== "clip") return;
+      advancedRef.current = false;
+      clearTimers();
       // Video element will start playing via key change + autoPlay.
       // onEnded callback handles advance.
       setLastClipPoster(current.poster);
@@ -233,12 +234,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
 
     if (current.kind === "word") {
+      if (phase !== "ask") return;
+      advancedRef.current = false;
+      clearTimers();
       // Freeze on the previous clip's last frame (the <video> just naturally
       // stays paused at its current frame). Narrate stem, then start listening.
       setAttempts(0);
       wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      setPhase("ask");
       speak(current.askLine, BENNY_VOICE);
       queue(() => {
         setPhase("reading");
@@ -288,11 +291,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         window.setTimeout(() => setShowSparkle(false), 700);
       }
 
-      if (current.successLine) {
-        // Speak success line over the start of the next clip.
-        queue(() => speak(current.successLine!, BENNY_VOICE), 300);
-      }
-
+      cancelSpeech();
       setPhase("advancing");
       queue(() => {
         const next = stepIndex + 1;
@@ -304,7 +303,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         }
       }, 600);
     },
-    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture] // eslint-disable-line react-hooks/exhaustive-deps
+    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture]
   );
 
   const handleMatch = useCallback(
@@ -354,6 +353,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
+    const video = videoRef.current;
+    if (video) {
+      try {
+        video.muted = false;
+        video.volume = 1;
+        video.currentTime = 0;
+        const playPromise = video.play();
+        if (playPromise) {
+          playPromise.catch((err) => console.warn("[NabuVideo] initial video play failed:", err));
+        }
+      } catch (err) {
+        console.warn("[NabuVideo] initial video play failed:", err);
+      }
+    }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
@@ -406,7 +419,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // Find the "active video" src — current clip, or last clip we played
   // (so during word phases we hold the frozen last frame).
-  const activeVideoSrc = useMemo(() => {
+  const activeVideoSrc = (() => {
     if (clipStep) return clipStep.src;
     // Walk backwards to find the most recent clip.
     for (let i = stepIndex - 1; i >= 0; i--) {
@@ -414,20 +427,19 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (s.kind === "clip") return s.src;
     }
     return null;
-  }, [clipStep, stepIndex, steps]);
+  })();
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
       {/* ── Video layer ─────────────────────────────────────────────────── */}
-      {activeVideoSrc && phase !== "tap-to-begin" && phase !== "ending" && (
+      {activeVideoSrc && phase !== "ending" && (
         <video
           ref={videoRef}
           key={activeVideoSrc}
           className="absolute inset-0 h-full w-full object-cover"
           src={activeVideoSrc}
           poster={lastClipPoster}
-          autoPlay={!!clipStep}
-          muted
+          autoPlay={phase === "clip" && !!clipStep}
           playsInline
           preload="auto"
           controls={false}
