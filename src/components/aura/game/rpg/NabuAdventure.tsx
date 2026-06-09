@@ -272,6 +272,27 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl shadow-xl">
       <div className={`absolute inset-0 bg-gradient-to-b ${skyClass}`} />
 
+      {scene?.backgroundVideo === "riverStream" && phase !== "ending" && (
+        <video
+          key="river-stream-bg"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          src={riverStreamVideo.url}
+          poster={riverStreamPoster.url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          controls={false}
+          disablePictureInPicture
+          aria-hidden
+          tabIndex={-1}
+          draggable={false}
+        />
+      )}
+
+
+
       {scene && phase !== "ending" && (
         <NabuScene
           word={scene.word}
