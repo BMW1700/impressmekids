@@ -233,7 +233,10 @@ const ensureBennySpriteKeyframes = () => {
   will-change: transform;
 }
 .benny-walk-strip {
-  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES - 1}, end) 1 both;
+  /* Infinite loop so the legs keep cycling on every obstacle. The wrapper is
+     persistent across phases now, so a `1 both` animation would freeze on
+     its last frame after the first walk and never replay. */
+  animation: benny-walk-svg-cycle ${BENNY_TRANSITION_SECONDS}s steps(${BENNY_WALK_FRAMES - 1}, end) infinite;
   transform-box: fill-box;
   transform-origin: 0 0;
   will-change: transform;
