@@ -506,7 +506,7 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
           ))}
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={bouncyWalkAnim} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
 
       {/* boots on Nabu — chunky, painted, with highlights so they read at 5ft */}
       {solved && (
