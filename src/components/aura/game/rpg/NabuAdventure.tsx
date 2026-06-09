@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { NabuScene } from "./NabuScene";
 import { RPGWordReader } from "./RPGWordReader";
 import { getPreKAdventure, type PreKAdventure } from "@/data/preKAdventures";
+import riverStreamVideo from "@/assets/river-stream-bg.mp4.asset.json";
+import riverStreamPoster from "@/assets/river-stream-poster.jpg.asset.json";
 import { speak, speakWordPolite } from "@/lib/tts";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
