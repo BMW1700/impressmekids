@@ -361,7 +361,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const isWordPhase = phase === "ask" || phase === "reading";
   const wordStep = isWordPhase && current && current.kind === "word" ? current : null;
   const clipStep = current && current.kind === "clip" ? current : null;
-  const showTapFallback = phase === "reading" && attempts >= 1;
 
   // Find the "active video" src — current clip, or last clip we played
   // (so during word phases we hold the frozen last frame).
