@@ -402,7 +402,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
       // parabola peaking between river banks (x ~380..620), centered at 500
       const t = Math.max(0, Math.min(1, (x - 320) / (680 - 320)));
       const lift = Math.sin(t * Math.PI) * arcPeak;
-      return 370 - lift;
+      return GROUND_Y - lift;
     });
     return {
       x: xs,
@@ -410,13 +410,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
       transition: { duration: BENNY_TRANSITION_SECONDS, ease: "linear" },
     };
   }
-  if (phase === "solved") {
-    return {
-      x: [140, 140],
-      y: [370, 340],
-      transition: { duration: 0.4, ease: "easeOut" },
-    };
-  }
+  if (phase === "solved") return nabuAnim(phase);
   return nabuAnim(phase);
 };
 
@@ -944,7 +938,7 @@ const GenericScene = ({
           <text x="560" y={GROUND_Y + 2} textAnchor="middle" fontSize="30" fontWeight="900" fill="#92400e">{word}</text>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 10)} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
     </Stage>
   );
 };
