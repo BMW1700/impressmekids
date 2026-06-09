@@ -136,22 +136,19 @@ const NabuSprite = ({
 }) => {
   const ctxMood = useContext(BennyMoodContext);
   // Walking sprite ONLY during actual travel (`transition`). During `solved`,
-  // Benny is celebrating in place — show idle/celebrate, not legs running in
-  // place. This eliminates the ~1s of running-in-place before he moves.
+  // Benny remains the same grounded idle dog so the walk handoff is invisible.
   const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
-  // Memoize the animate object so framer-motion doesn't restart the loop on
-  // every parent re-render (that was the "spazz"). Key the motion.g on phase
-  // so phase changes intentionally restart the animation cleanly.
+  // Memoize the animate object so framer-motion doesn't restart on every parent
+  // re-render. Do NOT key by phase: that remount caused the pre-walk glitch.
   const animateValue = useMemo(
     () => (anim ? anim(phase) : nabuAnim(phase)),
     [anim, phase]
   );
   return (
     <motion.g
-      key={phase}
-      initial={{ x: NABU_START.x, y: NABU_START.y }}
+      initial={false}
       animate={animateValue}
     >
       <BennySvgImage mood={bennyMood} size={size} />
@@ -250,8 +247,8 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
 
   return (
     <g aria-label="Benny" role="img">
-      {/* Idle layer: always mounted, fades out when walking/still. */}
-      <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 250ms ease" }}>
+      {/* Idle layer: always mounted, fades out instantly when walking/still. */}
+      <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
           x={-w / 2}
           y={stillY}
@@ -277,7 +274,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
 
       {/* Walk layer: always mounted (so its texture is pre-decoded), fades in
           on walk/jump/climb. Pre-decoding kills the Safari first-paint glitch. */}
-      <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 200ms ease" }}>
+      <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
           x={-w / 2}
           y={walkY}
