@@ -75,39 +75,16 @@ const nabuAnim = (phase: ScenePhase) => {
     };
   }
   if (phase === "solved") {
-    // Joyful triple-hop with squash-and-stretch + small spin on each apex.
-    return {
-      x: NABU_START.x,
-      y: [NABU_START.y, NABU_START.y - 38, NABU_START.y, NABU_START.y - 26, NABU_START.y, NABU_START.y - 18, NABU_START.y],
-      scaleY: [1, 1.12, 0.88, 1.10, 0.92, 1.06, 1],
-      scaleX: [1, 0.92, 1.08, 0.94, 1.06, 0.96, 1],
-      rotate: [0, -6, 0, 6, 0, -3, 0],
-      transition: { duration: 1.6, ease: "easeOut" as const },
-    };
+    // Stay grounded after the word is accepted. Reward FX can celebrate, but
+    // Benny's body must not hop before the walking handoff begins.
+    return NABU_IDLE_ANIM;
   }
-  // problem / ask / reading: completely still idle. The pre-word motion was
-  // the remaining visible glitch; walking stays separate and untouched.
+  // problem / ask / reading: the sprite-sheet animation is the only idle motion.
   return NABU_IDLE_ANIM;
 };
 
 // ── Scene-specific Nabu motion helpers ─────────────────────────────────────
 // All return a framer-motion `animate` object for the <motion.g> wrapper.
-
-// High-bouncing walk across — for muddy / squishy ground (BOOTS). Adds
-// squash on landings and stretch on rises so feet feel weighty.
-const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
-  if (phase === "transition") {
-    return {
-      x: [140, 280, 420, 560, 700, 860],
-      y: [370, 320, 370, 320, 370, 370],
-      scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
-      scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
-      rotate: [0, -4, 0, 4, 0, 0],
-      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
-    };
-  }
-  return nabuAnim(phase);
-};
 
 // Hop over an obstacle centered at obstacleX — anticipation crouch, big arc,
 // squash on landing, then trot off. Reads as a real jump, not a slide-up.
@@ -115,7 +92,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, obstacleX - 90, obstacleX - 70, obstacleX, obstacleX + 70, obstacleX + 90, 860],
-      y: [370, 380, 380, 250, 380, 380, 370],
+      y: [GROUND_Y, GROUND_Y, GROUND_Y, 250, GROUND_Y, GROUND_Y, GROUND_Y],
       scaleY: [1, 0.82, 1.18, 1.05, 1.18, 0.82, 1],
       scaleX: [1, 1.12, 0.90, 0.96, 0.90, 1.12, 1],
       rotate: [0, 0, -8, -4, 4, 0, 0],
@@ -126,7 +103,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
 };
 
 // Walk forward and stop at a target — adds a small settle-bob on arrival.
-const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
@@ -135,6 +112,21 @@ const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
         scaleY: [1, 1, 1],
         scaleX: [1, 1, 1],
         transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.55, 1] },
+      };
+    }
+    return nabuAnim(phase);
+  };
+
+const climbToAnim = (targetX: number, targetY: number) =>
+  (phase: ScenePhase): NabuAnim => {
+    if (phase === "transition") {
+      return {
+        x: targetX,
+        y: targetY,
+        scaleY: 1,
+        scaleX: 1,
+        rotate: 0,
+        transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" },
       };
     }
     return nabuAnim(phase);
@@ -159,22 +151,22 @@ const NabuSprite = ({
 }) => {
   const ctxMood = useContext(BennyMoodContext);
   // Walking sprite ONLY during actual travel (`transition`). During `solved`,
-  // Benny is celebrating in place — show idle/celebrate, not legs running in
-  // place. This eliminates the ~1s of running-in-place before he moves.
+  // Benny remains the same grounded idle dog so the walk handoff is invisible.
   const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
-  // Memoize the animate object so framer-motion doesn't restart the loop on
-  // every parent re-render (that was the "spazz"). Key the motion.g on phase
-  // so phase changes intentionally restart the animation cleanly.
+  // Memoize the animate object so framer-motion doesn't restart on every parent
+  // re-render. Do NOT key by phase: that remount caused the pre-walk glitch.
   const animateValue = useMemo(
     () => (anim ? anim(phase) : nabuAnim(phase)),
-    [anim, phase]
+    // `anim` is scene-stable for a single obstacle; depending on its inline
+    // function identity would rebuild the same motion target on parent re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phase]
   );
   return (
     <motion.g
-      key={phase}
-      initial={{ x: NABU_START.x, y: NABU_START.y }}
+      initial={false}
       animate={animateValue}
     >
       <BennySvgImage mood={bennyMood} size={size} />
@@ -273,8 +265,8 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
 
   return (
     <g aria-label="Benny" role="img">
-      {/* Idle layer: always mounted, fades out when walking/still. */}
-      <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 250ms ease" }}>
+      {/* Idle layer: always mounted, fades out instantly when walking/still. */}
+      <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
           x={-w / 2}
           y={stillY}
@@ -300,7 +292,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
 
       {/* Walk layer: always mounted (so its texture is pre-decoded), fades in
           on walk/jump/climb. Pre-decoding kills the Safari first-paint glitch. */}
-      <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 200ms ease" }}>
+      <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
           x={-w / 2}
           y={walkY}
@@ -328,7 +320,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
       {isStill && stillAnim && (
         <foreignObject
           x={-w / 2}
-          y={-h + 10}
+          y={-h}
           width={w}
           height={h}
           style={{ overflow: "visible", pointerEvents: "none" }}
@@ -428,7 +420,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
       // parabola peaking between river banks (x ~380..620), centered at 500
       const t = Math.max(0, Math.min(1, (x - 320) / (680 - 320)));
       const lift = Math.sin(t * Math.PI) * arcPeak;
-      return 370 - lift;
+      return GROUND_Y - lift;
     });
     return {
       x: xs,
@@ -436,13 +428,7 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
       transition: { duration: BENNY_TRANSITION_SECONDS, ease: "linear" },
     };
   }
-  if (phase === "solved") {
-    return {
-      x: [140, 140],
-      y: [370, 340],
-      transition: { duration: 0.4, ease: "easeOut" },
-    };
-  }
+  if (phase === "solved") return nabuAnim(phase);
   return nabuAnim(phase);
 };
 
@@ -741,18 +727,8 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           <rect key={i} x="595" y={GROUND_Y - 30 - i * 30} width="36" height="5" fill="#92400e" />
         ))}
       </motion.g>
-      {/* Nabu — special: climb up instead of walking right */}
-      {phase === "transition" ? (
-        <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y }}
-          animate={{ x: 612, y: GROUND_Y - 260 }}
-          transition={{ duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" }}
-        >
-          <BennySvgImage mood="climb" size={BENNY_SCENE_SIZE} />
-        </motion.g>
-      ) : (
-        <NabuSprite phase={phase} />
-      )}
+      {/* Benny climbs up without swapping/remounting the character tree. */}
+      <NabuSprite phase={phase} anim={climbToAnim(612, GROUND_Y - 260)} action="climb" />
     </Stage>
   );
 };
@@ -970,7 +946,7 @@ const GenericScene = ({
           <text x="560" y={GROUND_Y + 2} textAnchor="middle" fontSize="30" fontWeight="900" fill="#92400e">{word}</text>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860, GROUND_Y - 10)} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
     </Stage>
   );
 };
@@ -1013,7 +989,7 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(500, 60)} />
+      <NabuSprite phase={phase} anim={walkToAnim(860)} />
 
     </Stage>
   );
