@@ -293,10 +293,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     wasAutoPassedRef.current = true;
     advanceFromWord(false, "", true);
   };
-  const handleHearWord = () => {
-    if (current && current.kind === "word") speakWordPolite(current.word, 300);
-  };
-
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
     const video = videoRef.current;
@@ -560,13 +556,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
                 <div className="mt-1 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-600">
                   <Mic className="h-3 w-3" /> Your turn!
                 </div>
-                <button
-                  onClick={handleHearWord}
-                  className="absolute right-2 top-2 rounded-full bg-amber-100 p-1.5 text-amber-700 shadow hover:bg-amber-200"
-                  aria-label="Hear the word"
-                >
-                  <Volume2 className="h-4 w-4" />
-                </button>
               </motion.div>
 
               <div className="mx-auto rounded-2xl bg-white/90 px-3 py-2 shadow-xl backdrop-blur-sm">
