@@ -232,7 +232,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       advancedRef.current = true;
       if (!current || current.kind !== "word") return;
 
-      stopListening();
       const { blob, durationSec } = stopMicCapture();
 
       // Fire-and-forget AURA submission so every Pre-K read hits the same
@@ -275,7 +274,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         }
       }, 600);
     },
-    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture]
+    [current, stepIndex, steps, adventure, attempts, stopMicCapture]
   );
 
   const handleMatch = useCallback(
