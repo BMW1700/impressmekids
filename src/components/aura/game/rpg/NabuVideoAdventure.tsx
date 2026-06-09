@@ -18,7 +18,7 @@ import { ArrowLeft, Mic, SkipForward, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getVideoLevel, type VideoLevel, type VideoStep } from "@/data/preKAdventuresVideo";
-import { speak, speakWordPolite, cancelSpeech } from "@/lib/tts";
+import { speak, cancelSpeech } from "@/lib/tts";
 import { submitPreKAuraReading } from "@/lib/preKAuraSubmit";
 import { RPGWordReader } from "./RPGWordReader";
 import type { CampaignWorld } from "@/lib/campaignData";
@@ -106,7 +106,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
-  const wasAutoPassedRef = useRef(false);
   const advancedRef = useRef(false);
   const askedStepRef = useRef<number>(-1);
 
@@ -214,7 +213,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       clearTimers();
       cancelSpeech();
       setAttempts(0);
-      wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
       queue(() => {
         setPhase("reading");
@@ -290,7 +288,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   const handleSkip = () => {
     if (!current || current.kind !== "word") return;
-    wasAutoPassedRef.current = true;
     advanceFromWord(false, "", true);
   };
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
