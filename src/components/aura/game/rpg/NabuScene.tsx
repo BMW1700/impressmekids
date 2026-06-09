@@ -75,39 +75,16 @@ const nabuAnim = (phase: ScenePhase) => {
     };
   }
   if (phase === "solved") {
-    // Joyful triple-hop with squash-and-stretch + small spin on each apex.
-    return {
-      x: NABU_START.x,
-      y: [NABU_START.y, NABU_START.y - 38, NABU_START.y, NABU_START.y - 26, NABU_START.y, NABU_START.y - 18, NABU_START.y],
-      scaleY: [1, 1.12, 0.88, 1.10, 0.92, 1.06, 1],
-      scaleX: [1, 0.92, 1.08, 0.94, 1.06, 0.96, 1],
-      rotate: [0, -6, 0, 6, 0, -3, 0],
-      transition: { duration: 1.6, ease: "easeOut" as const },
-    };
+    // Stay grounded after the word is accepted. Reward FX can celebrate, but
+    // Benny's body must not hop before the walking handoff begins.
+    return NABU_IDLE_ANIM;
   }
-  // problem / ask / reading: completely still idle. The pre-word motion was
-  // the remaining visible glitch; walking stays separate and untouched.
+  // problem / ask / reading: the sprite-sheet animation is the only idle motion.
   return NABU_IDLE_ANIM;
 };
 
 // ── Scene-specific Nabu motion helpers ─────────────────────────────────────
 // All return a framer-motion `animate` object for the <motion.g> wrapper.
-
-// High-bouncing walk across — for muddy / squishy ground (BOOTS). Adds
-// squash on landings and stretch on rises so feet feel weighty.
-const bouncyWalkAnim = (phase: ScenePhase): NabuAnim => {
-  if (phase === "transition") {
-    return {
-      x: [140, 280, 420, 560, 700, 860],
-      y: [370, 320, 370, 320, 370, 370],
-      scaleY: [1, 1.12, 0.88, 1.12, 0.88, 1],
-      scaleX: [1, 0.92, 1.10, 0.92, 1.10, 1],
-      rotate: [0, -4, 0, 4, 0, 0],
-      transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 0.8, 1] },
-    };
-  }
-  return nabuAnim(phase);
-};
 
 // Hop over an obstacle centered at obstacleX — anticipation crouch, big arc,
 // squash on landing, then trot off. Reads as a real jump, not a slide-up.
@@ -115,7 +92,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
   if (phase === "transition") {
     return {
       x: [140, obstacleX - 90, obstacleX - 70, obstacleX, obstacleX + 70, obstacleX + 90, 860],
-      y: [370, 380, 380, 250, 380, 380, 370],
+      y: [GROUND_Y, GROUND_Y, GROUND_Y, 250, GROUND_Y, GROUND_Y, GROUND_Y],
       scaleY: [1, 0.82, 1.18, 1.05, 1.18, 0.82, 1],
       scaleX: [1, 1.12, 0.90, 0.96, 0.90, 1.12, 1],
       rotate: [0, 0, -8, -4, 4, 0, 0],
@@ -126,7 +103,7 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
 };
 
 // Walk forward and stop at a target — adds a small settle-bob on arrival.
-const walkToAnim = (targetX: number, targetY: number = GROUND_Y - 10) =>
+const walkToAnim = (targetX: number, targetY: number = GROUND_Y) =>
   (phase: ScenePhase): NabuAnim => {
     if (phase === "transition") {
       return {
