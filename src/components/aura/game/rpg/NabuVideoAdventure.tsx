@@ -19,9 +19,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { getVideoLevel, type VideoLevel, type VideoStep } from "@/data/preKAdventuresVideo";
 import { speak, speakWordPolite, cancelSpeech } from "@/lib/tts";
-import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { submitPreKAuraReading } from "@/lib/preKAuraSubmit";
-import { speechManager } from "@/lib/speechRecognitionManager";
+import { RPGWordReader } from "./RPGWordReader";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
 
@@ -126,7 +125,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     clearTimers();
     cancelSpeech();
     stopMicCapture();
-    speechManager.forceStop();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── current step & lookahead ───────────────────────────────────────────────
@@ -187,33 +185,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     return { blob, durationSec };
   }, []);
 
-  // ── Web Speech listener for the current word step ──────────────────────────
-  const startListening = useCallback((expectedWord: string) => {
-    speechManager.start({
-      owner: "reader",
-      continuous: true,
-      interimResults: true,
-      onResult: (transcript, alternatives, isFinal) => {
-        if (!isFinal) return;
-        const candidates = [transcript, ...alternatives];
-        const matched = candidates.some((c) => isWordMatchLenient(c, expectedWord));
-        if (matched) {
-          handleMatch(transcript || expectedWord);
-        } else {
-          // Only count finals as misses (avoid interim noise)
-          handleMiss(transcript);
-        }
-      },
-      onError: (e) => {
-        console.warn("[NabuVideo] speech error:", e);
-      },
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const stopListening = useCallback(() => {
-    speechManager.stop("reader");
-  }, []);
-
   // ── phase driver ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!adventure) return;
@@ -246,9 +217,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       setWordsAsked((n) => n + 1);
       speak(current.askLine, { ...BENNY_VOICE, interrupt: true });
       queue(() => {
+        cancelSpeech();
         setPhase("reading");
         startMicCapture();
-        startListening(current.word);
       }, 1400);
       return;
     }
