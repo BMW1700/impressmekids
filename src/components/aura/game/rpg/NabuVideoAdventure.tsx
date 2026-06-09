@@ -236,20 +236,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
+      // Guard: only speak the cloze stem once per step (StrictMode safe).
+      if (askedStepRef.current === stepIndex) return;
+      askedStepRef.current = stepIndex;
       advancedRef.current = false;
       clearTimers();
-      // Freeze on the previous clip's last frame (the <video> just naturally
-      // stays paused at its current frame). Narrate stem, then start listening.
       setAttempts(0);
       wasAutoPassedRef.current = false;
       setWordsAsked((n) => n + 1);
-      speak(current.askLine, BENNY_VOICE);
+      speak(current.askLine, { ...BENNY_VOICE, interrupt: true });
       queue(() => {
         setPhase("reading");
-        // Kick off mic capture + Web Speech.
         startMicCapture();
         startListening(current.word);
-      }, 1100);
+      }, 1400);
       return;
     }
   }, [stepIndex, phase, adventure]); // eslint-disable-line react-hooks/exhaustive-deps
