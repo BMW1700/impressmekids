@@ -254,17 +254,27 @@ const ensureBennySpriteKeyframes = () => {
 };
 
 const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number }) => {
-  // Idle: static original pose. No sprite-sheet animation here — the pre-word
-  // idle was the remaining glitch. Walking remains unchanged below.
-  // Walk / jump / climb: real walking video as a transparent sprite sheet —
-  // legs visibly cycle. Anchored so feet sit at the same ground baseline.
-  if (mood === "idle") {
-    ensureBennySpriteKeyframes();
-    const w = size;
-    const h = Math.round(size * BENNY_SPRITE_ASPECT);
-    const stillY = -h;
-    return (
-      <g aria-label="Benny the puppy" role="img">
+  // Render idle + walk layers BOTH mounted at once, crossfading via opacity.
+  // Previously we conditionally swapped between two <g> trees with different
+  // y/height geometry, which caused a 1-frame "glitch flash" right before the
+  // walk began (different sprite sizes + Safari re-decoding the walk sheet on
+  // first paint). Keeping both layers mounted eliminates that pop.
+  ensureBennySpriteKeyframes();
+  const w = size;
+  const h = Math.round(size * BENNY_SPRITE_ASPECT);
+  const stillY = -h;
+  const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
+  const walkY = -w + walkPad;
+  const isWalking = mood === "walk" || mood === "jump" || mood === "climb";
+  const isIdle = mood === "idle";
+  const isStill = mood === "celebrate" || mood === "sad";
+  const stillSrc = mood === "celebrate" ? celebrateAsset.url : sadAsset.url;
+  const stillAnim = isStill ? bennyMoodAnim(mood) : null;
+
+  return (
+    <g aria-label="Benny" role="img">
+      {/* Idle layer: always mounted, fades out when walking/still. */}
+      <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 250ms ease" }}>
         <svg
           x={-w / 2}
           y={stillY}
@@ -287,18 +297,10 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           />
         </svg>
       </g>
-    );
-  }
 
-  if (mood === "walk" || mood === "jump" || mood === "climb") {
-    ensureBennySpriteKeyframes();
-    const w = size;
-    const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
-    // Anchor at parent's (NABU_START.y == GROUND_Y). Sprite bottom edge sits
-    // on the ground; walking sheet adds its transparent bottom pad back.
-    const walkY = -w + walkPad;
-    return (
-      <g aria-label="Benny walking" role="img">
+      {/* Walk layer: always mounted (so its texture is pre-decoded), fades in
+          on walk/jump/climb. Pre-decoding kills the Safari first-paint glitch. */}
+      <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 200ms ease" }}>
         <svg
           x={-w / 2}
           y={walkY}
@@ -321,44 +323,36 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           />
         </svg>
       </g>
-    );
-  }
 
-
-  // Celebrate / sad: render the still PNG inside a motion wrapper. The
-  // sprite-sheet has no celebrate/sad frames, and the rigged head/body split
-  // looked unprofessional (floating head). A clean still + Motion bounce
-  // reads as a single coherent character.
-  const src = mood === "celebrate" ? celebrateAsset.url : sadAsset.url;
-  const w = size;
-  const h = Math.round(size * BENNY_SPRITE_ASPECT);
-  const anim = bennyMoodAnim(mood);
-  return (
-    <foreignObject
-      x={-w / 2}
-      y={-h + 10}
-      width={w}
-      height={h}
-      style={{ overflow: "visible", pointerEvents: "none" }}
-    >
-      <div style={{ width: w, height: h, transformOrigin: "50% 100%" }}>
-        <motion.img
-          src={src}
-          alt={`Benny ${mood}`}
-          draggable={false}
-          animate={anim.animate}
-          transition={anim.transition}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "contain",
-            transformOrigin: "50% 100%",
-            pointerEvents: "none",
-            userSelect: "none",
-          }}
-        />
-      </div>
-    </foreignObject>
+      {/* Celebrate / sad still PNG layer, mounted only when needed. */}
+      {isStill && stillAnim && (
+        <foreignObject
+          x={-w / 2}
+          y={-h + 10}
+          width={w}
+          height={h}
+          style={{ overflow: "visible", pointerEvents: "none" }}
+        >
+          <div style={{ width: w, height: h, transformOrigin: "50% 100%" }}>
+            <motion.img
+              src={stillSrc}
+              alt={`Benny ${mood}`}
+              draggable={false}
+              animate={stillAnim.animate}
+              transition={stillAnim.transition}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                transformOrigin: "50% 100%",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
+            />
+          </div>
+        </foreignObject>
+      )}
+    </g>
   );
 };
 
