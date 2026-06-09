@@ -301,11 +301,11 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           on walk/jump/climb. Pre-decoding kills the Safari first-paint glitch. */}
       <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
-          x={-w / 2}
+          x={-wW / 2}
           y={walkY}
-          width={w}
-          height={w}
-          viewBox={`0 0 ${w} ${w}`}
+          width={wW}
+          height={wW}
+          viewBox={`0 0 ${wW} ${wW}`}
           overflow="hidden"
         >
           <image
@@ -313,11 +313,11 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             href={bennyWalkSprite.url}
             x="0"
             y="0"
-            width={w * BENNY_WALK_FRAMES}
-            height={w}
+            width={wW * BENNY_WALK_FRAMES}
+            height={wW}
             preserveAspectRatio="none"
             style={{
-              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
+              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * wW}px`,
             }}
           />
         </svg>
