@@ -36,6 +36,7 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 
 const MAX_ATTEMPTS = 3;
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
+const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
 let audioCtx: AudioContext | null = null;
@@ -90,7 +91,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     [world.id, level.id]
   );
 
-  const steps = adventure?.steps ?? [];
+  const steps = adventure?.steps ?? EMPTY_VIDEO_STEPS;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("tap-to-begin");
@@ -300,7 +301,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         }
       }, 600);
     },
-    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture] // eslint-disable-line react-hooks/exhaustive-deps
+    [current, stepIndex, steps, adventure, attempts, stopListening, stopMicCapture]
   );
 
   const handleMatch = useCallback(
@@ -402,7 +403,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // Find the "active video" src — current clip, or last clip we played
   // (so during word phases we hold the frozen last frame).
-  const activeVideoSrc = useMemo(() => {
+  const activeVideoSrc = (() => {
     if (clipStep) return clipStep.src;
     // Walk backwards to find the most recent clip.
     for (let i = stepIndex - 1; i >= 0; i--) {
@@ -410,7 +411,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (s.kind === "clip") return s.src;
     }
     return null;
-  }, [clipStep, stepIndex, steps]);
+  })();
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
