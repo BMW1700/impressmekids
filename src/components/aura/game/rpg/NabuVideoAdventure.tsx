@@ -218,15 +218,15 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     if (!adventure) return;
     if (phase === "tap-to-begin") return;
 
-    advancedRef.current = false;
-    clearTimers();
-
     if (!current) {
       setPhase("ending");
       return;
     }
 
     if (current.kind === "clip") {
+      if (phase !== "clip") return;
+      advancedRef.current = false;
+      clearTimers();
       // Video element will start playing via key change + autoPlay.
       // onEnded callback handles advance.
       setLastClipPoster(current.poster);
@@ -235,6 +235,8 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
+      advancedRef.current = false;
+      clearTimers();
       // Freeze on the previous clip's last frame (the <video> just naturally
       // stays paused at its current frame). Narrate stem, then start listening.
       setAttempts(0);
