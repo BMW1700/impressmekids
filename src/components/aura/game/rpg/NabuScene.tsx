@@ -258,12 +258,8 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   const w = size;
   const h = Math.round(size * BENNY_SPRITE_ASPECT);
   const stillY = -h;
-  // Walk sprite art occupies less of its cell than idle art, so scale the walk
-  // layer up so the visible dog matches the idle dog's on-screen size.
-  const WALK_SCALE = 1.4;
-  const wW = w * WALK_SCALE;
-  const walkPad = Math.round((wW * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
-  const walkY = -wW + walkPad;
+  const walkPad = Math.round((w * BENNY_WALK_VISIBLE_BOTTOM_PAD) / 360);
+  const walkY = -w + walkPad;
   const isWalking = mood === "walk" || mood === "jump" || mood === "climb";
   const isIdle = mood === "idle";
   const isStill = mood === "celebrate" || mood === "sad";
@@ -301,11 +297,11 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           on walk/jump/climb. Pre-decoding kills the Safari first-paint glitch. */}
       <g style={{ opacity: isWalking ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
-          x={-wW / 2}
+          x={-w / 2}
           y={walkY}
-          width={wW}
-          height={wW}
-          viewBox={`0 0 ${wW} ${wW}`}
+          width={w}
+          height={w}
+          viewBox={`0 0 ${w} ${w}`}
           overflow="hidden"
         >
           <image
@@ -313,11 +309,11 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
             href={bennyWalkSprite.url}
             x="0"
             y="0"
-            width={wW * BENNY_WALK_FRAMES}
-            height={wW}
+            width={w * BENNY_WALK_FRAMES}
+            height={w}
             preserveAspectRatio="none"
             style={{
-              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * wW}px`,
+              ["--benny-walk-end" as any]: `${-(BENNY_WALK_FRAMES - 1) * w}px`,
             }}
           />
         </svg>
