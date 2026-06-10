@@ -8691,6 +8691,7 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
+      has_verified_mfa: { Args: { _user_id: string }; Returns: boolean }
       is_classmate: {
         Args: { _viewed_id: string; _viewer_id: string }
         Returns: boolean
@@ -8703,6 +8704,7 @@ export type Database = {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
+      is_coppa_blocked: { Args: { _user_id: string }; Returns: boolean }
       is_district_manager: { Args: { _user_id: string }; Returns: boolean }
       is_parent: { Args: { _user_id: string }; Returns: boolean }
       is_parent_of_student: {
