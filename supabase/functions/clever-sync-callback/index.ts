@@ -161,13 +161,15 @@ serve(async (req) => {
       console.log('Created user:', userId);
     }
 
-    // Generate a magic link for the user to sign in
+    // Generate a magic link for the user to sign in.
+    // Pass the OAuth `state` back to the SPA so it can validate CSRF round-trip.
     console.log('Generating sign-in link...');
+    const successRedirect = `${appUrl}/auth?clever_login=success&state=${encodeURIComponent(state)}`;
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${appUrl}/auth?clever_login=success`,
+        redirectTo: successRedirect,
       },
     });
 
@@ -180,11 +182,10 @@ serve(async (req) => {
     const magicLinkUrl = new URL(linkData.properties.action_link);
     const token = magicLinkUrl.searchParams.get('token');
     const tokenType = magicLinkUrl.searchParams.get('type');
-    
+
     // Redirect to the app's auth page with the magic link token
-    // The Supabase client on the frontend will handle the token verification
-    const redirectUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${tokenType}&redirect_to=${encodeURIComponent(`${appUrl}/auth?clever_login=success`)}`;
-    
+    const redirectUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify?token=${token}&type=${tokenType}&redirect_to=${encodeURIComponent(successRedirect)}`;
+
     console.log('Redirecting to:', redirectUrl);
     return Response.redirect(redirectUrl, 302);
 
