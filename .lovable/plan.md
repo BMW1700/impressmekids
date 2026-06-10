@@ -1,36 +1,83 @@
-Brutally honest audit: the video level was not actually using the proven regular reader capture stack. It was showing a custom “Listening” label, but the real working controls/state machine from the regular Pre-K word reader were not there. The custom listener also only reacted to final transcripts, so if the browser stayed on interim speech or the recognition session failed/restarted silently, the UI looked active while nothing advanced.
+## Goal
 
-Plan to fix it:
+Add the next two obstacle scenes (BOOTS and KEY) to Benny Visits Grandma using the new video clips, with cinematic 1-second cross-fades between scenes. The word overlay must only appear during the freeze-frame pause, not while Benny is walking.
 
-1. Replace the custom word-phase microphone path in `NabuVideoAdventure.tsx` with the same proven `RPGWordReader` component used by regular levels.
-   - Render only one word at a time: `words={[wordStep.word]}`.
-   - Use `batchSize={1}` and `autoStart` so the mic starts when the word appears.
-   - Keep the video-level luxury word card look by using the existing overlay shell, but put the real reader controls directly beneath it.
+## Current 5 obstacles in W101_L1
 
-2. Keep the buttons the user requested.
-   - Show the `Hear` button.
-   - Show the `Reading...` mic button while active.
-   - Allow pausing/resuming the mic using the regular reader controls.
-   - Keep the listening waveform/status from the working reader instead of the fake custom status.
+1. JUMP (river) — already has A + B clips
+2. BOOTS (muddy field)
+3. KEY (locked gate)
+4. HOP (path)
+5. BONE (puppy)
 
-3. Stop “I need to...” from repeating.
-   - Remove/cancel any TTS replay behavior tied to the ask bubble after the first prompt.
-   - Make the ask bubble text remain visible, but not clickable for replay during the word-reading phase.
-   - Guard prompt audio by a per-step ref and cancel speech before entering mic mode so it cannot overlap/re-trigger.
+## Asset mapping (to confirm by inspecting the 4 uploads)
 
-4. Preserve the video adventure loop.
-   - Clip plays with audio.
-   - Video pauses/freezes on the final frame.
-   - Text remains: “I need to...”
-   - Word appears: “JUMP”.
-   - Child says “jump”.
-   - The regular reader detects it.
-   - On correct, submit the word/audio context to the backend path, then transition to the next video clip.
+User said "do boots and key first" with 4 uploads (9, 10, 11, 12) and confirmed two clips per obstacle (A = arrival + "I need...", B = resolution + walk-off). Tentative mapping:
 
-5. Keep backend/AURA submission intact.
-   - Continue using `submitPreKAuraReading` after the word is resolved.
-   - Pass expected word, spoken word, step index, attempts, and match status.
+- `L1-O2-A.mp4` = BOOTS setup → uploaded `9.MP4`
+- `L1-O2-B.mp4` = BOOTS resolution → uploaded `10.MP4`
+- `L1-O3-A.mp4` = KEY setup → uploaded `11.MP4`
+- `L1-O3-B.mp4` = KEY resolution → uploaded `12.MP4`
 
-6. Add diagnostic logging only around the video word phase if needed.
-   - Log when the word reader starts, when it returns a result, and when the clip advances.
-   - Keep logs minimal and remove/avoid noisy UI changes.
+I will inspect the first frame of each clip with ffmpeg before uploading to confirm which is mud vs. gate and which is setup vs. resolution. If the order is wrong I will reassign before publishing the asset pointers.
+
+## Implementation steps
+
+### 1. Upload clips as CDN assets
+Use `lovable-assets create` on each `/mnt/user-uploads/{9,10,11,12}.MP4` (re-muxed if needed for audio, matching how JUMP clips were prepared) and write four new `.asset.json` pointers under `src/assets/`:
+- `L1-O2-A.mp4.asset.json`
+- `L1-O2-B.mp4.asset.json`
+- `L1-O3-A.mp4.asset.json`
+- `L1-O3-B.mp4.asset.json`
+
+Also capture last-frame poster JPEGs for the A clips so the freeze-frame holds cleanly while the word card is up:
+- `L1-O2-A-last.jpg.asset.json`
+- `L1-O3-A-last.jpg.asset.json`
+
+### 2. Extend `src/data/preKAdventuresVideo.ts`
+Replace the BOOTS and KEY entries (currently word-only fallbacks) with the same clip→word→clip pattern used by JUMP:
+
+```
+{ kind: "clip", src: L1_O2_A.url, poster: L1_O2_A_LAST.url },
+{ kind: "word", word: "BOOTS", askLine: "My feet need big...", successLine: "Big boots! Splish splash!" },
+{ kind: "clip", src: L1_O2_B.url },
+{ kind: "clip", src: L1_O3_A.url, poster: L1_O3_A_LAST.url },
+{ kind: "word", word: "KEY", askLine: "To open the gate I need a...", successLine: "Click! The gate is open!" },
+{ kind: "clip", src: L1_O3_B.url },
+```
+
+HOP and BONE stay as word-only steps until their videos are filmed.
+
+### 3. Add 1-second cross-fade between clips in `NabuVideoAdventure.tsx`
+
+Currently transitions between steps are hard cuts. Add a clip-to-clip cross-fade layer:
+
+- Render two stacked `<video>` elements (current + next) inside an `AnimatePresence`-style wrapper.
+- When a `clip` step ends (or a `word` step resolves and the next step is a `clip`), fade the outgoing layer to opacity 0 over 1000 ms while the incoming clip fades in from opacity 0 and starts playing.
+- Use `framer-motion` (already in project) with `initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.0 }}`.
+- Cross-fade only between `clip` steps. The `clip → word` transition stays as a freeze on the last frame (poster image) so no fade happens when the word card appears.
+- Cross-fade also wraps the `word → clip` handoff: once the child says the word correctly, fade out the freeze-frame and fade in the resolution clip over 1 s.
+
+### 4. Word card appearance rule (re-confirm working behavior)
+
+The luxurious word card overlay must remain invisible while any clip is playing. It only mounts when `step.kind === "word"` AND the previous clip has fully ended (poster frame shown). This is already the case in `NabuVideoAdventure.tsx`; verify the cross-fade timing does not let the card appear while Benny is still walking off-screen. Concretely: the A clip plays to its natural end (where Benny is at the obstacle), pauses on its last frame, then the word card fades in.
+
+### 5. Keep existing reader + AURA submission intact
+
+No changes to `RPGWordReader` integration, `submitPreKAuraReading`, or the mic UI. This work is purely scene wiring + transitions.
+
+## Files touched
+
+- NEW: `src/assets/L1-O2-A.mp4.asset.json`
+- NEW: `src/assets/L1-O2-B.mp4.asset.json`
+- NEW: `src/assets/L1-O3-A.mp4.asset.json`
+- NEW: `src/assets/L1-O3-B.mp4.asset.json`
+- NEW: `src/assets/L1-O2-A-last.jpg.asset.json`
+- NEW: `src/assets/L1-O3-A-last.jpg.asset.json`
+- EDIT: `src/data/preKAdventuresVideo.ts` — add BOOTS and KEY clip steps
+- EDIT: `src/components/aura/game/rpg/NabuVideoAdventure.tsx` — add 1 s cross-fade layer between clips
+
+## Out of scope (next batch)
+
+- HOP and BONE clips — will be wired in the same way once you upload them.
+- Audio re-encoding/trimming beyond what's needed to make the uploaded MP4s play cleanly.

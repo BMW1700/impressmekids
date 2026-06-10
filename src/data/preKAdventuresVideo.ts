@@ -13,6 +13,12 @@
 import L1_O1_A from "@/assets/L1-O1-A.mp4.asset.json";
 import L1_O1_B from "@/assets/L1-O1-B.mp4.asset.json";
 import L1_O1_A_LAST from "@/assets/L1-O1-A-last.jpg.asset.json";
+import L1_O2_A from "@/assets/L1-O2-A.mp4.asset.json";
+import L1_O2_B from "@/assets/L1-O2-B.mp4.asset.json";
+import L1_O2_A_LAST from "@/assets/L1-O2-A-last.jpg.asset.json";
+import L1_O3_A from "@/assets/L1-O3-A.mp4.asset.json";
+import L1_O3_B from "@/assets/L1-O3-B.mp4.asset.json";
+import L1_O3_A_LAST from "@/assets/L1-O3-A-last.jpg.asset.json";
 
 export type VideoStep =
   | { kind: "clip"; src: string; poster?: string }
@@ -37,9 +43,8 @@ export interface VideoLevel {
 
 // ============================================================================
 // W101_L1 — "Help Benny visit Grandma!"
-// First obstacle (JUMP) has real video. The other four prompts will get
-// their clips dropped in as they're filmed; until then the screen holds on
-// the last frame of the previous clip while the kid reads the word.
+// Obstacles 1 (JUMP), 2 (BOOTS), 3 (KEY) have full A+B clips.
+// Obstacles 4 (HOP) and 5 (BONE) hold on the previous frame until filmed.
 // ============================================================================
 
 const W101_L1: VideoLevel = {
@@ -47,6 +52,7 @@ const W101_L1: VideoLevel = {
   goal: "Help Benny visit Grandma!",
   endingLine: "We made it to Grandma's!",
   steps: [
+    // — Obstacle 1: JUMP the river —
     { kind: "clip", src: L1_O1_A.url, poster: L1_O1_A_LAST.url },
     {
       kind: "word",
@@ -56,19 +62,27 @@ const W101_L1: VideoLevel = {
     },
     { kind: "clip", src: L1_O1_B.url },
 
-    // — Following obstacles: audio + word card only until clips are filmed —
+    // — Obstacle 2: BOOTS for the muddy field —
+    { kind: "clip", src: L1_O2_A.url, poster: L1_O2_A_LAST.url },
     {
       kind: "word",
       word: "BOOTS",
       askLine: "My feet need big...",
       successLine: "Big boots! Splish splash!",
     },
+    { kind: "clip", src: L1_O2_B.url },
+
+    // — Obstacle 3: KEY to open the gate —
+    { kind: "clip", src: L1_O3_A.url, poster: L1_O3_A_LAST.url },
     {
       kind: "word",
       word: "KEY",
       askLine: "To open the gate I need a...",
       successLine: "Click! The gate is open!",
     },
+    { kind: "clip", src: L1_O3_B.url },
+
+    // — Obstacle 4 & 5: audio + word card only until clips are filmed —
     {
       kind: "word",
       word: "HOP",
