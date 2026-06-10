@@ -96,6 +96,7 @@ const SchoolSetup = lazy(() => import("./pages/SchoolSetup"));
 const ScopeAndSequence = lazy(() => import("./pages/ScopeAndSequence"));
 const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
+const GameLegal = lazy(() => import("./pages/game/legal/GameLegal"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -181,6 +182,10 @@ const App = () => (
 
                   {/* Game Mode — public pages (no auth required) */}
                   <Route path="/game/dashboard" element={<GameDashboard />} />
+
+                  {/* Game Mode — Legal & Compliance (FERPA / COPPA / SOC 2) */}
+                  <Route path="/game/legal" element={<GameLegal />} />
+                  <Route path="/game/legal/:slug" element={<GameLegal />} />
 
                   {/* Protected routes — auth required */}
                   <Route element={<RequireAuth />}>
