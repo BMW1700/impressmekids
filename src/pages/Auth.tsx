@@ -138,10 +138,10 @@ const Auth = () => {
     // Handle Clever login success/error from URL params
     const cleverLogin = searchParams.get('clever_login');
     const cleverError = searchParams.get('error');
+    const returnedState = searchParams.get('state');
 
     const clearCleverParams = () => {
-      if (searchParams.has('clever_login') || searchParams.has('error')) {
-        // Clear params via router so history state stays consistent
+      if (searchParams.has('clever_login') || searchParams.has('error') || searchParams.has('state')) {
         setSearchParams({}, { replace: true });
       }
     };
@@ -157,6 +157,20 @@ const Auth = () => {
     }
 
     if (cleverLogin === 'success') {
+      // CSRF protection: validate state round-trip
+      const storedState = sessionStorage.getItem('clever_oauth_state');
+      sessionStorage.removeItem('clever_oauth_state');
+      if (!storedState || !returnedState || storedState !== returnedState) {
+        // Sign out any session that may have been established and abort
+        supabase.auth.signOut().catch(() => {});
+        toast({
+          title: "Clever login failed",
+          description: "Invalid login state. Please try again.",
+          variant: "destructive",
+        });
+        clearCleverParams();
+        return;
+      }
       toast({
         title: "Success!",
         description: "Successfully signed in with Clever",

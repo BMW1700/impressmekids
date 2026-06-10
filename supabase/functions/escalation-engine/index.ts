@@ -32,10 +32,37 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // --- AuthN/AuthZ: only teachers or admins may invoke this function ---
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!authHeader) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userErr } = await userClient.auth.getUser();
+    if (userErr || !userData?.user) {
+      return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const callerId = userData.user.id;
+    const { data: isAdmin } = await userClient.rpc("has_role", { _user_id: callerId, _role: "admin" });
+    const { data: isTeacher } = await userClient.rpc("has_role", { _user_id: callerId, _role: "teacher" });
+    if (!isAdmin && !isTeacher) {
+      return new Response(JSON.stringify({ success: false, error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { drill_session_id, action } = await req.json();
-    console.log(`[Escalation Engine] Action: ${action}, Drill: ${drill_session_id}`);
+    console.log(`[Escalation Engine] Action: ${action}, Drill: ${drill_session_id}, Caller: ${callerId}`);
 
     if (action === "check_escalations") {
       // Get active drill session
@@ -202,7 +229,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "acknowledge_escalation") {
-      const { notification_id, user_id, notes } = await req.json();
+      const { notification_id, notes } = await req.json();
+      // SECURITY: use verified caller id, never trust client-supplied user_id
+      const user_id = callerId;
 
       // Update the notification
       const { error: ackError } = await supabase
@@ -247,7 +276,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "resolve_missing_student") {
-      const { attendance_id, user_id, resolution_notes, resolved_status } = await req.json();
+      const { attendance_id, resolution_notes, resolved_status } = await req.json();
+      // SECURITY: use verified caller id, never trust client-supplied user_id
+      const user_id = callerId;
 
       // Update attendance record
       const { data: attendance, error: updateError } = await supabase
