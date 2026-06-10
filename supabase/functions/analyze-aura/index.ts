@@ -278,12 +278,13 @@ Format as JSON:
   }
 }`;
 
-      // Import Vertex AI helper
+      // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
       const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+      const { scrubPII } = await import('../_shared/pseudonymize.ts');
 
       const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
       
-      const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
+      const aiContent = await callVertexAI(scrubPII(aiPrompt), systemInstruction, {
         model: 'gemini-2.5-flash',
         temperature: 0.7,
       });
@@ -580,12 +581,13 @@ Format as JSON:
   }
 }`;
 
-  // Import Vertex AI helper
+  // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
   const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+  const { scrubPII } = await import('../_shared/pseudonymize.ts');
   
   const systemInstruction = 'You are an expert reading comprehension AI with proprietary analysis algorithms. Always respond with valid JSON.';
   
-  const aiContent = await callVertexAI(aiPrompt, systemInstruction, {
+  const aiContent = await callVertexAI(scrubPII(aiPrompt), systemInstruction, {
     model: 'gemini-2.5-flash',
     temperature: 0.7,
   });

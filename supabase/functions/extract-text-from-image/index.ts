@@ -67,8 +67,9 @@ serve(async (req) => {
 
     console.log('Sending OCR request to Google Vertex AI...');
 
-    // Import Vertex AI helper
+    // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
     const { callVertexVision } = await import('../_shared/vertexAuth.ts');
+    const { scrubPII } = await import('../_shared/pseudonymize.ts');
 
     const prompt = `Extract all text from this image of a reading passage. 
 Preserve paragraph breaks and formatting as much as possible.
