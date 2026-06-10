@@ -9,6 +9,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RequireSchoolProfile } from "@/components/auth/RequireSchoolProfile";
+import { RequireMFA } from "@/components/auth/RequireMFA";
 import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
@@ -246,18 +247,21 @@ const App = () => (
                       <Route path="/parent/install-app" element={<PWAInstallGuide />} />
                       <Route path="/parent/data-privacy" element={<DataPrivacy />} />
 
-                      <Route path="/admin" element={<AdminDashboard />} />
-                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                      <Route path="/admin/calendar" element={<AdminCalendar />} />
-                      <Route path="/admin/settings" element={<SchoolSettings />} />
-                      <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
-                      <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
-                      <Route path="/admin/security" element={<AdminSecurityDashboard />} />
+                      {/* Admin / District / Security — MFA enforced (FERPA / SOC 2) */}
+                      <Route element={<RequireMFA />}>
+                        <Route path="/admin" element={<AdminDashboard />} />
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route path="/admin/calendar" element={<AdminCalendar />} />
+                        <Route path="/admin/settings" element={<SchoolSettings />} />
+                        <Route path="/admin/safety" element={<AdminSafetyDashboard />} />
+                        <Route path="/admin/safety/drill/:drillId" element={<AdminDrillMonitor />} />
+                        <Route path="/admin/security" element={<AdminSecurityDashboard />} />
 
-                      <Route path="/security" element={<SecurityPortal />} />
-                      <Route path="/district/dashboard" element={<DistrictDashboard />} />
-                      <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
-                      <Route path="/district/register" element={<RegisterDistrict />} />
+                        <Route path="/security" element={<SecurityPortal />} />
+                        <Route path="/district/dashboard" element={<DistrictDashboard />} />
+                        <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
+                        <Route path="/district/register" element={<RegisterDistrict />} />
+                      </Route>
                     </Route>
                   </Route>
 

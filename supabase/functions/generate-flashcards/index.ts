@@ -123,12 +123,13 @@ Return ONLY a valid JSON array of flashcards in this exact format:
 
     console.log('Calling Vertex AI for flashcard generation...');
 
-    // Import Vertex AI helper
+    // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
     const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+    const { scrubPII } = await import('../_shared/pseudonymize.ts');
 
     const systemInstruction = 'You are a helpful assistant that creates educational flashcards. Always return valid JSON arrays.';
     
-    const generatedText = await callVertexAI(prompt, systemInstruction, {
+    const generatedText = await callVertexAI(scrubPII(prompt), systemInstruction, {
       model: 'gemini-2.5-flash',
       temperature: 0.7,
     });

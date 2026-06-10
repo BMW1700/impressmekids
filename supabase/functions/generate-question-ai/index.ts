@@ -101,10 +101,11 @@ Difficulty: ${difficulty}/5
 
 Generate 3 questions following the exact format specified.`;
 
-    // Import Vertex AI helper
+    // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
     const { callVertexAI } = await import('../_shared/vertexAuth.ts');
+    const { scrubPII } = await import('../_shared/pseudonymize.ts');
 
-    const content = await callVertexAI(userPrompt, SYSTEM_PROMPT, {
+    const content = await callVertexAI(scrubPII(userPrompt), SYSTEM_PROMPT, {
       model: 'gemini-2.5-flash',
       temperature: 0.7,
     });
