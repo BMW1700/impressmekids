@@ -329,20 +329,28 @@ serve(async (req) => {
 
 CRITICAL: Return ONLY the JSON object. No markdown, no code blocks, no extra text.`;
 
+    // FERPA/COPPA: strip real names + PII before sending to the LLM.
+    // We replace each student's name with a stable "Student N" alias,
+    // call the model, then restore real names in the response.
+    const { pseudonymizeStudents, scrubPII } = await import('../_shared/pseudonymize.ts');
+    const { anonymized, decode } = pseudonymizeStudents(studentsData, 'name');
+
     const userPrompt = `Analyze this classroom data and return the JSON structure exactly as specified:
 
-Classroom ID: ${classroom_id}
-Students Data: ${JSON.stringify(studentsData, null, 2)}
+Classroom ID: [classroom]
+Students Data: ${scrubPII(JSON.stringify(anonymized, null, 2))}
 
 Provide actionable insights for each student based on their assignments and AURA metrics.`;
 
     // Import Vertex AI helper
     const { callVertexAI } = await import('../_shared/vertexAuth.ts');
     
-    const summaryText = await callVertexAI(userPrompt, systemPrompt, {
+    const rawSummaryText = await callVertexAI(userPrompt, systemPrompt, {
       model: 'gemini-2.5-flash-lite',
       temperature: 0.7,
     });
+    // Map "Student N" aliases back to real names for teacher-facing UI.
+    const summaryText = decode(rawSummaryText);
     let summaryData;
 
     try {
