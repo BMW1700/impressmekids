@@ -197,6 +197,7 @@ const App = () => (
                     <Route path="/game/play" element={<GamePlay />} />
                     <Route path="/game/analytics" element={<GameAnalytics />} />
                     <Route path="/game/castle-swarm" element={<CastleSwarmDefense />} />
+                    <Route path="/account/mfa" element={<AccountMFA />} />
 
                     {/* School Mode — needs auth AND school profile (role + district) */}
                     <Route element={<RequireSchoolProfile />}>
