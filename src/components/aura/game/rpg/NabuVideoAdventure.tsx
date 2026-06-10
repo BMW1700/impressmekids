@@ -369,24 +369,34 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
-      {/* ── Video layer ─────────────────────────────────────────────────── */}
-      {activeVideoSrc && phase !== "ending" && (
-        <video
-          ref={videoRef}
-          key={activeVideoSrc}
-          className="absolute inset-0 h-full w-full object-cover"
-          src={activeVideoSrc}
-          poster={lastClipPoster}
-          autoPlay={phase === "clip" && !!clipStep}
-          playsInline
-          preload="auto"
-          controls={false}
-          disablePictureInPicture
-          aria-hidden
-          tabIndex={-1}
-          draggable={false}
-          onEnded={handleClipEnded}
-        />
+      {/* ── Video layer (1s cross-fade between clip swaps) ─────────────── */}
+      {/* AnimatePresence (no mode) overlaps exit + enter so the outgoing
+          clip fades to 0 while the incoming clip fades up from 0. The
+          poster on the incoming layer keeps the freeze-frame visible for
+          word steps (where src doesn't change). */}
+      {phase !== "ending" && activeVideoSrc && (
+        <AnimatePresence>
+          <motion.video
+            ref={videoRef}
+            key={activeVideoSrc}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.0, ease: "easeInOut" }}
+            className="absolute inset-0 h-full w-full object-cover"
+            src={activeVideoSrc}
+            poster={lastClipPoster}
+            autoPlay={phase === "clip" && !!clipStep}
+            playsInline
+            preload="auto"
+            controls={false}
+            disablePictureInPicture
+            aria-hidden
+            tabIndex={-1}
+            draggable={false}
+            onEnded={handleClipEnded}
+          />
+        </AnimatePresence>
       )}
 
       {/* Preload the next clip in the background so swap is instant. */}
