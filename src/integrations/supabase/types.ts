@@ -6046,6 +6046,8 @@ export type Database = {
           event_type: string
           id: string
           ip_address: unknown
+          prev_hash: string | null
+          row_hash: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -6057,6 +6059,8 @@ export type Database = {
           event_type: string
           id?: string
           ip_address?: unknown
+          prev_hash?: string | null
+          row_hash?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -6068,6 +6072,8 @@ export type Database = {
           event_type?: string
           id?: string
           ip_address?: unknown
+          prev_hash?: string | null
+          row_hash?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -6345,7 +6351,9 @@ export type Database = {
           id: string
           ip_address: unknown
           metadata: Json | null
+          prev_hash: string | null
           record_id: string | null
+          row_hash: string | null
           table_name: string
           user_agent: string | null
           user_email: string | null
@@ -6358,7 +6366,9 @@ export type Database = {
           id?: string
           ip_address?: unknown
           metadata?: Json | null
+          prev_hash?: string | null
           record_id?: string | null
+          row_hash?: string | null
           table_name: string
           user_agent?: string | null
           user_email?: string | null
@@ -6371,7 +6381,9 @@ export type Database = {
           id?: string
           ip_address?: unknown
           metadata?: Json | null
+          prev_hash?: string | null
           record_id?: string | null
+          row_hash?: string | null
           table_name?: string
           user_agent?: string | null
           user_email?: string | null
@@ -8254,6 +8266,10 @@ export type Database = {
       }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       cleanup_old_signin_attempts: { Args: never; Returns: undefined }
+      compute_audit_row_hash: {
+        Args: { _payload: Json; _prev_hash: string }
+        Returns: string
+      }
       compute_levenshtein: { Args: { a: string; b: string }; Returns: number }
       create_multiplayer_room: {
         Args: {
@@ -8885,6 +8901,15 @@ export type Database = {
       validate_substitute_access: {
         Args: { p_access_code: string; p_email: string }
         Returns: Json
+      }
+      verify_audit_chain: {
+        Args: { _table: string }
+        Returns: {
+          broken_at: string
+          broken_id: string
+          expected_hash: string
+          found_hash: string
+        }[]
       }
     }
     Enums: {
