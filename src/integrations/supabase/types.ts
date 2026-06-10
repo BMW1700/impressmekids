@@ -2252,6 +2252,51 @@ export type Database = {
           },
         ]
       }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          file_expires_at: string | null
+          file_path: string | null
+          id: string
+          requester_id: string
+          requester_role: string
+          scope: string
+          status: string
+          subject_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_expires_at?: string | null
+          file_path?: string | null
+          id?: string
+          requester_id: string
+          requester_role: string
+          scope?: string
+          status?: string
+          subject_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          file_expires_at?: string | null
+          file_path?: string | null
+          id?: string
+          requester_id?: string
+          requester_role?: string
+          scope?: string
+          status?: string
+          subject_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_restoration_requests: {
         Row: {
           backup_id: string
@@ -6195,9 +6240,14 @@ export type Database = {
       }
       school_settings: {
         Row: {
+          audio_retention_days: number
           created_at: string
+          data_retention_months: number
+          disable_session_replay_for_students: boolean
           id: string
+          pseudonymize_ai_requests: boolean
           school_end_time: string
+          school_mode_enabled: boolean
           school_start_time: string
           school_year_end: string
           school_year_start: string
@@ -6206,9 +6256,14 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          audio_retention_days?: number
           created_at?: string
+          data_retention_months?: number
+          disable_session_replay_for_students?: boolean
           id?: string
+          pseudonymize_ai_requests?: boolean
           school_end_time?: string
+          school_mode_enabled?: boolean
           school_start_time?: string
           school_year_end?: string
           school_year_start?: string
@@ -6217,9 +6272,14 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          audio_retention_days?: number
           created_at?: string
+          data_retention_months?: number
+          disable_session_replay_for_students?: boolean
           id?: string
+          pseudonymize_ai_requests?: boolean
           school_end_time?: string
+          school_mode_enabled?: boolean
           school_start_time?: string
           school_year_end?: string
           school_year_start?: string
