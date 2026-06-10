@@ -1,83 +1,63 @@
-## Goal
+## Backend security hardening — close all 255 scanner findings
 
-Add the next two obstacle scenes (BOOTS and KEY) to Benny Visits Grandma using the new video clips, with cinematic 1-second cross-fades between scenes. The word overlay must only appear during the freeze-frame pause, not while Benny is walking.
+Audit pulled fresh results. Findings group like this:
 
-## Current 5 obstacles in W101_L1
+| # | Severity | Finding |
+|---|---|---|
+| 2 | **error** | Students can overwrite each other's audio submissions; any authenticated user can upload assignment question images |
+| 2 | warn | Teacher aura-audio read policy + teacher question-image read policy both reference the wrong column, so teachers actually have no access (broken, not over-permissive) |
+| 4 | warn | Storage buckets are public and allow object listing |
+| 1 | warn | An RLS policy uses `USING (true)` / `WITH CHECK (true)` on a write path |
+| 4 | warn | Postgres functions missing `SET search_path` |
+| 118 | warn | `SECURITY DEFINER` functions executable by anon |
+| 124 | warn | `SECURITY DEFINER` functions executable by authenticated (broader than needed) |
 
-1. JUMP (river) — already has A + B clips
-2. BOOTS (muddy field)
-3. KEY (locked gate)
-4. HOP (path)
-5. BONE (puppy)
+Everything below is in service of "perfect" FERPA / COPPA / SOC 2 posture. No app feature changes, no UI changes, no Game Mode vs School Mode decision — purely backend hardening.
 
-## Asset mapping (to confirm by inspecting the 4 uploads)
+### Phase 1 — Stop the bleeding (the two `error` findings)
 
-User said "do boots and key first" with 4 uploads (9, 10, 11, 12) and confirmed two clips per obstacle (A = arrival + "I need...", B = resolution + walk-off). Tentative mapping:
+1. Replace the storage policy on the `aura-audio` bucket so students can `INSERT` / `UPDATE` / `DELETE` **only** objects whose first path segment is their own `auth.uid()`. Teachers + admins keep scoped read via `has_role` + classroom membership.
+2. Replace the `assignment-question-images` write policies so only the **teacher who owns the classroom** in the path prefix (`<classroom_id>/...`) can write, not "any authenticated user". Keep the existing classroom-member read policy.
 
-- `L1-O2-A.mp4` = BOOTS setup → uploaded `9.MP4`
-- `L1-O2-B.mp4` = BOOTS resolution → uploaded `10.MP4`
-- `L1-O3-A.mp4` = KEY setup → uploaded `11.MP4`
-- `L1-O3-B.mp4` = KEY resolution → uploaded `12.MP4`
+### Phase 2 — Fix the two broken teacher-read policies
 
-I will inspect the first frame of each clip with ffmpeg before uploading to confirm which is mud vs. gate and which is setup vs. resolution. If the order is wrong I will reassign before publishing the asset pointers.
+3. Rewrite the teacher read policy on `aura-audio` to use the correct join (`student_id` → `classroom_students` → `classrooms.teacher_id`) instead of the bad column ref. Same fix on `assignment-question-images` teacher read.
 
-## Implementation steps
+### Phase 3 — Storage buckets
 
-### 1. Upload clips as CDN assets
-Use `lovable-assets create` on each `/mnt/user-uploads/{9,10,11,12}.MP4` (re-muxed if needed for audio, matching how JUMP clips were prepared) and write four new `.asset.json` pointers under `src/assets/`:
-- `L1-O2-A.mp4.asset.json`
-- `L1-O2-B.mp4.asset.json`
-- `L1-O3-A.mp4.asset.json`
-- `L1-O3-B.mp4.asset.json`
+4. Flip all four public buckets that don't need anonymous listing to `public = false`, and drop any `storage.objects` `SELECT USING (true)` policies in favor of path-scoped + role-scoped policies. Each bucket gets a single reviewed read policy; legitimately public assets (e.g. campaign art) stay public but lose the listing privilege.
 
-Also capture last-frame poster JPEGs for the A clips so the freeze-frame holds cleanly while the word card is up:
-- `L1-O2-A-last.jpg.asset.json`
-- `L1-O3-A-last.jpg.asset.json`
+### Phase 4 — RLS
 
-### 2. Extend `src/data/preKAdventuresVideo.ts`
-Replace the BOOTS and KEY entries (currently word-only fallbacks) with the same clip→word→clip pattern used by JUMP:
+5. Find the one `USING (true)` / `WITH CHECK (true)` write policy flagged by the linter and replace it with an `auth.uid()` / `has_role()`-scoped predicate. Re-run linter to confirm zero remaining.
 
-```
-{ kind: "clip", src: L1_O2_A.url, poster: L1_O2_A_LAST.url },
-{ kind: "word", word: "BOOTS", askLine: "My feet need big...", successLine: "Big boots! Splish splash!" },
-{ kind: "clip", src: L1_O2_B.url },
-{ kind: "clip", src: L1_O3_A.url, poster: L1_O3_A_LAST.url },
-{ kind: "word", word: "KEY", askLine: "To open the gate I need a...", successLine: "Click! The gate is open!" },
-{ kind: "clip", src: L1_O3_B.url },
-```
+### Phase 5 — SECURITY DEFINER cleanup (the bulk of the noise)
 
-HOP and BONE stay as word-only steps until their videos are filmed.
+6. Enumerate every `SECURITY DEFINER` function in `public`. For each:
+   - Add `SET search_path = public, pg_temp` (covers the 4 `function_search_path_mutable` warnings as a side effect).
+   - `REVOKE EXECUTE ... FROM PUBLIC, anon` by default.
+   - `GRANT EXECUTE ... TO authenticated` **only** for functions explicitly meant for signed-in users (`has_role`, `get_student_classroom_ids`, etc.). Everything else stays callable only by `service_role` (i.e. edge functions).
+   - Convert any function that doesn't actually need elevated privileges to `SECURITY INVOKER`.
+7. Document which definers are intentionally callable by `authenticated` in `security-memory` so future scans don't re-flag them.
 
-### 3. Add 1-second cross-fade between clips in `NabuVideoAdventure.tsx`
+### Phase 6 — Verification & evidence
 
-Currently transitions between steps are hard cuts. Add a clip-to-clip cross-fade layer:
+8. Re-run `security--run_security_scan` and `supabase--linter` until count is 0 (or the only remaining items are documented intentional exceptions written to `security-memory`).
+9. Update `mem://compliance/school-contract-hardening-phase1` and `security-memory` with the final posture: which buckets are public, which definers are callable by `authenticated`, and why.
+10. Drop a `SECURITY_POSTURE.md` snapshot (counts, date, scope) into the repo so it's reproducible evidence for a SOC 2 Type 1 readiness file.
 
-- Render two stacked `<video>` elements (current + next) inside an `AnimatePresence`-style wrapper.
-- When a `clip` step ends (or a `word` step resolves and the next step is a `clip`), fade the outgoing layer to opacity 0 over 1000 ms while the incoming clip fades in from opacity 0 and starts playing.
-- Use `framer-motion` (already in project) with `initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.0 }}`.
-- Cross-fade only between `clip` steps. The `clip → word` transition stays as a freeze on the last frame (poster image) so no fade happens when the word card appears.
-- Cross-fade also wraps the `word → clip` handoff: once the child says the word correctly, fade out the freeze-frame and fade in the resolution clip over 1 s.
+### Out of scope (intentionally)
 
-### 4. Word card appearance rule (re-confirm working behavior)
+- Game Mode vs School Mode product decision — separate conversation.
+- Any frontend / UI changes.
+- New tables, new auth flows, new edge functions.
+- SOC 2 policy documents (DPA, AUP, IR plan) — those are a separate doc track, not code.
 
-The luxurious word card overlay must remain invisible while any clip is playing. It only mounts when `step.kind === "word"` AND the previous clip has fully ended (poster frame shown). This is already the case in `NabuVideoAdventure.tsx`; verify the cross-fade timing does not let the card appear while Benny is still walking off-screen. Concretely: the A clip plays to its natural end (where Benny is at the obstacle), pauses on its last frame, then the word card fades in.
+### Technical notes
 
-### 5. Keep existing reader + AURA submission intact
+- All changes ship as **one migration per phase** so each one is reviewable and revertable independently.
+- No data is touched; only schema/policies/grants/function bodies.
+- `service_role` keeps full access throughout so edge functions don't break.
+- After Phase 5 the public-facing Data API surface for RPCs shrinks dramatically — if any frontend code calls a definer that we lock down to `service_role`, it will start to 401. We'll inventory `supabase.rpc(...)` calls in the client during Phase 5 and route any legitimate ones through an edge function instead of granting broad `EXECUTE`.
 
-No changes to `RPGWordReader` integration, `submitPreKAuraReading`, or the mic UI. This work is purely scene wiring + transitions.
-
-## Files touched
-
-- NEW: `src/assets/L1-O2-A.mp4.asset.json`
-- NEW: `src/assets/L1-O2-B.mp4.asset.json`
-- NEW: `src/assets/L1-O3-A.mp4.asset.json`
-- NEW: `src/assets/L1-O3-B.mp4.asset.json`
-- NEW: `src/assets/L1-O2-A-last.jpg.asset.json`
-- NEW: `src/assets/L1-O3-A-last.jpg.asset.json`
-- EDIT: `src/data/preKAdventuresVideo.ts` — add BOOTS and KEY clip steps
-- EDIT: `src/components/aura/game/rpg/NabuVideoAdventure.tsx` — add 1 s cross-fade layer between clips
-
-## Out of scope (next batch)
-
-- HOP and BONE clips — will be wired in the same way once you upload them.
-- Audio re-encoding/trimming beyond what's needed to make the uploaded MP4s play cleanly.
+Approving this plan switches to build mode and I start with Phase 1.
