@@ -229,7 +229,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "acknowledge_escalation") {
-      const { notification_id, user_id, notes } = await req.json();
+      const { notification_id, notes } = await req.json();
+      // SECURITY: use verified caller id, never trust client-supplied user_id
+      const user_id = callerId;
 
       // Update the notification
       const { error: ackError } = await supabase
@@ -274,7 +276,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "resolve_missing_student") {
-      const { attendance_id, user_id, resolution_notes, resolved_status } = await req.json();
+      const { attendance_id, resolution_notes, resolved_status } = await req.json();
+      // SECURITY: use verified caller id, never trust client-supplied user_id
+      const user_id = callerId;
 
       // Update attendance record
       const { data: attendance, error: updateError } = await supabase
