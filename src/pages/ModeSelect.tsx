@@ -115,6 +115,15 @@ const ModeSelect = () => {
         >
           <RPGShowcase variant="hero" />
         </motion.div>
+
+        <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/50">
+          <a href="/game/legal/privacy" className="hover:text-white/90">Privacy</a>
+          <a href="/game/legal/terms" className="hover:text-white/90">Terms</a>
+          <a href="/game/legal/coppa" className="hover:text-white/90">COPPA & Parent Rights</a>
+          <a href="/game/legal/security" className="hover:text-white/90">Security</a>
+          <a href="/game/legal/dpa" className="hover:text-white/90">DPA</a>
+          <a href="/game/legal" className="hover:text-white/90">All legal</a>
+        </nav>
       </main>
     </div>
   );

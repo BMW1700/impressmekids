@@ -1,63 +1,89 @@
-## Backend security hardening — close all 255 scanner findings
 
-Audit pulled fresh results. Findings group like this:
+# Phase 2 — Final Contract Readiness
 
-| # | Severity | Finding |
-|---|---|---|
-| 2 | **error** | Students can overwrite each other's audio submissions; any authenticated user can upload assignment question images |
-| 2 | warn | Teacher aura-audio read policy + teacher question-image read policy both reference the wrong column, so teachers actually have no access (broken, not over-permissive) |
-| 4 | warn | Storage buckets are public and allow object listing |
-| 1 | warn | An RLS policy uses `USING (true)` / `WITH CHECK (true)` on a write path |
-| 4 | warn | Postgres functions missing `SET search_path` |
-| 118 | warn | `SECURITY DEFINER` functions executable by anon |
-| 124 | warn | `SECURITY DEFINER` functions executable by authenticated (broader than needed) |
+Goal: close every remaining gap from the brutally-honest audit so we can sign FERPA/COPPA/SOC 2 school contracts. All user-facing legal/compliance pages will be reachable from **Game Mode** routes (`/game/...`) so they remain live even if School Mode is hidden at ship.
 
-Everything below is in service of "perfect" FERPA / COPPA / SOC 2 posture. No app feature changes, no UI changes, no Game Mode vs School Mode decision — purely backend hardening.
+## 1. AI privacy — pseudonymize every LLM call
 
-### Phase 1 — Stop the bleeding (the two `error` findings)
+Wire `supabase/functions/_shared/pseudonymize.ts` into every edge function that sends student data to an LLM. Currently only `generate-teacher-summary` uses it.
 
-1. Replace the storage policy on the `aura-audio` bucket so students can `INSERT` / `UPDATE` / `DELETE` **only** objects whose first path segment is their own `auth.uid()`. Teachers + admins keep scoped read via `has_role` + classroom membership.
-2. Replace the `assignment-question-images` write policies so only the **teacher who owns the classroom** in the path prefix (`<classroom_id>/...`) can write, not "any authenticated user". Keep the existing classroom-member read policy.
+Functions to update (scrub PII + alias names + decode on response):
+- `generate-question-ai`
+- `generate-flashcards`
+- `extract-text-from-image`
+- `send-phoneme-report`
+- `send-risk-alerts`
+- `calculate-exercise-effectiveness`
+- `analyze-aura/*` (any subfunctions that call Vertex/Gemini)
+- `generate-world-backgrounds` (only if it sees student names; otherwise add a scrub pass on any free-text prompt)
 
-### Phase 2 — Fix the two broken teacher-read policies
+For each: import `scrubPII` + `pseudonymizeStudents`, alias names before prompt, call `decode()` on model output, gate behavior on `school_settings.pseudonymize_ai_requests` (already defaults true).
 
-3. Rewrite the teacher read policy on `aura-audio` to use the correct join (`student_id` → `classroom_students` → `classrooms.teacher_id`) instead of the bad column ref. Same fix on `assignment-question-images` teacher read.
+## 2. COPPA consent gate — verified, blocking
 
-### Phase 3 — Storage buckets
+- Audit `parent_consents` flow + `send-parent-consent-email`: confirm under-13 accounts cannot read/write any student data until `aura_recording_consent` / `data_use_consent` are TRUE.
+- Add an `is_coppa_blocked(user_id)` security-definer helper and reference it from RLS on: `aura_records`, `reading_sessions`, `assignment_submissions`, `student_reading_stats`, `parent_phoneme_reports`.
+- Add a frontend `RequireConsent` gate on the student dashboard that hard-blocks usage until a parent has confirmed.
+- Verify the existing token-signed consent email + double opt-in.
 
-4. Flip all four public buckets that don't need anonymous listing to `public = false`, and drop any `storage.objects` `SELECT USING (true)` policies in favor of path-scoped + role-scoped policies. Each bucket gets a single reviewed read policy; legitimately public assets (e.g. campaign art) stay public but lose the listing privilege.
+## 3. Auth hardening
 
-### Phase 4 — RLS
+- Turn on **Leaked Password Protection** (HIBP) via `configure_auth`.
+- Enforce **MFA** for `teacher`, `admin`, `district_admin`, `parent` roles. Add an `RequireMFA` guard on `/teacher`, `/admin`, `/district`, `/parent` routes. Students/game players unaffected.
+- Add server-side MFA-enrollment check in a security-definer function used by the guards.
 
-5. Find the one `USING (true)` / `WITH CHECK (true)` write policy flagged by the linter and replace it with an `auth.uid()` / `has_role()`-scoped predicate. Re-run linter to confirm zero remaining.
+## 4. Compliance documents (live on Game Mode routes)
 
-### Phase 5 — SECURITY DEFINER cleanup (the bulk of the noise)
+Create real, signable templates as pages under `/game/legal/...` so they ship regardless of School Mode visibility:
 
-6. Enumerate every `SECURITY DEFINER` function in `public`. For each:
-   - Add `SET search_path = public, pg_temp` (covers the 4 `function_search_path_mutable` warnings as a side effect).
-   - `REVOKE EXECUTE ... FROM PUBLIC, anon` by default.
-   - `GRANT EXECUTE ... TO authenticated` **only** for functions explicitly meant for signed-in users (`has_role`, `get_student_classroom_ids`, etc.). Everything else stays callable only by `service_role` (i.e. edge functions).
-   - Convert any function that doesn't actually need elevated privileges to `SECURITY INVOKER`.
-7. Document which definers are intentionally callable by `authenticated` in `security-memory` so future scans don't re-flag them.
+- `/game/legal/privacy` — full Privacy Policy (FERPA + COPPA disclosures, subprocessor list, data categories, retention, parent rights).
+- `/game/legal/terms` — Terms of Service.
+- `/game/legal/dpa` — Data Processing Addendum template (downloadable + on-page).
+- `/game/legal/subprocessors` — current subprocessor list (Supabase, Vertex AI, Resend, Sentry, Cloudflare, Datadog).
+- `/game/legal/security` — public-facing security overview (mirrors `SECURITY_POSTURE.md` without internals).
+- `/game/legal/incident-response` — incident response plan summary + 72-hour breach notification commitment.
+- `/game/legal/retention` — retention schedule (audio 90d, data 24mo, audit logs 7yr).
+- `/game/legal/coppa` — parent rights page + link to existing `/parent/data-privacy` deletion portal.
 
-### Phase 6 — Verification & evidence
+Footer links added to Game Mode landing + `GameHeader`. School Mode pages link to the same routes.
 
-8. Re-run `security--run_security_scan` and `supabase--linter` until count is 0 (or the only remaining items are documented intentional exceptions written to `security-memory`).
-9. Update `mem://compliance/school-contract-hardening-phase1` and `security-memory` with the final posture: which buckets are public, which definers are callable by `authenticated`, and why.
-10. Drop a `SECURITY_POSTURE.md` snapshot (counts, date, scope) into the repo so it's reproducible evidence for a SOC 2 Type 1 readiness file.
+## 5. SOC 2 evidence pack
 
-### Out of scope (intentionally)
+- `docs/soc2/access-control.md` — role matrix + RLS philosophy.
+- `docs/soc2/change-management.md` — Lovable migration approval flow + git history as evidence.
+- `docs/soc2/vendor-management.md` — subprocessor due-diligence checklist.
+- `docs/soc2/business-continuity.md` — backup/restore SLA (we already have `cold_storage_backups` + `check-backup-health`).
+- `docs/soc2/logging-monitoring.md` — points at `security_audit_log` + `safety_audit_log` (hash-chained) + Sentry + Datadog.
+- Update `SECURITY_POSTURE.md` to link the SOC 2 pack.
 
-- Game Mode vs School Mode product decision — separate conversation.
-- Any frontend / UI changes.
-- New tables, new auth flows, new edge functions.
-- SOC 2 policy documents (DPA, AUP, IR plan) — those are a separate doc track, not code.
+## 6. Migration prep — Lovable Cloud → Supabase
 
-### Technical notes
+Create `docs/migration/lovable-to-supabase.md` with:
+- Pre-flight checklist (env vars, secrets inventory via `fetch_secrets`, edge function list, storage bucket list, custom domain, auth providers config).
+- Step-by-step cutover: claim Supabase project, transfer ownership, re-point `VITE_SUPABASE_URL` + `_PUBLISHABLE_KEY`, re-add secrets, redeploy edge functions, verify RLS + storage policies, re-run security scan + linter.
+- Rollback plan.
+- Post-migration verification script list (auth flow, student sign-in, parent consent email, AI summary, audio upload).
 
-- All changes ship as **one migration per phase** so each one is reviewable and revertable independently.
-- No data is touched; only schema/policies/grants/function bodies.
-- `service_role` keeps full access throughout so edge functions don't break.
-- After Phase 5 the public-facing Data API surface for RPCs shrinks dramatically — if any frontend code calls a definer that we lock down to `service_role`, it will start to 401. We'll inventory `supabase.rpc(...)` calls in the client during Phase 5 and route any legitimate ones through an edge function instead of granting broad `EXECUTE`.
+No actual cutover yet — just the documented plan so when the user pulls the trigger it's pre-flighted.
 
-Approving this plan switches to build mode and I start with Phase 1.
+## 7. Verification
+
+After each block:
+- Re-run `security--run_security_scan` + `supabase--linter` — target: still 0 errors, ≤98 documented warns.
+- Spot-test one edge function per category with a synthetic student name to confirm pseudonymization.
+- Smoke-test `/game/legal/*` routes render.
+- Build passes.
+
+## Out of scope
+
+- Actually executing the Lovable→Supabase cutover (documented, not performed).
+- Pen-test / external SOC 2 auditor engagement (we're producing the evidence pack they'd consume).
+- Any UI redesign of Game Mode.
+- Touching School Mode UX.
+
+## Technical notes
+
+- All new RLS helpers will follow the existing `security definer` + `set search_path = public, pg_temp` + revoke-from-public pattern documented in `SECURITY_POSTURE.md`.
+- Legal pages will be static React routes with `Helmet` SEO + canonical, lazy-loaded, no backend dependency.
+- MFA guard uses `supabase.auth.mfa.listFactors()` client-side + a `has_verified_mfa(uid)` security-definer for RLS checks where needed.
+- Pseudonymization wiring is additive — no breaking changes to function signatures.
