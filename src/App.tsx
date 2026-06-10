@@ -74,6 +74,7 @@ const ParentReviewAnnotations = lazy(() => import("./pages/parent/ParentReviewAn
 const PWAInstallGuide = lazy(() => import("./pages/parent/PWAInstallGuide"));
 const DataPrivacy = lazy(() => import("./pages/parent/DataPrivacy"));
 const AccountDeletion = lazy(() => import("./pages/AccountDeletion"));
+const AccountMFA = lazy(() => import("./pages/account/AccountMFA"));
 const DistrictDashboard = lazy(() => import("./pages/district/DistrictDashboard"));
 const DistrictManagerDashboard = lazy(() => import("./pages/district/DistrictManagerDashboard"));
 const RegisterDistrict = lazy(() => import("./pages/district/RegisterDistrict"));
