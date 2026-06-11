@@ -1,129 +1,154 @@
-# Custom Story Override for RPG Mode
+# Super Admin: Pre-K Video Level Builder
 
-Let students, parents, and teachers paste their own text (a poem, a page from a book, their own writing) and play any **K-12 RPG level** or **Castle Swarm level** with that text instead of the built-in story. Pre-K (worlds 101/102/103) is out of scope — those are cinematic video levels.
+Build a Super Admin role and a content management interface that lets authorized users create, edit, and delete Pre-K worlds and video levels — including building each level from uploaded videos and spoken-word prompts. The existing "Visit Grandma" level gets migrated into the database so it's editable like any other.
 
-At the start of an eligible level, the player sees a small chooser: **Default story** or any of their available custom stories for that level. Pick one and play.
+Scope is **Pre-K only for now**. K-5, 6-12, and Castle Swarm CMS will reuse this foundation later.
 
-## Scope
+---
 
-- ✅ K-12 RPG (Classic + Agent) — `RPGOneWordReader` and its battle variants
-- ✅ Castle Swarm — `StoryRunner` (`src/components/aura/game/castle/storyRunner.ts`)
-- ❌ Pre-K worlds 101 / 102 / 103 (cinematic video — not editable)
+## 1. New `super_admin` role
 
-## Authors and visibility
+- Add `'super_admin'` to the existing `app_role` enum.
+- Reuse the existing `has_role()` security-definer function — no new RLS pattern needed.
+- **Bootstrap**: a one-time migration inserts the first super_admin for the email you provide. Once one super_admin exists, they can promote others in-app.
+- New page `/admin/super` (gated by `has_role(uid, 'super_admin')`) with a "Manage Super Admins" panel that lists current super_admins and lets you grant/revoke the role by user email.
 
-| Author     | Who can play their story                              |
-| ---------- | ----------------------------------------------------- |
-| Student    | Only themselves                                       |
-| Parent     | Themselves + every linked child (via `parent_student_links`) |
-| Teacher    | Themselves + every student in the target classroom    |
-
-No public/community sharing in v1.
-
-## Pick-at-level-start UX
+## 2. Database schema (new tables)
 
 ```text
-┌─────────────────────────────────────────┐
-│  World 3 · Level 2 · "The Cave"         │
-│                                         │
-│  Choose your story:                     │
-│   ●  Default — "Whisper in the Cave"    │
-│   ○  My Story — "Song of Myself" (Mom)  │
-│   ○  My Story — "My dog Rex"            │
-│                                         │
-│  [ + Write a new one ]   [  Play  ]     │
-└─────────────────────────────────────────┘
+prek_worlds
+  ├─ id (uuid)
+  ├─ world_number (int, unique)        ← shown to kids (101, 102, …)
+  ├─ title, description
+  ├─ difficulty ('easy' | 'medium' | 'hard')
+  ├─ sort_order, is_published
+  └─ created_by, timestamps
+
+prek_levels
+  ├─ id (uuid)
+  ├─ world_id → prek_worlds
+  ├─ level_number (int, unique per world)
+  ├─ title, description, goal, ending_line
+  ├─ opening_video_path  (storage path)
+  ├─ closing_video_path  (storage path)
+  ├─ sort_order, is_published
+  └─ created_by, timestamps
+
+prek_level_words   (one row per "introductory word" between videos)
+  ├─ id (uuid)
+  ├─ level_id → prek_levels
+  ├─ sort_order (1..N)
+  ├─ word (e.g. "JUMP")
+  ├─ ask_line, success_line
+  ├─ first_video_path   (plays before the word — "prompt" clip)
+  ├─ second_video_path  (plays after the word — "action" clip)
+  ├─ hold_poster_path   (optional last-frame still, auto-generated client-side)
+  └─ timestamps
 ```
 
-- Shown once at level entry. Skipped automatically if the user has no custom stories for that level.
-- "Write a new one" opens an inline editor (title + body textarea) that saves and immediately becomes selectable.
-- Selection is remembered per-user-per-level so returning play resumes the chosen story.
+**Access rules (plain English):**
 
-## Authoring UI
+- Super admins can create/edit/delete worlds, levels, and words.
+- All authenticated users (students, parents, teachers) can **read** published worlds/levels/words.
+- Unpublished content is visible only to super admins.
 
-A single reusable `CustomStoryEditor` dialog used from:
-- The level-start chooser ("Write a new one")
-- A new "My Stories" tab on the student dashboard, parent dashboard, and teacher classroom page (manage / edit / delete / see which levels they target)
+## 3. Storage
 
-Editor fields:
-- **Title** (required, ≤ 80 chars)
-- **Body** (required, 50–5,000 chars)
-- **Target level** — preselected when launched from the chooser; selectable otherwise (world + level, or "Any Castle Swarm K-5 / 6-12")
-- **Visibility** — auto-set from author role; teachers also pick a classroom
+- New **private** bucket `prek-level-videos`.
+- Path scheme: `{world_id}/{level_id}/{filename}` so deletion of a level cleanly cascades.
+- RLS on `storage.objects`:
+  - super_admins: full read/write/delete on this bucket
+  - authenticated users: read-only (playback uses signed URLs from a small edge helper, or short-lived signed URL fetched on demand)
+- Upload limits enforced client-side: ≤50 MB per video, MP4/WebM/MOV only.
 
-## Content safety (light tier)
+## 4. Super Admin UI
 
-Client + server both enforce:
-- 50 ≤ length ≤ 5,000 chars
-- Profanity filter against a small built-in word list (server-side authoritative)
-- Strip control chars, normalize whitespace, cap line breaks
-- Reject if it contains URLs or emails (light anti-spam)
+New routes, all gated by the super_admin role:
 
-No AI moderation pass and no teacher approval workflow in v1 — per your "light" choice.
-
-## How the story actually drives gameplay
-
-- **K-12 RPG (`RPGOneWordReader` + battle variants):** today the reader resolves words/passage from `curatedStories` / `agentStories` / Nabu copy via `useMemo` near the top of the file. We add a single hook `useActiveLevelStory(world, level)` that returns either the override text or the built-in content. The reader runs the override through the same sentence/word tokenizer used elsewhere (lowercase, strip punctuation, 1–14 char tokens — mirrors `storyRunner.ts`) so speech matching, verb animations, and analytics behave identically.
-- **Castle Swarm (`StoryRunner`):** add an optional `overrideText?: string` to its constructor. When present, it bypasses `pickStoriesForContext` and feeds the override through the existing `prepareStories` pipeline (one synthetic `CastleStory` with `paragraphs: [overrideText]`). All sentence/word/HUD behavior is unchanged.
-- Verb-specific character animations (`useVerbAnimation`) keep working — they trigger off matched words regardless of source.
-- Analytics: word_readings / aura_records continue logging; we add a `custom_story_id` column so reports can distinguish "read built-in passage" vs "read parent-authored text".
-
-## Database
-
-One new table, one helper view, RLS scoped to author + their audience.
-
-```sql
-create table public.custom_level_stories (
-  id uuid primary key default gen_random_uuid(),
-  author_id uuid not null references auth.users(id) on delete cascade,
-  author_role text not null check (author_role in ('student','parent','teacher')),
-  title text not null,
-  body text not null,
-  -- targeting (exactly one of these populated)
-  target_kind text not null check (target_kind in ('rpg_level','castle_band')),
-  world_id int,           -- for rpg_level
-  level_id text,          -- for rpg_level
-  castle_band text,       -- 'K-5' | '6-12' for castle_band
-  -- visibility
-  classroom_id uuid references public.classrooms(id) on delete cascade, -- teacher-authored
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
--- standard grants + RLS:
---   SELECT: author, OR (parent's linked children via parent_student_links),
---           OR (teacher's classroom members via classroom_students),
---           OR (the teacher themselves who owns the classroom)
---   INSERT/UPDATE/DELETE: author only
+```text
+/admin/super                       ← dashboard (cards: Pre-K, [K-5 coming soon], …)
+/admin/super/prek                  ← worlds list (create/edit/delete/reorder)
+/admin/super/prek/:worldId         ← levels list inside a world
+/admin/super/prek/:worldId/:levelId/edit   ← the level builder
 ```
 
-Plus a column on `aura_records` (or wherever per-attempt reading logs live — confirm during implementation): `custom_story_id uuid null references public.custom_level_stories(id) on delete set null`.
+### Worlds list page
 
-## Files to add / change
+- Table of worlds with title, difficulty, level count, published toggle, edit, delete.
+- "+ New World" → dialog (title, description, difficulty, world number).
 
-**New**
-- `src/data/customStories.ts` — types + small client helpers (list, create, update, delete, fetch-eligible-for-level)
-- `src/hooks/useCustomStories.ts` — react-query hooks
-- `src/hooks/useActiveLevelStory.ts` — returns `{ source: 'default' | 'custom', text, customStoryId }`
-- `src/components/aura/game/rpg/CustomStoryChooser.tsx` — level-start chooser dialog
-- `src/components/aura/game/rpg/CustomStoryEditor.tsx` — create/edit dialog
-- `src/components/customStories/MyStoriesPanel.tsx` — management list reused by all three dashboards
-- Supabase migration for `custom_level_stories` (table + grants + RLS) and the `custom_story_id` column
+### Levels list page
 
-**Edited (minimal, presentation-layer only)**
-- `src/components/aura/game/rpg/NabuEpisodeWrapper.tsx` — for K-12 path, wrap with chooser; Pre-K path untouched
-- `src/components/aura/game/rpg/RPGOneWordReader.tsx` — accept an optional `overrideStory` prop and feed it into the existing tokenization path
-- `src/components/aura/game/castle/storyRunner.ts` — accept optional `overrideText` in constructor
-- `src/pages/game/CastleSwarmDefense.tsx` — show chooser before run starts, pass override into `StoryRunner`
-- Student / parent / teacher dashboard entry points — add "My Stories" tab using `MyStoriesPanel`
+- Table of levels inside the selected world.
+- "+ New Level" → dialog (title, description, goal, ending line).
 
-## Out of scope (v1)
+### Level builder page (the core experience)
 
-- Public community library
-- Editing Pre-K cinematic levels
-- AI moderation, teacher approval workflow
-- Importing PDFs / images — text only
+Vertical timeline matching the "Visit Grandma" template:
 
-## Open question I'll resolve during build
+```text
+┌──────────────────────────────────────────────┐
+│  Opening Video         [ Upload / Replace ]  │
+│  ↓ fades into                                │
+│  Word #1: ___________                        │
+│    Ask line: ___________                     │
+│    Success line: ___________                 │
+│    First Video  [ Upload ]                   │
+│    Second Video [ Upload ]                   │
+│  ↓ fades into                                │
+│  Word #2: ___________  [ ↑ ↓ remove ]        │
+│    …                                         │
+│  [ + Add Word ]                              │
+│  ↓ fades into                                │
+│  Closing Video        [ Upload / Replace ]   │
+│                                              │
+│  [ Save Draft ]  [ Publish ]  [ Preview ]    │
+└──────────────────────────────────────────────┘
+```
 
-How a teacher-authored story interacts when a student has *also* written their own for the same level: I'll show both in the chooser, grouped ("From Ms. Lee" vs "Mine"), default-selecting the most recent one the student opened.
+- Drag-handle (or up/down buttons) to reorder words.
+- Each upload shows progress, then an inline `<video>` preview.
+- "Preview" opens the existing `NabuVideoAdventure` runner in a modal using the in-progress data — same seamless cross-fade logic that already powers Visit Grandma. **No new playback engine is built.**
+- Validation before publish: opening + closing videos present, at least one word, every word has both videos and a non-empty word string.
+
+## 5. Migrate "Visit Grandma" into the DB
+
+A one-time data migration:
+
+1. Inserts world `101` ("Nabu Village") and level `1` ("Help Benny visit Grandma!").
+2. Re-uploads the 16 existing clips from `src/assets/L1-*.mp4.asset.json` into the new storage bucket (the migration script uses the CDN URLs already in those `.asset.json` pointers as the source).
+3. Inserts 5 `prek_level_words` rows (JUMP, BOOTS, KEY, PUSH, SNEAK) with the existing ask/success lines.
+
+After this, `getVideoLevel()` will load `101:1` from the database instead of the hardcoded TS file.
+
+## 6. Runtime integration
+
+- New hook `usePreKVideoLevel(worldId, levelId)` that:
+  - Reads the level + words from DB (cached with React Query).
+  - Resolves storage paths to **signed URLs** in a single batched call.
+  - Returns the same `VideoLevel` shape `NabuVideoAdventure` already expects, so the runner doesn't change.
+- `src/data/preKAdventuresVideo.ts` becomes a thin fallback (kept only until the data migration is verified, then deleted).
+
+## 7. Out of scope (intentionally)
+
+- K-5 / 6-12 / Castle Swarm CMS — same schema pattern, deferred to a later turn.
+- Per-classroom or per-teacher custom Pre-K levels (this is global content).
+- Auto-generating the `hold_poster` frame server-side — derived on the client via a `<canvas>` capture of the prompt video's last frame at upload time.
+- Video transcoding / resolution normalization — admins upload at the size they want; we just enforce a 50 MB cap.
+
+---
+
+## Technical details (for reference)
+
+- **Bootstrap super_admin**: I'll need your account email before running the bootstrap migration. If you'd rather, the migration can promote *every existing 'admin'* to super_admin in one shot.
+- **Signed URLs**: 1-hour TTL, fetched in batch when a level loads. Cached in React Query keyed by storage path.
+- **Cascade deletes**: `prek_levels.world_id` and `prek_level_words.level_id` use `ON DELETE CASCADE`. A DB trigger on `prek_levels` delete removes all objects under `{world_id}/{level_id}/` from storage.
+- **Uploads**: direct browser → Supabase Storage `upload()` with `upsert: true`. No edge function in the upload path.
+- **Audit**: every world/level/word write inserts a row in `security_audit_log` with `action_type = 'prek_cms_*'` (you already have this table).
+- **Preview parity**: the level builder's Preview button mounts `NabuVideoAdventure` with the same `VideoLevel` object the runtime uses, so what the admin sees in preview is exactly what the kid will see — including the seamless cross-fades.
+
+---
+
+
+
+**["matthewross750@gmail.com"](mailto:matthewross750@gmail.com) should become the first super admin. Make the password "123456".**
