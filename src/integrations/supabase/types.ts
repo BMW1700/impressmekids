@@ -8986,6 +8986,7 @@ export type Database = {
         | "district_manager"
         | "parent"
         | "game_player"
+        | "super_admin"
       deletion_request_status: "pending" | "approved" | "denied" | "completed"
       difficulty_level: "easy" | "medium" | "hard"
       elimination_status: "active" | "eliminated"
@@ -9161,6 +9162,7 @@ export const Constants = {
         "district_manager",
         "parent",
         "game_player",
+        "super_admin",
       ],
       deletion_request_status: ["pending", "approved", "denied", "completed"],
       difficulty_level: ["easy", "medium", "hard"],
