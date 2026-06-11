@@ -8,11 +8,9 @@
 //                          background.
 //
 // NO-BLEED TRANSITIONS:
-//   Before any video src change we raise an opaque black veil that fully
-//   covers the stage. Only after the veil is opaque do we swap the <video>
-//   src. The veil only fades back out after the new clip's first frame is
-//   actually painted (onPlaying). This guarantees a frame from the outgoing
-//   scene can never visually bleed into the incoming scene.
+//   Before a video src change, we freeze the outgoing frame as an image overlay,
+//   swap the <video> underneath it, then fade the still away after the incoming
+//   clip is actually playing. No black transition screen is used.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,12 +38,11 @@ const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
 // Two-tier transition timing.
 //   SCENE = clip → clip (e.g. action clip → next prompt clip, ending → finale).
-//           Opaque black veil so two scenes never overlap visually.
+//           Frozen outgoing frame overlay so two scenes never overlap visually.
 //   CROSSFADE = word card → action clip. No black; we already hold an opaque
 //           poster of the previous frame, swap the video underneath, then
 //           softly fade the poster out as the new clip plays.
-const SCENE_VEIL_IN_MS = 360;
-const SCENE_VEIL_OUT_MS = 420;
+const SCENE_SNAPSHOT_FADE_OUT_MS = 420;
 const POSTER_FADE_OUT_MS = 240;
 const VEIL_SAFETY_MS = 1200;
 
@@ -113,10 +110,12 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // No-bleed transition machinery.
   // `mountedSrc` is what the <video> element is actually loading; it only
-  // changes while the veil is fully opaque.
+  // changes while either a poster or captured still is covering the stage.
   const [mountedSrc, setMountedSrc] = useState<string | null>(null);
-  const [veilOpaque, setVeilOpaque] = useState(true);
+  const [veilOpaque, setVeilOpaque] = useState(false);
   const [playBlocked, setPlayBlocked] = useState(false);
+  const [sceneSnapshot, setSceneSnapshot] = useState<string | null>(null);
+  const [sceneSnapshotVisible, setSceneSnapshotVisible] = useState(false);
   // While true, we render an opaque "freeze" image on top of the video so the
   // word card sits on a guaranteed-stable picture even if the underlying
   // <video> tries to rewind/replay on iOS.
