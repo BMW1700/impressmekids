@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
