@@ -479,13 +479,19 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   };
 
   // Video element fires onPlaying once the first frame is actually painted —
-  // that's our cue to drop the veil safely.
+  // that's our cue to either drop the scene veil (clip→clip) or fade the
+  // hold-poster off (word→clip crossfade).
   const handleVideoPlaying = () => {
     setPlayBlocked(false);
     if (expectFirstFrameRef.current) {
       expectFirstFrameRef.current = false;
-      // Small extra delay keeps the fade feeling cinematic.
-      queue(() => setVeilOpaque(false), 80);
+      if (holdPoster) {
+        // Crossfade out the poster to reveal the now-playing clip.
+        setHoldPosterVisible(false);
+        queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+      } else {
+        queue(() => setVeilOpaque(false), 80);
+      }
     }
   };
 
