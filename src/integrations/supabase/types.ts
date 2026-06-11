@@ -2147,6 +2147,59 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_level_stories: {
+        Row: {
+          author_id: string
+          author_role: string
+          body: string
+          castle_band: string | null
+          classroom_id: string | null
+          created_at: string
+          id: string
+          level_id: string | null
+          target_kind: string
+          title: string
+          updated_at: string
+          world_id: number | null
+        }
+        Insert: {
+          author_id: string
+          author_role: string
+          body: string
+          castle_band?: string | null
+          classroom_id?: string | null
+          created_at?: string
+          id?: string
+          level_id?: string | null
+          target_kind: string
+          title: string
+          updated_at?: string
+          world_id?: number | null
+        }
+        Update: {
+          author_id?: string
+          author_role?: string
+          body?: string
+          castle_band?: string | null
+          classroom_id?: string | null
+          created_at?: string
+          id?: string
+          level_id?: string | null
+          target_kind?: string
+          title?: string
+          updated_at?: string
+          world_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_level_stories_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_login_rewards: {
         Row: {
           bonus_reward: Json | null
@@ -8792,6 +8845,10 @@ export type Database = {
         }
         Returns: number
       }
+      parent_can_see_student: {
+        Args: { _parent_id: string; _student_id: string }
+        Returns: boolean
+      }
       peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
       purchase_castle_hero_level: {
         Args: { p_cost: number; p_grade_mode: string; p_hero_id: string }
@@ -8896,6 +8953,14 @@ export type Database = {
           }
       user_belongs_to_school: {
         Args: { _school_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_in_classroom: {
+        Args: { _classroom_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_owns_classroom: {
+        Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
       }
       validate_substitute_access: {
