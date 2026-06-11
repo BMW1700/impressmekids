@@ -18,7 +18,7 @@ const SuperAdminDashboard = () => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link to="/admin/super/prek">
+          <Link to="/super-admin/prek">
             <Card className="hover:border-primary transition-colors h-full">
               <CardHeader>
                 <Baby className="h-8 w-8 text-primary mb-2" />
