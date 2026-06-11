@@ -10,6 +10,7 @@
 // Authoring a new level: film clips, drop them in, list them in order.
 // No engineering required.
 
+import L1_INTRO from "@/assets/L1-intro.mp4.asset.json";
 import L1_O1_A from "@/assets/L1-O1-A.mp4.asset.json";
 import L1_O1_B from "@/assets/L1-O1-B.mp4.asset.json";
 import L1_O1_A_LAST from "@/assets/L1-O1-A-last.jpg.asset.json";
@@ -19,6 +20,13 @@ import L1_O2_A_LAST from "@/assets/L1-O2-A-last.jpg.asset.json";
 import L1_O3_A from "@/assets/L1-O3-A.mp4.asset.json";
 import L1_O3_B from "@/assets/L1-O3-B.mp4.asset.json";
 import L1_O3_A_LAST from "@/assets/L1-O3-A-last.jpg.asset.json";
+import L1_O4_A from "@/assets/L1-O4-A.mp4.asset.json";
+import L1_O4_B from "@/assets/L1-O4-B.mp4.asset.json";
+import L1_O4_A_LAST from "@/assets/L1-O4-A-last.jpg.asset.json";
+import L1_O5_A from "@/assets/L1-O5-A.mp4.asset.json";
+import L1_O5_B from "@/assets/L1-O5-B.mp4.asset.json";
+import L1_O5_A_LAST from "@/assets/L1-O5-A-last.jpg.asset.json";
+import L1_ENDING from "@/assets/L1-ending-grandma.mp4.asset.json";
 
 export type VideoStep =
   | { kind: "clip"; src: string; poster?: string }
@@ -43,8 +51,12 @@ export interface VideoLevel {
 
 // ============================================================================
 // W101_L1 — "Help Benny visit Grandma!"
-// Obstacles 1 (JUMP), 2 (BOOTS), 3 (KEY) have full A+B clips.
-// Obstacles 4 (HOP) and 5 (BONE) hold on the previous frame until filmed.
+//
+// Story flow:
+//   Intro (non-interactive)
+//     → JUMP the river → BOOTS for the mud → KEY for the gate
+//     → PUSH the log → SNEAK past the bear
+//     → Grandma's house (non-interactive ending)
 // ============================================================================
 
 const W101_L1: VideoLevel = {
@@ -52,6 +64,9 @@ const W101_L1: VideoLevel = {
   goal: "Help Benny visit Grandma!",
   endingLine: "We made it to Grandma's!",
   steps: [
+    // — Intro: pure cinematic, fades into Obstacle 1 —
+    { kind: "clip", src: L1_INTRO.url },
+
     // — Obstacle 1: JUMP the river —
     { kind: "clip", src: L1_O1_A.url, poster: L1_O1_A_LAST.url },
     {
@@ -82,19 +97,28 @@ const W101_L1: VideoLevel = {
     },
     { kind: "clip", src: L1_O3_B.url },
 
-    // — Obstacle 4 & 5: audio + word card only until clips are filmed —
+    // — Obstacle 4: PUSH the log —
+    { kind: "clip", src: L1_O4_A.url, poster: L1_O4_A_LAST.url },
     {
       kind: "word",
-      word: "HOP",
-      askLine: "Help me jump and...",
-      successLine: "Hop hop! Path is clear!",
+      word: "PUSH",
+      askLine: "How do I move this...",
+      successLine: "Heave! The log rolls away!",
     },
+    { kind: "clip", src: L1_O4_B.url },
+
+    // — Obstacle 5: SNEAK past the sleeping bear —
+    { kind: "clip", src: L1_O5_A.url, poster: L1_O5_A_LAST.url },
     {
       kind: "word",
-      word: "BONE",
-      askLine: "Give the puppy a...",
-      successLine: "Yum! The puppy runs to play!",
+      word: "SNEAK",
+      askLine: "The bear is sleeping. I need to...",
+      successLine: "Tiptoe... safe!",
     },
+    { kind: "clip", src: L1_O5_B.url },
+
+    // — Ending: Grandma's house (non-interactive, fades into win screen) —
+    { kind: "clip", src: L1_ENDING.url },
   ],
 };
 
