@@ -267,13 +267,14 @@ const App = () => (
                         <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
                         <Route path="/district/register" element={<RegisterDistrict />} />
 
-                        {/* Super Admin CMS — Pre-K only for now */}
-                        <Route path="/super-admin" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
-                        <Route path="/super-admin/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
-                        <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
-                        <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
                       </Route>
                     </Route>
+
+                    {/* Super Admin CMS — auth required, but NOT gated by school profile or MFA */}
+                    <Route path="/super-admin" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
