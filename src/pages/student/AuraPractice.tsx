@@ -117,6 +117,7 @@ const AuraPractice = () => {
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [selectedBattleMode, setSelectedBattleMode] = useState<BattleMode>('classic');
+  const [pendingBattle, setPendingBattle] = useState<null | { level: CampaignLevel; mode: BattleMode; enemy: EnemyType; primaryEnemy: string }>(null);
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
   
