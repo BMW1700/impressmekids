@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Gamepad2 } from "lucide-react";
+import { Loader2, Gamepad2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const ModeSelect = () => {
