@@ -1,4 +1,5 @@
-// Pre-K Video Adventure — one <video>, one steps array, one state machine.
+// Pre-K Video Adventure — one steps array, one state machine, TWO video layers
+// for true crossfade transitions (no black, no frozen still).
 //
 // LOOP:
 //   step.kind === "clip" → play, advance on onEnded
@@ -7,10 +8,12 @@
 //                          immediately AND fire AURA telemetry in the
 //                          background.
 //
-// NO-BLEED TRANSITIONS:
-//   Before a video src change, we freeze the outgoing frame as an image overlay,
-//   swap the <video> underneath it, then fade the still away after the incoming
-//   clip is actually playing. No black transition screen is used.
+// SEAMLESS TRANSITIONS:
+//   Two <video> elements (primary / incoming) sit stacked. When we need to
+//   switch clips, the incoming element loads + starts the next src, and on
+//   its onPlaying we crossfade primary→incoming over CROSSFADE_MS. Both
+//   videos are actually playing during the dissolve, so the audience never
+//   sees a freeze or a black frame.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,17 +39,10 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
-// Two-tier transition timing.
-//   SCENE = clip → clip (e.g. action clip → next prompt clip, ending → finale).
-//           Frozen outgoing frame overlay so two scenes never overlap visually.
-//   CROSSFADE = word card → action clip. No black; we already hold an opaque
-//           poster of the previous frame, swap the video underneath, then
-//           softly fade the poster out as the new clip plays.
-const SCENE_SNAPSHOT_FADE_OUT_MS = 420;
-const POSTER_FADE_OUT_MS = 240;
-const WORD_TO_ACTION_REVEAL_DELAY_MS = 180;
-const SCENE_REVEAL_DELAY_MS = 260;
-const VEIL_SAFETY_MS = 1200;
+// Single seamless crossfade timing — used for every clip→clip and word→clip
+// transition. Long enough to feel cinematic, short enough to keep pace.
+const CROSSFADE_MS = 600;
+const POSTER_FADE_OUT_MS = 500;
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
 let audioCtx: AudioContext | null = null;
@@ -95,6 +91,9 @@ const ensureSparkleStyle = () => {
   document.head.appendChild(el);
 };
 
+type Slot = "A" | "B";
+const otherSlot = (s: Slot): Slot => (s === "A" ? "B" : "A");
+
 export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const adventure = useMemo<VideoLevel | null>(
     () => getVideoLevel(world.id, level.id),
@@ -110,21 +109,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const [wordsAsked, setWordsAsked] = useState(0);
   const [showSparkle, setShowSparkle] = useState(false);
 
-  // No-bleed transition machinery.
-  // `mountedSrc` is what the <video> element is actually loading; it only
-  // changes while either a poster or captured still is covering the stage.
-  const [mountedSrc, setMountedSrc] = useState<string | null>(null);
+  // ── Two-video crossfade machinery ─────────────────────────────────────────
+  // slotSrc[A|B] each independently hold a clip src. activeSlot is the one
+  // currently visible/audible. When swapping clips, we load the new src on
+  // the OTHER slot, wait for its onPlaying, then crossfade activeSlot.
+  const [slotSrc, setSlotSrc] = useState<{ A: string | null; B: string | null }>({ A: null, B: null });
+  const [activeSlot, setActiveSlot] = useState<Slot>("A");
+  const [crossfading, setCrossfading] = useState(false); // both videos visible during dissolve
   const [playBlocked, setPlayBlocked] = useState(false);
-  const [sceneSnapshot, setSceneSnapshot] = useState<string | null>(null);
-  const [sceneSnapshotVisible, setSceneSnapshotVisible] = useState(false);
-  // While true, we render an opaque "freeze" image on top of the video so the
-  // word card sits on a guaranteed-stable picture even if the underlying
-  // <video> tries to rewind/replay on iOS.
+
+  // Word-phase freeze overlay (covers paused video while child reads).
   const [holdPoster, setHoldPoster] = useState<string | null>(null);
   const [holdPosterVisible, setHoldPosterVisible] = useState(false);
 
-  // Refs for things that must not trigger re-renders
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // Refs
+  const videoRefs = useRef<{ A: HTMLVideoElement | null; B: HTMLVideoElement | null }>({ A: null, B: null });
   const timers = useRef<number[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -132,10 +131,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const recordingStartRef = useRef<number>(0);
   const advancedRef = useRef(false);
   const askedStepRef = useRef<number>(-1);
-  const playTokenRef = useRef(0);
-  const expectFirstFrameRef = useRef(false);
-  const holdPosterRef = useRef<string | null>(null);
-  const sceneSnapshotRef = useRef<string | null>(null);
+  const activeSlotRef = useRef<Slot>("A");
+  // Slot we're currently waiting on for first-frame paint during a swap.
+  const incomingSlotRef = useRef<Slot | null>(null);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
@@ -146,22 +144,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const queue = (fn: () => void, ms: number) => {
     timers.current.push(window.setTimeout(fn, ms));
   };
-
-  const captureVideoSnapshot = useCallback((): string | null => {
-    const v = videoRef.current;
-    if (!v || v.videoWidth === 0 || v.videoHeight === 0) return null;
-    try {
-      const canvas = document.createElement("canvas");
-      canvas.width = v.videoWidth;
-      canvas.height = v.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return null;
-      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL("image/jpeg", 0.9);
-    } catch {
-      return null;
-    }
-  }, []);
 
   useEffect(() => () => {
     clearTimers();
@@ -181,17 +163,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
     return null;
   }, [stepIndex, steps]);
-  const mountedClipPoster = useMemo(() => {
-    const clip = steps.find(
-      (s): s is Extract<VideoStep, { kind: "clip" }> => s.kind === "clip" && s.src === mountedSrc
-    );
-    return clip?.poster;
-  }, [mountedSrc, steps]);
 
+  // Initial mount — put first clip on slot A so tap-to-begin can hit play.
   useEffect(() => {
     if (phase !== "tap-to-begin") return;
     if (!firstClipSrc) return;
-    setMountedSrc(firstClipSrc);
+    setSlotSrc((s) => (s.A === firstClipSrc ? s : { ...s, A: firstClipSrc }));
+    setActiveSlot("A");
+    activeSlotRef.current = "A";
   }, [firstClipSrc, phase]);
 
   // ── student id (for AURA telemetry) ────────────────────────────────────────
@@ -242,119 +221,54 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     return { blob, durationSec };
   }, []);
 
-  // ── No-bleed transition helpers ────────────────────────────────────────────
-  //
-  // swapToClip(src) raises the veil, waits for it to be fully opaque, swaps
-  // the mounted <video> src, then drops the veil only after onPlaying paints
-  // the first frame of the new clip.
-  const playMountedVideo = useCallback((allowMutedFallback = true) => {
-    const v = videoRef.current;
+  // ── Playback helper ────────────────────────────────────────────────────────
+  const playSlot = useCallback((slot: Slot, allowMutedFallback = true) => {
+    const v = videoRefs.current[slot];
     if (!v) return;
-    const token = ++playTokenRef.current;
     setPlayBlocked(false);
     try {
       const p = v.play();
       if (p && typeof p.catch === "function") {
         p.catch(() => {
-          if (token !== playTokenRef.current) return;
-          if (!allowMutedFallback) {
-            setPlayBlocked(true);
-            return;
-          }
+          if (!allowMutedFallback) { setPlayBlocked(true); return; }
           try {
             v.muted = true;
-            const mutedPlay = v.play();
-            if (mutedPlay && typeof mutedPlay.catch === "function") {
-              mutedPlay.catch(() => token === playTokenRef.current && setPlayBlocked(true));
-            }
-          } catch {
-            setPlayBlocked(true);
-          }
+            const mp = v.play();
+            if (mp && typeof mp.catch === "function") mp.catch(() => setPlayBlocked(true));
+          } catch { setPlayBlocked(true); }
         });
       }
     } catch {
       if (allowMutedFallback) {
-        try {
-          v.muted = true;
-          void v.play();
-        } catch {
-          setPlayBlocked(true);
-        }
+        try { v.muted = true; void v.play(); } catch { setPlayBlocked(true); }
       } else {
         setPlayBlocked(true);
       }
     }
   }, []);
 
-  type SwapStyle = "scene" | "crossfade" | "immediate";
+  // ── Crossfade swap: load nextSrc on idle slot, fade when it plays ─────────
+  const swapToClip = useCallback((nextSrc: string) => {
+    const cur = activeSlotRef.current;
+    const incoming = otherSlot(cur);
 
-  const swapToClip = useCallback((nextSrc: string, style: SwapStyle = "scene", fallbackPoster?: string) => {
-    expectFirstFrameRef.current = true;
-
-    if (style === "immediate") {
-      // First mount: no transition, just put the clip on screen.
-      holdPosterRef.current = null;
-      sceneSnapshotRef.current = null;
-      setHoldPoster(null);
-      setSceneSnapshot(null);
-      setHoldPosterVisible(false);
-      setMountedSrc(nextSrc);
+    // Already showing this src? nothing to do.
+    if (slotSrc[cur] === nextSrc) {
+      playSlot(cur);
       return;
     }
+    // Already loaded on the other slot? just trigger the fade path.
+    incomingSlotRef.current = incoming;
+    setSlotSrc((s) => ({ ...s, [incoming]: nextSrc }));
+    // The incoming <video> will mount/remount on the next render due to the
+    // new src+key; onPlaying for that slot finishes the crossfade.
+  }, [slotSrc, playSlot]);
 
-    if (style === "crossfade") {
-      // Word → action clip. The holdPoster is
-      // already covering the screen. Swap the video underneath now; once it
-      // paints we softly fade the poster out for a clean dissolve.
-      setMountedSrc(nextSrc);
-      queue(() => {
-        if (expectFirstFrameRef.current) {
-          expectFirstFrameRef.current = false;
-          setHoldPosterVisible(false);
-          queue(() => {
-            holdPosterRef.current = null;
-            setHoldPoster(null);
-          }, POSTER_FADE_OUT_MS + 40);
-        }
-      }, VEIL_SAFETY_MS);
-      return;
-    }
-
-    // "scene" — clip → next clip. Capture the outgoing frame, swap the video
-    // underneath it, then fade the still away. This preserves no-bleed without
-    // ever showing a black screen.
-    const snapshot = captureVideoSnapshot() ?? fallbackPoster ?? null;
-    if (snapshot) {
-      sceneSnapshotRef.current = snapshot;
-      setSceneSnapshot(snapshot);
-      setSceneSnapshotVisible(true);
-    }
-    holdPosterRef.current = null;
-    setHoldPoster(null);
-    setHoldPosterVisible(false);
-    setMountedSrc(nextSrc);
-    queue(() => {
-      if (expectFirstFrameRef.current) {
-        expectFirstFrameRef.current = false;
-        setSceneSnapshotVisible(false);
-        queue(() => {
-          sceneSnapshotRef.current = null;
-          setSceneSnapshot(null);
-        }, SCENE_SNAPSHOT_FADE_OUT_MS + 40);
-        setPlayBlocked(true);
-      }
-    }, VEIL_SAFETY_MS);
-  }, [captureVideoSnapshot]);
-
-  // freezeForWord(posterUrl) pauses the underlying <video> at its last frame
-  // and pins an opaque poster image on top so the word card sits on a totally
-  // stable picture — no possibility of the video peeking through.
+  // freeze current frame and pin opaque poster on top so the word card sits
+  // on a totally stable image.
   const freezeForWord = useCallback((posterUrl: string | undefined) => {
-    const v = videoRef.current;
-    if (v) {
-      try { v.pause(); } catch { /* ignore */ }
-    }
-    holdPosterRef.current = posterUrl ?? null;
+    const v = videoRefs.current[activeSlotRef.current];
+    if (v) { try { v.pause(); } catch { /* ignore */ } }
     setHoldPoster(posterUrl ?? null);
     setHoldPosterVisible(!!posterUrl);
   }, []);
@@ -373,18 +287,17 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (phase !== "clip") return;
       advancedRef.current = false;
       clearTimers();
-      // Pick the right transition:
-      //   - no clip mounted yet → immediate (first paint)
-      //   - we have a holdPoster up (came from a word card) → crossfade
-      //   - otherwise (clip → next clip) → frozen-frame scene fade
-      if (mountedSrc !== current.src) {
-        const style: SwapStyle =
-          mountedSrc === null ? "immediate" : holdPoster ? "crossfade" : "scene";
-        swapToClip(current.src, style, current.poster);
+      const cur = activeSlotRef.current;
+      if (slotSrc[cur] === current.src) {
+        // First clip after tap-to-begin already mounted on active slot.
+        // Make sure holdPoster (if any) fades off and just play.
+        if (holdPoster) {
+          setHoldPosterVisible(false);
+          queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+        }
+        playSlot(cur);
       } else {
-        // Same src already mounted (rare); just ensure veil is down.
-        setHoldPoster(null);
-        playMountedVideo();
+        swapToClip(current.src);
       }
       return;
     }
@@ -398,8 +311,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       cancelSpeech();
       setAttempts(0);
       setWordsAsked((n) => n + 1);
-      // Freeze the picture immediately so the bubble + card sit on a stable
-      // image (no chance of bleed from the just-ended clip).
       freezeForWord(current.holdPoster);
       queue(() => {
         setPhase("reading");
@@ -407,7 +318,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       }, 250);
       return;
     }
-  }, [stepIndex, phase, adventure, mountedSrc, current, swapToClip, freezeForWord, startMicCapture, playMountedVideo]);
+  }, [stepIndex, phase, adventure, current, slotSrc, swapToClip, freezeForWord, startMicCapture, playSlot, holdPoster]);
 
   // ── word read handlers ─────────────────────────────────────────────────────
   const advanceFromWord = useCallback(
@@ -454,7 +365,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           setStepIndex(next);
           setPhase(steps[next].kind === "clip" ? "clip" : "ask");
         }
-      }, 600);
+      }, 350);
     },
     [current, stepIndex, steps, adventure, attempts, stopMicCapture]
   );
@@ -478,80 +389,74 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
-    // Prime the audio context with the user gesture.
     getCtx();
-    const v = videoRef.current;
+    const v = videoRefs.current[activeSlotRef.current];
     if (v) {
       try {
         v.muted = false;
         v.currentTime = 0;
       } catch { /* ignore */ }
-      playMountedVideo();
-    } else if (firstClipSrc) {
-      expectFirstFrameRef.current = true;
-      setMountedSrc(firstClipSrc);
+      playSlot(activeSlotRef.current);
     }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
-  const handleClipEnded = () => {
+  const handleClipEnded = (slot: Slot) => {
+    // Only react to the active slot ending. (Old, faded-out slot can also fire
+    // ended after a swap; ignore those.)
+    if (slot !== activeSlotRef.current) return;
     if (!current || current.kind !== "clip") return;
     const next = stepIndex + 1;
     if (next >= steps.length) {
-      // Final clip: hold the veil down, fall into ending overlay.
       setPhase("ending");
       return;
     }
     const nextStep = steps[next];
-    if (nextStep.kind === "word") {
-      // Next is a word — freeze current frame, no src change needed.
-      setStepIndex(next);
-      setPhase("ask");
-    } else {
-      setStepIndex(next);
-      setPhase("clip");
-    }
+    setStepIndex(next);
+    setPhase(nextStep.kind === "word" ? "ask" : "clip");
   };
 
-  // Video element fires onPlaying once the first frame is actually painted —
-  // that's our cue to fade off whichever still image is covering the new clip.
-  const handleVideoPlaying = () => {
+  // ── Crossfade trigger: incoming slot just painted its first frame ─────────
+  const handleVideoPlaying = (slot: Slot) => {
     setPlayBlocked(false);
-    if (expectFirstFrameRef.current) {
-      expectFirstFrameRef.current = false;
-      if (holdPosterRef.current) {
-        // Crossfade out the poster to reveal the now-playing clip.
-        queue(() => {
-          setHoldPosterVisible(false);
-          queue(() => {
-            holdPosterRef.current = null;
-            setHoldPoster(null);
-          }, POSTER_FADE_OUT_MS + 40);
-        }, WORD_TO_ACTION_REVEAL_DELAY_MS);
-      } else if (sceneSnapshotRef.current) {
-        queue(() => {
-          setSceneSnapshotVisible(false);
-          queue(() => {
-            sceneSnapshotRef.current = null;
-            setSceneSnapshot(null);
-          }, SCENE_SNAPSHOT_FADE_OUT_MS + 40);
-        }, SCENE_REVEAL_DELAY_MS);
-      } else {
-        sceneSnapshotRef.current = null;
-        setSceneSnapshot(null);
-      }
+    // If this is the slot we're crossfading IN to, kick off the dissolve.
+    if (incomingSlotRef.current === slot) {
+      incomingSlotRef.current = null;
+      setCrossfading(true);
+      // Flip active immediately so opacity transitions reflect it.
+      activeSlotRef.current = slot;
+      setActiveSlot(slot);
+      // Fade out the hold poster (if word→clip) in parallel with the video
+      // crossfade — both ride the same easing window.
+      if (holdPoster) setHoldPosterVisible(false);
+      // After the dissolve, clear the outgoing slot's src to release memory
+      // and stop the (now hidden) old video.
+      queue(() => {
+        const prev = otherSlot(slot);
+        const prevVideo = videoRefs.current[prev];
+        if (prevVideo) {
+          try { prevVideo.pause(); } catch { /* ignore */ }
+        }
+        setSlotSrc((s) => ({ ...s, [prev]: null }));
+        setCrossfading(false);
+        if (holdPoster) setHoldPoster(null);
+      }, CROSSFADE_MS + 40);
     }
   };
 
-  const handleVideoReady = () => {
-    if (phase !== "tap-to-begin") playMountedVideo();
+  const handleVideoReady = (slot: Slot) => {
+    if (phase === "tap-to-begin") return;
+    // If this slot is the incoming swap target, start it playing so onPlaying fires.
+    if (incomingSlotRef.current === slot) {
+      playSlot(slot);
+    }
   };
 
-  const handleVideoError = () => {
-    expectFirstFrameRef.current = false;
-    sceneSnapshotRef.current = null;
-    setSceneSnapshot(null);
+  const handleVideoError = (slot: Slot) => {
+    if (incomingSlotRef.current === slot) {
+      incomingSlotRef.current = null;
+    }
     setPlayBlocked(true);
   };
 
@@ -587,34 +492,45 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       ? current
       : null;
 
+  const renderSlot = (slot: Slot) => {
+    const src = slotSrc[slot];
+    if (!src) return null;
+    const isActive = activeSlot === slot;
+    return (
+      <video
+        ref={(el) => { videoRefs.current[slot] = el; }}
+        key={`${slot}-${src}`}
+        className="absolute inset-0 h-full w-full object-cover"
+        src={src}
+        playsInline
+        preload="auto"
+        controls={false}
+        disablePictureInPicture
+        aria-hidden
+        tabIndex={-1}
+        draggable={false}
+        style={{
+          opacity: isActive ? 1 : crossfading ? 0 : 0,
+          transition: `opacity ${CROSSFADE_MS}ms ease-in-out`,
+          zIndex: isActive ? 2 : 1,
+        }}
+        onLoadedData={() => handleVideoReady(slot)}
+        onCanPlay={() => handleVideoReady(slot)}
+        onPlaying={() => handleVideoPlaying(slot)}
+        onError={() => handleVideoError(slot)}
+        onEnded={() => handleClipEnded(slot)}
+      />
+    );
+  };
+
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-slate-950 shadow-xl">
-      {/* ── Single video layer (no overlap, no AnimatePresence) ─────────── */}
-      {mountedSrc && (
-        <video
-          ref={videoRef}
-          key={mountedSrc}
-          className="absolute inset-0 h-full w-full object-cover"
-          src={mountedSrc}
-          poster={mountedClipPoster}
-          playsInline
-          preload="auto"
-          controls={false}
-          disablePictureInPicture
-          aria-hidden
-          tabIndex={-1}
-          draggable={false}
-          onLoadedData={handleVideoReady}
-          onCanPlay={handleVideoReady}
-          onPlaying={handleVideoPlaying}
-          onError={handleVideoError}
-          onEnded={handleClipEnded}
-        />
-      )}
+      {/* ── Two-video crossfade layer ───────────────────────────────────── */}
+      {renderSlot("A")}
+      {renderSlot("B")}
 
-      {/* ── Freeze-frame overlay for word phases. Stays opaque during the
-            word card, then softly fades to reveal the new action clip
-            (crossfade transition). ─────────────────────────────────────── */}
+      {/* ── Freeze-frame overlay for word phases. Sits above both videos.
+            Fades out gently in parallel with the word→clip crossfade. ──── */}
       {holdPoster && (
         <img
           src={holdPoster}
@@ -623,14 +539,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           draggable={false}
           style={{
             opacity: holdPosterVisible ? 1 : 0,
-            transition: `opacity ${POSTER_FADE_OUT_MS}ms ease-out`,
+            transition: `opacity ${POSTER_FADE_OUT_MS}ms ease-in-out`,
           }}
           className="pointer-events-none absolute inset-0 z-20 h-full w-full object-cover"
         />
       )}
 
       {/* ── Preload next clip in the background so swap is instant ──────── */}
-      {nextClipStep && nextClipStep.src !== mountedSrc && (
+      {nextClipStep && nextClipStep.src !== slotSrc.A && nextClipStep.src !== slotSrc.B && (
         <video
           key={`preload-${nextClipStep.src}`}
           src={nextClipStep.src}
@@ -641,23 +557,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           aria-hidden
         />
       )}
-
-      {/* ── Scene-change freeze frame. Used instead of a black veil so clip →
-            clip swaps stay clean without flashing to black. ─────────────── */}
-      {sceneSnapshot && (
-        <img
-          src={sceneSnapshot}
-          alt=""
-          aria-hidden
-          draggable={false}
-          style={{
-            opacity: sceneSnapshotVisible ? 1 : 0,
-            transition: `opacity ${SCENE_SNAPSHOT_FADE_OUT_MS}ms ease-in-out`,
-          }}
-          className="pointer-events-none absolute inset-0 z-30 h-full w-full object-cover"
-        />
-      )}
-
 
       {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ────── */}
       {phase === "tap-to-begin" && (
@@ -677,7 +576,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
       {phase !== "tap-to-begin" && playBlocked && (
         <button
-          onClick={() => playMountedVideo(false)}
+          onClick={() => playSlot(activeSlotRef.current, false)}
           className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
           aria-label="Resume story video"
         >
@@ -689,7 +588,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
       {/* ── HUD (chrome) ────────────────────────────────────────────────── */}
       {phase !== "tap-to-begin" && (
-        <div className="relative z-20 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
+        <div className="relative z-30 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
           {/* Header */}
           <div className="flex items-center justify-between gap-2">
             <Button
