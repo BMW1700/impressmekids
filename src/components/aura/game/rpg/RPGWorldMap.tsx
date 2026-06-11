@@ -225,6 +225,35 @@ export const RPGWorldMap = ({
 }: RPGWorldMapProps) => {
   const navigate = useNavigate();
   const [previousBookCount] = useState(totalBooksRescued);
+  // Published Pre-K worlds from the Super Admin CMS (prek_worlds table).
+  // Used to gate which Pre-K cards are shown so only super-admin-managed
+  // worlds appear to students. `null` = still loading.
+  const [publishedPrekWorldNums, setPublishedPrekWorldNums] = useState<Set<number> | null>(null);
+  const [publishedPrekMeta, setPublishedPrekMeta] = useState<Record<number, { title: string; description: string }>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('prek_worlds')
+        .select('world_number, title, description, is_published')
+        .eq('is_published', true);
+      if (cancelled) return;
+      if (error || !data) {
+        setPublishedPrekWorldNums(new Set());
+        return;
+      }
+      const nums = new Set<number>();
+      const meta: Record<number, { title: string; description: string }> = {};
+      for (const row of data) {
+        nums.add(row.world_number);
+        meta[row.world_number] = { title: row.title, description: row.description ?? '' };
+      }
+      setPublishedPrekWorldNums(nums);
+      setPublishedPrekMeta(meta);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Check if Boss Rush is unlocked (World 8 complete)
   const isBossRushUnlocked = useMemo(() => {
