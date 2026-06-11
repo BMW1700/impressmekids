@@ -112,7 +112,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // `mountedSrc` is what the <video> element is actually loading; it only
   // changes while either a poster or captured still is covering the stage.
   const [mountedSrc, setMountedSrc] = useState<string | null>(null);
-  const [veilOpaque, setVeilOpaque] = useState(false);
   const [playBlocked, setPlayBlocked] = useState(false);
   const [sceneSnapshot, setSceneSnapshot] = useState<string | null>(null);
   const [sceneSnapshotVisible, setSceneSnapshotVisible] = useState(false);
@@ -284,7 +283,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (style === "immediate") {
       // First mount: no transition, just put the clip on screen.
-      setVeilOpaque(false);
       setHoldPoster(null);
       setHoldPosterVisible(false);
       setMountedSrc(nextSrc);
@@ -292,10 +290,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
 
     if (style === "crossfade") {
-      // Word → action clip. Don't raise the black veil — the holdPoster is
+      // Word → action clip. The holdPoster is
       // already covering the screen. Swap the video underneath now; once it
       // paints we softly fade the poster out for a clean dissolve.
-      setVeilOpaque(false);
       setMountedSrc(nextSrc);
       queue(() => {
         if (expectFirstFrameRef.current) {
@@ -315,7 +312,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       setSceneSnapshot(snapshot);
       setSceneSnapshotVisible(true);
     }
-    setVeilOpaque(false);
     setHoldPoster(null);
     setHoldPosterVisible(false);
     setMountedSrc(nextSrc);
@@ -339,7 +335,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
     setHoldPoster(posterUrl ?? null);
     setHoldPosterVisible(!!posterUrl);
-    setVeilOpaque(false);
   }, []);
 
   // ── phase driver ───────────────────────────────────────────────────────────
@@ -366,7 +361,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         swapToClip(current.src, style);
       } else {
         // Same src already mounted (rare); just ensure veil is down.
-        setVeilOpaque(false);
         setHoldPoster(null);
         playMountedVideo();
       }
@@ -512,7 +506,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         setSceneSnapshotVisible(false);
         queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
       } else {
-        setVeilOpaque(false);
+        setSceneSnapshot(null);
       }
     }
   };
@@ -523,7 +517,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   const handleVideoError = () => {
     expectFirstFrameRef.current = false;
-    setVeilOpaque(false);
+    setSceneSnapshot(null);
     setPlayBlocked(true);
   };
 
