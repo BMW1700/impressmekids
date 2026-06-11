@@ -66,7 +66,7 @@ const K12LevelWithChooser = ({ world, level, onBack, onComplete }: Props) => {
           }
         }}
         target={{ kind: "rpg_level", worldId: world.id, levelId: level.id }}
-        levelLabel={`${world.title} · Level ${level.id}`}
+        levelLabel={`${world.name} · Level ${level.id}`}
         defaultStoryLabel="Built-in story"
         onConfirm={(s) => {
           setSource(s);
