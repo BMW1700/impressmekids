@@ -307,22 +307,27 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       return;
     }
 
-    // "scene" — clip → next clip. Opaque veil, swap, then fade out.
-    setVeilOpaque(true);
+    // "scene" — clip → next clip. Capture the outgoing frame, swap the video
+    // underneath it, then fade the still away. This preserves no-bleed without
+    // ever showing a black screen.
+    const snapshot = captureVideoSnapshot();
+    if (snapshot) {
+      setSceneSnapshot(snapshot);
+      setSceneSnapshotVisible(true);
+    }
+    setVeilOpaque(false);
     setHoldPoster(null);
     setHoldPosterVisible(false);
-    const doSwap = () => {
-      setMountedSrc(nextSrc);
-      queue(() => {
-        if (expectFirstFrameRef.current) {
-          expectFirstFrameRef.current = false;
-          setVeilOpaque(false);
-          setPlayBlocked(true);
-        }
-      }, VEIL_SAFETY_MS);
-    };
-    queue(doSwap, SCENE_VEIL_IN_MS);
-  }, []);
+    setMountedSrc(nextSrc);
+    queue(() => {
+      if (expectFirstFrameRef.current) {
+        expectFirstFrameRef.current = false;
+        setSceneSnapshotVisible(false);
+        queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
+        setPlayBlocked(true);
+      }
+    }, VEIL_SAFETY_MS);
+  }, [captureVideoSnapshot]);
 
   // freezeForWord(posterUrl) pauses the underlying <video> at its last frame
   // and pins an opaque poster image on top so the word card sits on a totally
@@ -354,7 +359,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       // Pick the right transition:
       //   - no clip mounted yet → immediate (first paint)
       //   - we have a holdPoster up (came from a word card) → crossfade
-      //   - otherwise (clip → next clip) → opaque scene fade
+      //   - otherwise (clip → next clip) → frozen-frame scene fade
       if (mountedSrc !== current.src) {
         const style: SwapStyle =
           mountedSrc === null ? "immediate" : holdPoster ? "crossfade" : "scene";
@@ -494,8 +499,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   };
 
   // Video element fires onPlaying once the first frame is actually painted —
-  // that's our cue to either drop the scene veil (clip→clip) or fade the
-  // hold-poster off (word→clip crossfade).
+  // that's our cue to fade off whichever still image is covering the new clip.
   const handleVideoPlaying = () => {
     setPlayBlocked(false);
     if (expectFirstFrameRef.current) {
@@ -504,8 +508,11 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         // Crossfade out the poster to reveal the now-playing clip.
         setHoldPosterVisible(false);
         queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+      } else if (sceneSnapshot) {
+        setSceneSnapshotVisible(false);
+        queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
       } else {
-        queue(() => setVeilOpaque(false), 80);
+        setVeilOpaque(false);
       }
     }
   };
