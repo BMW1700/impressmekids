@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -133,6 +133,33 @@ const PreKLevelBuilder = () => {
   const [words, setWords] = useState<WordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const saveProgress = async () => {
+    if (!level) return;
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        words.map((w) =>
+          supabase
+            .from("prek_level_words")
+            .update({
+              word: (w.word ?? "").trim(),
+              ask_line: w.ask_line ?? "",
+              success_line: w.success_line ?? "",
+            })
+            .eq("id", w.id),
+        ),
+      );
+      const firstErr = results.find((r) => r.error)?.error;
+      if (firstErr) throw firstErr;
+      toast.success("Progress saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const load = async () => {
     if (!levelId) return;
@@ -309,6 +336,10 @@ const PreKLevelBuilder = () => {
             <Badge variant={level.is_published ? "default" : "secondary"}>
               {level.is_published ? "Published" : "Draft"}
             </Badge>
+            <Button onClick={saveProgress} variant="outline" disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              Save Progress
+            </Button>
             <Button onClick={togglePublish} variant={level.is_published ? "outline" : "default"}>
               {level.is_published ? "Unpublish" : "Publish"}
             </Button>
