@@ -568,6 +568,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           key={mountedSrc}
           className="absolute inset-0 h-full w-full object-cover"
           src={mountedSrc}
+          poster={mountedClipPoster}
           playsInline
           preload="auto"
           controls={false}
