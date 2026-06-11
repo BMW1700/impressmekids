@@ -53,6 +53,7 @@ import { analyzePresentation, type PresentationPrompt, type PresentationMetrics 
 import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModalTransferNetwork";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
+import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
