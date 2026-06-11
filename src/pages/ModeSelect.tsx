@@ -84,7 +84,6 @@ const ModeSelect = () => {
           <span className="text-yellow-400">NabuLearn</span>
         </motion.h1>
 
-        <div className="flex items-center justify-center w-full">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
         {/* Game Mode */}
         <motion.button
