@@ -237,6 +237,12 @@ const Auth = () => {
           }
         }
 
+        // Super admin always routes to the super admin CMS.
+        if (await isSuperAdminUser(session.user.id)) {
+          navigate('/admin/super');
+          return;
+        }
+
         // Get user profile with role
         const { data: profileData, error: rpcError } = await supabase.rpc('get_user_profile', { _user_id: session.user.id });
 
