@@ -133,6 +133,33 @@ const PreKLevelBuilder = () => {
   const [words, setWords] = useState<WordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const saveProgress = async () => {
+    if (!level) return;
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        words.map((w) =>
+          supabase
+            .from("prek_level_words")
+            .update({
+              word: (w.word ?? "").trim(),
+              ask_line: w.ask_line ?? "",
+              success_line: w.success_line ?? "",
+            })
+            .eq("id", w.id),
+        ),
+      );
+      const firstErr = results.find((r) => r.error)?.error;
+      if (firstErr) throw firstErr;
+      toast.success("Progress saved");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const load = async () => {
     if (!levelId) return;
