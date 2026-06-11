@@ -938,6 +938,11 @@ const Auth = () => {
         userRole = 'student';
       }
 
+      // Super admin always wins, regardless of profile role.
+      if (await isSuperAdminUser(data.user.id)) {
+        userRole = 'super_admin';
+      }
+
       toast({
         title: "Welcome back!",
         description: "Successfully signed in.",
