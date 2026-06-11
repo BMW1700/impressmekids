@@ -520,18 +520,25 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     setPlayBlocked(false);
     if (expectFirstFrameRef.current) {
       expectFirstFrameRef.current = false;
-      if (holdPoster) {
+      if (holdPosterRef.current) {
         // Crossfade out the poster to reveal the now-playing clip.
         queue(() => {
           setHoldPosterVisible(false);
-          queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+          queue(() => {
+            holdPosterRef.current = null;
+            setHoldPoster(null);
+          }, POSTER_FADE_OUT_MS + 40);
         }, WORD_TO_ACTION_REVEAL_DELAY_MS);
-      } else if (sceneSnapshot) {
+      } else if (sceneSnapshotRef.current) {
         queue(() => {
           setSceneSnapshotVisible(false);
-          queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
+          queue(() => {
+            sceneSnapshotRef.current = null;
+            setSceneSnapshot(null);
+          }, SCENE_SNAPSHOT_FADE_OUT_MS + 40);
         }, SCENE_REVEAL_DELAY_MS);
       } else {
+        sceneSnapshotRef.current = null;
         setSceneSnapshot(null);
       }
     }
@@ -543,6 +550,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   const handleVideoError = () => {
     expectFirstFrameRef.current = false;
+    sceneSnapshotRef.current = null;
     setSceneSnapshot(null);
     setPlayBlocked(true);
   };
