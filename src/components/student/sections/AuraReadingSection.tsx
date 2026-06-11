@@ -31,6 +31,7 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
+import { usePublishedPrekLevels } from "@/hooks/usePublishedPrekLevels";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
@@ -95,6 +96,10 @@ export const AuraReadingSection = () => {
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
+  const isSelectedPreK = !!selectedWorld && selectedWorld.mode === 'prek';
+  const { levelNums: publishedPrekLevelNums } = usePublishedPrekLevels(
+    isSelectedPreK ? selectedWorld!.id : null,
+  );
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
@@ -376,7 +381,12 @@ export const AuraReadingSection = () => {
     const allCompletedStories = new Set(Object.values(worldProgressData).flat());
     const completedStories = completedStoriesInWorld;
     
-    const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
+    // For Pre-K worlds, only show levels published in the Super Admin CMS.
+    const sourceLevels = isSelectedPreK
+      ? selectedWorld.levels.filter((l) => publishedPrekLevelNums.has(l.id))
+      : selectedWorld.levels;
+
+    const levels: CampaignLevel[] = sourceLevels.map((levelData, idx) => {
       // Tutorial world uses a special story
       const isTutorial = selectedWorld.id === 0;
       const story = isTutorial 
