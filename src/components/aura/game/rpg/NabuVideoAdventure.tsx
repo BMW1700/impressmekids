@@ -412,7 +412,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       } catch { /* ignore */ }
       playMountedVideo();
     } else if (firstClipSrc) {
-      activeClipKeyRef.current = `0:${firstClipSrc}`;
       expectFirstFrameRef.current = true;
       setMountedSrc(firstClipSrc);
     }
