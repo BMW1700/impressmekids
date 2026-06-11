@@ -96,6 +96,10 @@ export const AuraReadingSection = () => {
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
+  const isSelectedPreK = !!selectedWorld && selectedWorld.mode === 'prek';
+  const { levelNums: publishedPrekLevelNums, meta: publishedPrekLevelMeta } = usePublishedPrekLevels(
+    isSelectedPreK ? selectedWorld!.id : null,
+  );
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
