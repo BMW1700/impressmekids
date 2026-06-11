@@ -4922,6 +4922,154 @@ export type Database = {
           },
         ]
       }
+      prek_level_words: {
+        Row: {
+          ask_line: string
+          created_at: string
+          first_video_url: string | null
+          hold_poster_url: string | null
+          id: string
+          level_id: string
+          second_video_url: string | null
+          sort_order: number
+          success_line: string
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          ask_line?: string
+          created_at?: string
+          first_video_url?: string | null
+          hold_poster_url?: string | null
+          id?: string
+          level_id: string
+          second_video_url?: string | null
+          sort_order?: number
+          success_line?: string
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          ask_line?: string
+          created_at?: string
+          first_video_url?: string | null
+          hold_poster_url?: string | null
+          id?: string
+          level_id?: string
+          second_video_url?: string | null
+          sort_order?: number
+          success_line?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prek_level_words_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "prek_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prek_levels: {
+        Row: {
+          closing_video_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          ending_line: string
+          goal: string
+          id: string
+          is_published: boolean
+          level_number: number
+          opening_video_url: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          closing_video_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          ending_line?: string
+          goal?: string
+          id?: string
+          is_published?: boolean
+          level_number: number
+          opening_video_url?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          closing_video_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          ending_line?: string
+          goal?: string
+          id?: string
+          is_published?: boolean
+          level_number?: number
+          opening_video_url?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prek_levels_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "prek_worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prek_worlds: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          difficulty: string
+          id: string
+          is_published: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+          world_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          difficulty?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          title: string
+          updated_at?: string
+          world_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          difficulty?: string
+          id?: string
+          is_published?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          world_number?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
