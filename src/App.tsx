@@ -10,6 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RequireSchoolProfile } from "@/components/auth/RequireSchoolProfile";
 import { RequireMFA } from "@/components/auth/RequireMFA";
+import { RequireSuperAdmin } from "@/components/auth/RequireSuperAdmin";
 import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
@@ -103,7 +104,6 @@ const SuperAdminDashboard = lazy(() => import("./pages/superadmin/SuperAdminDash
 const PreKWorldsList = lazy(() => import("./pages/superadmin/PreKWorldsList"));
 const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
 const PreKLevelBuilder = lazy(() => import("./pages/superadmin/PreKLevelBuilder"));
-import { RequireSuperAdmin } from "@/components/auth/RequireSuperAdmin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
