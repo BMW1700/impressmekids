@@ -110,6 +110,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // changes while the veil is fully opaque.
   const [mountedSrc, setMountedSrc] = useState<string | null>(null);
   const [veilOpaque, setVeilOpaque] = useState(true);
+  const [playBlocked, setPlayBlocked] = useState(false);
   // While true, we render an opaque "freeze" image on top of the video so the
   // word card sits on a guaranteed-stable picture even if the underlying
   // <video> tries to rewind/replay on iOS.
@@ -124,6 +125,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const recordingStartRef = useRef<number>(0);
   const advancedRef = useRef(false);
   const askedStepRef = useRef<number>(-1);
+  const playTokenRef = useRef(0);
   const expectFirstFrameRef = useRef(false);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
@@ -144,12 +146,22 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   // ── current step & lookahead ───────────────────────────────────────────────
   const current = steps[stepIndex];
+  const firstClipSrc = useMemo(() => {
+    const firstClip = steps.find((s): s is Extract<VideoStep, { kind: "clip" }> => s.kind === "clip");
+    return firstClip?.src ?? null;
+  }, [steps]);
   const nextClipStep = useMemo(() => {
     for (let i = stepIndex + 1; i < steps.length; i++) {
       if (steps[i].kind === "clip") return steps[i] as Extract<VideoStep, { kind: "clip" }>;
     }
     return null;
   }, [stepIndex, steps]);
+
+  useEffect(() => {
+    if (phase !== "tap-to-begin") return;
+    if (!firstClipSrc) return;
+    setMountedSrc(firstClipSrc);
+  }, [firstClipSrc, phase]);
 
   // ── student id (for AURA telemetry) ────────────────────────────────────────
   const studentIdRef = useRef<string | null>(null);
@@ -204,32 +216,62 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // swapToClip(src) raises the veil, waits for it to be fully opaque, swaps
   // the mounted <video> src, then drops the veil only after onPlaying paints
   // the first frame of the new clip.
-  const swapToClip = useCallback((nextSrc: string) => {
+  const playMountedVideo = useCallback((allowMutedFallback = true) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const token = ++playTokenRef.current;
+    setPlayBlocked(false);
+    try {
+      const p = v.play();
+      if (p && typeof p.catch === "function") {
+        p.catch(() => {
+          if (token !== playTokenRef.current) return;
+          if (!allowMutedFallback) {
+            setPlayBlocked(true);
+            return;
+          }
+          try {
+            v.muted = true;
+            const mutedPlay = v.play();
+            if (mutedPlay && typeof mutedPlay.catch === "function") {
+              mutedPlay.catch(() => token === playTokenRef.current && setPlayBlocked(true));
+            }
+          } catch {
+            setPlayBlocked(true);
+          }
+        });
+      }
+    } catch {
+      if (allowMutedFallback) {
+        try {
+          v.muted = true;
+          void v.play();
+        } catch {
+          setPlayBlocked(true);
+        }
+      } else {
+        setPlayBlocked(true);
+      }
+    }
+  }, []);
+
+  const swapToClip = useCallback((nextSrc: string, immediate = false) => {
     setVeilOpaque(true);
     setHoldPoster(null); // freeze frame no longer needed once we leave a word
     expectFirstFrameRef.current = true;
-    queue(() => {
+    const doSwap = () => {
       setMountedSrc(nextSrc);
-      // Force the element to pick up new src + play.
-      requestAnimationFrame(() => {
-        const v = videoRef.current;
-        if (v) {
-          try {
-            v.muted = false;
-            v.currentTime = 0;
-            const p = v.play();
-            if (p && typeof p.catch === "function") p.catch(() => { /* ignore */ });
-          } catch { /* ignore */ }
-        }
-      });
       // Safety: if onPlaying never fires (codec hiccup), drop veil anyway.
       queue(() => {
         if (expectFirstFrameRef.current) {
           expectFirstFrameRef.current = false;
           setVeilOpaque(false);
+          setPlayBlocked(true);
         }
       }, VEIL_SAFETY_MS);
-    }, VEIL_FADE_IN_MS);
+    };
+    if (immediate) doSwap();
+    else queue(doSwap, VEIL_FADE_IN_MS);
   }, []);
 
   // freezeForWord(posterUrl) pauses the underlying <video> at its last frame
@@ -261,11 +303,12 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       clearTimers();
       // If the mounted src doesn't already match this clip, swap with veil.
       if (mountedSrc !== current.src) {
-        swapToClip(current.src);
+        swapToClip(current.src, mountedSrc === null);
       } else {
         // Same src already mounted (rare); just ensure veil is down.
         setVeilOpaque(false);
         setHoldPoster(null);
+        playMountedVideo();
       }
       return;
     }
@@ -288,7 +331,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       }, 250);
       return;
     }
-  }, [stepIndex, phase, adventure, mountedSrc, current, swapToClip, freezeForWord, startMicCapture]);
+  }, [stepIndex, phase, adventure, mountedSrc, current, swapToClip, freezeForWord, startMicCapture, playMountedVideo]);
 
   // ── word read handlers ─────────────────────────────────────────────────────
   const advanceFromWord = useCallback(
@@ -361,6 +404,18 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const handleBegin = () => {
     // Prime the audio context with the user gesture.
     getCtx();
+    const v = videoRef.current;
+    if (v) {
+      try {
+        v.muted = false;
+        v.currentTime = 0;
+      } catch { /* ignore */ }
+      playMountedVideo();
+    } else if (firstClipSrc) {
+      activeClipKeyRef.current = `0:${firstClipSrc}`;
+      expectFirstFrameRef.current = true;
+      setMountedSrc(firstClipSrc);
+    }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
@@ -387,11 +442,22 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // Video element fires onPlaying once the first frame is actually painted —
   // that's our cue to drop the veil safely.
   const handleVideoPlaying = () => {
+    setPlayBlocked(false);
     if (expectFirstFrameRef.current) {
       expectFirstFrameRef.current = false;
       // Small extra delay keeps the fade feeling cinematic.
       queue(() => setVeilOpaque(false), 80);
     }
+  };
+
+  const handleVideoReady = () => {
+    if (phase !== "tap-to-begin") playMountedVideo();
+  };
+
+  const handleVideoError = () => {
+    expectFirstFrameRef.current = false;
+    setVeilOpaque(false);
+    setPlayBlocked(true);
   };
 
   // ── ending → onComplete ────────────────────────────────────────────────────
@@ -429,7 +495,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
       {/* ── Single video layer (no overlap, no AnimatePresence) ─────────── */}
-      {phase !== "tap-to-begin" && mountedSrc && (
+      {mountedSrc && (
         <video
           ref={videoRef}
           key={mountedSrc}
@@ -442,7 +508,10 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
           aria-hidden
           tabIndex={-1}
           draggable={false}
+          onLoadedData={handleVideoReady}
+          onCanPlay={handleVideoReady}
           onPlaying={handleVideoPlaying}
+          onError={handleVideoError}
           onEnded={handleClipEnded}
         />
       )}
@@ -494,6 +563,18 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
             </div>
             <div className="mt-4 text-base font-bold text-rose-600">Tap to begin →</div>
           </div>
+        </button>
+      )}
+
+      {phase !== "tap-to-begin" && playBlocked && (
+        <button
+          onClick={() => playMountedVideo(false)}
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          aria-label="Resume story video"
+        >
+          <span className="rounded-3xl bg-white px-8 py-5 text-xl font-extrabold text-slate-900 shadow-2xl">
+            Tap to keep playing
+          </span>
         </button>
       )}
 
