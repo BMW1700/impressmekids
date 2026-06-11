@@ -486,7 +486,12 @@ const AuraPractice = () => {
     const isPreKWorld = selectedWorld.mode === 'prek' || isPreKWorldId(selectedWorld.id);
 
     // Generate levels from world's level data + curated stories (or Pre-K word banks)
-    const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
+    // For Pre-K worlds, only show levels that are PUBLISHED in the Super Admin CMS.
+    const sourceLevels = isPreKWorld
+      ? selectedWorld.levels.filter((l) => publishedPrekLevelNums.has(l.id))
+      : selectedWorld.levels;
+
+    const levels: CampaignLevel[] = sourceLevels.map((levelData, idx) => {
       const isTutorial = selectedWorld.id === 0;
 
       // Pre-K worlds: synthesize a lightweight story from word banks (no curated stories)
@@ -494,14 +499,15 @@ const AuraPractice = () => {
         const content = getPreKContent(selectedWorld.id, levelData.id);
         const items = content.kind === 'single' ? content.words : content.phrases;
         const preview = items.slice(0, 3).join(' · ');
-        const title = `${selectedWorld.name} · Lesson ${levelData.id}`;
+        const cmsMeta = publishedPrekLevelMeta[levelData.id];
+        const title = cmsMeta?.title || `${selectedWorld.name} · Lesson ${levelData.id}`;
         const story = {
           title,
-          description: preview,
+          description: cmsMeta?.goal || preview,
           passage_text: items.join(' '),
           grade_level: 0,
           category: 'adventure' as const,
-          word_count: items.length,
+          word_count: cmsMeta?.wordCount || items.length,
           reading_time_minutes: 1,
           difficulty_level: 0,
           cover_gradient: selectedWorld.gradient || 'from-pink-300 to-rose-400',
