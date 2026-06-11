@@ -85,7 +85,7 @@ const POWERS: { id: PowerId; label: string; icon: typeof Flame; color: string }[
 
 const normalize = (s: string) => s.toLowerCase().replace(/[^a-z']/g, "");
 
-export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
+export const CastleSwarmArena = ({ mode, onExit, onPlayAgain, overrideText, overrideTitle }: Props) => {
   const { user } = useAuth();
   const gradeMode = getGradeMode(getStoredTheme());
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
