@@ -50,11 +50,12 @@ interface RPGWorldMapProps {
   onSelectWorld: (world: CampaignWorld) => void;
   onBack: () => void;
   onStartBossRush?: () => void;
-  onSwitchMode?: () => void;
+  onSwitchMode?: (theme: GameTheme) => void;
   studentId?: string;
   gold?: number;
   xp?: number;
   gradeMode?: string;
+  currentTheme?: GameTheme | null;
 }
 
 const worldIcons: Record<number, React.ReactNode> = {
@@ -222,8 +223,10 @@ export const RPGWorldMap = ({
   gold = 0,
   xp = 0,
   gradeMode,
+  currentTheme,
 }: RPGWorldMapProps) => {
   const navigate = useNavigate();
+  const mapTheme = currentTheme ?? getStoredTheme() ?? 'classic';
   const [previousBookCount] = useState(totalBooksRescued);
   // Published Pre-K worlds + levels from the Super Admin CMS. Anything
   // published here appears as a Pre-K world card — whether or not a
@@ -351,7 +354,7 @@ export const RPGWorldMap = ({
           </Button>
           {/* Mode switcher — Pre-K → Classic → Agent (grade-level order) */}
           {(() => {
-            const current = getStoredTheme();
+            const current = mapTheme;
             const MODES: { value: GameTheme; label: string; sub: string; emoji: string }[] = [
               { value: 'prek',    label: 'Pre-K',   sub: 'Ages 3–5', emoji: '✨' },
               { value: 'classic', label: 'Classic', sub: 'Grades K–5', emoji: '⚔️' },
@@ -361,7 +364,7 @@ export const RPGWorldMap = ({
             const handlePick = (next: GameTheme) => {
               if (next === current) return;
               setStoredTheme(next);
-              if (onSwitchMode) onSwitchMode();
+              if (onSwitchMode) onSwitchMode(next);
               else window.location.reload();
             };
             return (
