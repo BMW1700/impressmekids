@@ -6,9 +6,8 @@
 //                                   show word card, listen on the mic,
 //                                   advance when matched (or auto-pass).
 //
-// The runner enforces a no-bleed transition: an opaque veil covers the stage
-// before the video src swaps, so a frame from the outgoing scene can never
-// appear inside the incoming scene.
+// The runner enforces no-bleed transitions with frozen-frame overlays: the
+// outgoing frame stays visible while the next video loads, then fades away.
 
 import L1_INTRO from "@/assets/L1-intro.mp4.asset.json";
 import L1_JUMP_PROMPT from "@/assets/L1-O1-A.mp4.asset.json";
