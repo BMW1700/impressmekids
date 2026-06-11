@@ -64,6 +64,9 @@ interface Props {
   mode: CastleRunMode;
   onExit: () => void;
   onPlayAgain?: () => void;
+  /** Optional custom story text overriding the built-in bank. */
+  overrideText?: string;
+  overrideTitle?: string;
 }
 
 const ARENA_WIDTH = 900;
