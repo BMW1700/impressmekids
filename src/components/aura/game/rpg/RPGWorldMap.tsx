@@ -506,12 +506,26 @@ export const RPGWorldMap = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = getStoredTheme();
-            const displayedWorlds =
-              theme === 'agent'
-                ? agentCampaignWorlds
-                : theme === 'prek'
-                  ? campaignWorlds.filter((w) => w.mode === 'prek')
-                  : campaignWorlds.filter((w) => w.mode !== 'prek');
+            let displayedWorlds: CampaignWorld[];
+            if (theme === 'agent') {
+              displayedWorlds = agentCampaignWorlds;
+            } else if (theme === 'prek') {
+              // Only show Pre-K worlds that exist & are published in the Super Admin CMS.
+              if (publishedPrekWorldNums === null) {
+                displayedWorlds = []; // still loading
+              } else {
+                displayedWorlds = campaignWorlds
+                  .filter((w) => w.mode === 'prek' && publishedPrekWorldNums.has(w.id))
+                  .map((w) => {
+                    const meta = publishedPrekMeta[w.id];
+                    return meta
+                      ? { ...w, name: meta.title || w.name, description: meta.description || w.description }
+                      : w;
+                  });
+              }
+            } else {
+              displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
+            }
             return displayedWorlds.map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
