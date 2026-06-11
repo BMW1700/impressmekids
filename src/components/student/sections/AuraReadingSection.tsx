@@ -505,10 +505,8 @@ export const AuraReadingSection = () => {
           onBack={() => setIsRpgMode(false)}
           totalBooksRescued={campaignProgress?.books_rescued || 0}
           gradeMode={currentGradeMode}
-          onSwitchMode={() => {
-            const next: GameTheme = gameTheme === 'agent' ? 'classic' : 'agent';
-            setGameTheme(next);
-          }}
+          currentTheme={gameTheme}
+          onSwitchMode={setGameTheme}
         />
       </div>
     );
