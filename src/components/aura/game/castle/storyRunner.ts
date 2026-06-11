@@ -74,8 +74,7 @@ export class StoryRunner {
         title: opts.overrideTitle ?? "My Story",
         gradeBand: opts.gradeBand,
         paragraphs: [opts.overrideText],
-        arcId: undefined as unknown as string,
-      } as unknown as CastleStory];
+      }];
     } else {
       this.stories = pickStoriesForContext(opts);
     }
