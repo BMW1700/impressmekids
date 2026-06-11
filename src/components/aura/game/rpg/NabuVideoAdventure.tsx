@@ -613,16 +613,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Opaque scene-change veil. Only used for clip → clip swaps so a
-            character frame can never bleed between scenes. ──────────────── */}
-      <div
-        className="pointer-events-none absolute inset-0 z-30 bg-black"
-        style={{
-          opacity: veilOpaque ? 1 : 0,
-          transition: `opacity ${veilOpaque ? SCENE_VEIL_IN_MS : SCENE_VEIL_OUT_MS}ms ease-in-out`,
-        }}
-        aria-hidden
-      />
+      {/* ── Scene-change freeze frame. Used instead of a black veil so clip →
+            clip swaps stay clean without flashing to black. ─────────────── */}
+      {sceneSnapshot && (
+        <img
+          src={sceneSnapshot}
+          alt=""
+          aria-hidden
+          draggable={false}
+          style={{
+            opacity: sceneSnapshotVisible ? 1 : 0,
+            transition: `opacity ${SCENE_SNAPSHOT_FADE_OUT_MS}ms ease-in-out`,
+          }}
+          className="pointer-events-none absolute inset-0 z-30 h-full w-full object-cover"
+        />
+      )}
 
 
       {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ────── */}
