@@ -10,14 +10,14 @@
 // before the video src swaps, so a frame from the outgoing scene can never
 // appear inside the incoming scene.
 
-import L1_INTRO from "@/assets/L1-intro.mov.asset.json";
-import L1_PUSH_PROMPT from "@/assets/L1-push-prompt.mov.asset.json";
+import L1_INTRO from "@/assets/L1-intro.mp4.asset.json";
+import L1_PUSH_PROMPT from "@/assets/L1-push-prompt.mp4.asset.json";
 import L1_PUSH_PROMPT_LAST from "@/assets/L1-push-prompt-last.jpg.asset.json";
-import L1_PUSH_ACTION from "@/assets/L1-push-action.mov.asset.json";
-import L1_SNEAK_PROMPT from "@/assets/L1-sneak-prompt.mov.asset.json";
+import L1_PUSH_ACTION from "@/assets/L1-push-action.mp4.asset.json";
+import L1_SNEAK_PROMPT from "@/assets/L1-sneak-prompt.mp4.asset.json";
 import L1_SNEAK_PROMPT_LAST from "@/assets/L1-sneak-prompt-last.jpg.asset.json";
-import L1_SNEAK_ACTION from "@/assets/L1-sneak-action.mov.asset.json";
-import L1_GRANDMA_ENDING from "@/assets/L1-grandma-ending.mov.asset.json";
+import L1_SNEAK_ACTION from "@/assets/L1-sneak-action.mp4.asset.json";
+import L1_GRANDMA_ENDING from "@/assets/L1-grandma-ending.mp4.asset.json";
 
 export type VideoStep =
   | { kind: "clip"; src: string; poster?: string }
