@@ -38,9 +38,15 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
-// Veil timing — kept slow & calm so it reads as a deliberate fade, not a flash.
-const VEIL_FADE_IN_MS = 450;
-const VEIL_FADE_OUT_MS = 500;
+// Two-tier transition timing.
+//   SCENE = clip → clip (e.g. action clip → next prompt clip, ending → finale).
+//           Opaque black veil so two scenes never overlap visually.
+//   CROSSFADE = word card → action clip. No black; we already hold an opaque
+//           poster of the previous frame, swap the video underneath, then
+//           softly fade the poster out as the new clip plays.
+const SCENE_VEIL_IN_MS = 360;
+const SCENE_VEIL_OUT_MS = 420;
+const POSTER_FADE_OUT_MS = 240;
 const VEIL_SAFETY_MS = 1200;
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
