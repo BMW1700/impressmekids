@@ -1,34 +1,35 @@
-// Pre-K Video Adventures — the new cinematic gameplay loop.
+// Pre-K Video Adventures — cinematic gameplay loop.
 //
 // A level is a flat ordered list of STEPS:
-//   - { kind: "clip", video } — play a video, advance when it ends.
-//   - { kind: "word", word, askLine, successLine } — freeze on the last
-//     frame of the previous clip, narrate the cloze stem ("I need to..."),
-//     show the word card, listen on the mic, advance when the kid says the
-//     word (or after a 3-strike auto-pass).
+//   - { kind: "clip", src }       — play a video, advance when it ends.
+//   - { kind: "word", word, ... } — freeze on the previous clip's last frame,
+//                                   show word card, listen on the mic,
+//                                   advance when matched (or auto-pass).
 //
-// Authoring a new level: film clips, drop them in, list them in order.
-// No engineering required.
+// The runner enforces a no-bleed transition: an opaque veil covers the stage
+// before the video src swaps, so a frame from the outgoing scene can never
+// appear inside the incoming scene.
 
-import L1_O1_A from "@/assets/L1-O1-A.mp4.asset.json";
-import L1_O1_B from "@/assets/L1-O1-B.mp4.asset.json";
-import L1_O1_A_LAST from "@/assets/L1-O1-A-last.jpg.asset.json";
-import L1_O2_A from "@/assets/L1-O2-A.mp4.asset.json";
-import L1_O2_B from "@/assets/L1-O2-B.mp4.asset.json";
-import L1_O2_A_LAST from "@/assets/L1-O2-A-last.jpg.asset.json";
-import L1_O3_A from "@/assets/L1-O3-A.mp4.asset.json";
-import L1_O3_B from "@/assets/L1-O3-B.mp4.asset.json";
-import L1_O3_A_LAST from "@/assets/L1-O3-A-last.jpg.asset.json";
+import L1_INTRO from "@/assets/L1-intro.mov.asset.json";
+import L1_PUSH_PROMPT from "@/assets/L1-push-prompt.mov.asset.json";
+import L1_PUSH_PROMPT_LAST from "@/assets/L1-push-prompt-last.jpg.asset.json";
+import L1_PUSH_ACTION from "@/assets/L1-push-action.mov.asset.json";
+import L1_SNEAK_PROMPT from "@/assets/L1-sneak-prompt.mov.asset.json";
+import L1_SNEAK_PROMPT_LAST from "@/assets/L1-sneak-prompt-last.jpg.asset.json";
+import L1_SNEAK_ACTION from "@/assets/L1-sneak-action.mov.asset.json";
+import L1_GRANDMA_ENDING from "@/assets/L1-grandma-ending.mov.asset.json";
 
 export type VideoStep =
   | { kind: "clip"; src: string; poster?: string }
   | {
       kind: "word";
       word: string;
-      /** Cloze stem narrated on the frozen frame — ends with "..." so TTS pauses. */
+      /** Cloze stem displayed while listening; audio lives inside the prompt clip. */
       askLine: string;
-      /** Spoken after the kid reads the word, during the next clip. */
+      /** Optional follow-up line. */
       successLine?: string;
+      /** Frozen frame to hold while the word card is shown. */
+      holdPoster?: string;
     };
 
 export interface VideoLevel {
@@ -43,8 +44,8 @@ export interface VideoLevel {
 
 // ============================================================================
 // W101_L1 — "Help Benny visit Grandma!"
-// Obstacles 1 (JUMP), 2 (BOOTS), 3 (KEY) have full A+B clips.
-// Obstacles 4 (HOP) and 5 (BONE) hold on the previous frame until filmed.
+//   intro → push prompt → PUSH word → push action →
+//   sneak prompt → SNEAK word → sneak action → grandma ending
 // ============================================================================
 
 const W101_L1: VideoLevel = {
@@ -52,49 +53,33 @@ const W101_L1: VideoLevel = {
   goal: "Help Benny visit Grandma!",
   endingLine: "We made it to Grandma's!",
   steps: [
-    // — Obstacle 1: JUMP the river —
-    { kind: "clip", src: L1_O1_A.url, poster: L1_O1_A_LAST.url },
-    {
-      kind: "word",
-      word: "JUMP",
-      askLine: "I need to...",
-      successLine: "Whoosh! Over we go!",
-    },
-    { kind: "clip", src: L1_O1_B.url },
+    // Intro
+    { kind: "clip", src: L1_INTRO.url },
 
-    // — Obstacle 2: BOOTS for the muddy field —
-    { kind: "clip", src: L1_O2_A.url, poster: L1_O2_A_LAST.url },
+    // Obstacle 1: PUSH the log
+    { kind: "clip", src: L1_PUSH_PROMPT.url, poster: L1_PUSH_PROMPT_LAST.url },
     {
       kind: "word",
-      word: "BOOTS",
-      askLine: "My feet need big...",
-      successLine: "Big boots! Splish splash!",
+      word: "PUSH",
+      askLine: "How do I move this?",
+      successLine: "Heave-ho! There it goes!",
+      holdPoster: L1_PUSH_PROMPT_LAST.url,
     },
-    { kind: "clip", src: L1_O2_B.url },
+    { kind: "clip", src: L1_PUSH_ACTION.url },
 
-    // — Obstacle 3: KEY to open the gate —
-    { kind: "clip", src: L1_O3_A.url, poster: L1_O3_A_LAST.url },
+    // Obstacle 2: SNEAK past the bear
+    { kind: "clip", src: L1_SNEAK_PROMPT.url, poster: L1_SNEAK_PROMPT_LAST.url },
     {
       kind: "word",
-      word: "KEY",
-      askLine: "To open the gate I need a...",
-      successLine: "Click! The gate is open!",
+      word: "SNEAK",
+      askLine: "Shhh… what should I do?",
+      successLine: "Tip-toe, tip-toe… past the bear!",
+      holdPoster: L1_SNEAK_PROMPT_LAST.url,
     },
-    { kind: "clip", src: L1_O3_B.url },
+    { kind: "clip", src: L1_SNEAK_ACTION.url },
 
-    // — Obstacle 4 & 5: audio + word card only until clips are filmed —
-    {
-      kind: "word",
-      word: "HOP",
-      askLine: "Help me jump and...",
-      successLine: "Hop hop! Path is clear!",
-    },
-    {
-      kind: "word",
-      word: "BONE",
-      askLine: "Give the puppy a...",
-      successLine: "Yum! The puppy runs to play!",
-    },
+    // Grandma ending
+    { kind: "clip", src: L1_GRANDMA_ENDING.url },
   ],
 };
 
