@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -224,6 +225,35 @@ export const RPGWorldMap = ({
 }: RPGWorldMapProps) => {
   const navigate = useNavigate();
   const [previousBookCount] = useState(totalBooksRescued);
+  // Published Pre-K worlds from the Super Admin CMS (prek_worlds table).
+  // Used to gate which Pre-K cards are shown so only super-admin-managed
+  // worlds appear to students. `null` = still loading.
+  const [publishedPrekWorldNums, setPublishedPrekWorldNums] = useState<Set<number> | null>(null);
+  const [publishedPrekMeta, setPublishedPrekMeta] = useState<Record<number, { title: string; description: string }>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('prek_worlds')
+        .select('world_number, title, description, is_published')
+        .eq('is_published', true);
+      if (cancelled) return;
+      if (error || !data) {
+        setPublishedPrekWorldNums(new Set());
+        return;
+      }
+      const nums = new Set<number>();
+      const meta: Record<number, { title: string; description: string }> = {};
+      for (const row of data) {
+        nums.add(row.world_number);
+        meta[row.world_number] = { title: row.title, description: row.description ?? '' };
+      }
+      setPublishedPrekWorldNums(nums);
+      setPublishedPrekMeta(meta);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Check if Boss Rush is unlocked (World 8 complete)
   const isBossRushUnlocked = useMemo(() => {
@@ -476,12 +506,26 @@ export const RPGWorldMap = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = getStoredTheme();
-            const displayedWorlds =
-              theme === 'agent'
-                ? agentCampaignWorlds
-                : theme === 'prek'
-                  ? campaignWorlds.filter((w) => w.mode === 'prek')
-                  : campaignWorlds.filter((w) => w.mode !== 'prek');
+            let displayedWorlds: CampaignWorld[];
+            if (theme === 'agent') {
+              displayedWorlds = agentCampaignWorlds;
+            } else if (theme === 'prek') {
+              // Only show Pre-K worlds that exist & are published in the Super Admin CMS.
+              if (publishedPrekWorldNums === null) {
+                displayedWorlds = []; // still loading
+              } else {
+                displayedWorlds = campaignWorlds
+                  .filter((w) => w.mode === 'prek' && publishedPrekWorldNums.has(w.id))
+                  .map((w) => {
+                    const meta = publishedPrekMeta[w.id];
+                    return meta
+                      ? { ...w, name: meta.title || w.name, description: meta.description || w.description }
+                      : w;
+                  });
+              }
+            } else {
+              displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
+            }
             return displayedWorlds.map((world, index) => {
             const progress = getWorldProgress(world.id);
             const unlocked = isWorldUnlocked(world);
