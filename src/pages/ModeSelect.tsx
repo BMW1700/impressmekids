@@ -12,6 +12,7 @@ const ModeSelect = () => {
   const location = useLocation();
   const skipRedirect = (location.state as any)?.skipRedirect === true;
   const { user, profile, isLoading, isProfileLoading } = useAuth();
+  const { isSuperAdmin } = useIsSuperAdmin();
 
   useEffect(() => {
     if (skipRedirect) return;
