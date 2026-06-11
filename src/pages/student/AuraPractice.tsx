@@ -9,6 +9,7 @@ import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGW
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
 import { NabuEpisodeWrapper } from "@/components/aura/game/rpg/NabuEpisodeWrapper";
 import { getPreKContent, isPreKWorldId } from "@/data/preKWordBanks";
+import { usePublishedPrekLevels } from "@/hooks/usePublishedPrekLevels";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
 import { BookRescueCelebration } from "@/components/aura/game/BookRescueCelebration";
 import { campaignWorlds, type CampaignWorld } from "@/lib/campaignData";
