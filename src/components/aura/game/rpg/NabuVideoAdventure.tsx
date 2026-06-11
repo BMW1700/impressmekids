@@ -555,14 +555,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Freeze-frame overlay for word phases (kills any chance of bleed) ─ */}
+      {/* ── Freeze-frame overlay for word phases. Stays opaque during the
+            word card, then softly fades to reveal the new action clip
+            (crossfade transition). ─────────────────────────────────────── */}
       {holdPoster && (
         <img
           src={holdPoster}
           alt=""
           aria-hidden
           draggable={false}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          style={{
+            opacity: holdPosterVisible ? 1 : 0,
+            transition: `opacity ${POSTER_FADE_OUT_MS}ms ease-out`,
+          }}
+          className="pointer-events-none absolute inset-0 z-20 h-full w-full object-cover"
         />
       )}
 
@@ -579,15 +585,17 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Opaque transition veil — covers EVERYTHING during swaps ─────── */}
+      {/* ── Opaque scene-change veil. Only used for clip → clip swaps so a
+            character frame can never bleed between scenes. ──────────────── */}
       <div
         className="pointer-events-none absolute inset-0 z-30 bg-black"
         style={{
           opacity: veilOpaque ? 1 : 0,
-          transition: `opacity ${veilOpaque ? VEIL_FADE_IN_MS : VEIL_FADE_OUT_MS}ms ease-in-out`,
+          transition: `opacity ${veilOpaque ? SCENE_VEIL_IN_MS : SCENE_VEIL_OUT_MS}ms ease-in-out`,
         }}
         aria-hidden
       />
+
 
       {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ────── */}
       {phase === "tap-to-begin" && (
