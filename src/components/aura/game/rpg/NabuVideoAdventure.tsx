@@ -121,6 +121,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // word card sits on a guaranteed-stable picture even if the underlying
   // <video> tries to rewind/replay on iOS.
   const [holdPoster, setHoldPoster] = useState<string | null>(null);
+  const [holdPosterVisible, setHoldPosterVisible] = useState(false);
 
   // Refs for things that must not trigger re-renders
   const videoRef = useRef<HTMLVideoElement | null>(null);
