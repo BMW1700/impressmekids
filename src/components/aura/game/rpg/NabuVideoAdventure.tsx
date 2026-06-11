@@ -144,6 +144,22 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     timers.current.push(window.setTimeout(fn, ms));
   };
 
+  const captureVideoSnapshot = useCallback((): string | null => {
+    const v = videoRef.current;
+    if (!v || v.videoWidth === 0 || v.videoHeight === 0) return null;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = v.videoWidth;
+      canvas.height = v.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL("image/jpeg", 0.9);
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => () => {
     clearTimers();
     cancelSpeech();
