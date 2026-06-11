@@ -336,9 +336,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (phase !== "clip") return;
       advancedRef.current = false;
       clearTimers();
-      // If the mounted src doesn't already match this clip, swap with veil.
+      // Pick the right transition:
+      //   - no clip mounted yet → immediate (first paint)
+      //   - we have a holdPoster up (came from a word card) → crossfade
+      //   - otherwise (clip → next clip) → opaque scene fade
       if (mountedSrc !== current.src) {
-        swapToClip(current.src, mountedSrc === null);
+        const style: SwapStyle =
+          mountedSrc === null ? "immediate" : holdPoster ? "crossfade" : "scene";
+        swapToClip(current.src, style);
       } else {
         // Same src already mounted (rare); just ensure veil is down.
         setVeilOpaque(false);
