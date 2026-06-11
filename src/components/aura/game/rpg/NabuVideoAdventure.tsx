@@ -38,9 +38,15 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 
-// Veil timing — kept slow & calm so it reads as a deliberate fade, not a flash.
-const VEIL_FADE_IN_MS = 450;
-const VEIL_FADE_OUT_MS = 500;
+// Two-tier transition timing.
+//   SCENE = clip → clip (e.g. action clip → next prompt clip, ending → finale).
+//           Opaque black veil so two scenes never overlap visually.
+//   CROSSFADE = word card → action clip. No black; we already hold an opaque
+//           poster of the previous frame, swap the video underneath, then
+//           softly fade the poster out as the new clip plays.
+const SCENE_VEIL_IN_MS = 360;
+const SCENE_VEIL_OUT_MS = 420;
+const POSTER_FADE_OUT_MS = 240;
 const VEIL_SAFETY_MS = 1200;
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
@@ -115,6 +121,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   // word card sits on a guaranteed-stable picture even if the underlying
   // <video> tries to rewind/replay on iOS.
   const [holdPoster, setHoldPoster] = useState<string | null>(null);
+  const [holdPosterVisible, setHoldPosterVisible] = useState(false);
 
   // Refs for things that must not trigger re-renders
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -255,13 +262,42 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
   }, []);
 
-  const swapToClip = useCallback((nextSrc: string, immediate = false) => {
-    setVeilOpaque(true);
-    setHoldPoster(null); // freeze frame no longer needed once we leave a word
+  type SwapStyle = "scene" | "crossfade" | "immediate";
+
+  const swapToClip = useCallback((nextSrc: string, style: SwapStyle = "scene") => {
     expectFirstFrameRef.current = true;
+
+    if (style === "immediate") {
+      // First mount: no transition, just put the clip on screen.
+      setVeilOpaque(false);
+      setHoldPoster(null);
+      setHoldPosterVisible(false);
+      setMountedSrc(nextSrc);
+      return;
+    }
+
+    if (style === "crossfade") {
+      // Word → action clip. Don't raise the black veil — the holdPoster is
+      // already covering the screen. Swap the video underneath now; once it
+      // paints we softly fade the poster out for a clean dissolve.
+      setVeilOpaque(false);
+      setMountedSrc(nextSrc);
+      queue(() => {
+        if (expectFirstFrameRef.current) {
+          expectFirstFrameRef.current = false;
+          setHoldPosterVisible(false);
+          queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+        }
+      }, VEIL_SAFETY_MS);
+      return;
+    }
+
+    // "scene" — clip → next clip. Opaque veil, swap, then fade out.
+    setVeilOpaque(true);
+    setHoldPoster(null);
+    setHoldPosterVisible(false);
     const doSwap = () => {
       setMountedSrc(nextSrc);
-      // Safety: if onPlaying never fires (codec hiccup), drop veil anyway.
       queue(() => {
         if (expectFirstFrameRef.current) {
           expectFirstFrameRef.current = false;
@@ -270,8 +306,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         }
       }, VEIL_SAFETY_MS);
     };
-    if (immediate) doSwap();
-    else queue(doSwap, VEIL_FADE_IN_MS);
+    queue(doSwap, SCENE_VEIL_IN_MS);
   }, []);
 
   // freezeForWord(posterUrl) pauses the underlying <video> at its last frame
@@ -283,7 +318,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       try { v.pause(); } catch { /* ignore */ }
     }
     setHoldPoster(posterUrl ?? null);
-    // The veil should already be down here; ensure it is.
+    setHoldPosterVisible(!!posterUrl);
     setVeilOpaque(false);
   }, []);
 
@@ -301,9 +336,14 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (phase !== "clip") return;
       advancedRef.current = false;
       clearTimers();
-      // If the mounted src doesn't already match this clip, swap with veil.
+      // Pick the right transition:
+      //   - no clip mounted yet → immediate (first paint)
+      //   - we have a holdPoster up (came from a word card) → crossfade
+      //   - otherwise (clip → next clip) → opaque scene fade
       if (mountedSrc !== current.src) {
-        swapToClip(current.src, mountedSrc === null);
+        const style: SwapStyle =
+          mountedSrc === null ? "immediate" : holdPoster ? "crossfade" : "scene";
+        swapToClip(current.src, style);
       } else {
         // Same src already mounted (rare); just ensure veil is down.
         setVeilOpaque(false);
@@ -439,13 +479,19 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   };
 
   // Video element fires onPlaying once the first frame is actually painted —
-  // that's our cue to drop the veil safely.
+  // that's our cue to either drop the scene veil (clip→clip) or fade the
+  // hold-poster off (word→clip crossfade).
   const handleVideoPlaying = () => {
     setPlayBlocked(false);
     if (expectFirstFrameRef.current) {
       expectFirstFrameRef.current = false;
-      // Small extra delay keeps the fade feeling cinematic.
-      queue(() => setVeilOpaque(false), 80);
+      if (holdPoster) {
+        // Crossfade out the poster to reveal the now-playing clip.
+        setHoldPosterVisible(false);
+        queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+      } else {
+        queue(() => setVeilOpaque(false), 80);
+      }
     }
   };
 
@@ -515,14 +561,20 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Freeze-frame overlay for word phases (kills any chance of bleed) ─ */}
+      {/* ── Freeze-frame overlay for word phases. Stays opaque during the
+            word card, then softly fades to reveal the new action clip
+            (crossfade transition). ─────────────────────────────────────── */}
       {holdPoster && (
         <img
           src={holdPoster}
           alt=""
           aria-hidden
           draggable={false}
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          style={{
+            opacity: holdPosterVisible ? 1 : 0,
+            transition: `opacity ${POSTER_FADE_OUT_MS}ms ease-out`,
+          }}
+          className="pointer-events-none absolute inset-0 z-20 h-full w-full object-cover"
         />
       )}
 
@@ -539,15 +591,17 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Opaque transition veil — covers EVERYTHING during swaps ─────── */}
+      {/* ── Opaque scene-change veil. Only used for clip → clip swaps so a
+            character frame can never bleed between scenes. ──────────────── */}
       <div
         className="pointer-events-none absolute inset-0 z-30 bg-black"
         style={{
           opacity: veilOpaque ? 1 : 0,
-          transition: `opacity ${veilOpaque ? VEIL_FADE_IN_MS : VEIL_FADE_OUT_MS}ms ease-in-out`,
+          transition: `opacity ${veilOpaque ? SCENE_VEIL_IN_MS : SCENE_VEIL_OUT_MS}ms ease-in-out`,
         }}
         aria-hidden
       />
+
 
       {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ────── */}
       {phase === "tap-to-begin" && (

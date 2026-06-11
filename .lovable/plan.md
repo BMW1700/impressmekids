@@ -1,49 +1,38 @@
-## Plan
+## Problem
 
-I will implement the new Benny level using the six uploaded videos in the exact order you gave, and I will change the runner so transitions never crossfade two different videos on top of each other.
+Right now every step boundary uses the same opaque black veil. That looks correct between full scenes (action clip → next prompt clip), but it kills the moment between the kid saying the word and the action clip — there should be a quick, clean crossfade there, like the original behavior.
 
-## Clip order
+## Fix
 
-1. `My_Movie_37_2-2.MOV` — intro, non-interactive, fades into current first obstacle video
-2. `Initial_Scene_-_2026-06-10_202606101735-2.MOV` — Benny reaches the log and asks how to move it
-3. `Initial_Scene_-_2026-06-10_202606101735_2-2.MOV` — action clip after the user says `PUSH`
-4. `Initial_Scene_-_2026-06-11_202606102216-2.MOV` — Benny reaches the sleeping bear and asks what to do
-5. `Initial_Scene_-_2026-06-11_202606102216_2-2.MOV` — action clip after the user says `SNEAK`
-6. `Untitled_Scene_06-10_22_46_21_202606101850-2.MOV` — grandma house ending, non-interactive, then level-complete award screen
+In `src/components/aura/game/rpg/NabuVideoAdventure.tsx`, replace the single veil transition with two tiers, chosen by what kind of step boundary we are crossing:
 
-## What I will change
+1. **Word → action clip (intra-beat)**
+   - Trigger: leaving a `word` step into the next `clip`.
+   - Style: quick crossfade between the held poster frame and the new video. No black. ~180 ms in, ~120 ms out, total ~300 ms.
+   - Implementation: render the incoming video underneath, fade the outgoing poster/word card out on top. No opaque veil layer involved.
 
-- Upload the six MOV files as Lovable CDN assets, not raw repo files.
-- Add asset pointers under `src/assets/`.
-- Update `src/data/preKAdventuresVideo.ts` so World 101 Level 1 becomes:
+2. **Clip → next clip / Clip → prompt clip (scene change)**
+   - Trigger: leaving a `clip` step into another `clip` (e.g. action → next prompt, or grandma ending into completion).
+   - Style: the existing no-bleed veil, but as a softer fade (not a hard cut). ~350 ms veil-in, swap src while fully covered, ~350 ms veil-out. Roughly double the intra-beat duration, matching the user's "double the time period" ask.
+   - Keeps the guarantee that two different video frames never appear on screen at the same time, which was the original bleed bug.
 
-```text
-intro clip
-push prompt clip
-word: PUSH
-push action clip
-sneak prompt clip
-word: SNEAK
-sneak action clip
-grandma ending clip
-completion popup
-```
+3. **Clip → word step**
+   - Same clip element keeps playing visually; we just freeze on `holdPoster` and fade the word card in over ~200 ms. No veil. (This is already close to correct; just make sure the veil never fires here.)
 
-- Keep only `PUSH` and `SNEAK` as interactive word cards for this version.
-- Replace the current overlapping video crossfade behavior in `NabuVideoAdventure.tsx` with a no-bleed transition system:
-  - never render outgoing and incoming videos at the same time
-  - fade an opaque transition veil up first
-  - swap the video source only while the veil is fully covering the stage
-  - fade the veil back out after the new video is ready
-  - keep the word prompt frozen on the actual final frame of the prompt clip
-- Preserve the existing microphone / word-recognition flow and level completion logic.
+## Transition selection logic
 
-## Technical guardrail for the bleed bug
+Add a small helper `transitionKindFor(prevStep, nextStep)` returning one of:
+- `"hold"` — clip → word (no veil, just card fade-in)
+- `"crossfade"` — word → clip (quick poster-to-video crossfade)
+- `"sceneFade"` — clip → clip (longer veil-covered swap, the current behavior)
 
-The current runner uses overlapping `AnimatePresence` video layers, which can show the outgoing clip’s final frame while the incoming clip fades in. I will remove that overlap for clip-to-clip changes and use a single active video layer plus an opaque fade veil, so a character/frame from one scene cannot visually bleed into the next scene.
+The runner picks the matching transition when advancing.
 
 ## Verification
 
-- Confirm all six uploaded clips are referenced in the correct order.
-- Confirm the runner no longer overlaps two video elements during transitions.
-- Run a targeted code check/search to ensure the old overlapping video transition pattern is gone.
+- Step through the level in the preview: intro → JUMP prompt → word card → JUMP action → … → grandma ending.
+- Confirm: word card → action clip is a smooth crossfade with no black frame.
+- Confirm: action clip → next prompt clip uses the longer fade and never shows two scenes overlapping (no character bleed).
+- Confirm: prompt clip → word card just freezes on the last frame and fades the card in.
+
+No data, asset, or speech-logic changes — transitions only.
