@@ -268,10 +268,10 @@ const App = () => (
                         <Route path="/district/register" element={<RegisterDistrict />} />
 
                         {/* Super Admin CMS — Pre-K only for now */}
-                        <Route path="/admin/super" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
-                        <Route path="/admin/super/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
-                        <Route path="/admin/super/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
-                        <Route path="/admin/super/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
+                        <Route path="/super-admin" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
+                        <Route path="/super-admin/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
+                        <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
+                        <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
                       </Route>
                     </Route>
                   </Route>

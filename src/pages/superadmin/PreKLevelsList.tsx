@@ -124,7 +124,7 @@ const PreKLevelsList = () => {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
-              <Link to="/admin/super/prek"><ArrowLeft className="h-4 w-4 mr-1" /> Worlds</Link>
+              <Link to="/super-admin/prek"><ArrowLeft className="h-4 w-4 mr-1" /> Worlds</Link>
             </Button>
             <h1 className="text-3xl font-bold">{world ? world.title : "Levels"}</h1>
             {world && <Badge variant="outline">#{world.world_number}</Badge>}
@@ -162,7 +162,7 @@ const PreKLevelsList = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button asChild size="sm"><Link to={`/admin/super/prek/${worldId}/${l.id}/edit`}>
+                      <Button asChild size="sm"><Link to={`/super-admin/prek/${worldId}/${l.id}/edit`}>
                         <Wrench className="h-4 w-4 mr-1" /> Build
                       </Link></Button>
                       <Button variant="ghost" size="icon" onClick={() => togglePublish(l)} title={l.is_published ? "Unpublish" : "Publish"}>

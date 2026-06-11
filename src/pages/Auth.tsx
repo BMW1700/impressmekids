@@ -116,7 +116,7 @@ const Auth = () => {
 
   const redirectToDashboard = (userRole: string) => {
     if (userRole === 'super_admin') {
-      navigate('/admin/super');
+      navigate('/super-admin');
     } else if (userRole === 'district_manager') {
       navigate('/district-manager/dashboard');
     } else if (userRole === 'teacher') {
@@ -239,7 +239,7 @@ const Auth = () => {
 
         // Super admin always routes to the super admin CMS.
         if (await isSuperAdminUser(session.user.id)) {
-          navigate('/admin/super');
+          navigate('/super-admin');
           return;
         }
 

@@ -298,7 +298,7 @@ const PreKLevelBuilder = () => {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
-              <Link to={`/admin/super/prek/${worldId}`}><ArrowLeft className="h-4 w-4 mr-1" /> Levels</Link>
+              <Link to={`/super-admin/prek/${worldId}`}><ArrowLeft className="h-4 w-4 mr-1" /> Levels</Link>
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{level.title}</h1>

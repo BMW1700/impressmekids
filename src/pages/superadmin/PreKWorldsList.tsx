@@ -129,7 +129,7 @@ const PreKWorldsList = () => {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="sm">
-              <Link to="/admin/super"><ArrowLeft className="h-4 w-4 mr-1" /> Super Admin</Link>
+              <Link to="/super-admin"><ArrowLeft className="h-4 w-4 mr-1" /> Super Admin</Link>
             </Button>
             <h1 className="text-3xl font-bold">Pre-K Worlds</h1>
           </div>
@@ -162,7 +162,7 @@ const PreKWorldsList = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button asChild variant="outline" size="sm"><Link to={`/admin/super/prek/${w.id}`}>Open</Link></Button>
+                    <Button asChild variant="outline" size="sm"><Link to={`/super-admin/prek/${w.id}`}>Open</Link></Button>
                     <Button variant="ghost" size="icon" onClick={() => togglePublish(w)} title={w.is_published ? "Unpublish" : "Publish"}>
                       {w.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </Button>
