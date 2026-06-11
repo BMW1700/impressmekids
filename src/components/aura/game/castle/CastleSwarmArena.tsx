@@ -102,6 +102,8 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain, overrideText, over
       gradeBand: gradeMode === "6to12" ? "6-12" : "K-5",
       levelId: mode.kind === "campaign" ? mode.level.id : undefined,
       arcId: mode.kind === "campaign" ? mode.level.arc : undefined,
+      overrideText,
+      overrideTitle,
     });
   }
 
