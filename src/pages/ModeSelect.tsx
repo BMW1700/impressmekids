@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Gamepad2 } from "lucide-react";
+import { Loader2, Gamepad2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { RPGShowcase } from "@/components/landing/RPGShowcase";
 
 const ModeSelect = () => {
@@ -11,6 +12,7 @@ const ModeSelect = () => {
   const location = useLocation();
   const skipRedirect = (location.state as any)?.skipRedirect === true;
   const { user, profile, isLoading, isProfileLoading } = useAuth();
+  const { isSuperAdmin } = useIsSuperAdmin();
 
   useEffect(() => {
     if (skipRedirect) return;
@@ -82,7 +84,7 @@ const ModeSelect = () => {
           <span className="text-yellow-400">NabuLearn</span>
         </motion.h1>
 
-        <div className="flex items-center justify-center w-full">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full">
         {/* Game Mode */}
         <motion.button
           initial={{ opacity: 0, scale: 0.8 }}
@@ -105,6 +107,31 @@ const ModeSelect = () => {
           <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Enter the Adventure</span>
           <span className="text-xs sm:text-sm text-white/60">Play & Learn to Read</span>
         </motion.button>
+
+        {/* Super Admin entry — only visible to super_admin role */}
+        {isSuperAdmin && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate('/super-admin')}
+            className="w-full max-w-sm sm:w-72 h-52 sm:h-64 md:w-80 md:h-80 rounded-2xl flex flex-col items-center justify-center gap-3 sm:gap-4
+              bg-white/10 backdrop-blur-xl border border-white/20
+              shadow-[0_8px_32px_rgba(250,204,21,0.25),0_0_60px_rgba(250,204,21,0.15),inset_0_1px_1px_rgba(255,255,255,0.15)]
+              hover:shadow-[0_12px_50px_rgba(250,204,21,0.4),0_0_80px_rgba(250,204,21,0.25),inset_0_1px_1px_rgba(255,255,255,0.2)]
+              hover:bg-white/15 hover:border-white/30
+              transition-all duration-300 cursor-pointer group relative overflow-hidden"
+          >
+            <div className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl bg-white/10 flex items-center justify-center
+              group-hover:bg-white/20 transition-colors duration-300">
+              <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 text-yellow-300" />
+            </div>
+            <span className="text-lg sm:text-xl md:text-2xl font-semibold text-white text-center px-4">Open Super Admin Interface</span>
+            <span className="text-xs sm:text-sm text-white/60">Manage Pre-K worlds & levels</span>
+          </motion.button>
+        )}
         </div>
 
         <motion.div
