@@ -381,7 +381,12 @@ export const AuraReadingSection = () => {
     const allCompletedStories = new Set(Object.values(worldProgressData).flat());
     const completedStories = completedStoriesInWorld;
     
-    const levels: CampaignLevel[] = selectedWorld.levels.map((levelData, idx) => {
+    // For Pre-K worlds, only show levels published in the Super Admin CMS.
+    const sourceLevels = isSelectedPreK
+      ? selectedWorld.levels.filter((l) => publishedPrekLevelNums.has(l.id))
+      : selectedWorld.levels;
+
+    const levels: CampaignLevel[] = sourceLevels.map((levelData, idx) => {
       // Tutorial world uses a special story
       const isTutorial = selectedWorld.id === 0;
       const story = isTutorial 
