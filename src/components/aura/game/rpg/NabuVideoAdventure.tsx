@@ -32,6 +32,8 @@ interface Props {
   level: CampaignLevel;
   onBack: () => void;
   onComplete: (stats: { wordsRead: number; correctWords: number; stars: number }) => void;
+  /** Optional DB-loaded level override. When provided, takes precedence over the hardcoded data file. */
+  overrideLevel?: VideoLevel | null;
 }
 
 type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending";
@@ -94,10 +96,10 @@ const ensureSparkleStyle = () => {
 type Slot = "A" | "B";
 const otherSlot = (s: Slot): Slot => (s === "A" ? "B" : "A");
 
-export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) => {
+export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel }: Props) => {
   const adventure = useMemo<VideoLevel | null>(
-    () => getVideoLevel(world.id, level.id),
-    [world.id, level.id]
+    () => overrideLevel ?? getVideoLevel(world.id, level.id),
+    [overrideLevel, world.id, level.id]
   );
 
   const steps = adventure?.steps ?? EMPTY_VIDEO_STEPS;
