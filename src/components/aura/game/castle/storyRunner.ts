@@ -59,8 +59,26 @@ export class StoryRunner {
   /** Position in the flat stream. */
   private cursor = 0;
 
-  constructor(opts: { gradeBand: CastleGradeBand; levelId?: string; arcId?: string }) {
-    this.stories = pickStoriesForContext(opts);
+  constructor(opts: {
+    gradeBand: CastleGradeBand;
+    levelId?: string;
+    arcId?: string;
+    /** When provided, bypasses the built-in story bank and runs on this raw text. */
+    overrideText?: string;
+    /** Display title for the override (shown in HUD). */
+    overrideTitle?: string;
+  }) {
+    if (opts.overrideText && opts.overrideText.trim().length > 0) {
+      this.stories = [{
+        id: "custom",
+        title: opts.overrideTitle ?? "My Story",
+        gradeBand: opts.gradeBand,
+        paragraphs: [opts.overrideText],
+        arcId: undefined as unknown as string,
+      } as unknown as CastleStory];
+    } else {
+      this.stories = pickStoriesForContext(opts);
+    }
     this.sentences = prepareStories(this.stories);
     this.stream = [];
     this.sentences.forEach((sent, sentenceIdx) => {
