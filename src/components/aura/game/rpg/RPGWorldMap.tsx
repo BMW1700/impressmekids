@@ -545,19 +545,7 @@ export const RPGWorldMap = ({
             if (theme === 'agent') {
               displayedWorlds = agentCampaignWorlds;
             } else if (theme === 'prek') {
-              // Only show Pre-K worlds that exist & are published in the Super Admin CMS.
-              if (publishedPrekWorldNums === null) {
-                displayedWorlds = []; // still loading
-              } else {
-                displayedWorlds = campaignWorlds
-                  .filter((w) => w.mode === 'prek' && publishedPrekWorldNums.has(w.id))
-                  .map((w) => {
-                    const meta = publishedPrekMeta[w.id];
-                    return meta
-                      ? { ...w, name: meta.title || w.name, description: meta.description || w.description }
-                      : w;
-                  });
-              }
+              displayedWorlds = publishedPrekWorlds ?? [];
             } else {
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
             }
