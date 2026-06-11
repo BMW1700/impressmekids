@@ -120,6 +120,10 @@ const AuraPractice = () => {
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [selectedBattleMode, setSelectedBattleMode] = useState<BattleMode>('classic');
   const [pendingBattle, setPendingBattle] = useState<null | { level: CampaignLevel; mode: BattleMode; enemy: EnemyType; primaryEnemy: string }>(null);
+  const isSelectedPreK = !!selectedWorld && (selectedWorld.mode === 'prek' || isPreKWorldId(selectedWorld.id));
+  const { levelNums: publishedPrekLevelNums, meta: publishedPrekLevelMeta } = usePublishedPrekLevels(
+    isSelectedPreK ? selectedWorld!.id : null,
+  );
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
   
