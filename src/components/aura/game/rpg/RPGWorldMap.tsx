@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap, BookOpen, ChevronRight } from "lucide-react";
-import { campaignWorlds, CampaignWorld } from "@/lib/campaignData";
+import { campaignWorlds, CampaignWorld, CampaignLevel } from "@/lib/campaignData";
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
@@ -225,32 +225,67 @@ export const RPGWorldMap = ({
 }: RPGWorldMapProps) => {
   const navigate = useNavigate();
   const [previousBookCount] = useState(totalBooksRescued);
-  // Published Pre-K worlds from the Super Admin CMS (prek_worlds table).
-  // Used to gate which Pre-K cards are shown so only super-admin-managed
-  // worlds appear to students. `null` = still loading.
-  const [publishedPrekWorldNums, setPublishedPrekWorldNums] = useState<Set<number> | null>(null);
-  const [publishedPrekMeta, setPublishedPrekMeta] = useState<Record<number, { title: string; description: string }>>({});
+  // Published Pre-K worlds + levels from the Super Admin CMS. Anything
+  // published here appears as a Pre-K world card — whether or not a
+  // hardcoded campaignWorlds entry exists for it. `null` = still loading.
+  const [publishedPrekWorlds, setPublishedPrekWorlds] = useState<CampaignWorld[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data, error } = await supabase
+      const { data: worlds, error } = await supabase
         .from('prek_worlds')
-        .select('world_number, title, description, is_published')
-        .eq('is_published', true);
+        .select('id, world_number, title, description, difficulty, sort_order')
+        .eq('is_published', true)
+        .order('sort_order', { ascending: true })
+        .order('world_number', { ascending: true });
       if (cancelled) return;
-      if (error || !data) {
-        setPublishedPrekWorldNums(new Set());
+      if (error || !worlds) {
+        setPublishedPrekWorlds([]);
         return;
       }
-      const nums = new Set<number>();
-      const meta: Record<number, { title: string; description: string }> = {};
-      for (const row of data) {
-        nums.add(row.world_number);
-        meta[row.world_number] = { title: row.title, description: row.description ?? '' };
+      const worldIds = worlds.map((w) => w.id);
+      let levelsByWorld: Record<string, number[]> = {};
+      if (worldIds.length) {
+        const { data: levels } = await supabase
+          .from('prek_levels')
+          .select('world_id, level_number, is_published')
+          .in('world_id', worldIds)
+          .eq('is_published', true)
+          .order('level_number', { ascending: true });
+        for (const l of levels ?? []) {
+          (levelsByWorld[l.world_id] ||= []).push(l.level_number);
+        }
       }
-      setPublishedPrekWorldNums(nums);
-      setPublishedPrekMeta(meta);
+      const built: CampaignWorld[] = worlds.map((w) => {
+        const hardcoded = campaignWorlds.find((c) => c.id === w.world_number && c.mode === 'prek');
+        const publishedLevelNums = levelsByWorld[w.id] ?? [];
+        const levels: CampaignLevel[] = publishedLevelNums.map((n) => {
+          const fromHardcoded = hardcoded?.levels.find((lv) => lv.id === n);
+          return fromHardcoded ?? {
+            id: n,
+            storyIndex: -1,
+            enemies: ['wiggleworm'],
+            isBossLevel: false,
+            starThresholds: [50, 70, 90] as [number, number, number],
+          };
+        });
+        return {
+          id: w.world_number,
+          name: w.title || hardcoded?.name || `World ${w.world_number}`,
+          description: w.description || hardcoded?.description || '',
+          gradient: hardcoded?.gradient ?? 'from-pink-300 via-rose-300 to-orange-300',
+          bgColor: hardcoded?.bgColor ?? 'bg-pink-900/10',
+          enemyTypes: hardcoded?.enemyTypes ?? ['wiggleworm'],
+          requiredGradeLevel: 0,
+          storyCount: levels.length,
+          unlockRequirement: 0,
+          mode: 'prek',
+          lore: hardcoded?.lore ?? '',
+          levels,
+        };
+      });
+      setPublishedPrekWorlds(built);
     })();
     return () => { cancelled = true; };
   }, []);
@@ -510,19 +545,7 @@ export const RPGWorldMap = ({
             if (theme === 'agent') {
               displayedWorlds = agentCampaignWorlds;
             } else if (theme === 'prek') {
-              // Only show Pre-K worlds that exist & are published in the Super Admin CMS.
-              if (publishedPrekWorldNums === null) {
-                displayedWorlds = []; // still loading
-              } else {
-                displayedWorlds = campaignWorlds
-                  .filter((w) => w.mode === 'prek' && publishedPrekWorldNums.has(w.id))
-                  .map((w) => {
-                    const meta = publishedPrekMeta[w.id];
-                    return meta
-                      ? { ...w, name: meta.title || w.name, description: meta.description || w.description }
-                      : w;
-                  });
-              }
+              displayedWorlds = publishedPrekWorlds ?? [];
             } else {
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
             }

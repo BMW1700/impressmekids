@@ -37,7 +37,7 @@ interface Props {
 
 export const NabuEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) => {
   // Pre-K: try DB → hardcoded video script → legacy obstacle runner.
-  if (isPreKAdventureWorld(world.id)) {
+  if (world.mode === 'prek' || isPreKAdventureWorld(world.id)) {
     return <PreKEpisodeRouter world={world} level={level} onBack={onBack} onComplete={onComplete} />;
   }
 
