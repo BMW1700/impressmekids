@@ -53,6 +53,7 @@ import { analyzePresentation, type PresentationPrompt, type PresentationMetrics 
 import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModalTransferNetwork";
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
+import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
@@ -117,6 +118,7 @@ const AuraPractice = () => {
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
   const [rpgEnemyType, setRpgEnemyType] = useState<EnemyType>('minion');
   const [selectedBattleMode, setSelectedBattleMode] = useState<BattleMode>('classic');
+  const [pendingBattle, setPendingBattle] = useState<null | { level: CampaignLevel; mode: BattleMode; enemy: EnemyType; primaryEnemy: string }>(null);
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
   
@@ -551,7 +553,7 @@ const AuraPractice = () => {
     const handleLevelSelect = async (level: CampaignLevel, battleMode: BattleMode) => {
       setSelectedLevel(level);
       setRpgStory(level.story);
-      setSelectedBattleMode(battleMode); // Save the selected battle mode
+      setSelectedBattleMode(battleMode);
 
       // Pre-K worlds: skip the standard battle and go straight to the One-Word Reader
       if (isPreKWorld) {
@@ -561,59 +563,41 @@ const AuraPractice = () => {
 
       // Set enemy type based on level
       const primaryEnemy = level.enemies[0];
-      // Map all campaign enemy types to battle enemy types
       const enemyMap: Record<string, EnemyType> = {
-        minion: 'minion',
-        guard: 'guard',
-        elite: 'elite',
-        boss: 'boss',
-        dragon: 'dragon',
-        ice_golem: 'ice_golem',
-        shadow_wraith: 'shadow_wraith',
-        stone_guardian: 'stone_guardian',
-        cave_troll: 'cave_troll',
-        crystal_spider: 'crystal_spider',
-        echo_wraith: 'echo_wraith',
-        storm_harpy: 'storm_harpy',
-        cloud_giant: 'cloud_giant',
-        zephyr: 'zephyr',
-        ink_kraken: 'ink_kraken',
-        reef_guardian: 'reef_guardian',
-        leviathan: 'leviathan',
-        void_phantom: 'void_phantom',
-        reality_shifter: 'reality_shifter',
-        word_eater: 'word_eater',
-        fire_elemental: 'fire_elemental',
-        lava_hound: 'lava_hound',
-        ember_drake: 'ember_drake',
-        crystal_knight: 'crystal_knight',
-        prism_mage: 'prism_mage',
-        crystal_queen: 'crystal_queen',
-        star_sprite: 'star_sprite',
-        comet_wolf: 'comet_wolf',
-        nova_titan: 'nova_titan',
-        tome_golem: 'tome_golem',
-        page_wraith: 'page_wraith',
-        the_librarian: 'the_librarian',
+        minion: 'minion', guard: 'guard', elite: 'elite', boss: 'boss', dragon: 'dragon',
+        ice_golem: 'ice_golem', shadow_wraith: 'shadow_wraith', stone_guardian: 'stone_guardian',
+        cave_troll: 'cave_troll', crystal_spider: 'crystal_spider', echo_wraith: 'echo_wraith',
+        storm_harpy: 'storm_harpy', cloud_giant: 'cloud_giant', zephyr: 'zephyr',
+        ink_kraken: 'ink_kraken', reef_guardian: 'reef_guardian', leviathan: 'leviathan',
+        void_phantom: 'void_phantom', reality_shifter: 'reality_shifter', word_eater: 'word_eater',
+        fire_elemental: 'fire_elemental', lava_hound: 'lava_hound', ember_drake: 'ember_drake',
+        crystal_knight: 'crystal_knight', prism_mage: 'prism_mage', crystal_queen: 'crystal_queen',
+        star_sprite: 'star_sprite', comet_wolf: 'comet_wolf', nova_titan: 'nova_titan',
+        tome_golem: 'tome_golem', page_wraith: 'page_wraith', the_librarian: 'the_librarian',
       };
-      setRpgEnemyType(enemyMap[primaryEnemy] || 'minion');
+      const enemy = enemyMap[primaryEnemy] || 'minion';
+      setRpgEnemyType(enemy);
 
-      console.log('[AuraPractice] Selected battle mode:', battleMode);
+      // Show the custom-story chooser before starting the battle
+      setPendingBattle({ level, mode: battleMode, enemy, primaryEnemy });
+    };
 
-      // Start battle session in database
+    const startBattleWithStory = async (storyForBattle: Story) => {
+      if (!pendingBattle || !selectedWorld) return;
+      setRpgStory(storyForBattle);
       try {
         const battleSession = await startBattle({
-          storyTitle: level.story.title,
-          storyCategory: level.story.category,
+          storyTitle: storyForBattle.title,
+          storyCategory: storyForBattle.category,
           worldNumber: selectedWorld.id,
-          enemyType: primaryEnemy,
+          enemyType: pendingBattle.primaryEnemy,
           enemyMaxHp: 100,
         });
         setCurrentBattleId(battleSession.id);
       } catch (error) {
         console.error('Failed to start battle session:', error);
       }
-
+      setPendingBattle(null);
       setRpgView('battle');
     };
 
@@ -628,6 +612,22 @@ const AuraPractice = () => {
             setRpgView('world_map');
           }}
         />
+        {pendingBattle && (
+          <CustomStoryChooser
+            open={!!pendingBattle}
+            onOpenChange={(open) => { if (!open) setPendingBattle(null); }}
+            target={{ kind: "rpg_level", worldId: selectedWorld.id, levelId: pendingBattle.level.id }}
+            levelLabel={`${selectedWorld.name} · Level ${pendingBattle.level.id}`}
+            defaultStoryLabel={pendingBattle.level.story.title}
+            onConfirm={(source) => {
+              const base = pendingBattle.level.story;
+              const storyForBattle: Story = source.kind === "custom"
+                ? { ...base, title: source.story.title, passage_text: source.story.body }
+                : base;
+              void startBattleWithStory(storyForBattle);
+            }}
+          />
+        )}
       </div>
     );
   }
