@@ -336,6 +336,10 @@ const PreKLevelBuilder = () => {
             <Badge variant={level.is_published ? "default" : "secondary"}>
               {level.is_published ? "Published" : "Draft"}
             </Badge>
+            <Button onClick={saveProgress} variant="outline" disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              Save Progress
+            </Button>
             <Button onClick={togglePublish} variant={level.is_published ? "outline" : "default"}>
               {level.is_published ? "Unpublish" : "Publish"}
             </Button>
