@@ -2,15 +2,17 @@
 //
 // LOOP:
 //   step.kind === "clip" → play, advance on onEnded
-//   step.kind === "word" → freeze last frame, speak askLine, show word card,
-//                          listen on mic. On match (Web Speech) advance
-//                          immediately (optimistic) AND fire the audio
-//                          blob + transcript at analyze-aura in the
-//                          background so the kid's read flows into the
-//                          same 4-ML-model spine as every other mode.
+//   step.kind === "word" → pause on last frame, hold an opaque poster overlay,
+//                          show word card, listen on the mic. On match advance
+//                          immediately AND fire AURA telemetry in the
+//                          background.
 //
-// Every word is captured (where consent + MediaRecorder support exist).
-// Web Speech drives gameplay so the kid never waits on a network round-trip.
+// NO-BLEED TRANSITIONS:
+//   Before any video src change we raise an opaque black veil that fully
+//   covers the stage. Only after the veil is opaque do we swap the <video>
+//   src. The veil only fades back out after the new clip's first frame is
+//   actually painted (onPlaying). This guarantees a frame from the outgoing
+//   scene can never visually bleed into the incoming scene.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,6 +37,11 @@ type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending
 
 const BENNY_VOICE = { rate: 0.95, pitch: 1.15 } as const;
 const EMPTY_VIDEO_STEPS: VideoStep[] = [];
+
+// Veil timing — kept slow & calm so it reads as a deliberate fade, not a flash.
+const VEIL_FADE_IN_MS = 450;
+const VEIL_FADE_OUT_MS = 500;
+const VEIL_SAFETY_MS = 1200;
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
 let audioCtx: AudioContext | null = null;
@@ -97,7 +104,16 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const [correct, setCorrect] = useState(0);
   const [wordsAsked, setWordsAsked] = useState(0);
   const [showSparkle, setShowSparkle] = useState(false);
-  const [lastClipPoster, setLastClipPoster] = useState<string | undefined>(undefined);
+
+  // No-bleed transition machinery.
+  // `mountedSrc` is what the <video> element is actually loading; it only
+  // changes while the veil is fully opaque.
+  const [mountedSrc, setMountedSrc] = useState<string | null>(null);
+  const [veilOpaque, setVeilOpaque] = useState(true);
+  // While true, we render an opaque "freeze" image on top of the video so the
+  // word card sits on a guaranteed-stable picture even if the underlying
+  // <video> tries to rewind/replay on iOS.
+  const [holdPoster, setHoldPoster] = useState<string | null>(null);
 
   // Refs for things that must not trigger re-renders
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -108,6 +124,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const recordingStartRef = useRef<number>(0);
   const advancedRef = useRef(false);
   const askedStepRef = useRef<number>(-1);
+  const expectFirstFrameRef = useRef(false);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
@@ -158,7 +175,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       mediaRecorderRef.current = mr;
       recordingStartRef.current = Date.now();
     } catch (err) {
-      // No mic permission, low-power, etc. — game still runs on Web Speech.
       console.warn("[NabuVideo] mic capture unavailable:", err);
     }
   }, []);
@@ -183,6 +199,52 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     return { blob, durationSec };
   }, []);
 
+  // ── No-bleed transition helpers ────────────────────────────────────────────
+  //
+  // swapToClip(src) raises the veil, waits for it to be fully opaque, swaps
+  // the mounted <video> src, then drops the veil only after onPlaying paints
+  // the first frame of the new clip.
+  const swapToClip = useCallback((nextSrc: string) => {
+    setVeilOpaque(true);
+    setHoldPoster(null); // freeze frame no longer needed once we leave a word
+    expectFirstFrameRef.current = true;
+    queue(() => {
+      setMountedSrc(nextSrc);
+      // Force the element to pick up new src + play.
+      requestAnimationFrame(() => {
+        const v = videoRef.current;
+        if (v) {
+          try {
+            v.muted = false;
+            v.currentTime = 0;
+            const p = v.play();
+            if (p && typeof p.catch === "function") p.catch(() => { /* ignore */ });
+          } catch { /* ignore */ }
+        }
+      });
+      // Safety: if onPlaying never fires (codec hiccup), drop veil anyway.
+      queue(() => {
+        if (expectFirstFrameRef.current) {
+          expectFirstFrameRef.current = false;
+          setVeilOpaque(false);
+        }
+      }, VEIL_SAFETY_MS);
+    }, VEIL_FADE_IN_MS);
+  }, []);
+
+  // freezeForWord(posterUrl) pauses the underlying <video> at its last frame
+  // and pins an opaque poster image on top so the word card sits on a totally
+  // stable picture — no possibility of the video peeking through.
+  const freezeForWord = useCallback((posterUrl: string | undefined) => {
+    const v = videoRef.current;
+    if (v) {
+      try { v.pause(); } catch { /* ignore */ }
+    }
+    setHoldPoster(posterUrl ?? null);
+    // The veil should already be down here; ensure it is.
+    setVeilOpaque(false);
+  }, []);
+
   // ── phase driver ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!adventure) return;
@@ -197,16 +259,19 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (phase !== "clip") return;
       advancedRef.current = false;
       clearTimers();
-      // Video element will start playing via key change + autoPlay.
-      // onEnded callback handles advance.
-      setLastClipPoster(current.poster);
+      // If the mounted src doesn't already match this clip, swap with veil.
+      if (mountedSrc !== current.src) {
+        swapToClip(current.src);
+      } else {
+        // Same src already mounted (rare); just ensure veil is down.
+        setVeilOpaque(false);
+        setHoldPoster(null);
+      }
       return;
     }
 
     if (current.kind === "word") {
       if (phase !== "ask") return;
-      // Guard: only open each cloze prompt once per step (StrictMode safe).
-      // The prompt audio is already inside the video clip; do NOT play TTS here.
       if (askedStepRef.current === stepIndex) return;
       askedStepRef.current = stepIndex;
       advancedRef.current = false;
@@ -214,13 +279,16 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       cancelSpeech();
       setAttempts(0);
       setWordsAsked((n) => n + 1);
+      // Freeze the picture immediately so the bubble + card sit on a stable
+      // image (no chance of bleed from the just-ended clip).
+      freezeForWord(current.holdPoster);
       queue(() => {
         setPhase("reading");
         startMicCapture();
       }, 250);
       return;
     }
-  }, [stepIndex, phase, adventure]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stepIndex, phase, adventure, mountedSrc, current, swapToClip, freezeForWord, startMicCapture]);
 
   // ── word read handlers ─────────────────────────────────────────────────────
   const advanceFromWord = useCallback(
@@ -231,8 +299,6 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
       const { blob, durationSec } = stopMicCapture();
 
-      // Fire-and-forget AURA submission so every Pre-K read hits the same
-      // 4-ML-model spine as the rest of the platform.
       const sid = studentIdRef.current;
       if (sid && adventure) {
         submitPreKAuraReading({
@@ -290,36 +356,41 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     if (!current || current.kind !== "word") return;
     advanceFromWord(false, "", true);
   };
+
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
-    const video = videoRef.current;
-    if (video) {
-      try {
-        video.muted = false;
-        video.volume = 1;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise) {
-          playPromise.catch((err) => console.warn("[NabuVideo] initial video play failed:", err));
-        }
-      } catch (err) {
-        console.warn("[NabuVideo] initial video play failed:", err);
-      }
-    }
+    // Prime the audio context with the user gesture.
+    getCtx();
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
   const handleClipEnded = () => {
     if (!current || current.kind !== "clip") return;
-    // capture last frame info so the upcoming word step holds the picture
-    setLastClipPoster(undefined);
     const next = stepIndex + 1;
     if (next >= steps.length) {
+      // Final clip: hold the veil down, fall into ending overlay.
       setPhase("ending");
+      return;
+    }
+    const nextStep = steps[next];
+    if (nextStep.kind === "word") {
+      // Next is a word — freeze current frame, no src change needed.
+      setStepIndex(next);
+      setPhase("ask");
     } else {
       setStepIndex(next);
-      setPhase(steps[next].kind === "clip" ? "clip" : "ask");
+      setPhase("clip");
+    }
+  };
+
+  // Video element fires onPlaying once the first frame is actually painted —
+  // that's our cue to drop the veil safely.
+  const handleVideoPlaying = () => {
+    if (expectFirstFrameRef.current) {
+      expectFirstFrameRef.current = false;
+      // Small extra delay keeps the fade feeling cinematic.
+      queue(() => setVeilOpaque(false), 80);
     }
   };
 
@@ -350,57 +421,45 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     );
   }
 
-  // ── derived UI bits ────────────────────────────────────────────────────────
-  const isWordPhase = phase === "ask" || phase === "reading";
-  const wordStep = isWordPhase && current && current.kind === "word" ? current : null;
-  const clipStep = current && current.kind === "clip" ? current : null;
-
-  // Find the "active video" src — current clip, or last clip we played
-  // (so during word phases we hold the frozen last frame).
-  const activeVideoSrc = (() => {
-    if (clipStep) return clipStep.src;
-    // Walk backwards to find the most recent clip.
-    for (let i = stepIndex - 1; i >= 0; i--) {
-      const s = steps[i];
-      if (s.kind === "clip") return s.src;
-    }
-    return null;
-  })();
+  const wordStep =
+    (phase === "ask" || phase === "reading") && current && current.kind === "word"
+      ? current
+      : null;
 
   return (
     <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
-      {/* ── Video layer (1s cross-fade between clip swaps) ─────────────── */}
-      {/* AnimatePresence (no mode) overlaps exit + enter so the outgoing
-          clip fades to 0 while the incoming clip fades up from 0. The
-          poster on the incoming layer keeps the freeze-frame visible for
-          word steps (where src doesn't change). */}
-      {phase !== "ending" && activeVideoSrc && (
-        <AnimatePresence>
-          <motion.video
-            ref={videoRef}
-            key={activeVideoSrc}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1.0, ease: "easeInOut" }}
-            className="absolute inset-0 h-full w-full object-cover"
-            src={activeVideoSrc}
-            poster={lastClipPoster}
-            autoPlay={phase === "clip" && !!clipStep}
-            playsInline
-            preload="auto"
-            controls={false}
-            disablePictureInPicture
-            aria-hidden
-            tabIndex={-1}
-            draggable={false}
-            onEnded={handleClipEnded}
-          />
-        </AnimatePresence>
+      {/* ── Single video layer (no overlap, no AnimatePresence) ─────────── */}
+      {phase !== "tap-to-begin" && mountedSrc && (
+        <video
+          ref={videoRef}
+          key={mountedSrc}
+          className="absolute inset-0 h-full w-full object-cover"
+          src={mountedSrc}
+          playsInline
+          preload="auto"
+          controls={false}
+          disablePictureInPicture
+          aria-hidden
+          tabIndex={-1}
+          draggable={false}
+          onPlaying={handleVideoPlaying}
+          onEnded={handleClipEnded}
+        />
       )}
 
-      {/* Preload the next clip in the background so swap is instant. */}
-      {nextClipStep && (
+      {/* ── Freeze-frame overlay for word phases (kills any chance of bleed) ─ */}
+      {holdPoster && (
+        <img
+          src={holdPoster}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+
+      {/* ── Preload next clip in the background so swap is instant ──────── */}
+      {nextClipStep && nextClipStep.src !== mountedSrc && (
         <video
           key={`preload-${nextClipStep.src}`}
           src={nextClipStep.src}
@@ -412,11 +471,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         />
       )}
 
-      {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ──── */}
+      {/* ── Opaque transition veil — covers EVERYTHING during swaps ─────── */}
+      <div
+        className="pointer-events-none absolute inset-0 z-30 bg-black"
+        style={{
+          opacity: veilOpaque ? 1 : 0,
+          transition: `opacity ${veilOpaque ? VEIL_FADE_IN_MS : VEIL_FADE_OUT_MS}ms ease-in-out`,
+        }}
+        aria-hidden
+      />
+
+      {/* ── Tap-to-begin gate (satisfies iOS autoplay user-gesture) ────── */}
       {phase === "tap-to-begin" && (
         <button
           onClick={handleBegin}
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-6 bg-gradient-to-br from-rose-200 via-amber-200 to-emerald-200 p-6"
+          className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-gradient-to-br from-rose-200 via-amber-200 to-emerald-200 p-6"
           aria-label="Begin the story"
         >
           <div className="rounded-3xl bg-white/95 px-8 py-6 text-center shadow-2xl">
@@ -430,7 +499,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
       {/* ── HUD (chrome) ────────────────────────────────────────────────── */}
       {phase !== "tap-to-begin" && (
-        <div className="relative z-10 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
+        <div className="relative z-20 flex h-full min-h-0 flex-col gap-2 p-3 sm:gap-3 sm:p-4">
           {/* Header */}
           <div className="flex items-center justify-between gap-2">
             <Button
@@ -501,7 +570,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
               </motion.div>
             )}
 
-            {/* askLine bubble — text stays visible; audio lives in the video clip. */}
+            {/* askLine bubble */}
             <AnimatePresence mode="wait">
               {wordStep && (
                 <motion.div
