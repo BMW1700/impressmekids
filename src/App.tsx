@@ -99,6 +99,11 @@ const ScopeAndSequence = lazy(() => import("./pages/ScopeAndSequence"));
 const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const GameLegal = lazy(() => import("./pages/game/legal/GameLegal"));
+const SuperAdminDashboard = lazy(() => import("./pages/superadmin/SuperAdminDashboard"));
+const PreKWorldsList = lazy(() => import("./pages/superadmin/PreKWorldsList"));
+const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
+const PreKLevelBuilder = lazy(() => import("./pages/superadmin/PreKLevelBuilder"));
+import { RequireSuperAdmin } from "@/components/auth/RequireSuperAdmin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -261,6 +266,12 @@ const App = () => (
                         <Route path="/district/dashboard" element={<DistrictDashboard />} />
                         <Route path="/district-manager/dashboard" element={<DistrictManagerDashboard />} />
                         <Route path="/district/register" element={<RegisterDistrict />} />
+
+                        {/* Super Admin CMS — Pre-K only for now */}
+                        <Route path="/admin/super" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
+                        <Route path="/admin/super/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
+                        <Route path="/admin/super/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
+                        <Route path="/admin/super/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
                       </Route>
                     </Route>
                   </Route>
