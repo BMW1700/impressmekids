@@ -1,7 +1,8 @@
 // Routing:
 //   Pre-K worlds (101/102/103):
-//     - If the level has a fully-migrated cinematic video script
-//       (preKAdventuresVideo.ts) → NabuVideoAdventure (new pure-video loop).
+//     - First we try to load a DB-backed level (admin-authored content). If
+//       the DB returns a complete level with all videos, we render that.
+//     - Otherwise, if the hardcoded video script exists, we render that.
 //     - Otherwise → NabuAdventure (legacy emoji/sprite obstacle runner).
 //   K-12 → existing RPGOneWordReader.
 //
@@ -10,11 +11,13 @@
 // for that level.
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { RPGOneWordReader } from "./RPGOneWordReader";
 import { NabuAdventure } from "./NabuAdventure";
 import { NabuVideoAdventure } from "./NabuVideoAdventure";
 import { isPreKAdventureWorld } from "@/data/preKAdventures";
 import { hasVideoLevel } from "@/data/preKAdventuresVideo";
+import { usePreKVideoLevel } from "@/lib/preKLevelFromDb";
 import { CustomStoryChooser, type StorySource } from "@/components/customStories/CustomStoryChooser";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
@@ -33,21 +36,45 @@ interface Props {
 }
 
 export const NabuEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) => {
-  // Pre-K: cinematic / legacy paths — never editable, no chooser.
+  // Pre-K: try DB → hardcoded video script → legacy obstacle runner.
   if (isPreKAdventureWorld(world.id)) {
-    if (hasVideoLevel(world.id, level.id)) {
-      return (
-        <NabuVideoAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />
-      );
-    }
-    return (
-      <NabuAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />
-    );
+    return <PreKEpisodeRouter world={world} level={level} onBack={onBack} onComplete={onComplete} />;
   }
 
   // K-12: show the custom-story chooser, then start the reader with whichever
   // text the player selected. If they pick Default we just pass nothing.
   return <K12LevelWithChooser world={world} level={level} onBack={onBack} onComplete={onComplete} />;
+};
+
+const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
+  const levelNumber = typeof level.id === "number" ? level.id : Number(level.id);
+  const { level: dbLevel, loading } = usePreKVideoLevel(world.id, levelNumber);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (dbLevel) {
+    return (
+      <NabuVideoAdventure
+        world={world}
+        level={level}
+        onBack={onBack}
+        onComplete={onComplete}
+        overrideLevel={dbLevel}
+      />
+    );
+  }
+
+  if (hasVideoLevel(world.id, level.id)) {
+    return <NabuVideoAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
+  }
+
+  return <NabuAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
 };
 
 const K12LevelWithChooser = ({ world, level, onBack, onComplete }: Props) => {
