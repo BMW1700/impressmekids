@@ -115,7 +115,9 @@ const Auth = () => {
   });
 
   const redirectToDashboard = (userRole: string) => {
-    if (userRole === 'district_manager') {
+    if (userRole === 'super_admin') {
+      navigate('/admin/super');
+    } else if (userRole === 'district_manager') {
       navigate('/district-manager/dashboard');
     } else if (userRole === 'teacher') {
       navigate('/teacher/dashboard');
@@ -125,6 +127,22 @@ const Auth = () => {
       navigate('/admin/dashboard');
     } else {
       navigate('/student/dashboard');
+    }
+  };
+
+  // Super admin role lives in user_roles only; check it explicitly so it
+  // always wins over whatever `get_user_profile` returns.
+  const isSuperAdminUser = async (userId: string): Promise<boolean> => {
+    try {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'super_admin')
+        .maybeSingle();
+      return !!data;
+    } catch {
+      return false;
     }
   };
 
@@ -217,6 +235,12 @@ const Auth = () => {
             setShowRoleModal(true);
             return;
           }
+        }
+
+        // Super admin always routes to the super admin CMS.
+        if (await isSuperAdminUser(session.user.id)) {
+          navigate('/admin/super');
+          return;
         }
 
         // Get user profile with role
@@ -912,6 +936,11 @@ const Auth = () => {
 
       if (!userRole) {
         userRole = 'student';
+      }
+
+      // Super admin always wins, regardless of profile role.
+      if (await isSuperAdminUser(data.user.id)) {
+        userRole = 'super_admin';
       }
 
       toast({
