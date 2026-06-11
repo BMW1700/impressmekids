@@ -72,9 +72,12 @@ interface RPGOneWordReaderProps {
   level: CampaignLevel;
   onBack: () => void;
   onComplete: (stats: { wordsRead: number; correctWords: number; stars: number }) => void;
+  /** Optional custom-authored story text. When present, replaces the built-in passage. */
+  overrideText?: string;
+  overrideTitle?: string;
 }
 
-export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWordReaderProps) => {
+export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideText, overrideTitle }: RPGOneWordReaderProps) => {
   const content: PreKLevelContent = useMemo(() => {
     const demoWords = getNabuDemoWords(world.id, level.id);
     if (demoWords && demoWords.length > 0) {
@@ -90,10 +93,20 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete }: RPGOneWor
 
   // Phrase mode (World 103): track the original phrases for display + progress,
   // but expand them into individual words for the speech recognizer.
+  // When a custom story override is provided, tokenize it into a word list
+  // (each token = one "phrase") so the existing reader pipeline still works.
   const phrases: string[] = useMemo(() => {
+    if (overrideText && overrideText.trim().length > 0) {
+      // Lazy import to avoid a circular dep risk
+      const tokens = overrideText
+        .toLowerCase()
+        .match(/[a-zA-Z']+/g) ?? [];
+      const filtered = tokens.filter((w) => w.length >= 1 && w.length <= 20);
+      if (filtered.length >= 4) return filtered;
+    }
     if (content.kind === "phrase") return content.phrases;
     return content.words;
-  }, [content]);
+  }, [content, overrideText]);
 
 
   // Flat word list fed to RPGWordReader. In phrase mode each phrase is split

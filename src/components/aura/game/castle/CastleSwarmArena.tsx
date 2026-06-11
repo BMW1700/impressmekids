@@ -64,6 +64,9 @@ interface Props {
   mode: CastleRunMode;
   onExit: () => void;
   onPlayAgain?: () => void;
+  /** Optional custom story text overriding the built-in bank. */
+  overrideText?: string;
+  overrideTitle?: string;
 }
 
 const ARENA_WIDTH = 900;
@@ -82,7 +85,7 @@ const POWERS: { id: PowerId; label: string; icon: typeof Flame; color: string }[
 
 const normalize = (s: string) => s.toLowerCase().replace(/[^a-z']/g, "");
 
-export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
+export const CastleSwarmArena = ({ mode, onExit, onPlayAgain, overrideText, overrideTitle }: Props) => {
   const { user } = useAuth();
   const gradeMode = getGradeMode(getStoredTheme());
   const characterName = gradeMode === "6to12" ? "Agent X" : "Sir Valor";
@@ -99,6 +102,8 @@ export const CastleSwarmArena = ({ mode, onExit, onPlayAgain }: Props) => {
       gradeBand: gradeMode === "6to12" ? "6-12" : "K-5",
       levelId: mode.kind === "campaign" ? mode.level.id : undefined,
       arcId: mode.kind === "campaign" ? mode.level.arc : undefined,
+      overrideText,
+      overrideTitle,
     });
   }
 
