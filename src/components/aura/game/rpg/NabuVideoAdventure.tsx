@@ -44,6 +44,8 @@ const EMPTY_VIDEO_STEPS: VideoStep[] = [];
 //           softly fade the poster out as the new clip plays.
 const SCENE_SNAPSHOT_FADE_OUT_MS = 420;
 const POSTER_FADE_OUT_MS = 240;
+const WORD_TO_ACTION_REVEAL_DELAY_MS = 180;
+const SCENE_REVEAL_DELAY_MS = 260;
 const VEIL_SAFETY_MS = 1200;
 
 // ── tiny Web Audio sparkle/chime ─────────────────────────────────────────────
@@ -506,11 +508,15 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       expectFirstFrameRef.current = false;
       if (holdPoster) {
         // Crossfade out the poster to reveal the now-playing clip.
-        setHoldPosterVisible(false);
-        queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+        queue(() => {
+          setHoldPosterVisible(false);
+          queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+        }, WORD_TO_ACTION_REVEAL_DELAY_MS);
       } else if (sceneSnapshot) {
-        setSceneSnapshotVisible(false);
-        queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
+        queue(() => {
+          setSceneSnapshotVisible(false);
+          queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
+        }, SCENE_REVEAL_DELAY_MS);
       } else {
         setSceneSnapshot(null);
       }
@@ -560,7 +566,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       : null;
 
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-black shadow-xl">
+    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-slate-950 shadow-xl">
       {/* ── Single video layer (no overlap, no AnimatePresence) ─────────── */}
       {mountedSrc && (
         <video
