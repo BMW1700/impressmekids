@@ -695,6 +695,7 @@ const AuraPractice = () => {
           gold={campaignProgress?.total_gold || 0}
           xp={campaignProgress?.total_xp_earned || 0}
           gradeMode={currentGradeMode}
+          currentTheme={gameTheme}
           onSelectWorld={(world) => {
             setSelectedWorld(world);
             setRpgView('level_select');
@@ -704,10 +705,7 @@ const AuraPractice = () => {
             setRpgView('world_map');
             setSelectedWorld(null);
           }}
-          onSwitchMode={() => {
-            const next: GameTheme = gameTheme === 'agent' ? 'classic' : 'agent';
-            setGameTheme(next);
-          }}
+          onSwitchMode={setGameTheme}
         />
       </div>
     );
