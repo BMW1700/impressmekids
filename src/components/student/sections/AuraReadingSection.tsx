@@ -97,7 +97,7 @@ export const AuraReadingSection = () => {
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle'>('world_map');
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
   const isSelectedPreK = !!selectedWorld && selectedWorld.mode === 'prek';
-  const { levelNums: publishedPrekLevelNums, meta: publishedPrekLevelMeta } = usePublishedPrekLevels(
+  const { levelNums: publishedPrekLevelNums } = usePublishedPrekLevels(
     isSelectedPreK ? selectedWorld!.id : null,
   );
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
