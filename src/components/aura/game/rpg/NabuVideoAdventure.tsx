@@ -177,6 +177,12 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     }
     return null;
   }, [stepIndex, steps]);
+  const mountedClipPoster = useMemo(() => {
+    const clip = steps.find(
+      (s): s is Extract<VideoStep, { kind: "clip" }> => s.kind === "clip" && s.src === mountedSrc
+    );
+    return clip?.poster;
+  }, [mountedSrc, steps]);
 
   useEffect(() => {
     if (phase !== "tap-to-begin") return;
@@ -278,7 +284,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
   type SwapStyle = "scene" | "crossfade" | "immediate";
 
-  const swapToClip = useCallback((nextSrc: string, style: SwapStyle = "scene") => {
+  const swapToClip = useCallback((nextSrc: string, style: SwapStyle = "scene", fallbackPoster?: string) => {
     expectFirstFrameRef.current = true;
 
     if (style === "immediate") {
@@ -307,7 +313,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     // "scene" — clip → next clip. Capture the outgoing frame, swap the video
     // underneath it, then fade the still away. This preserves no-bleed without
     // ever showing a black screen.
-    const snapshot = captureVideoSnapshot();
+    const snapshot = captureVideoSnapshot() ?? fallbackPoster ?? null;
     if (snapshot) {
       setSceneSnapshot(snapshot);
       setSceneSnapshotVisible(true);
@@ -358,7 +364,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (mountedSrc !== current.src) {
         const style: SwapStyle =
           mountedSrc === null ? "immediate" : holdPoster ? "crossfade" : "scene";
-        swapToClip(current.src, style);
+        swapToClip(current.src, style, current.poster);
       } else {
         // Same src already mounted (rare); just ensure veil is down.
         setHoldPoster(null);
