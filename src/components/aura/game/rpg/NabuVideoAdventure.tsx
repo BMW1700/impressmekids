@@ -134,6 +134,8 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
   const askedStepRef = useRef<number>(-1);
   const playTokenRef = useRef(0);
   const expectFirstFrameRef = useRef(false);
+  const holdPosterRef = useRef<string | null>(null);
+  const sceneSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
@@ -291,7 +293,10 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
 
     if (style === "immediate") {
       // First mount: no transition, just put the clip on screen.
+      holdPosterRef.current = null;
+      sceneSnapshotRef.current = null;
       setHoldPoster(null);
+      setSceneSnapshot(null);
       setHoldPosterVisible(false);
       setMountedSrc(nextSrc);
       return;
@@ -306,7 +311,10 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
         if (expectFirstFrameRef.current) {
           expectFirstFrameRef.current = false;
           setHoldPosterVisible(false);
-          queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
+          queue(() => {
+            holdPosterRef.current = null;
+            setHoldPoster(null);
+          }, POSTER_FADE_OUT_MS + 40);
         }
       }, VEIL_SAFETY_MS);
       return;
@@ -317,9 +325,11 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     // ever showing a black screen.
     const snapshot = captureVideoSnapshot() ?? fallbackPoster ?? null;
     if (snapshot) {
+      sceneSnapshotRef.current = snapshot;
       setSceneSnapshot(snapshot);
       setSceneSnapshotVisible(true);
     }
+    holdPosterRef.current = null;
     setHoldPoster(null);
     setHoldPosterVisible(false);
     setMountedSrc(nextSrc);
@@ -327,7 +337,10 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
       if (expectFirstFrameRef.current) {
         expectFirstFrameRef.current = false;
         setSceneSnapshotVisible(false);
-        queue(() => setSceneSnapshot(null), SCENE_SNAPSHOT_FADE_OUT_MS + 40);
+        queue(() => {
+          sceneSnapshotRef.current = null;
+          setSceneSnapshot(null);
+        }, SCENE_SNAPSHOT_FADE_OUT_MS + 40);
         setPlayBlocked(true);
       }
     }, VEIL_SAFETY_MS);
@@ -341,6 +354,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete }: Props) 
     if (v) {
       try { v.pause(); } catch { /* ignore */ }
     }
+    holdPosterRef.current = posterUrl ?? null;
     setHoldPoster(posterUrl ?? null);
     setHoldPosterVisible(!!posterUrl);
   }, []);
