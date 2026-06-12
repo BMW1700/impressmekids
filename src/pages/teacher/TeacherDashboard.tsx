@@ -32,7 +32,7 @@ import { Directory } from "@/components/Directory";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeacherDashboardData";
-import { useTeacherClubs } from "@/hooks/useTeacherClubs";
+import { TeacherClub, useTeacherClubs } from "@/hooks/useTeacherClubs";
 
 const TeacherDashboard = () => {
   const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
@@ -306,7 +306,7 @@ const TeacherDashboard = () => {
                   </Card>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {classrooms.map((classroom: any) => (
+                    {classrooms.map((classroom) => (
                       <div
                         key={classroom.id}
                         onClick={() => navigate(`/classrooms/${classroom.id}`)}
@@ -361,7 +361,7 @@ const TeacherDashboard = () => {
                   </Card>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {teacherClubs.map((club: any) => (
+                    {teacherClubs.map((club: TeacherClub) => (
                       <ClubCard
                         key={club.id}
                         id={club.id}
