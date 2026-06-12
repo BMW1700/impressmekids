@@ -55,7 +55,7 @@ const TeacherDashboard = () => {
   const { data: teacherClubs = [], refetch: refetchClubs } = useTeacherClubs();
 
   // Lazy load all students only when dialog opens
-  const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
+  const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms, showStudentsDialog);
 
   useEffect(() => {
     if (authLoading || isProfileLoading) return;
@@ -522,7 +522,7 @@ const TeacherDashboard = () => {
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
         classrooms={classroomsWithStudents}
-        totalStudents={classroomsWithStudents.reduce((sum: number, c: any) => sum + (c.students?.length || 0), 0)}
+        totalStudents={classroomsWithStudents.reduce((sum, classroom) => sum + classroom.students.length, 0)}
       />
     </div>
   );
