@@ -5,6 +5,9 @@ import { useAuth } from "@/contexts/AuthContext";
 interface TeacherClassroom {
   id: string;
   name: string;
+  join_code?: string | null;
+  student_count?: number | null;
+  created_at?: string;
   subject?: string | null;
   grade?: string | number | null;
 }
