@@ -6,7 +6,22 @@ interface TeacherClassroom {
   id: string;
   name: string;
   subject?: string | null;
-  grade?: string | null;
+  grade?: string | number | null;
+}
+
+interface TeacherStudent {
+  id: string;
+  full_name: string;
+  email: string;
+  joined_at: string;
+}
+
+interface TeacherClassroomWithStudents {
+  id: string;
+  name: string;
+  subject: string;
+  grade: number;
+  students: TeacherStudent[];
 }
 
 interface ClassroomStudentRow {
@@ -81,7 +96,7 @@ export const useTeacherActiveAssignments = (classroomIds: string[]) => {
   });
 };
 
-export const useTeacherAllStudents = (classrooms: TeacherClassroom[]) => {
+export const useTeacherAllStudents = (classrooms: TeacherClassroom[], enabled = true) => {
   const { user } = useAuth();
 
   return useQuery({
@@ -106,34 +121,29 @@ export const useTeacherAllStudents = (classrooms: TeacherClassroom[]) => {
 
       if (error) throw error;
 
-      const studentsByClassroom = ((students || []) as ClassroomStudentRow[]).reduce<Record<string, Array<{
-        id: string;
-        full_name: string | null;
-        email: string | null;
-        joined_at: string;
-      }>>>((acc, student) => {
+      const studentsByClassroom = ((students || []) as ClassroomStudentRow[]).reduce<Record<string, TeacherStudent[]>>((acc, student) => {
         if (!student.profiles) return acc;
         acc[student.classroom_id] = acc[student.classroom_id] || [];
         acc[student.classroom_id].push({
           id: student.profiles.id,
-          full_name: student.profiles.full_name,
-          email: student.profiles.email,
+          full_name: student.profiles.full_name || "Unknown student",
+          email: student.profiles.email || "",
           joined_at: student.joined_at,
         });
         return acc;
       }, {});
 
-      const classroomsWithStudents = classrooms.map((classroom) => ({
+      const classroomsWithStudents: TeacherClassroomWithStudents[] = classrooms.map((classroom) => ({
         id: classroom.id,
         name: classroom.name,
-        subject: classroom.subject,
-        grade: classroom.grade,
+        subject: classroom.subject || "Classroom",
+        grade: Number(classroom.grade) || 0,
         students: studentsByClassroom[classroom.id] || [],
       }));
 
       return classroomsWithStudents;
     },
-    enabled: !!user && classrooms.length > 0,
+    enabled: enabled && !!user && classrooms.length > 0,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
