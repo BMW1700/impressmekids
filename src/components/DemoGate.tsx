@@ -8,24 +8,46 @@ import { supabase } from "@/integrations/supabase/client";
 
 const DEMO_CODE = "Brecon50";
 const STORAGE_KEY = "imk_demo_access";
+let cachedGateEnabled: boolean | null = null;
+let gateSettingPromise: Promise<boolean> | null = null;
+
+const loadGateSetting = async () => {
+  if (cachedGateEnabled !== null) return cachedGateEnabled;
+  if (!gateSettingPromise) {
+    gateSettingPromise = Promise.resolve(supabase
+      .from("app_settings")
+      .select("demo_gate_enabled")
+      .eq("id", 1)
+      .maybeSingle())
+      .then(({ data }) => {
+        cachedGateEnabled = data?.demo_gate_enabled ?? true;
+        return cachedGateEnabled;
+      })
+      .finally(() => {
+        gateSettingPromise = null;
+      });
+  }
+  return gateSettingPromise;
+};
 
 export function DemoGate({ children }: { children: ReactNode }) {
   const [granted, setGranted] = useState(() => localStorage.getItem(STORAGE_KEY) === "1");
-  const [gateEnabled, setGateEnabled] = useState<boolean | null>(null); // null = still loading
+  const [gateEnabled, setGateEnabled] = useState<boolean | null>(() => cachedGateEnabled); // null = still loading
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (granted) {
+      setGateEnabled(false);
+      return;
+    }
+
     let mounted = true;
 
     const fetchSetting = async () => {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("demo_gate_enabled")
-        .eq("id", 1)
-        .maybeSingle();
+      const enabled = await loadGateSetting();
       if (mounted) {
-        setGateEnabled(data?.demo_gate_enabled ?? true);
+        setGateEnabled(enabled);
       }
     };
     fetchSetting();
@@ -37,7 +59,8 @@ export function DemoGate({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "app_settings" },
         (payload: any) => {
           if (payload.new && mounted) {
-            setGateEnabled(payload.new.demo_gate_enabled);
+            cachedGateEnabled = payload.new.demo_gate_enabled;
+            setGateEnabled(cachedGateEnabled);
           }
         }
       )
@@ -47,7 +70,7 @@ export function DemoGate({ children }: { children: ReactNode }) {
       mounted = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [granted]);
 
   // Gate is OFF globally → render app
   if (gateEnabled === false) return <>{children}</>;

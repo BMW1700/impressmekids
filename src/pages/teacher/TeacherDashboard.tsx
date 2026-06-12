@@ -32,7 +32,7 @@ import { Directory } from "@/components/Directory";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTeacherDashboardData, useTeacherAllStudents } from "@/hooks/useTeacherDashboardData";
-import { useTeacherClubs } from "@/hooks/useTeacherClubs";
+import { TeacherClub, useTeacherClubs } from "@/hooks/useTeacherClubs";
 
 const TeacherDashboard = () => {
   const { user, profile, isLoading: authLoading, isProfileLoading, signOut } = useAuth();
@@ -55,7 +55,7 @@ const TeacherDashboard = () => {
   const { data: teacherClubs = [], refetch: refetchClubs } = useTeacherClubs();
 
   // Lazy load all students only when dialog opens
-  const { data: classroomsWithStudents = [], refetch: loadAllStudents } = useTeacherAllStudents(classrooms);
+  const { data: classroomsWithStudents = [] } = useTeacherAllStudents(classrooms, showStudentsDialog);
 
   useEffect(() => {
     if (authLoading || isProfileLoading) return;
@@ -104,7 +104,6 @@ const TeacherDashboard = () => {
   };
 
   const handleOpenStudentsDialog = () => {
-    loadAllStudents();
     setShowStudentsDialog(true);
   };
 
@@ -307,7 +306,7 @@ const TeacherDashboard = () => {
                   </Card>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {classrooms.map((classroom: any) => (
+                    {classrooms.map((classroom) => (
                       <div
                         key={classroom.id}
                         onClick={() => navigate(`/classrooms/${classroom.id}`)}
@@ -316,9 +315,9 @@ const TeacherDashboard = () => {
                         <ClassroomCard
                           id={classroom.id}
                           name={classroom.name}
-                          joinCode={classroom.join_code}
+                          joinCode={classroom.join_code ?? undefined}
                           studentCount={classroom.student_count || 0}
-                          createdAt={classroom.created_at}
+                          createdAt={classroom.created_at || new Date().toISOString()}
                         />
                       </div>
                     ))}
@@ -362,7 +361,7 @@ const TeacherDashboard = () => {
                   </Card>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                    {teacherClubs.map((club: any) => (
+                    {teacherClubs.map((club: TeacherClub) => (
                       <ClubCard
                         key={club.id}
                         id={club.id}
@@ -522,7 +521,7 @@ const TeacherDashboard = () => {
         open={showStudentsDialog}
         onOpenChange={setShowStudentsDialog}
         classrooms={classroomsWithStudents}
-        totalStudents={classroomsWithStudents.reduce((sum: number, c: any) => sum + (c.students?.length || 0), 0)}
+        totalStudents={classroomsWithStudents.reduce((sum, classroom) => sum + classroom.students.length, 0)}
       />
     </div>
   );

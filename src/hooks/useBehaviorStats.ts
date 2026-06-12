@@ -33,6 +33,8 @@ export const useBehaviorStats = (studentId?: string, classroomId?: string) => {
       return data as BehaviorStats[];
     },
     enabled: !!studentId || !!classroomId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
@@ -51,5 +53,7 @@ export const useStudentBehaviorStats = (studentId: string, classroomId: string) 
       return data as BehaviorStats | null;
     },
     enabled: !!studentId && !!classroomId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 };

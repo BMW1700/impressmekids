@@ -1,4 +1,12 @@
-import * as Sentry from "@sentry/react";
+let sentryModule: Promise<typeof import("@sentry/react")> | null = null;
+let sentryStarted = false;
+let pendingUser: { id: string; role?: string } | null = null;
+let pendingStudentMode = true;
+
+const loadSentry = () => {
+  if (!sentryModule) sentryModule = import("@sentry/react");
+  return sentryModule;
+};
 
 /**
  * Sentry initialization — Kids-app & COPPA hardened.
@@ -20,7 +28,8 @@ export const initSentry = () => {
     return;
   }
 
-  Sentry.init({
+  loadSentry().then((Sentry) => {
+    Sentry.init({
     dsn,
     integrations: [
       Sentry.browserTracingIntegration(),
@@ -61,11 +70,15 @@ export const initSentry = () => {
       }
       return breadcrumb;
     },
+    });
+    sentryStarted = true;
+    Sentry.setUser(pendingUser);
+    applyStudentMode(Sentry, pendingStudentMode);
   });
 };
 
 export const captureError = (error: Error, context?: Record<string, unknown>) => {
-  Sentry.captureException(error, { extra: context });
+  loadSentry().then((Sentry) => Sentry.captureException(error, { extra: context }));
 };
 
 /**
@@ -79,25 +92,20 @@ export const setUserContext = (
   _email?: string,
   role?: string,
 ) => {
-  Sentry.setUser({ id: userId, ...(role ? { role } : {}) });
-  // Auto-apply student mode based on role.
-  setStudentMode(role === "student");
+  pendingUser = { id: userId, ...(role ? { role } : {}) };
+  if (sentryStarted) loadSentry().then((Sentry) => Sentry.setUser(pendingUser));
+  // Keep replay off until role is known; only confirmed non-student roles enable it.
+  setStudentMode(role ? role === "student" : true);
 };
 
 export const clearUserContext = () => {
-  Sentry.setUser(null);
+  pendingUser = null;
+  if (sentryStarted) loadSentry().then((Sentry) => Sentry.setUser(null));
   // Be safe: when logged out, do not capture replay until role is known again.
   setStudentMode(true);
 };
 
-/**
- * Toggle Session Replay sampling based on whether the current user is a student.
- *
- * Students (kids under 13) NEVER get replay captured, even with all masking
- * applied — this is the COPPA-safe default. Adults (teacher / parent / admin)
- * get the standard 10% session / 100% on-error replay sampling.
- */
-export const setStudentMode = (isStudent: boolean) => {
+const applyStudentMode = (Sentry: typeof import("@sentry/react"), isStudent: boolean) => {
   try {
     const client = Sentry.getClient();
     if (!client) return;
@@ -115,4 +123,16 @@ export const setStudentMode = (isStudent: boolean) => {
   } catch {
     // Replay integration may not be present; ignore.
   }
+};
+
+/**
+ * Toggle Session Replay sampling based on whether the current user is a student.
+ *
+ * Students (kids under 13) NEVER get replay captured, even with all masking
+ * applied — this is the COPPA-safe default. Adults (teacher / parent / admin)
+ * get the standard 10% session / 100% on-error replay sampling.
+ */
+export const setStudentMode = (isStudent: boolean) => {
+  pendingStudentMode = isStudent;
+  if (sentryStarted) loadSentry().then((Sentry) => applyStudentMode(Sentry, isStudent));
 };

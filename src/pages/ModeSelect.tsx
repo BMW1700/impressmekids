@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2, Gamepad2, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
-import { RPGShowcase } from "@/components/landing/RPGShowcase";
+
+const RPGShowcase = lazy(() =>
+  import("@/components/landing/RPGShowcase").then((module) => ({ default: module.RPGShowcase }))
+);
 
 const ModeSelect = () => {
   const navigate = useNavigate();
@@ -13,6 +16,12 @@ const ModeSelect = () => {
   const skipRedirect = (location.state as any)?.skipRedirect === true;
   const { user, profile, isLoading, isProfileLoading } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
+  const [showShowcase, setShowShowcase] = useState(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setShowShowcase(true), 900);
+    return () => window.clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (skipRedirect) return;
@@ -46,9 +55,9 @@ const ModeSelect = () => {
     // Otherwise stay on mode select
   }, [skipRedirect, isLoading, isProfileLoading, user, profile, navigate]);
 
-  // Show spinner only while session is being determined OR while a signed-in user's
-  // profile is loading (so we don't flash mode select before redirecting them).
-  const showSpinner = !skipRedirect && (isLoading || (!!user && (isProfileLoading || !profile)));
+  // Don't block the public landing page while the browser checks for a saved session.
+  // Only signed-in users wait briefly for profile data so redirects stay accurate.
+  const showSpinner = !skipRedirect && !!user && (isProfileLoading || !profile);
 
   if (showSpinner) {
     return (
@@ -140,7 +149,13 @@ const ModeSelect = () => {
           transition={{ duration: 0.7, delay: 0.5 }}
           className="w-full max-w-5xl mt-12 sm:mt-16 rounded-3xl border border-white/10 bg-[hsl(270_45%_8%)] overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
         >
-          <RPGShowcase variant="hero" />
+          {showShowcase ? (
+            <Suspense fallback={<div className="h-[min(620px,78vh)] bg-[hsl(270_45%_8%)]" aria-hidden="true" />}>
+              <RPGShowcase variant="hero" />
+            </Suspense>
+          ) : (
+            <div className="h-[min(620px,78vh)] bg-[hsl(270_45%_8%)]" aria-hidden="true" />
+          )}
         </motion.div>
 
         <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/50">
