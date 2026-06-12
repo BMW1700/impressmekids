@@ -315,9 +315,9 @@ const TeacherDashboard = () => {
                         <ClassroomCard
                           id={classroom.id}
                           name={classroom.name}
-                          joinCode={classroom.join_code}
+                          joinCode={classroom.join_code ?? undefined}
                           studentCount={classroom.student_count || 0}
-                          createdAt={classroom.created_at}
+                          createdAt={classroom.created_at || new Date().toISOString()}
                         />
                       </div>
                     ))}
