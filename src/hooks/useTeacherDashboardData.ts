@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -71,38 +71,43 @@ export const useTeacherAllStudents = (classrooms: any[]) => {
     queryKey: ["teacher-all-students", classrooms.map(c => c.id)],
     queryFn: async () => {
       if (!user || classrooms.length === 0) return [];
-      
-      const classroomsWithStudents = await Promise.all(
-        classrooms.map(async (classroom) => {
-          const { data: students } = await supabase
-            .from("classroom_students")
-            .select(`
-              student_id,
-              joined_at,
-              profiles:student_id (
-                id,
-                full_name,
-                email
-              )
-            `)
-            .eq("classroom_id", classroom.id)
-            .order("joined_at", { ascending: true });
+      const classroomIds = classrooms.map((classroom) => classroom.id);
+      const { data: students, error } = await supabase
+        .from("classroom_students")
+        .select(`
+          classroom_id,
+          student_id,
+          joined_at,
+          profiles:student_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .in("classroom_id", classroomIds)
+        .order("joined_at", { ascending: true });
 
-          return {
-            id: classroom.id,
-            name: classroom.name,
-            subject: classroom.subject,
-            grade: classroom.grade,
-            students:
-              students?.map((s: any) => ({
-                id: s.profiles.id,
-                full_name: s.profiles.full_name,
-                email: s.profiles.email,
-                joined_at: s.joined_at,
-              })) || [],
-          };
-        })
-      );
+      if (error) throw error;
+
+      const studentsByClassroom = (students || []).reduce<Record<string, any[]>>((acc, student: any) => {
+        if (!student.profiles) return acc;
+        acc[student.classroom_id] = acc[student.classroom_id] || [];
+        acc[student.classroom_id].push({
+          id: student.profiles.id,
+          full_name: student.profiles.full_name,
+          email: student.profiles.email,
+          joined_at: student.joined_at,
+        });
+        return acc;
+      }, {});
+
+      const classroomsWithStudents = classrooms.map((classroom) => ({
+        id: classroom.id,
+        name: classroom.name,
+        subject: classroom.subject,
+        grade: classroom.grade,
+        students: studentsByClassroom[classroom.id] || [],
+      }));
 
       return classroomsWithStudents;
     },
