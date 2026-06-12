@@ -20,11 +20,11 @@ import { Loader2 } from "lucide-react";
 
 // Eagerly loaded critical routes
 import ModeSelect from "./pages/ModeSelect";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Lazy-loaded routes for code splitting
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
 const Demos = lazy(() => import("./pages/Demos"));
 const StudentDemo = lazy(() => import("./pages/demos/StudentDemo"));
 const TeacherDemo = lazy(() => import("./pages/demos/TeacherDemo"));

@@ -8,8 +8,9 @@ import { setupGlobalErrorHandler } from "./lib/globalErrorHandler";
 import ErrorBoundary from "./components/error/ErrorBoundary";
 import { initCapacitor } from "./lib/native/capacitorBootstrap";
 
-// Initialize Sentry for error monitoring
-initSentry();
+// Initialize monitoring after first paint so it does not slow the landing screen.
+const startMonitoring = () => initSentry();
+globalThis.setTimeout(startMonitoring, 5000);
 
 // Set up global error handlers for uncaught errors
 setupGlobalErrorHandler();
