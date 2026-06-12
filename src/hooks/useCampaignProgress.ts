@@ -76,6 +76,8 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
       return (data as CampaignProgress) || DEFAULT_PROGRESS;
     },
     enabled: !!studentId,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: recentBattles, isLoading: battlesLoading } = useQuery({
@@ -95,6 +97,8 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
       return data as BattleSession[];
     },
     enabled: !!studentId,
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const initializeProgress = useMutation({
