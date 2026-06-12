@@ -2,6 +2,23 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface TeacherClassroom {
+  id: string;
+  name: string;
+  subject?: string | null;
+  grade?: string | null;
+}
+
+interface ClassroomStudentRow {
+  classroom_id: string;
+  joined_at: string;
+  profiles: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+  } | null;
+}
+
 export const useTeacherClassrooms = () => {
   const { user } = useAuth();
 
@@ -15,7 +32,7 @@ export const useTeacherClassrooms = () => {
       });
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as TeacherClassroom[];
     },
     enabled: !!user,
     staleTime: 5 * 60 * 1000, // 5 min - classrooms don't change often
@@ -64,7 +81,7 @@ export const useTeacherActiveAssignments = (classroomIds: string[]) => {
   });
 };
 
-export const useTeacherAllStudents = (classrooms: any[]) => {
+export const useTeacherAllStudents = (classrooms: TeacherClassroom[]) => {
   const { user } = useAuth();
 
   return useQuery({
@@ -89,7 +106,12 @@ export const useTeacherAllStudents = (classrooms: any[]) => {
 
       if (error) throw error;
 
-      const studentsByClassroom = (students || []).reduce<Record<string, any[]>>((acc, student: any) => {
+      const studentsByClassroom = ((students || []) as ClassroomStudentRow[]).reduce<Record<string, Array<{
+        id: string;
+        full_name: string | null;
+        email: string | null;
+        joined_at: string;
+      }>>>((acc, student) => {
         if (!student.profiles) return acc;
         acc[student.classroom_id] = acc[student.classroom_id] || [];
         acc[student.classroom_id].push({
@@ -120,7 +142,7 @@ export const useTeacherAllStudents = (classrooms: any[]) => {
 // Combined hook for convenience
 export const useTeacherDashboardData = () => {
   const classroomsQuery = useTeacherClassrooms();
-  const classroomIds = (classroomsQuery.data || []).map((c: any) => c.id);
+  const classroomIds = (classroomsQuery.data || []).map((c) => c.id);
   
   const studentCountQuery = useTeacherStudentCount(classroomIds);
   const activeAssignmentsQuery = useTeacherActiveAssignments(classroomIds);
