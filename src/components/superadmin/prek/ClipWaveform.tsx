@@ -59,9 +59,14 @@ interface Props {
   heightPx: number;
   /** CSS color for the waveform fill. Defaults to currentColor at ~70% alpha. */
   colorClass?: string;
+  /** Optional slice (0-1) of the source waveform to render. Used when a clip
+   *  visually teleports across a word-card boundary and is drawn as multiple
+   *  sub-segments — each segment renders just its own slice of the audio. */
+  peakStart?: number;
+  peakEnd?: number;
 }
 
-export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foreground/70" }: Props) {
+export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foreground/70", peakStart = 0, peakEnd = 1 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [peaks, setPeaks] = useState<Float32Array | null>(url ? peakCache.get(url) ?? null : null);
 
@@ -88,18 +93,22 @@ export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foregr
     g.fillStyle = style.color || "rgba(255,255,255,0.7)";
     const mid = h / 2;
     if (!peaks || peaks.length === 0) {
-      // baseline
       g.fillRect(0, mid - 0.5, w, 1);
       return;
     }
     const bins = peaks.length;
+    const s = Math.max(0, Math.min(1, peakStart));
+    const e = Math.max(s, Math.min(1, peakEnd));
+    const startBin = Math.floor(s * bins);
+    const endBin = Math.max(startBin + 1, Math.ceil(e * bins));
+    const sliceBins = endBin - startBin;
     for (let x = 0; x < w; x++) {
-      const idx = Math.min(bins - 1, Math.floor((x / w) * bins));
+      const idx = Math.min(bins - 1, startBin + Math.floor((x / w) * sliceBins));
       const v = peaks[idx];
       const barH = Math.max(1, v * (h - 2));
       g.fillRect(x, mid - barH / 2, 1, barH);
     }
-  }, [peaks, widthPx, heightPx]);
+  }, [peaks, widthPx, heightPx, peakStart, peakEnd]);
 
   return (
     <canvas
