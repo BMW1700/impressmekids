@@ -11,11 +11,12 @@
 //   • Drag span-end handle → re-anchor end of span-videos clip
 //   • Drop onto bottom "+" lane → create a new track and move the clip there
 
-import { useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
-import { Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
+import { Zap, Play, Pause } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
+import { ClipWaveform } from "./ClipWaveform";
 
 const PX_PER_SEC_FULL = 48;
 const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is off
@@ -30,6 +31,8 @@ interface Props {
   selectedClipId: string | null;
   wallClock: boolean;
   playheadSec?: number | null;
+  /** storage_path -> signed audio URL, for waveform decode + isolated preview. */
+  signedUrls?: Record<string, string>;
   onSelectClip: (id: string | null) => void;
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
@@ -51,12 +54,33 @@ interface DragState {
 }
 
 export function TimelineCanvas({
-  graph, tracks, clips, selectedClipId, wallClock, playheadSec,
+  graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls,
   onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   dragRef.current = drag;
+
+  // Single shared audio element for clip-isolated previews (▶ button on each
+  // clip). Guarantees only one preview plays at a time.
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [previewingClipId, setPreviewingClipId] = useState<string | null>(null);
+  const stopClipPreview = useCallback(() => {
+    const a = previewAudioRef.current;
+    if (a) { try { a.pause(); } catch { /* noop */ } }
+    setPreviewingClipId(null);
+  }, []);
+  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number) => {
+    stopClipPreview();
+    const a = new Audio(url);
+    a.playbackRate = rate || 1;
+    try { a.currentTime = trim || 0; } catch { /* noop */ }
+    previewAudioRef.current = a;
+    a.onended = () => setPreviewingClipId((id) => id === clipId ? null : id);
+    a.play().catch(() => setPreviewingClipId(null));
+    setPreviewingClipId(clipId);
+  }, [stopClipPreview]);
+  useEffect(() => () => stopClipPreview(), [stopClipPreview]);
 
   // Per-scene rendered width. When wallClock=false, card scenes shrink to a notch.
   const segs = useMemo(() => {
@@ -283,11 +307,13 @@ export function TimelineCanvas({
                     c.duration_mode === "fill-scene" ? "bg-emerald-500/30 border-emerald-500/70" :
                     c.duration_mode === "span-videos" ? "bg-violet-500/30 border-violet-500/70" :
                     "bg-primary/30 border-primary/70";
+                  const audioUrl = signedUrls?.[c.storage_path] ?? null;
+                  const isPreviewing = previewingClipId === c.id;
                   return (
                     <div
                       key={c.id}
                       onPointerDown={(e) => beginDrag(e, c, "body")}
-                      className={`absolute top-5 bottom-1 rounded border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} flex items-center px-2 text-[11px] font-medium overflow-hidden cursor-grab active:cursor-grabbing`}
+                      className={`absolute top-5 bottom-1 rounded border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing`}
                       style={{
                         left: leftPx,
                         width: widthPx,
@@ -296,11 +322,36 @@ export function TimelineCanvas({
                         zIndex: dragging ? 50 : 2,
                       }}
                     >
-                      <span className="truncate pr-2">{c.display_name}</span>
+                      {/* Waveform fills the body */}
+                      <div className="absolute inset-0 px-1 flex items-center">
+                        <ClipWaveform url={audioUrl} widthPx={Math.max(1, widthPx - 8)} heightPx={28} />
+                      </div>
+                      {/* ▶ play button (isolated preview) */}
+                      <button
+                        type="button"
+                        onPointerDown={(e) => { e.stopPropagation(); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isPreviewing) stopClipPreview();
+                          else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                        }}
+                        title={isPreviewing ? "Stop preview" : "Preview this clip"}
+                        className="absolute left-1 top-1 z-[3] rounded bg-background/80 hover:bg-background text-foreground p-0.5 shadow-sm"
+                      >
+                        {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                      </button>
+                      {/* Filename label (lower priority than waveform) */}
+                      <span
+                        className="absolute bottom-0.5 left-1 right-2 truncate text-[10px] opacity-80 pointer-events-none"
+                        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}
+                      >
+                        {c.display_name}
+                        {c.playback_rate && c.playback_rate !== 1 ? ` · ${c.playback_rate.toFixed(2)}×` : ""}
+                      </span>
                       {c.duration_mode === "span-videos" && (
                         <div
                           onPointerDown={(e) => beginDrag(e, c, "end")}
-                          className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/70 cursor-ew-resize"
+                          className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/70 cursor-ew-resize z-[3]"
                           title="Drag to set end anchor"
                         />
                       )}

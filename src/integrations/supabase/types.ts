@@ -4941,6 +4941,7 @@ export type Database = {
           level_id: string
           loop_clip: boolean
           pause_on_word_card: boolean
+          playback_rate: number
           sort_order: number
           storage_path: string
           track_index: number
@@ -4967,6 +4968,7 @@ export type Database = {
           level_id: string
           loop_clip?: boolean
           pause_on_word_card?: boolean
+          playback_rate?: number
           sort_order?: number
           storage_path: string
           track_index: number
@@ -4993,6 +4995,7 @@ export type Database = {
           level_id?: string
           loop_clip?: boolean
           pause_on_word_card?: boolean
+          playback_rate?: number
           sort_order?: number
           storage_path?: string
           track_index?: number

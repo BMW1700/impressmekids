@@ -461,12 +461,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   // ── Preview transport ─────────────────────────────────────────────────────
   // Mount the runtime mixer for editor preview. Solo + Mute-all are session-only.
-  usePreKAudioMixerRuntime({
+  const mixer = usePreKAudioMixerRuntime({
     tracks: mix.tracks,
     clips: mix.clips,
     signedUrls: mix.signedUrls,
     masterVolume: mix.settings.audio_master_volume,
-    enabled: previewPlaying || previewTime > 0,
+    enabled: previewPlaying,
     event: previewEvent,
     soloTrackIndex,
     muteAll,
@@ -522,17 +522,30 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   const startPreview = () => {
     if (previewPlaying) return;
+    mixer.stopAll();
+    lastEdgeRef.current = null;
     if (previewTime >= sceneGraph.nominalDurationTotal - 0.05) {
       setPreviewTime(0);
-      lastEdgeRef.current = null;
     }
     setPreviewPlaying(true);
+  };
+  const pausePreview = () => {
+    setPreviewPlaying(false);
+    mixer.stopAll();
   };
   const stopPreview = () => {
     setPreviewPlaying(false);
     setPreviewTime(0);
     lastEdgeRef.current = null;
     setPreviewEvent(null);
+    mixer.stopAll();
+  };
+  const scrubTo = (sec: number) => {
+    mixer.stopAll();
+    setPreviewPlaying(false);
+    lastEdgeRef.current = null;
+    setPreviewEvent(null);
+    setPreviewTime(sec);
   };
 
   // ── Warnings ──────────────────────────────────────────────────────────────
@@ -610,7 +623,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             <Label className="text-sm flex items-center gap-1"><Clock className="h-3 w-3"/> Wall-clock timeline</Label>
           </div>
           <div className="flex-1" />
-          <Button size="sm" variant={previewPlaying ? "default" : "outline"} onClick={previewPlaying ? () => setPreviewPlaying(false) : startPreview}>
+          <Button size="sm" variant={previewPlaying ? "default" : "outline"} onClick={previewPlaying ? pausePreview : startPreview}>
             {previewPlaying ? <Square className="h-3 w-3 mr-1"/> : <Play className="h-3 w-3 mr-1"/>}
             {previewPlaying ? "Pause" : "Preview"}
           </Button>
@@ -666,11 +679,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             selectedClipId={selectedClipId}
             wallClock={wallClock}
             playheadSec={effectivePlayhead > 0 || previewPlaying ? effectivePlayhead : null}
+            signedUrls={mix.signedUrls}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
             onDropOnNewTrack={onDropOnNewTrack}
-            onScrub={(sec) => { setPreviewPlaying(false); setPreviewTime(sec); }}
+            onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">
@@ -929,6 +943,18 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, onUpdat
         <div>
           <Label>Trim end (s)</Label>
           <Input type="number" step="0.1" defaultValue={clip.trim_end_seconds ?? ""} onBlur={(e) => onUpdate(clip, { trim_end_seconds: e.target.value === "" ? null : Math.max(0, Number(e.target.value) || 0) })}/>
+        </div>
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between">
+            <Label>Playback speed ({(clip.playback_rate || 1).toFixed(2)}×)</Label>
+            <Button size="sm" variant="ghost" onClick={() => onUpdate(clip, { playback_rate: 1 })}>Reset</Button>
+          </div>
+          <Slider
+            min={50} max={200} step={5}
+            value={[Math.round((clip.playback_rate || 1) * 100)]}
+            onValueChange={(v) => onUpdate(clip, { playback_rate: v[0] / 100 })}
+          />
+          <p className="text-[10px] text-muted-foreground mt-1">Browser playback rate (pitch shifts with speed). 0.5× = half speed, 2.0× = double speed.</p>
         </div>
       </CardContent>
     </Card>
