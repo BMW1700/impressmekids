@@ -23,6 +23,7 @@ const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is o
 const TRACK_HEIGHT = 78;
 const TRACK_GAP = 6;
 const HEADER_HEIGHT = 32;
+const VIDEO_LANE_HEIGHT = 56; // read-only source-video waveform lane
 
 interface Props {
   graph: SceneGraph;
@@ -33,6 +34,8 @@ interface Props {
   playheadSec?: number | null;
   /** storage_path -> signed audio URL, for waveform decode + isolated preview. */
   signedUrls?: Record<string, string>;
+  /** sceneKey -> signed video URL. Used to render the read-only "Video" lane. */
+  videoUrls?: Record<string, string>;
   onSelectClip: (id: string | null) => void;
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
@@ -44,6 +47,7 @@ interface Props {
   /** Stops the main transport before isolated clip-button playback. */
   onBeforeIsolatedPreview?: () => void;
 }
+
 
 interface DragState {
   clipId: string;
