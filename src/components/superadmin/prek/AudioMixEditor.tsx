@@ -435,6 +435,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           </div>
           <div className="flex-1" />
           <Button size="sm" variant="outline" onClick={undo}><Undo2 className="h-3 w-3 mr-1"/> Undo</Button>
+          <Button size="sm" variant="outline" onClick={redo}><Redo2 className="h-3 w-3 mr-1"/> Redo</Button>
         </CardContent>
       </Card>
 
