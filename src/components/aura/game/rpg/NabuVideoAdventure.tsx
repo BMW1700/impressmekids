@@ -26,6 +26,9 @@ import { submitPreKAuraReading } from "@/lib/preKAuraSubmit";
 import { RPGWordReader } from "./RPGWordReader";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
+import { usePreKAudioMix } from "@/hooks/usePreKAudioMix";
+import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
+import { sceneKeyForStep, SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 interface Props {
   world: CampaignWorld;
@@ -34,6 +37,8 @@ interface Props {
   onComplete: (stats: { wordsRead: number; correctWords: number; stars: number }) => void;
   /** Optional DB-loaded level override. When provided, takes precedence over the hardcoded data file. */
   overrideLevel?: VideoLevel | null;
+  /** Database level UUID — when set, loads & plays the audio overlay mix and applies source-video mute. */
+  dbLevelId?: string | null;
 }
 
 type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending";
@@ -96,13 +101,32 @@ const ensureSparkleStyle = () => {
 type Slot = "A" | "B";
 const otherSlot = (s: Slot): Slot => (s === "A" ? "B" : "A");
 
-export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel }: Props) => {
+export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel, dbLevelId }: Props) => {
   const adventure = useMemo<VideoLevel | null>(
     () => overrideLevel ?? getVideoLevel(world.id, level.id),
     [overrideLevel, world.id, level.id]
   );
 
   const steps = adventure?.steps ?? EMPTY_VIDEO_STEPS;
+
+  // Number of "word" steps — needed to compute scene keys from step index.
+  const wordCount = useMemo(() => steps.filter((s) => s.kind === "word").length, [steps]);
+
+  // Audio overlay mix (no-op when dbLevelId is null)
+  const mix = usePreKAudioMix(dbLevelId ?? null);
+  const [sceneEvent, setSceneEvent] = useState<PreKAudioMixerEvent | null>(null);
+  const emitScene = useCallback((sceneKey: string, edge: "start" | "end") => {
+    setSceneEvent({ sceneKey, edge, isWordCard: sceneKey.endsWith("-card") });
+  }, []);
+  usePreKAudioMixerRuntime({
+    tracks: mix.tracks,
+    clips: mix.clips,
+    signedUrls: mix.signedUrls,
+    masterVolume: mix.settings.audio_master_volume,
+    enabled: !!dbLevelId,
+    event: sceneEvent,
+  });
+  const muteSourceVideo = !!dbLevelId && mix.settings.mute_source_video_audio;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("tap-to-begin");
@@ -138,6 +162,31 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const incomingSlotRef = useRef<Slot | null>(null);
 
   useEffect(() => { ensureSparkleStyle(); }, []);
+
+  // ── Scene-event emission for the audio overlay mixer ─────────────────────
+  // We emit `end` for the previous scene + `start` for the new scene whenever
+  // the active step changes (and on tap-to-begin → opening start).
+  const prevSceneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dbLevelId) return;
+    if (phase === "tap-to-begin") return;
+    const sceneKey = sceneKeyForStep(stepIndex, wordCount);
+    if (prevSceneRef.current === sceneKey) return;
+    if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
+    prevSceneRef.current = sceneKey;
+    emitScene(sceneKey, "start");
+  }, [stepIndex, phase, dbLevelId, wordCount, emitScene]);
+
+  // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
+  useEffect(() => {
+    if (!dbLevelId) return;
+    if (phase !== "ending") return;
+    if (prevSceneRef.current) {
+      emitScene(prevSceneRef.current, "end");
+      prevSceneRef.current = null;
+    }
+  }, [phase, dbLevelId, emitScene]);
+
 
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -505,6 +554,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         className="absolute inset-0 h-full w-full object-cover"
         src={src}
         playsInline
+        muted={muteSourceVideo}
         preload="auto"
         controls={false}
         disablePictureInPicture

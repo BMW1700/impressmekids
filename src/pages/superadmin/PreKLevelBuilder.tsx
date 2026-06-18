@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
+import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 
 interface LevelRow {
   id: string;
@@ -30,6 +31,10 @@ interface LevelRow {
   opening_video_url: string | null;
   closing_video_url: string | null;
   is_published: boolean;
+  opening_video_duration_seconds: number | null;
+  closing_video_duration_seconds: number | null;
+  audio_master_volume: number | null;
+  mute_source_video_audio: boolean | null;
 }
 interface WordRow {
   id: string;
@@ -41,6 +46,9 @@ interface WordRow {
   first_video_url: string | null;
   second_video_url: string | null;
   hold_poster_url: string | null;
+  word_hold_seconds: number | null;
+  first_video_duration_seconds: number | null;
+  second_video_duration_seconds: number | null;
 }
 
 // Component that renders a video URL/path with playback. For storage paths it
@@ -453,6 +461,20 @@ const PreKLevelBuilder = () => {
           </CardContent>
         </Card>
 
+
+        {/* ── Audio overlay editor ─────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Audio Overlay Mix</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add unlimited audio tracks over the videos. Each clip can be a one-shot, loop a scene, play under the whole level, or span across multiple videos (skipping the word-card pauses). You can also mute the original video audio.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AudioMixEditor levelId={level.id} level={level} words={words} />
+          </CardContent>
+        </Card>
+
         <div className="text-sm text-muted-foreground">
           When everything looks right, click <strong>Publish</strong> at the top to make this level visible to students.
         </div>
@@ -460,5 +482,6 @@ const PreKLevelBuilder = () => {
     </div>
   );
 };
+
 
 export default PreKLevelBuilder;
