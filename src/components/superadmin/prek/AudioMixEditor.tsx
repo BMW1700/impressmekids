@@ -78,6 +78,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const [muteAll, setMuteAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [wallClock, setWallClock] = useState(true);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [previewTime, setPreviewTime] = useState(0);
+  const [previewEvent, setPreviewEvent] = useState<PreKAudioMixerEvent | null>(null);
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
