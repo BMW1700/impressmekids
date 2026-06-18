@@ -28,7 +28,7 @@ import {
   type PreKAudioDurationMode,
   type PreKAudioTrack,
 } from "@/hooks/usePreKAudioMix";
-import { uploadPreKAudio, deletePreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
+import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
 import { TimelineCanvas } from "./TimelineCanvas";
