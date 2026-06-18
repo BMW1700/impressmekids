@@ -5,6 +5,9 @@
 //   HTMLAudioElement → MediaElementSourceNode → clipGain → trackGain[i]
 //                    → masterGain → ctx.destination
 //
+// If createMediaElementSource throws (element already attached), we fall back
+// to direct el.volume control so mute/solo/master still work.
+//
 // Modes:
 //   - fixed       : play one-shot at anchor + offset
 //   - fill-scene  : play+loop while the anchor scene is active; fade out on scene-end
@@ -12,7 +15,9 @@
 //                   pause_on_word_card = true
 //   - span-videos : play continuously from start-anchor to end-anchor; pause
 //                   when a word-card begins; resume when next video scene starts
-//                   (currentTime is never seeked, so resume is seamless)
+//
+// **Mutual exclusivity**: starting any clip first stops every other clip on
+// the same track_index (DAW semantics). Use a new track for overlap.
 
 import { useEffect, useMemo, useRef } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
@@ -20,6 +25,7 @@ import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 const FADE_RAMP_SEC = 0.03;
 const CARD_FADE_SEC = 0.15;
 const SCENE_END_FADE_SEC = 0.2;
+const STOP_FADE_SEC = 0.05;
 
 type SceneEdge = "start" | "end";
 
@@ -35,28 +41,37 @@ interface UseArgs {
   signedUrls: Record<string, string>;
   masterVolume: number;
   enabled: boolean;
-  /** Bumps to publish a scene event. */
   event: PreKAudioMixerEvent | null;
-  /** Editor-only: when set, only this track plays. Pass null at runtime. */
   soloTrackIndex?: number | null;
-  /** Editor-only: session-only master kill switch. */
   muteAll?: boolean;
 }
 
 interface ClipState {
   el: HTMLAudioElement;
-  node: MediaElementAudioSourceNode | null;
+  node: MediaElementAudioSourceNode | null; // null = fallback (control el.volume)
   clipGain: GainNode;
   loaded: boolean;
+  trackIndex: number;
+  trackVolume: number; // mirror for fallback path
 }
 
-export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolume, enabled, event, soloTrackIndex = null, muteAll = false }: UseArgs) {
+export interface PreKAudioMixerHandle {
+  ready: boolean;
+  stopAll: () => void;
+}
+
+export function usePreKAudioMixerRuntime({
+  tracks, clips, signedUrls, masterVolume, enabled, event,
+  soloTrackIndex = null, muteAll = false,
+}: UseArgs): PreKAudioMixerHandle {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const trackGainsRef = useRef<Map<number, GainNode>>(new Map());
+  const trackVolumesRef = useRef<Map<number, number>>(new Map()); // for fallback el.volume math
   const clipStatesRef = useRef<Map<string, ClipState>>(new Map());
   const activeSpanClipsRef = useRef<Set<string>>(new Set());
   const scheduledTimersRef = useRef<number[]>([]);
+  const masterMultiplierRef = useRef<number>(masterVolume);
 
   const ensureCtx = (): AudioContext | null => {
     if (typeof window === "undefined") return null;
@@ -77,10 +92,37 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
     return ctxRef.current;
   };
 
-  // Update master volume reactively (respects session-only muteAll)
+  // Compute the effective volume (0..1) for a clip when routed through fallback
+  // (no MediaElementSourceNode). This mirrors clipGain * trackGain * master.
+  const effectiveFallbackVolume = (st: ClipState, clipVolume: number): number => {
+    const trackV = trackVolumesRef.current.get(st.trackIndex) ?? 1;
+    return Math.max(0, Math.min(1, clipVolume * trackV * masterMultiplierRef.current));
+  };
+
+  const setClipTargetVolume = (st: ClipState, target: number, durSec: number) => {
+    const ctx = ctxRef.current; if (!ctx) return;
+    const now = ctx.currentTime;
+    st.clipGain.gain.cancelScheduledValues(now);
+    st.clipGain.gain.setValueAtTime(st.clipGain.gain.value, now);
+    st.clipGain.gain.linearRampToValueAtTime(target, now + Math.max(0.01, durSec));
+    if (st.node === null) {
+      // Fallback: HTMLAudioElement isn't routed through the graph, so we have
+      // to drive el.volume directly. Apply the equivalent effective gain.
+      try { st.el.volume = effectiveFallbackVolume(st, target); } catch { /* noop */ }
+    }
+  };
+
+  // Update master multiplier (audio context master + fallback mirror)
   useEffect(() => {
+    masterMultiplierRef.current = muteAll ? 0 : masterVolume;
     const ctx = ctxRef.current; const m = masterGainRef.current;
-    if (ctx && m) m.gain.setTargetAtTime(muteAll ? 0 : masterVolume, ctx.currentTime, FADE_RAMP_SEC);
+    if (ctx && m) m.gain.setTargetAtTime(masterMultiplierRef.current, ctx.currentTime, FADE_RAMP_SEC);
+    // Re-apply fallback element volumes
+    for (const [, st] of clipStatesRef.current) {
+      if (st.node === null) {
+        try { st.el.volume = effectiveFallbackVolume(st, st.clipGain.gain.value); } catch { /* noop */ }
+      }
+    }
   }, [masterVolume, muteAll]);
 
   // Track gains: create/update per track row. If any track is soloed (editor),
@@ -100,6 +142,13 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
       const soloMutes = soloActive && t.track_index !== soloTrackIndex;
       const target = (t.muted || soloMutes) ? 0 : t.volume;
       g.gain.setTargetAtTime(target, ctx.currentTime, FADE_RAMP_SEC);
+      trackVolumesRef.current.set(t.track_index, target);
+    }
+    // Refresh fallback element volumes against new track volumes
+    for (const [, st] of clipStatesRef.current) {
+      if (st.node === null) {
+        try { st.el.volume = effectiveFallbackVolume(st, st.clipGain.gain.value); } catch { /* noop */ }
+      }
     }
   }, [tracks, enabled, soloTrackIndex]);
 
@@ -107,7 +156,11 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
   const ensureClipState = (clip: PreKAudioClip): ClipState | null => {
     const ctx = ensureCtx(); if (!ctx) return null;
     let st = clipStatesRef.current.get(clip.id);
-    if (st) return st;
+    if (st) {
+      // Keep trackIndex in sync if the clip was moved between tracks
+      st.trackIndex = clip.track_index;
+      return st;
+    }
     const url = signedUrls[clip.storage_path]; if (!url) return null;
     const el = new Audio();
     el.crossOrigin = "anonymous";
@@ -123,41 +176,63 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
       node = ctx.createMediaElementSource(el);
       node.connect(clipGain);
     } catch {
-      // Some browsers throw if element already connected; route via element volume as fallback
+      // Fallback path — control via el.volume.
       node = null;
+      el.volume = 0;
     }
-    st = { el, node, clipGain, loaded: false };
+    st = {
+      el, node, clipGain, loaded: false,
+      trackIndex: clip.track_index,
+      trackVolume: trackVolumesRef.current.get(clip.track_index) ?? 1,
+    };
     el.addEventListener("loadeddata", () => { if (st) st.loaded = true; });
     clipStatesRef.current.set(clip.id, st);
     return st;
   };
 
-  const fadeIn = (st: ClipState, targetVolume: number, durSec: number) => {
-    const ctx = ctxRef.current!;
-    const now = ctx.currentTime;
-    st.clipGain.gain.cancelScheduledValues(now);
-    st.clipGain.gain.setValueAtTime(st.clipGain.gain.value, now);
-    st.clipGain.gain.linearRampToValueAtTime(targetVolume, now + Math.max(0.01, durSec));
-  };
   const fadeOutAndPause = (st: ClipState, durSec: number) => {
-    const ctx = ctxRef.current!;
-    const now = ctx.currentTime;
-    st.clipGain.gain.cancelScheduledValues(now);
-    st.clipGain.gain.setValueAtTime(st.clipGain.gain.value, now);
-    st.clipGain.gain.linearRampToValueAtTime(0, now + Math.max(0.01, durSec));
-    const tid = window.setTimeout(() => { try { st.el.pause(); } catch { /* noop */ } }, Math.max(20, durSec * 1000 + 20));
+    setClipTargetVolume(st, 0, durSec);
+    const tid = window.setTimeout(() => {
+      try { st.el.pause(); } catch { /* noop */ }
+      if (st.node === null) { try { st.el.volume = 0; } catch { /* noop */ } }
+    }, Math.max(20, durSec * 1000 + 20));
     scheduledTimersRef.current.push(tid);
+  };
+
+  // Stop every other clip currently on the same track (DAW mutual exclusivity).
+  const stopSiblingsOnTrack = (trackIndex: number, exceptClipId: string) => {
+    for (const [id, st] of clipStatesRef.current) {
+      if (id === exceptClipId) continue;
+      if (st.trackIndex !== trackIndex) continue;
+      // Only fade if currently producing sound
+      if (!st.el.paused) fadeOutAndPause(st, STOP_FADE_SEC);
+      activeSpanClipsRef.current.delete(id);
+    }
+  };
+
+  // Public stopAll — fades & pauses everything, clears scheduled timers.
+  const stopAll = () => {
+    scheduledTimersRef.current.forEach((id) => window.clearTimeout(id));
+    scheduledTimersRef.current = [];
+    activeSpanClipsRef.current.clear();
+    for (const [, st] of clipStatesRef.current) {
+      if (!st.el.paused) fadeOutAndPause(st, STOP_FADE_SEC);
+      else if (st.node === null) { try { st.el.volume = 0; } catch { /* noop */ } }
+    }
   };
 
   const playClip = (clip: PreKAudioClip, opts: { loop?: boolean } = {}) => {
     const st = ensureClipState(clip); if (!st) return;
     const ctx = ensureCtx(); if (!ctx) return;
+    // Mutual exclusivity: kill anything else on this track first.
+    stopSiblingsOnTrack(clip.track_index, clip.id);
     try { if (ctx.state === "suspended") void ctx.resume(); } catch { /* noop */ }
     st.el.loop = !!opts.loop || clip.loop_clip;
-    st.el.currentTime = clip.trim_start_seconds || 0;
+    try { st.el.playbackRate = clip.playback_rate || 1; } catch { /* noop */ }
+    try { st.el.currentTime = clip.trim_start_seconds || 0; } catch { /* noop */ }
     const playPromise = st.el.play();
     if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => { /* gesture not yet, ignore */ });
-    fadeIn(st, clip.volume, clip.fade_in_seconds || FADE_RAMP_SEC);
+    setClipTargetVolume(st, clip.volume, clip.fade_in_seconds || FADE_RAMP_SEC);
   };
 
   // Handle scene events
@@ -166,8 +241,6 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
     const ctx = ensureCtx(); if (!ctx) return;
     const { sceneKey, edge, isWordCard } = event;
 
-    // (a) On the VERY first event of a level (we treat opening-start as init):
-    //     start all fill-level clips here too.
     if (sceneKey === "opening" && edge === "start") {
       for (const clip of clips.filter((c) => c.duration_mode === "fill-level")) {
         playClip(clip, { loop: true });
@@ -175,33 +248,29 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
     }
 
     if (edge === "start") {
-      // fill-level pause/resume on word card
       if (isWordCard) {
         for (const clip of clips.filter((c) => c.duration_mode === "fill-level" && c.pause_on_word_card)) {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           fadeOutAndPause(st, CARD_FADE_SEC);
         }
-        // span-videos: pause without seeking
         for (const clipId of activeSpanClipsRef.current) {
           const st = clipStatesRef.current.get(clipId); if (!st) continue;
           fadeOutAndPause(st, CARD_FADE_SEC);
         }
       } else {
-        // resume fill-level on entering a video scene
         for (const clip of clips.filter((c) => c.duration_mode === "fill-level" && c.pause_on_word_card)) {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           st.el.play().catch(() => { /* noop */ });
-          fadeIn(st, clip.volume, CARD_FADE_SEC);
+          setClipTargetVolume(st, clip.volume, CARD_FADE_SEC);
         }
-        // resume any active span-videos clips
         for (const clipId of activeSpanClipsRef.current) {
           const st = clipStatesRef.current.get(clipId); if (!st) continue;
           st.el.play().catch(() => { /* noop */ });
-          const c = clips.find((x) => x.id === clipId); if (c) fadeIn(st, c.volume, CARD_FADE_SEC);
+          const c = clips.find((x) => x.id === clipId);
+          if (c) setClipTargetVolume(st, c.volume, CARD_FADE_SEC);
         }
       }
 
-      // Trigger clips anchored to scene-start
       for (const clip of clips) {
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "start") continue;
         const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
@@ -214,17 +283,11 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
           } else if (clip.duration_mode === "fixed") {
             playClip(clip);
           }
-          // fill-level handled at opening-start above
         };
         if (delayMs === 0) fire();
-        else {
-          const tid = window.setTimeout(fire, delayMs);
-          scheduledTimersRef.current.push(tid);
-        }
-        // Start the end-anchor schedule for span-videos when its end-anchor scene starts (below).
+        else { const tid = window.setTimeout(fire, delayMs); scheduledTimersRef.current.push(tid); }
       }
 
-      // span-videos end anchors
       for (const clip of clips) {
         if (clip.duration_mode !== "span-videos") continue;
         if (clip.end_anchor_scene_key !== sceneKey || clip.end_anchor_edge !== "start") continue;
@@ -240,26 +303,30 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
     }
 
     if (edge === "end") {
-      // fill-scene clips anchored to this scene: fade out
       for (const clip of clips) {
         if (clip.duration_mode === "fill-scene" && clip.anchor_scene_key === sceneKey) {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
         }
       }
-      // clips anchored to scene-end (fixed, fill-scene end-start) — fire after offset (typically negative not allowed for cards; for videos we approximate using setTimeout 0 since runner emits end at the moment of end)
       for (const clip of clips) {
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "end") continue;
         const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
-        const fire = () => {
-          if (clip.duration_mode === "fixed") playClip(clip);
-        };
+        const fire = () => { if (clip.duration_mode === "fixed") playClip(clip); };
         if (delayMs === 0) fire();
         else { const tid = window.setTimeout(fire, delayMs); scheduledTimersRef.current.push(tid); }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [event]);
+
+  // When `enabled` flips to false, hard-stop everything.
+  useEffect(() => {
+    if (!enabled) {
+      stopAll();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -276,9 +343,17 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
       ctxRef.current = null;
       masterGainRef.current = null;
       trackGainsRef.current.clear();
+      trackVolumesRef.current.clear();
     };
   }, []);
 
-  // Resolve & return helper: nothing public besides triggering events
-  return useMemo(() => ({ ready: enabled }), [enabled]);
+  // Stable handle. stopAll closes over refs so identity can stay constant.
+  const handleRef = useRef<PreKAudioMixerHandle | null>(null);
+  if (!handleRef.current) {
+    handleRef.current = { ready: enabled, stopAll };
+  } else {
+    handleRef.current.ready = enabled;
+    handleRef.current.stopAll = stopAll;
+  }
+  return useMemo(() => handleRef.current!, [enabled]);
 }
