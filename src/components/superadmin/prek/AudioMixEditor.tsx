@@ -7,10 +7,10 @@
 //   ├ Track mixer strips (name, M, S, volume, add audio, reorder, delete)
 //   └ Clip Inspector (anchor, mode, fades, trim, effective gain)
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  ArrowUp, ArrowDown, Undo2, AlertTriangle, Clock, Zap,
+  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
