@@ -104,6 +104,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const sceneGraph = useMemo(() => buildSceneGraph(level, words), [level, words]);
   const sceneByKey = useMemo(() => new Map(sceneGraph.scenes.map((s) => [s.key, s])), [sceneGraph]);
   const videoScenes = sceneGraph.scenes.filter(isVideoScene);
+  const videoUrlsState = usePreKLevelVideoUrls(level, words);
+  const wordsByIndex = useMemo(() => {
+    const out: Record<number, string> = {};
+    [...words].sort((a, b) => a.sort_order - b.sort_order).forEach((w, i) => { out[i + 1] = w.word; });
+    return out;
+  }, [words]);
+  // Drag-preview override: while dragging a clip, scrub the video to the
+  // proposed drop point. Clears on pointer-up.
+  const [dragPreviewSec, setDragPreviewSec] = useState<number | null>(null);
+  const effectivePlayhead = dragPreviewSec ?? previewTime;
 
   // ── Level settings ─────────────────────────────────────────────────────────
   const updateLevelSetting = async (
