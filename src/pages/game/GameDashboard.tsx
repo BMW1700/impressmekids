@@ -289,7 +289,7 @@ const GameDashboard = () => {
               >
                 <h1 className="text-2xl sm:text-3xl font-bold">
                   {isSignedIn ? (
-                    <>Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮</>
+                    <>Welcome back, <span className="text-yellow-400">{displayName.split(' ')[0]}</span>! 🎮</>
                   ) : (
                     <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
                   )}
@@ -297,6 +297,11 @@ const GameDashboard = () => {
                 <p className="text-muted-foreground mt-1">
                   {isSignedIn ? 'Choose your reading adventure' : 'Sign in to track your progress and play'}
                 </p>
+                {isSignedIn && statsErrored && (
+                  <p className="text-xs text-destructive mt-2">
+                    Couldn't load your latest stats. Refresh to retry — your progress is safe.
+                  </p>
+                )}
               </motion.div>
 
               {/* Sign In CTA for unauthenticated users */}
