@@ -163,6 +163,31 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
+  // ── Scene-event emission for the audio overlay mixer ─────────────────────
+  // We emit `end` for the previous scene + `start` for the new scene whenever
+  // the active step changes (and on tap-to-begin → opening start).
+  const prevSceneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!dbLevelId) return;
+    if (phase === "tap-to-begin") return;
+    const sceneKey = sceneKeyForStep(stepIndex, wordCount);
+    if (prevSceneRef.current === sceneKey) return;
+    if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
+    prevSceneRef.current = sceneKey;
+    emitScene(sceneKey, "start");
+  }, [stepIndex, phase, dbLevelId, wordCount, emitScene]);
+
+  // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
+  useEffect(() => {
+    if (!dbLevelId) return;
+    if (phase !== "ending") return;
+    if (prevSceneRef.current) {
+      emitScene(prevSceneRef.current, "end");
+      prevSceneRef.current = null;
+    }
+  }, [phase, dbLevelId, emitScene]);
+
+
   const clearTimers = () => {
     timers.current.forEach((id) => window.clearTimeout(id));
     timers.current = [];
