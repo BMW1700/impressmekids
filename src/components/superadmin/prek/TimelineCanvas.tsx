@@ -197,8 +197,15 @@ export function TimelineCanvas({
             <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500" />
           </div>
         )}
-        {/* Sticky scene header */}
-        <div className="absolute top-0 left-0 right-0 bg-background/95 border-b z-10" style={{ height: HEADER_HEIGHT }}>
+        {/* Sticky scene header (also acts as the scrub strip) */}
+        <div
+          className="absolute top-0 left-0 right-0 bg-background/95 border-b z-10 cursor-ew-resize touch-none"
+          style={{ height: HEADER_HEIGHT }}
+          onPointerDown={onHeaderPointerDown}
+          onPointerMove={onHeaderPointerMove}
+          onPointerUp={onHeaderPointerUp}
+          onPointerCancel={onHeaderPointerUp}
+        >
           {segs.items.map(({ scene, left, width }) => (
             <div
               key={scene.key}
