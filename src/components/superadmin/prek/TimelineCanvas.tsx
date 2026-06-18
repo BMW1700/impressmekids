@@ -214,7 +214,9 @@ export function TimelineCanvas({
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
   const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
-  const canvasHeight = HEADER_HEIGHT + 8 + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
+  const videoLaneTop = HEADER_HEIGHT + 4;
+  const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
+  const canvasHeight = tracksTopOffset + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
 
   return (
     <div
