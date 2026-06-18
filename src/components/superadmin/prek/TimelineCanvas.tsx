@@ -316,7 +316,7 @@ export function TimelineCanvas({
                     <div
                       key={c.id}
                       onPointerDown={(e) => beginDrag(e, c, "body")}
-                      className={`absolute top-5 bottom-1 rounded border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing`}
+                      className={`absolute top-5 bottom-2 rounded-md border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing shadow-sm`}
                       style={{
                         left: leftPx,
                         width: widthPx,
@@ -325,9 +325,9 @@ export function TimelineCanvas({
                         zIndex: dragging ? 50 : 2,
                       }}
                     >
-                      {/* Waveform fills the body */}
-                      <div className="absolute inset-0 px-1 flex items-center">
-                        <ClipWaveform url={audioUrl} widthPx={Math.max(1, widthPx - 8)} heightPx={28} />
+                      {/* Waveform is the primary visual; labels live in a separate footer. */}
+                      <div className="absolute left-6 right-1 top-1 bottom-5 rounded-sm bg-background/35 border border-background/30 flex items-center overflow-hidden">
+                        <ClipWaveform url={audioUrl} widthPx={Math.max(1, widthPx - 34)} heightPx={36} colorClass="text-foreground/85" />
                       </div>
                       {/* ▶ play button (isolated preview) */}
                       <button
@@ -339,18 +339,18 @@ export function TimelineCanvas({
                           else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
                         }}
                         title={isPreviewing ? "Stop preview" : "Preview this clip"}
-                        className="absolute left-1 top-1 z-[3] rounded bg-background/80 hover:bg-background text-foreground p-0.5 shadow-sm"
+                        className="absolute left-1 top-1 z-[3] h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
                       >
                         {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                       </button>
-                      {/* Filename label (lower priority than waveform) */}
-                      <span
-                        className="absolute bottom-0.5 left-1 right-2 truncate text-[10px] opacity-80 pointer-events-none"
-                        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.4)" }}
-                      >
-                        {c.display_name}
-                        {c.playback_rate && c.playback_rate !== 1 ? ` · ${c.playback_rate.toFixed(2)}×` : ""}
-                      </span>
+                      <div className="absolute left-0 right-0 bottom-0 h-4 px-1.5 bg-background/80 border-t border-background/40 flex items-center gap-1 pointer-events-none">
+                        <span className="truncate text-[9px] leading-none opacity-90">{c.display_name}</span>
+                        {c.playback_rate && c.playback_rate !== 1 && (
+                          <span className="ml-auto shrink-0 rounded-sm bg-background px-1 text-[8px] leading-3 tabular-nums border border-border/50">
+                            {c.playback_rate.toFixed(2)}×
+                          </span>
+                        )}
+                      </div>
                       {c.duration_mode === "span-videos" && (
                         <div
                           onPointerDown={(e) => beginDrag(e, c, "end")}
