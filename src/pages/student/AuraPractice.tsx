@@ -191,8 +191,11 @@ const AuraPractice = () => {
         .from('profiles')
         .select('role, default_grade_mode')
         .eq('id', user.id)
-        .single();
-      if (error) return null;
+        .maybeSingle();
+      if (error) {
+        console.error('[AuraPractice] profile load failed', error);
+        return null;
+      }
       return data;
     },
     enabled: !!user?.id,

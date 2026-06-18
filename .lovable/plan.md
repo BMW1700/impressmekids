@@ -1,35 +1,45 @@
-## What's broken
+## What's actually broken
 
-From the screenshots and code audit, three things are stacking on top of each other on the AURA Reading page:
+Walking through the two screenshots and the code paths:
 
-1. **"Checking your session…" never resolves.** `RequireAuth` reads `isLoading` from `AuthContext`, but the game route is gated until session resolves. If `supabase.auth.getSession()` is slow or the listener fires before the initial `getSession` resolves, users get parked on the "Still loading…" notice.
-2. **Empty "header" boxes that just sit there.** Inside `AuraPractice`, `GamificationHeader` and `SmartNotifications` render before `user` is known. Because `AuraPractice` fetches the user with its own `useQuery(['user'])` calling `supabase.auth.getUser()` (separate from `AuthContext`), `user` is `undefined` for the first paint and these two components render empty placeholder bars — exactly the blank rectangles in your screenshots.
-3. **Clicking "Enter World Map" (RPG Mode) does nothing.** The RPG render branch in `AuraPractice` is gated on `isRpgMode && rpgView === 'world_map' && user?.id`. When the local `useQuery(['user'])` hasn't resolved (or returns null in game mode), `user?.id` is falsy, so `setIsRpgMode(true)` flips state but the conditional drops through to the default tabs view — the button "does nothing" from the user's perspective. Same root cause applies to the Castle Mode button when it routes into a `/game/*` protected route that's still stuck on RequireAuth.
+1. **Dashboard says "Welcome back, Adventurer!" instead of the student's name.** `GameDashboard.tsx` reads `profile?.full_name` from `useAuth()`. The AuthContext profile comes from the `get_user_profile` RPC. When that RPC returns nothing or errors for student-ID logins, `profile` stays `null` and the UI silently falls back to "Adventurer". No console error is surfaced.
+
+2. **All six stat cards show `0`.** `useGameReadingSummary` + the `student_reading_stats` query are gated only on `!!user?.id`. If RLS denies the read (e.g. the row is keyed by `student_id` ≠ `auth.uid()` mapping for that account) the query returns `null` and we silently render zeros. Same for `useCampaignProgress` — it falls back to `DEFAULT_PROGRESS` so gold/XP look like a brand-new account every login.
+
+3. **"Loading your stories…" never resolves in the level dialog.** `CustomStoryChooser` calls `listStoriesForRpgLevel(...)`. The function `throw`s on supabase error, but the chooser only chains `.then().finally()` with no `.catch()`. When the query rejects (RLS denial, schema error, or a hanging request before the session token is attached), the promise rejects, `.then` is skipped, `.finally` clears `loading` — but the *unhandled rejection* is what we're seeing. Worse: if the request is genuinely hanging (token race), `.finally` never fires and the spinner is stuck forever. That matches the screenshot exactly.
+
+4. **"Can't click most levels."** Levels 2+ render locked because `campaignProgress.world_progress` is the `DEFAULT_PROGRESS` fallback (see #2). It's not a click bug — it's the same data-load failure.
+
+So root cause is one theme: **data-fetching code in game mode silently swallows failures and has no visibility, and at least one path hangs forever.** On top of that, AuthContext's profile fetch can return `null` for student accounts and we never retry or log it.
 
 ## Fix plan
 
-### 1. Single source of truth for `user` in `AuraPractice`
-- Replace the local `useQuery(['user'])` + `useQuery(['profile', user?.id])` block with values from `useAuth()` (`user`, `profile`, `isLoading`).
-- Delete the duplicate `supabase.auth.getUser()` call so we stop racing the centralized listener.
+### 1. Surface failures instead of hiding them
+- `CustomStoryChooser.tsx` (lines 52-64): add `.catch` that sets `loading=false`, logs the error, and shows an inline "Couldn't load your custom stories — using the built-in one." message. Add an `AbortController` + 8s timeout so a hanging request can't pin the spinner forever.
+- `useCampaignProgress`, `useGameReadingSummary`, the `student_reading_stats` query in `GameDashboard`, and the `profile` query in `AuraPractice`: add `onError` (TanStack v5: `meta: { errorMessage }` + a shared `queryCache.onError`) that `console.error`s with the query key. No UI churn, just observability for the next pass.
 
-### 2. Gate the page on auth resolution
-- While `isLoading` from `AuthContext` is true, render the existing spinner instead of the full layout. This eliminates the flicker where `GamificationHeader` / `SmartNotifications` mount with no user and paint empty bars.
-- After `isLoading` resolves, render normally. `GamificationHeader` and `SmartNotifications` will now always receive a real `studentId`.
+### 2. Fix the dashboard "Adventurer" fallback
+- `GameDashboard.tsx` line 279: prefer `profile?.full_name` from `useAuth()`, then fall back to `user?.user_metadata?.full_name`, then `user?.email?.split('@')[0]`, then `"Adventurer"`. That covers student-ID accounts whose `profiles.full_name` is empty.
+- `AuthContext.fetchProfile`: when the RPC returns `[]` (no profile row), fall back to building a minimal profile from the verification select (which already runs in parallel) so `profile` is never `null` for a signed-in user. Today an empty RPC result silently strands `profile = null`.
 
-### 3. Make the RPG/Castle buttons resilient
-- In the `onStartRpgMode` handler, if `user?.id` isn't ready yet, show a toast ("Loading your profile…") instead of silently flipping state.
-- Loosen the render gate so `isRpgMode && rpgView === 'world_map'` renders the world map shell even if `user?.id` arrives a tick later — pass `user?.id` down and let child components handle the brief loading state. This guarantees the click always produces a visible UI change.
+### 3. Don't silently render zeros when stats fail to load
+- `GameDashboard.tsx` stat grid: thread the query's `error` / `isError` through and, when the query errored, show a small "Couldn't load stats — tap to retry" chip instead of `0`s. Same for `useGameReadingSummary`. This makes the broken-state visible instead of looking like "I logged in but nothing counted."
 
-### 4. Quick audit of `RequireAuth` / `AuthContext`
-- Confirm the `onAuthStateChange` callback doesn't `await` Supabase calls inside the callback (it doesn't today — profile fetch is in a separate effect — keep it that way).
-- Keep the existing "preserve previous profile on transient errors" behavior so tab returns don't blank the UI.
-- No schema changes; this is frontend-only.
+### 4. Verify the actual data path for Student A
+After the fixes above land, the console will tell us which of these is the real culprit:
+- `student_reading_stats` RLS denial → fix the SELECT policy (probably needs `student_id = auth.uid()` or a `has_role` check).
+- `campaign_progress` empty for this `grade_mode` → call `initializeProgress` on first dashboard load when `progress` is `null`, instead of waiting for the user to start a battle.
+- `get_user_profile` RPC returning empty → patched by step 2's fallback.
 
-### Files to edit
-- `src/pages/student/AuraPractice.tsx` — swap local user query for `useAuth()`, add `isLoading` gate, guard RPG button.
-- (Reference only, no changes expected) `src/contexts/AuthContext.tsx`, `src/components/auth/RequireAuth.tsx`.
+I'll wire these up in this order and then re-run the dashboard while signed in as Student A to confirm name, stats, and level unlocks all appear, and the story chooser either lists stories or shows the error inline (never an infinite spinner).
 
-### Out of scope
-- No backend / RLS changes.
-- No design changes to the AURA Reading layout itself.
-- The earlier audio-mix editor work is untouched.
+## Files to edit
+
+- `src/components/customStories/CustomStoryChooser.tsx` — error handling + timeout
+- `src/pages/game/GameDashboard.tsx` — name fallback chain, error chips on stat cards, auto-init campaign progress when null
+- `src/contexts/AuthContext.tsx` — fallback profile when RPC returns empty
+- `src/hooks/useCampaignProgress.ts` — `onError` logging
+- `src/hooks/useGameReadingSummary.ts` — `onError` logging
+- `src/pages/student/AuraPractice.tsx` — `onError` logging on the local `profile` query
+
+No schema/RLS changes in this pass — first I want the errors visible so we can target the right policy. If step 4 turns up an RLS denial I'll follow with a focused migration.

@@ -23,7 +23,7 @@ const GameDashboard = () => {
   const currentGradeMode = getGradeMode(getStoredTheme());
   const { progress } = useCampaignProgress(user?.id, currentGradeMode);
 
-  const { data: readingStats } = useQuery({
+  const { data: readingStats, isError: readingStatsError } = useQuery({
     queryKey: ['game-reading-stats', user?.id, currentGradeMode],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -32,16 +32,29 @@ const GameDashboard = () => {
         .select('*')
         .eq('student_id', user.id);
       if (currentGradeMode) query = query.eq('grade_mode', currentGradeMode);
-      const { data } = await query.maybeSingle();
+      const { data, error } = await query.maybeSingle();
+      if (error) {
+        console.error('[GameDashboard] student_reading_stats error', error);
+        throw error;
+      }
       return data;
     },
     enabled: !!user?.id,
+    retry: 1,
   });
 
   const gold = progress?.total_gold ?? 0;
   const xp = progress?.total_xp_earned ?? 0;
   const isSignedIn = !!session;
-  const { data: readingSummary } = useGameReadingSummary(user?.id);
+  const { data: readingSummary, isError: readingSummaryError } = useGameReadingSummary(user?.id);
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    (user?.user_metadata as any)?.full_name ||
+    (user?.email ? user.email.split('@')[0] : null) ||
+    'Adventurer';
+
+  const statsErrored = readingStatsError || readingSummaryError;
 
   const handleModeSelect = (mode: 'classic' | 'agent' | 'prek') => {
     setStoredTheme(mode);
@@ -276,7 +289,7 @@ const GameDashboard = () => {
               >
                 <h1 className="text-2xl sm:text-3xl font-bold">
                   {isSignedIn ? (
-                    <>Welcome back, <span className="text-yellow-400">{profile?.full_name?.split(' ')[0] || 'Adventurer'}</span>! 🎮</>
+                    <>Welcome back, <span className="text-yellow-400">{displayName.split(' ')[0]}</span>! 🎮</>
                   ) : (
                     <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
                   )}
@@ -284,6 +297,11 @@ const GameDashboard = () => {
                 <p className="text-muted-foreground mt-1">
                   {isSignedIn ? 'Choose your reading adventure' : 'Sign in to track your progress and play'}
                 </p>
+                {isSignedIn && statsErrored && (
+                  <p className="text-xs text-destructive mt-2">
+                    Couldn't load your latest stats. Refresh to retry — your progress is safe.
+                  </p>
+                )}
               </motion.div>
 
               {/* Sign In CTA for unauthenticated users */}
