@@ -461,6 +461,20 @@ const PreKLevelBuilder = () => {
           </CardContent>
         </Card>
 
+
+        {/* ── Audio overlay editor ─────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Audio Overlay Mix</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Add unlimited audio tracks over the videos. Each clip can be a one-shot, loop a scene, play under the whole level, or span across multiple videos (skipping the word-card pauses). You can also mute the original video audio.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AudioMixEditor levelId={level.id} level={level} words={words} />
+          </CardContent>
+        </Card>
+
         <div className="text-sm text-muted-foreground">
           When everything looks right, click <strong>Publish</strong> at the top to make this level visible to students.
         </div>
@@ -468,5 +482,6 @@ const PreKLevelBuilder = () => {
     </div>
   );
 };
+
 
 export default PreKLevelBuilder;
