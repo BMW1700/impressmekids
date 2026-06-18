@@ -486,13 +486,22 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           {mix.tracks.map((t, i) => {
             const isSolo = soloTrackIndex === t.track_index;
             const effectivelyMuted = t.muted || (soloTrackIndex !== null && !isSolo);
+            const dragging = mixerDrag?.id === t.id;
             return (
-              <div key={t.id} className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""}`}>
+              <div
+                key={t.id}
+                className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""} ${dragging ? "ring-2 ring-primary shadow-lg" : ""}`}
+                style={dragging ? { transform: `translateY(${mixerDrag!.dy}px)`, zIndex: 30, position: "relative" } : undefined}
+              >
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => moveTrack(t, -1)} disabled={i === 0}><ArrowUp className="h-3 w-3"/></Button>
-                    <Button size="icon" variant="ghost" onClick={() => moveTrack(t, 1)} disabled={i === mix.tracks.length - 1}><ArrowDown className="h-3 w-3"/></Button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label="Drag to reorder"
+                    onPointerDown={(e) => beginMixerDrag(e, t, i)}
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -ml-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <GripVertical className="h-4 w-4"/>
+                  </button>
                   <Input
                     className="w-44"
                     defaultValue={t.name}
