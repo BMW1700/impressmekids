@@ -72,7 +72,10 @@ export const useCampaignProgress = (studentId?: string, gradeMode: GradeMode = '
         .eq("grade_mode", gradeMode)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useCampaignProgress] load failed", { studentId, gradeMode, error });
+        throw error;
+      }
       return (data as CampaignProgress) || DEFAULT_PROGRESS;
     },
     enabled: !!studentId,
