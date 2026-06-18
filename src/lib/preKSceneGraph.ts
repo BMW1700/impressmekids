@@ -19,8 +19,15 @@ export interface Scene {
   wordRowId?: string;
   /** Display text — e.g. "Opening", "Word 2 — first clip", "Word 2 — card (JUMP)". */
   label: string;
-  /** Fixed for videos, nominal for cards. */
+  /** Fixed for videos, nominal for cards. Used for legacy wall-clock previews. */
   nominalDurationSeconds: number;
+  /**
+   * Effective duration the editor timeline uses for layout & playhead math.
+   * Word-card scenes are zero-width "skip notches": audio teleports from the
+   * end of the previous video directly to the start of the next video, never
+   * sounding during the open-ended "child speaks" pause.
+   */
+  timelineDurationSeconds: number;
 }
 
 export interface VideoTimelineEntry {
