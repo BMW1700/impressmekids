@@ -199,11 +199,38 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     }
   };
 
-  // ── Mixer row drag (reorder by grip handle) ───────────────────────────────
-  const MIXER_ROW_PX = 64; // border+padding row stride
+  // ── Mixer row drag (reorder by grip handle, measurement-based) ────────────
+  // Each rendered row registers its DOM node so drop targeting uses real
+  // bounding-rect midpoints instead of a guessed row height. Handles wrapped
+  // rows, padding, and dynamic content correctly.
+  const mixerRowRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const registerMixerRow = (id: string) => (el: HTMLDivElement | null) => {
+    if (el) mixerRowRefs.current.set(id, el);
+    else mixerRowRefs.current.delete(id);
+  };
   const [mixerDrag, setMixerDrag] = useState<{ id: string; fromIdx: number; dy: number } | null>(null);
   const mixerDragRef = useRef<typeof mixerDrag>(null);
   mixerDragRef.current = mixerDrag;
+
+  // Given a pointer Y in client coords, return the destination index in
+  // mix.tracks (0..length-1) based on the midpoints of the live row rects.
+  const resolveDropIndex = (clientY: number): number => {
+    const orderedIds = mix.tracks.map((t) => t.id);
+    const rects = orderedIds
+      .map((id) => {
+        const el = mixerRowRefs.current.get(id);
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { id, mid: r.top + r.height / 2 };
+      })
+      .filter((x): x is { id: string; mid: number } => !!x);
+    if (rects.length === 0) return 0;
+    for (let i = 0; i < rects.length; i++) {
+      if (clientY < rects[i].mid) return i;
+    }
+    return rects.length - 1;
+  };
+
   const beginMixerDrag = (e: RPointerEvent, t: PreKAudioTrack, fromIdx: number) => {
     e.preventDefault();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
@@ -214,14 +241,15 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       if (!d) return;
       setMixerDrag({ ...d, dy: ev.clientY - startY });
     };
-    const up = async () => {
+    const up = async (ev: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);
       const d = mixerDragRef.current;
       setMixerDrag(null);
       if (!d) return;
-      const delta = Math.round(d.dy / MIXER_ROW_PX);
+      const targetIdx = resolveDropIndex(ev.clientY);
+      const delta = targetIdx - d.fromIdx;
       if (delta !== 0) await moveTrackBy(t, delta);
     };
     window.addEventListener("pointermove", move);
@@ -628,6 +656,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             return (
               <div
                 key={t.id}
+                ref={registerMixerRow(t.id)}
                 className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""} ${dragging ? "ring-2 ring-primary shadow-lg" : ""}`}
                 style={dragging ? { transform: `translateY(${mixerDrag!.dy}px)`, zIndex: 30, position: "relative" } : undefined}
               >
