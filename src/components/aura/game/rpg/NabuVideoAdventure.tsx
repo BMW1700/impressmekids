@@ -444,7 +444,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     const v = videoRefs.current[activeSlotRef.current];
     if (v) {
       try {
-        v.muted = false;
+        // Respect the per-level mute_source_video_audio setting; only unmute
+        // when the level keeps its baked-in narration.
+        v.muted = muteSourceVideo;
         v.currentTime = 0;
       } catch { /* ignore */ }
       playSlot(activeSlotRef.current);
