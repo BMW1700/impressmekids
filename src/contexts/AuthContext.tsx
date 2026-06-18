@@ -54,6 +54,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!data || data.length === 0) {
+        // RPC returned no row (e.g. student-ID login where get_user_profile
+        // doesn't surface a row). Fall back to a minimal profile built from
+        // the verification select so the UI never strands `profile = null`
+        // for a signed-in user (which made the dashboard say "Adventurer").
+        if (verificationData) {
+          return {
+            id: userId,
+            email: verificationData.email ?? null,
+            full_name: null,
+            role: null,
+            is_verified: verificationData.is_verified ?? null,
+            school_id: verificationData.school_id ?? null,
+            district_id: verificationData.district_id ?? null,
+            student_id: verificationData.student_id ?? null,
+          };
+        }
         return null;
       }
 
