@@ -635,6 +635,24 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         </Card>
       )}
 
+      {/* Video preview synced to the timeline playhead */}
+      <Card>
+        <CardHeader className="py-3">
+          <CardTitle className="text-base flex items-center gap-2">Video preview <span className="text-xs font-normal text-muted-foreground">(scrub the timeline header or drag a clip to align audio with video)</span></CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TimelinePreviewPlayer
+            graph={sceneGraph}
+            videoUrls={videoUrlsState.videoUrls}
+            posterUrls={videoUrlsState.posterUrls}
+            playheadSec={effectivePlayhead}
+            playing={previewPlaying && dragPreviewSec === null}
+            muteSourceVideo={mix.settings.mute_source_video_audio}
+            wordsByIndex={wordsByIndex}
+          />
+        </CardContent>
+      </Card>
+
       {/* Timeline canvas */}
       <Card>
         <CardHeader className="py-3">
@@ -647,14 +665,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             clips={mix.clips}
             selectedClipId={selectedClipId}
             wallClock={wallClock}
-            playheadSec={previewPlaying || previewTime > 0 ? previewTime : null}
+            playheadSec={effectivePlayhead > 0 || previewPlaying ? effectivePlayhead : null}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
             onDropOnNewTrack={onDropOnNewTrack}
+            onScrub={(sec) => { setPreviewPlaying(false); setPreviewTime(sec); }}
+            onDragPreview={setDragPreviewSec}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.
+            Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Click or drag the scene header to scrub the video. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.
           </p>
         </CardContent>
       </Card>
