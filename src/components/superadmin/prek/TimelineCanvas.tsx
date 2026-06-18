@@ -298,18 +298,11 @@ export function TimelineCanvas({
               )}
               {!isNew && clips
                 .filter((c) => c.track_index === t!.track_index)
-                .map((c) => {
+                .flatMap((c) => {
                   const res = resolveClip(c, graph);
-                  const startPx = secToPx(res.startSec);
-                  const endPx = secToPx(res.endSec);
                   const dragging = drag?.clipId === c.id;
                   const dx = dragging ? drag!.dx : 0;
                   const dy = dragging ? drag!.dy : 0;
-                  const leftPx = dragging && drag!.mode === "body" ? startPx + dx : startPx;
-                  const rightPx = dragging && drag!.mode === "end"
-                    ? endPx + dx
-                    : (dragging && drag!.mode === "body" ? endPx + dx : endPx);
-                  const widthPx = Math.max(24, rightPx - leftPx);
                   const selected = selectedClipId === c.id;
                   const color =
                     c.duration_mode === "fill-level" ? "bg-blue-500/30 border-blue-500/70" :
@@ -318,54 +311,104 @@ export function TimelineCanvas({
                     "bg-primary/30 border-primary/70";
                   const audioUrl = signedUrls?.[c.storage_path] ?? null;
                   const isPreviewing = previewingClipId === c.id;
-                  return (
-                    <div
-                      key={c.id}
-                      onPointerDown={(e) => beginDrag(e, c, "body")}
-                      className={`absolute top-5 bottom-2 rounded-md border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing shadow-sm`}
-                      style={{
-                        left: leftPx,
-                        width: widthPx,
-                        transform: dragging ? `translateY(${dy}px)` : undefined,
-                        opacity: dragging ? 0.85 : 1,
-                        zIndex: dragging ? 50 : 2,
-                      }}
-                    >
-                      {/* Waveform is the primary visual; labels live in a separate footer. */}
-                      <div className="absolute left-6 right-1 top-1 bottom-5 rounded-sm bg-background/35 border border-background/30 flex items-center overflow-hidden">
-                        <ClipWaveform url={audioUrl} widthPx={Math.max(1, widthPx - 34)} heightPx={36} colorClass="text-foreground/85" />
-                      </div>
-                      {/* ▶ play button (isolated preview) */}
-                      <button
-                        type="button"
-                        onPointerDown={(e) => { e.stopPropagation(); }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isPreviewing) stopClipPreview();
-                          else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                  const audioDurTL = Math.max(0.0001, res.endSec - res.startSec);
+
+                  // Build visual segments: while dragging, a single block
+                  // tracks the pointer; otherwise the clip is split around any
+                  // zero-width card notches so the audio teleports across.
+                  type Seg = { leftPx: number; widthPx: number; peakStart: number; peakEnd: number };
+                  const segments: Seg[] = [];
+                  if (dragging) {
+                    const startPx = secToPx(res.startSec);
+                    const endPx = secToPx(res.endSec);
+                    const lp = drag!.mode === "body" ? startPx + dx : startPx;
+                    const rp = drag!.mode === "end" ? endPx + dx : drag!.mode === "body" ? endPx + dx : endPx;
+                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart: 0, peakEnd: 1 });
+                  } else {
+                    for (const it of segs.items) {
+                      if (it.isCard) continue;
+                      const segStart = Math.max(it.realStart, res.startSec);
+                      const segEnd = Math.min(it.realEnd, res.endSec);
+                      if (segEnd <= segStart) continue;
+                      const localStart = segStart - it.realStart;
+                      const localEnd = segEnd - it.realStart;
+                      const leftPx = it.left + localStart * it.pxPerSec;
+                      const widthPx = Math.max(8, (localEnd - localStart) * it.pxPerSec);
+                      const peakStart = (segStart - res.startSec) / audioDurTL;
+                      const peakEnd = (segEnd - res.startSec) / audioDurTL;
+                      segments.push({ leftPx, widthPx, peakStart, peakEnd });
+                    }
+                    if (segments.length === 0) {
+                      segments.push({ leftPx: secToPx(res.startSec), widthPx: 24, peakStart: 0, peakEnd: 1 });
+                    }
+                  }
+
+                  return segments.map((seg, segIdx) => {
+                    const isFirst = segIdx === 0;
+                    const isLast = segIdx === segments.length - 1;
+                    const waveLeft = isFirst ? 24 : 4;
+                    const waveRight = 4;
+                    return (
+                      <div
+                        key={`${c.id}-${segIdx}`}
+                        onPointerDown={(e) => beginDrag(e, c, "body")}
+                        className={`absolute top-5 bottom-2 rounded-md border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing shadow-sm`}
+                        style={{
+                          left: seg.leftPx,
+                          width: seg.widthPx,
+                          transform: dragging ? `translateY(${dy}px)` : undefined,
+                          opacity: dragging ? 0.85 : 1,
+                          zIndex: dragging ? 50 : 2,
                         }}
-                        title={isPreviewing ? "Stop preview" : "Preview this clip"}
-                        className="absolute left-1 top-1 z-[3] h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
                       >
-                        {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                      </button>
-                      <div className="absolute left-0 right-0 bottom-0 h-4 px-1.5 bg-background/80 border-t border-background/40 flex items-center gap-1 pointer-events-none">
-                        <span className="truncate text-[9px] leading-none opacity-90">{c.display_name}</span>
-                        {c.playback_rate && c.playback_rate !== 1 && (
-                          <span className="ml-auto shrink-0 rounded-sm bg-background px-1 text-[8px] leading-3 tabular-nums border border-border/50">
-                            {c.playback_rate.toFixed(2)}×
-                          </span>
+                        <div
+                          className="absolute top-1 rounded-sm bg-background/35 border border-background/30 flex items-center overflow-hidden"
+                          style={{ left: waveLeft, right: waveRight, bottom: isLast ? 20 : 4 }}
+                        >
+                          <ClipWaveform
+                            url={audioUrl}
+                            widthPx={Math.max(1, seg.widthPx - waveLeft - waveRight)}
+                            heightPx={36}
+                            colorClass="text-foreground/85"
+                            peakStart={seg.peakStart}
+                            peakEnd={seg.peakEnd}
+                          />
+                        </div>
+                        {isFirst && (
+                          <button
+                            type="button"
+                            onPointerDown={(e) => { e.stopPropagation(); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isPreviewing) stopClipPreview();
+                              else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                            }}
+                            title={isPreviewing ? "Stop preview" : "Preview this clip"}
+                            className="absolute left-1 top-1 z-[3] h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
+                          >
+                            {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                          </button>
+                        )}
+                        {isLast && (
+                          <div className="absolute left-0 right-0 bottom-0 h-4 px-1.5 bg-background/80 border-t border-background/40 flex items-center gap-1 pointer-events-none">
+                            <span className="truncate text-[9px] leading-none opacity-90">{c.display_name}</span>
+                            {c.playback_rate && c.playback_rate !== 1 && (
+                              <span className="ml-auto shrink-0 rounded-sm bg-background px-1 text-[8px] leading-3 tabular-nums border border-border/50">
+                                {c.playback_rate.toFixed(2)}×
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {isLast && c.duration_mode === "span-videos" && (
+                          <div
+                            onPointerDown={(e) => beginDrag(e, c, "end")}
+                            className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/70 cursor-ew-resize z-[3]"
+                            title="Drag to set end anchor"
+                          />
                         )}
                       </div>
-                      {c.duration_mode === "span-videos" && (
-                        <div
-                          onPointerDown={(e) => beginDrag(e, c, "end")}
-                          className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/70 cursor-ew-resize z-[3]"
-                          title="Drag to set end anchor"
-                        />
-                      )}
-                    </div>
-                  );
+                    );
+                  });
                 })}
             </div>
           );
