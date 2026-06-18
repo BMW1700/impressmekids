@@ -18,19 +18,31 @@ async function decodePeaks(url: string): Promise<Float32Array | null> {
   const existing = inflight.get(url);
   if (existing) return existing;
   const job = (async () => {
+    const t0 = performance.now();
     try {
       const res = await fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok) {
+        console.warn("[ClipWaveform] fetch failed", { url, status: res.status });
+        return null;
+      }
       const buf = await res.arrayBuffer();
       const AC = window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const tmp = new AC();
-      const audioBuf = await tmp.decodeAudioData(buf.slice(0));
+      let audioBuf: AudioBuffer;
+      try {
+        audioBuf = await tmp.decodeAudioData(buf.slice(0));
+      } catch (decodeErr) {
+        console.warn("[ClipWaveform] decodeAudioData failed — source likely has no audio track or uses an unsupported codec", { url, bytes: buf.byteLength, err: String(decodeErr) });
+        try { void tmp.close(); } catch { /* noop */ }
+        return null;
+      }
       try { void tmp.close(); } catch { /* noop */ }
       const ch = audioBuf.getChannelData(0);
       const bins = Math.min(TARGET_PEAKS, ch.length);
       const step = Math.max(1, Math.floor(ch.length / bins));
       const peaks = new Float32Array(bins);
+      let globalMax = 0;
       for (let i = 0; i < bins; i++) {
         let max = 0;
         const start = i * step;
@@ -40,10 +52,17 @@ async function decodePeaks(url: string): Promise<Float32Array | null> {
           if (v > max) max = v;
         }
         peaks[i] = max;
+        if (max > globalMax) globalMax = max;
+      }
+      if (globalMax === 0) {
+        console.warn("[ClipWaveform] decoded but track is digital silence", { url, durationSec: audioBuf.duration, channels: audioBuf.numberOfChannels });
+      } else {
+        console.debug("[ClipWaveform] decoded ok", { url, ms: Math.round(performance.now() - t0), durationSec: audioBuf.duration, peak: globalMax.toFixed(3) });
       }
       peakCache.set(url, peaks);
       return peaks;
-    } catch {
+    } catch (err) {
+      console.warn("[ClipWaveform] unexpected error", { url, err: String(err) });
       return null;
     } finally {
       inflight.delete(url);
