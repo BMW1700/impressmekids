@@ -59,16 +59,16 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
     return { startSec, endSec, anchorScene: anchor.scene, endAnchorScene: endAnchor.scene };
   }
 
-  // fixed — clamp the audible end at the next card-scene boundary so a clip
-  // anchored in one video can never bleed into a later word's video.
+  // fixed — endSec extends past any card boundary naturally because cards are
+  // zero-width on the editor timeline. The canvas renders the visual block as
+  // multiple segments split around the notch so the waveform appears to
+  // teleport across.
   const rawDur = clip.duration_seconds ?? 1;
   const trimEndCut = clip.trim_end_seconds != null ? Math.max(0, rawDur - clip.trim_end_seconds) : 0;
   const rate = Math.max(0.05, clip.playback_rate || 1);
   const effectiveAudioSeconds = Math.max(0.1, rawDur - clip.trim_start_seconds - trimEndCut);
   const effective = effectiveAudioSeconds / rate;
-  const nextBoundary = spans.find((sp) => sp.scene.kind === "word-card" && sp.start > startSec)?.start ?? totalDur;
-  const clampedEnd = Math.min(startSec + effective, nextBoundary);
-  return { startSec, endSec: Math.max(startSec + 0.05, clampedEnd), anchorScene: anchor.scene };
+  return { startSec, endSec: Math.min(totalDur, startSec + effective), anchorScene: anchor.scene };
 }
 
 export interface SceneHit { scene: Scene; sceneStart: number; sceneEnd: number }
