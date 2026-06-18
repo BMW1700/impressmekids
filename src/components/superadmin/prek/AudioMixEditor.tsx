@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical, Play, Square, RotateCcw,
+  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical, Play, Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
