@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  ArrowUp, ArrowDown, Undo2, AlertTriangle, Clock,
+  ArrowUp, ArrowDown, Undo2, AlertTriangle, Clock, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
