@@ -23,7 +23,7 @@ const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is o
 const TRACK_HEIGHT = 78;
 const TRACK_GAP = 6;
 const HEADER_HEIGHT = 32;
-const VIDEO_LANE_HEIGHT = 56; // read-only source-video waveform lane
+const VIDEO_LANE_HEIGHT = 84; // read-only source-video waveform lane
 
 interface Props {
   graph: SceneGraph;
