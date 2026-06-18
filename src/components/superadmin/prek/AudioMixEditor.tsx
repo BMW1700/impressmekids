@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical, Play, Square, RotateCcw,
+  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical, Play, Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -713,14 +713,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
                     />
                     <span className="text-xs text-muted-foreground w-10">{Math.round(t.volume * 100)}%</span>
                   </div>
-                  <TrackSpeedControl
-                    track={t}
-                    clips={mix.clips.filter((c) => c.track_index === t.track_index)}
-                    onChange={(rate) => {
-                      const targets = mix.clips.filter((c) => c.track_index === t.track_index);
-                      targets.forEach((c) => { void updateClip(c, { playback_rate: rate }, true); });
-                    }}
-                  />
                   <div className="flex-1" />
                   <Button size="sm" variant="outline" onClick={() => pickClipFor(t)} disabled={busy}>
                     {busy ? <Loader2 className="h-3 w-3 mr-1 animate-spin"/> : <Upload className="h-3 w-3 mr-1"/>} Add audio
@@ -944,50 +936,3 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, onUpdat
   );
 };
 
-
-// ── Track-level speed slider ──────────────────────────────────────────────
-// Slider 25%–200% with a vertical tick at the 100% center. Because playback
-// rate is stored per-clip, changing the track speed writes the same rate to
-// every clip on that track. Reset snaps back to 1.0×.
-interface TrackSpeedControlProps {
-  track: PreKAudioTrack;
-  clips: PreKAudioClip[];
-  onChange: (rate: number) => void;
-}
-const SPEED_MIN = 25;
-const SPEED_MAX = 200;
-const TrackSpeedControl = ({ clips, onChange }: TrackSpeedControlProps) => {
-  const currentRate = clips.length > 0 ? (clips[0].playback_rate || 1) : 1;
-  const pct = Math.round(Math.max(SPEED_MIN, Math.min(SPEED_MAX, currentRate * 100)));
-  const disabled = clips.length === 0;
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Slow</span>
-      <div className="relative w-36">
-        <Slider
-          min={SPEED_MIN}
-          max={SPEED_MAX}
-          step={5}
-          value={[pct]}
-          onValueChange={(v) => onChange(v[0] / 100)}
-          disabled={disabled}
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-foreground/70"
-        />
-      </div>
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Fast</span>
-      <span className="text-xs text-muted-foreground w-12 tabular-nums">{(pct / 100).toFixed(2)}×</span>
-      <Button
-        size="icon"
-        variant="ghost"
-        title="Reset to original speed"
-        onClick={() => onChange(1)}
-        disabled={disabled || pct === 100}
-      >
-        <RotateCcw className="h-3.5 w-3.5" />
-      </Button>
-    </div>
-  );
-};
