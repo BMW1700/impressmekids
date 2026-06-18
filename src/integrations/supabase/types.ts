@@ -4928,6 +4928,7 @@ export type Database = {
           anchor_offset_seconds: number
           anchor_scene_key: string
           created_at: string
+          deleted_at: string | null
           display_name: string
           duration_mode: string
           duration_seconds: number | null
@@ -4953,6 +4954,7 @@ export type Database = {
           anchor_offset_seconds?: number
           anchor_scene_key: string
           created_at?: string
+          deleted_at?: string | null
           display_name?: string
           duration_mode?: string
           duration_seconds?: number | null
@@ -4978,6 +4980,7 @@ export type Database = {
           anchor_offset_seconds?: number
           anchor_scene_key?: string
           created_at?: string
+          deleted_at?: string | null
           display_name?: string
           duration_mode?: string
           duration_seconds?: number | null
@@ -5011,6 +5014,7 @@ export type Database = {
       prek_level_audio_tracks: {
         Row: {
           created_at: string
+          deleted_at: string | null
           id: string
           level_id: string
           muted: boolean
@@ -5021,6 +5025,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           level_id: string
           muted?: boolean
@@ -5031,6 +5036,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           id?: string
           level_id?: string
           muted?: boolean
