@@ -292,19 +292,19 @@ export function TimelineCanvas({
             return (
               <div
                 key={`video-${scene.key}`}
-                className="absolute top-5 bottom-2 rounded-md border-2 bg-slate-500/20 border-slate-500/60 overflow-hidden pointer-events-none shadow-sm"
+                className="absolute top-5 bottom-2 rounded-md border-2 bg-slate-900/10 dark:bg-slate-100/10 border-slate-500/70 overflow-hidden pointer-events-none shadow-sm"
                 style={{ left: blockLeft, width: blockWidth }}
                 title={scene.label}
               >
                 <div
-                  className="absolute top-1 rounded-sm bg-background/35 border border-background/30 flex items-center overflow-hidden"
+                  className="absolute top-1 rounded-sm bg-background/60 border border-background/40 flex items-center overflow-hidden"
                   style={{ left: waveLeft, right: waveRight, bottom: 14 }}
                 >
                   <ClipWaveform
                     url={url}
                     widthPx={Math.max(1, blockWidth - waveLeft - waveRight)}
-                    heightPx={22}
-                    colorClass="text-slate-700 dark:text-slate-200"
+                    heightPx={48}
+                    colorClass="text-slate-900 dark:text-slate-50"
                   />
                 </div>
                 <div className="absolute left-0 right-0 bottom-0 h-3.5 px-1.5 bg-background/80 border-t border-background/40 flex items-center pointer-events-none">
