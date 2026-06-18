@@ -89,9 +89,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     skipUndo = false,
   ) => {
     if (!skipUndo) {
-      const before: UndoEntry["before"] & Record<string, unknown> = {};
-      for (const k of Object.keys(patch) as (keyof typeof patch)[]) {
-        (before as Record<string, unknown>)[k] = mix.settings[k as keyof typeof mix.settings];
+      const before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> = {};
+      for (const k of Object.keys(patch) as Array<keyof typeof patch>) {
+        (before as Record<string, unknown>)[k] = mix.settings[k];
       }
       pushUndo({ kind: "level", before });
     }
