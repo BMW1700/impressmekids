@@ -194,7 +194,36 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     }
   };
 
-  // ── Clip CRUD ─────────────────────────────────────────────────────────────
+  // ── Mixer row drag (reorder by grip handle) ───────────────────────────────
+  const MIXER_ROW_PX = 64; // border+padding row stride
+  const [mixerDrag, setMixerDrag] = useState<{ id: string; fromIdx: number; dy: number } | null>(null);
+  const mixerDragRef = useRef<typeof mixerDrag>(null);
+  mixerDragRef.current = mixerDrag;
+  const beginMixerDrag = (e: RPointerEvent, t: PreKAudioTrack, fromIdx: number) => {
+    e.preventDefault();
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+    const startY = e.clientY;
+    setMixerDrag({ id: t.id, fromIdx, dy: 0 });
+    const move = (ev: PointerEvent) => {
+      const d = mixerDragRef.current;
+      if (!d) return;
+      setMixerDrag({ ...d, dy: ev.clientY - startY });
+    };
+    const up = async () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const d = mixerDragRef.current;
+      setMixerDrag(null);
+      if (!d) return;
+      const delta = Math.round(d.dy / MIXER_ROW_PX);
+      if (delta !== 0) await moveTrackBy(t, delta);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingTrackRef = useRef<PreKAudioTrack | null>(null);
   const pickClipFor = (t: PreKAudioTrack) => {
