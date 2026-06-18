@@ -19,8 +19,11 @@ function buildSpans(graph: SceneGraph): SceneSpan[] {
   const out: SceneSpan[] = [];
   let cur = 0;
   for (const s of graph.scenes) {
-    out.push({ scene: s, start: cur, end: cur + s.nominalDurationSeconds });
-    cur += s.nominalDurationSeconds;
+    // Word-card scenes are zero-width on the editor timeline so audio teleports
+    // straight from end-of-first-video to start-of-second-video.
+    const dur = s.timelineDurationSeconds;
+    out.push({ scene: s, start: cur, end: cur + dur });
+    cur += dur;
   }
   return out;
 }
