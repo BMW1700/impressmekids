@@ -48,6 +48,10 @@ export function useGameReadingSummary(studentId?: string) {
           .maybeSingle(),
       ]);
 
+      if (recentRes.error) console.error("[useGameReadingSummary] reading_sessions error", recentRes.error);
+      if (countRes.error) console.error("[useGameReadingSummary] reading_sessions count error", countRes.error);
+      if (statsRes.error) console.error("[useGameReadingSummary] student_reading_stats error", statsRes.error);
+
       const list = recentRes.data ?? [];
       const n = list.length;
       const totalSessions = countRes.count ?? 0;
