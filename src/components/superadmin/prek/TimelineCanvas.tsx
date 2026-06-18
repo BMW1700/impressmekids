@@ -110,13 +110,29 @@ export function TimelineCanvas({
 
   const onPointerMove = (e: RPointerEvent) => {
     const d = dragRef.current; if (!d) return;
-    setDrag({ ...d, dx: e.clientX - d.startX, dy: e.clientY - d.startY });
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    setDrag({ ...d, dx, dy });
+    // Live scrub preview to the proposed drop position
+    if (onDragPreview) {
+      const clip = clips.find((c) => c.id === d.clipId);
+      if (clip) {
+        const res = resolveClip(clip, graph);
+        if (d.mode === "end") {
+          const endPx = secToPx(res.endSec);
+          onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(endPx + dx))));
+        } else {
+          const startPx = secToPx(res.startSec);
+          onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(startPx + dx))));
+        }
+      }
+    }
   };
 
   const onPointerUp = () => {
     const d = dragRef.current; if (!d) { return; }
     const clip = clips.find((c) => c.id === d.clipId);
-    if (!clip) { setDrag(null); return; }
+    if (!clip) { setDrag(null); onDragPreview?.(null); return; }
     const res = resolveClip(clip, graph);
     const startPx = secToPx(res.startSec);
     const endPx = secToPx(res.endSec);
@@ -136,7 +152,29 @@ export function TimelineCanvas({
       }
     }
     setDrag(null);
+    onDragPreview?.(null);
   };
+
+  // Scrub by clicking/dragging the scene header (or empty canvas area)
+  const scrubFromEvent = (e: RPointerEvent) => {
+    if (!onScrub) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left + (e.currentTarget as HTMLElement).scrollLeft;
+    onScrub(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(x))));
+  };
+  const scrubbingRef = useRef(false);
+  const onHeaderPointerDown = (e: RPointerEvent) => {
+    if (!onScrub) return;
+    e.preventDefault();
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+    scrubbingRef.current = true;
+    scrubFromEvent(e);
+  };
+  const onHeaderPointerMove = (e: RPointerEvent) => {
+    if (!scrubbingRef.current) return;
+    scrubFromEvent(e);
+  };
+  const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
   const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const canvasHeight = HEADER_HEIGHT + 8 + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
