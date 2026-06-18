@@ -64,9 +64,13 @@ interface Props {
    *  sub-segments — each segment renders just its own slice of the audio. */
   peakStart?: number;
   peakEnd?: number;
+  /** Multiply peak values for visibility on quiet sources (e.g. video audio). */
+  gain?: number;
+  /** Normalize so the loudest visible bar fills the lane. */
+  normalize?: boolean;
 }
 
-export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foreground/70", peakStart = 0, peakEnd = 1 }: Props) {
+export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foreground/70", peakStart = 0, peakEnd = 1, gain = 1, normalize = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [peaks, setPeaks] = useState<Float32Array | null>(url ? peakCache.get(url) ?? null : null);
 
