@@ -91,7 +91,10 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
       setTracks([]); setClips([]); setSignedUrls({}); setLoading(false);
       return;
     }
-    setLoading(true);
+    // NOTE: do NOT setLoading(true) on re-fetches. Flipping `loading` true on
+    // every edit causes the editor to unmount its timeline / waveforms /
+    // preview video and visibly "reset". Only the initial mount keeps the
+    // `loading: true` default; subsequent reloads refresh data in place.
     const [{ data: ts }, { data: cs }, { data: lv }] = await Promise.all([
       supabase.from("prek_level_audio_tracks").select("*").eq("level_id", levelId).is("deleted_at", null).order("track_index"),
       supabase.from("prek_level_audio_clips").select("*").eq("level_id", levelId).is("deleted_at", null).order("sort_order"),
@@ -105,8 +108,20 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
       audio_master_volume: Number((lv as { audio_master_volume?: number }).audio_master_volume ?? 1),
       mute_source_video_audio: Boolean((lv as { mute_source_video_audio?: boolean }).mute_source_video_audio ?? false),
     });
-    const urls = await signMany(clipsRows.map((c) => c.storage_path));
-    setSignedUrls(urls);
+    // Preserve existing signed URLs for paths we've already signed. Re-signing
+    // creates brand-new URL strings, which forces every <ClipWaveform> to
+    // re-fetch + re-decode and the preview <video> to reload — making the
+    // editor flash/reset on every edit. Only sign the genuinely-new paths.
+    setSignedUrls((prev) => {
+      const needed = clipsRows.map((c) => c.storage_path);
+      const missing = needed.filter((p) => !prev[p]);
+      if (missing.length === 0) return prev;
+      void signMany(missing).then((fresh) => {
+        if (Object.keys(fresh).length === 0) return;
+        setSignedUrls((cur) => ({ ...cur, ...fresh }));
+      });
+      return prev;
+    });
     setLoading(false);
   }, [levelId]);
 
