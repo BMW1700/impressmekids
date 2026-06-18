@@ -34,6 +34,10 @@ interface Props {
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
   onDropOnNewTrack: (clip: PreKAudioClip, newStartSec: number) => void;
+  /** Click/drag on the timeline header to move the playhead. */
+  onScrub?: (sec: number) => void;
+  /** Fired during clip drags so the preview can scrub to the drop target. */
+  onDragPreview?: (sec: number | null) => void;
 }
 
 interface DragState {
