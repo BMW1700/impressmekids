@@ -47,7 +47,7 @@ interface DragState {
 }
 
 export function TimelineCanvas({
-  graph, tracks, clips, selectedClipId, wallClock,
+  graph, tracks, clips, selectedClipId, wallClock, playheadSec,
   onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
