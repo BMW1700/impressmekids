@@ -195,14 +195,14 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             <Slider
               className="w-40"
               min={0} max={200} step={5}
-              value={[Math.round((level.audio_master_volume ?? 1) * 100)]}
+              value={[Math.round(mix.settings.audio_master_volume * 100)]}
               onValueChange={(v) => updateLevelSetting({ audio_master_volume: v[0] / 100 })}
             />
-            <span className="text-xs text-muted-foreground w-10">{Math.round((level.audio_master_volume ?? 1) * 100)}%</span>
+            <span className="text-xs text-muted-foreground w-10">{Math.round(mix.settings.audio_master_volume * 100)}%</span>
           </div>
           <div className="flex items-center gap-3">
             <Switch
-              checked={!!level.mute_source_video_audio}
+              checked={mix.settings.mute_source_video_audio}
               onCheckedChange={(v) => updateLevelSetting({ mute_source_video_audio: v })}
             />
             <Label className="text-sm">Mute original video audio</Label>
