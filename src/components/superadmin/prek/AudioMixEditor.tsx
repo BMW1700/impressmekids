@@ -28,7 +28,7 @@ import {
   type PreKAudioDurationMode,
   type PreKAudioTrack,
 } from "@/hooks/usePreKAudioMix";
-import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
+import { usePreKAudioTimelineTransport } from "@/hooks/usePreKAudioTimelineTransport";
 import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
@@ -87,7 +87,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const [wallClock, setWallClock] = useState(true);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
-  const [previewEvent, setPreviewEvent] = useState<PreKAudioMixerEvent | null>(null);
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
@@ -205,14 +204,13 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   };
   const moveTrackBy = async (t: PreKAudioTrack, delta: number) => {
     const step = delta > 0 ? 1 : -1;
-    let current = t;
     for (let i = 0; i < Math.abs(delta); i++) {
-      const idx = mix.tracks.findIndex((x) => x.id === current.id);
+      const idx = mix.tracks.findIndex((x) => x.id === t.id);
       const ni = idx + step;
       if (ni < 0 || ni >= mix.tracks.length) break;
-      await moveTrack(current, step);
+      await moveTrack(t, step);
       // mix.tracks won't reflect the swap synchronously, but moveTrack only relies on `t.track_index`
-      // so we keep the same `current` reference (its identity stays valid).
+      // so we keep the same track reference (its identity stays valid).
     }
   };
 
@@ -460,70 +458,49 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const selectedTrack = selectedClip ? mix.tracks.find((t) => t.track_index === selectedClip.track_index) ?? null : null;
 
   // ── Preview transport ─────────────────────────────────────────────────────
-  // Mount the runtime mixer for editor preview. Solo + Mute-all are session-only.
-  const mixer = usePreKAudioMixerRuntime({
+  // Editor preview is playhead-owned, not scene-event-owned: every tick it
+  // decides exactly which clips are allowed to play and hard-stops the rest.
+  const mixer = usePreKAudioTimelineTransport({
+    graph: sceneGraph,
     tracks: mix.tracks,
     clips: mix.clips,
     signedUrls: mix.signedUrls,
     masterVolume: mix.settings.audio_master_volume,
     enabled: previewPlaying,
-    event: previewEvent,
+    playheadSec: previewTime,
     soloTrackIndex,
     muteAll,
   });
 
   // rAF-driven cursor that walks through scenes by wall-clock time and emits
   // start/end events to the runtime mixer when the cursor crosses scene edges.
-  const lastEdgeRef = useRef<{ idx: number; edge: "start" | "end" } | null>(null);
   const previewStartedAtRef = useRef<number>(0);
   const previewBaseTimeRef = useRef<number>(0);
+  const previewTimeRef = useRef<number>(0);
+  useEffect(() => { previewTimeRef.current = previewTime; }, [previewTime]);
   useEffect(() => {
     if (!previewPlaying) return;
     previewStartedAtRef.current = performance.now();
-    previewBaseTimeRef.current = previewTime;
+    previewBaseTimeRef.current = previewTimeRef.current;
     let raf = 0;
     const tick = () => {
       const elapsed = (performance.now() - previewStartedAtRef.current) / 1000;
       const t = previewBaseTimeRef.current + elapsed;
       setPreviewTime(t);
-      // Find current scene index for time t
-      let acc = 0;
-      let idx = 0;
-      for (; idx < sceneGraph.scenes.length; idx++) {
-        const s = sceneGraph.scenes[idx];
-        if (t < acc + s.nominalDurationSeconds) break;
-        acc += s.nominalDurationSeconds;
-      }
-      if (idx >= sceneGraph.scenes.length) {
+      if (t >= sceneGraph.nominalDurationTotal) {
         setPreviewPlaying(false);
+        mixer.stopAll();
         return;
-      }
-      const scene = sceneGraph.scenes[idx];
-      const prev = lastEdgeRef.current;
-      if (!prev || prev.idx !== idx) {
-        // Emit end of previous scene (if any), then start of new scene
-        if (prev) {
-          const prevScene = sceneGraph.scenes[prev.idx];
-          if (prevScene) {
-            setPreviewEvent({ sceneKey: prevScene.key, edge: "end", isWordCard: prevScene.kind === "word-card" });
-          }
-        }
-        // Defer start emit to next frame so the runtime sees them as distinct events
-        requestAnimationFrame(() => {
-          setPreviewEvent({ sceneKey: scene.key, edge: "start", isWordCard: scene.kind === "word-card" });
-        });
-        lastEdgeRef.current = { idx, edge: "start" };
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [previewPlaying, sceneGraph]);
+  }, [previewPlaying, sceneGraph, mixer]);
 
   const startPreview = () => {
     if (previewPlaying) return;
     mixer.stopAll();
-    lastEdgeRef.current = null;
     if (previewTime >= sceneGraph.nominalDurationTotal - 0.05) {
       setPreviewTime(0);
     }
@@ -536,15 +513,11 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const stopPreview = () => {
     setPreviewPlaying(false);
     setPreviewTime(0);
-    lastEdgeRef.current = null;
-    setPreviewEvent(null);
     mixer.stopAll();
   };
   const scrubTo = (sec: number) => {
     mixer.stopAll();
     setPreviewPlaying(false);
-    lastEdgeRef.current = null;
-    setPreviewEvent(null);
     setPreviewTime(sec);
   };
 
@@ -686,6 +659,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             onDropOnNewTrack={onDropOnNewTrack}
             onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
+            onBeforeIsolatedPreview={pausePreview}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">
             Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Click or drag the scene header to scrub the video. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.

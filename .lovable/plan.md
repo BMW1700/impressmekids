@@ -1,65 +1,51 @@
-## Brutally honest audit of the Pre-K audio editor
+Brutally honest audit:
 
-Three real bugs, ordered by severity:
+1. The overlap fix is incomplete.
+   - The current mixer only stops sibling clips when a new scene event starts a clip.
+   - It does not own one central transport timeline; it reacts to scene edges, so clips that should start inside the current scene after a scrub/preview restart can be missed or left running.
+   - `stopAll()` fades instead of hard-stopping immediately, and it reuses the same scheduled fade helper after clearing timers, so there is still a timing window where old audio can remain audible.
+   - The editor preview emits only scene start/end events, not true clip start/stop events. That is the wrong architecture for timeline editing.
 
-### Bug 1 — Overlapping audio playback (CRITICAL, what you hit)
-`usePreKAudioMixerRuntime.ts` never enforces mutual exclusivity on a track. When clip 1 (Opening) is a long fixed one-shot, it keeps playing until its file naturally ends. When the playhead crosses into Word 1 and clip 2 starts, **both clips on Track 1 play at once**. Same issue compounds on Preview/scrub: pressing Preview a second time, or jumping the playhead, fires new `playClip` calls without stopping prior ones, so audio stacks indefinitely.
+2. The timeline clip UI is genuinely bad.
+   - The waveform is rendered behind the file name and play button in a tiny lane, so it visually collides with text.
+   - The filename is still the dominant visual even though the user needs the waveform to be the dominant signal.
+   - The clip height is too short for a readable waveform plus controls.
 
-There is also a silent volume-bypass bug: when `ctx.createMediaElementSource(el)` throws (re-render reuse), the code falls through with `node = null` but the `HTMLAudioElement` keeps playing at native volume — track mute / master mute / solo silently do nothing for that clip.
+3. The current preview behavior is too fragile.
+   - Scrubbing, pressing preview, and dragging clips all call stop/start paths, but there is no single source of truth that says: “at this playhead time, these exact clips should be playing, and no others.”
 
-### Bug 2 — Scrubbing leaks playback
-`setPreviewTime` from the scrub handler does not stop currently-playing clips, and pressing Preview again replays scene-start events from the new position without first silencing anything that was already firing. This is the same root cause as #1 but worth calling out: the scrub path needs a hard "stop everything" before resuming.
+Plan to fix it properly:
 
-### Bug 3 — Clips render as a name-only bar
-`TimelineCanvas` shows each clip as a flat colored block with the filename truncated. You can drag it horizontally / vertically but you can't see waveform shape, can't preview-play it in place, and can't change playback speed. That's why it doesn't feel like an audio track.
+1. Replace editor preview playback with a deterministic timeline transport
+   - In `AudioMixEditor`, stop driving audio from scene-edge events for editor preview.
+   - Add a preview-only transport that evaluates every clip against `previewTime` on each tick.
+   - Rule: if the playhead is inside a clip’s resolved time range, that clip may play; if it is outside, it must be stopped.
+   - Rule: within a single track, only the top/current clip is allowed to play. If a second clip becomes active on that same track, the first is hard-stopped immediately.
+   - Scrub and reset will hard-stop every audio element synchronously before moving the playhead.
 
----
+2. Make stopping actually stop
+   - Add a hard stop path that immediately pauses, zeros volume/gain, clears timers, clears active IDs, and resets audio elements as needed.
+   - Use hard stop for editor preview, scrubbing, pause, reset, clip drag, and preview restart.
+   - Keep fades only for runtime/gameplay scene transitions where fades are desirable.
 
-## Fix plan
+3. Fix clip start offsets correctly
+   - When preview begins at 11.2s and a clip started at 10.8s, the audio should start 0.4s into that clip, not from the beginning and not be skipped.
+   - Apply trim start and playback speed correctly when setting `audio.currentTime`.
+   - Respect trim end and clip duration when deciding active ranges.
 
-### 1. Mutual exclusivity + scrub-safe mixer (`usePreKAudioMixerRuntime.ts`)
-- New helper `stopAllClipsOnTrack(trackIndex, exceptClipId, fade=0.05s)` — iterates `clipStatesRef`, finds clips whose `track_index` matches, fades to 0 and pauses.
-- Call it at the top of `playClip` (before fade-in) so starting any clip kills siblings on its lane.
-- New helper `stopAllClips(fade)` that hits every active state.
-- Export a `stopAll()` from the hook and call it from:
-  - `stopPreview()` in `AudioMixEditor`
-  - the scrub handler (`onScrub`) before updating `previewTime`
-  - the start of `startPreview()` (defensive)
-- Fix the `createMediaElementSource` fallback: if `node` is null, set `el.volume = clipGain.gain.value` whenever clipGain changes, by attaching an `ontimeupdate`-style sync — simpler: keep a per-clip `el.volume` mirror that's updated alongside clipGain via a small `setClipVolume(st, v)` wrapper, and use `setClipVolume` everywhere instead of writing to `clipGain.gain` directly.
-- Ensure `playClip` resets `el.currentTime = trim_start` AND calls `el.pause()` first when re-firing, so re-entry doesn't double-trigger.
+4. Rebuild timeline clip visuals
+   - Increase lane/clip height enough for a real waveform.
+   - Render waveform as the primary visual in a dedicated top/body area.
+   - Move filename into a separate footer strip below the waveform so it no longer sits on top of the waveform.
+   - Keep the small play button separate from the waveform and prevent it from obscuring peaks.
+   - Add a cleaner speed badge only when playback rate is not 1.0x.
 
-### 2. Editor-side hardening (`AudioMixEditor.tsx`)
-- Replace the implicit `enabled: previewPlaying || previewTime > 0` with explicit `enabled: previewPlaying` and call `stopAll()` whenever preview pauses/scrubs.
-- On `onScrub`: `mixerRef.stopAll(); setPreviewPlaying(false); setPreviewTime(sec); lastEdgeRef.current = null;` so the next Preview restarts from the new position cleanly.
-- On `startPreview`: call `stopAll()` once before flipping `previewPlaying` true.
+5. Prevent isolated clip preview from fighting transport preview
+   - When the small clip play button is used, stop the main timeline preview first.
+   - Maintain one shared isolated preview audio element so multiple clip preview buttons cannot overlap.
 
-### 3. Waveform + per-clip controls (`TimelineCanvas.tsx` + new `ClipWaveform.tsx`)
-- New `ClipWaveform` component: takes `signedUrl + duration + widthPx + heightPx`, decodes once via `OfflineAudioContext` (cached in a module-level `Map<url, Float32Array>`), renders peaks into a `<canvas>`. Falls back to a flat baseline while decoding.
-- Inside each clip block in `TimelineCanvas`, render:
-  - `ClipWaveform` filling the body (behind the label).
-  - Small inline ▶ button (top-left, 14px) that previews the clip in isolation via a single shared `<audio>` element (no Web Audio routing, just `new Audio(url).play()` with a ref so only one preview at a time).
-  - Filename label kept but lowered to `text-[10px]` and `opacity-70` so the waveform reads first.
-- Keep all existing drag handlers untouched — they already work; this is purely visual + a play button.
-
-### 4. Playback-rate (speed) control (DB + UI + runtime)
-- Migration: `ALTER TABLE public.prek_level_audio_clips ADD COLUMN playback_rate real NOT NULL DEFAULT 1.0 CHECK (playback_rate BETWEEN 0.5 AND 2.0);`
-- `PreKAudioClip` type: add `playback_rate: number`.
-- Runtime: in `playClip`, set `st.el.playbackRate = clip.playback_rate || 1`.
-- Inspector (`ClipInspector` in `AudioMixEditor.tsx`): add a Slider (0.5×–2.0×, step 0.05) labelled "Speed" with a "Reset" button. Wires through existing `updateClip(c, { playback_rate })`.
-
-### Out of scope
-- Per-clip waveform-based trim handles (we keep the existing inspector trim fields).
-- Pitch-preserving time-stretch (browser `playbackRate` will pitch-shift; acceptable for SFX/VO at the requested ranges).
-- Real-time level meters on the mixer strips.
-
-### Technical notes
-- Waveform decode is one-shot per signed URL and cached for the session, so adding 5 clips decodes 5 times then never again.
-- Mutual-exclusivity matches DAW behavior on a single mono track — if a user actually wants overlap, they can put the second clip on a new track (we already support drag-to-new-track).
-- The mixer fix is backwards-compatible with the runtime player used in `NabuVideoAdventure` — `stopAllClipsOnTrack` only fires inside `playClip`, which only fires on scene-start, so legitimate level playback behavior (e.g. opening voice-over followed by a Word 1 SFX on the same track) now sounds *correct*: VO is cut off when the SFX starts, instead of clashing.
-
-### Files
-- edit `src/hooks/usePreKAudioMixerRuntime.ts`
-- edit `src/components/superadmin/prek/AudioMixEditor.tsx`
-- edit `src/components/superadmin/prek/TimelineCanvas.tsx`
-- new `src/components/superadmin/prek/ClipWaveform.tsx`
-- new migration adding `playback_rate` to `prek_level_audio_clips`
+6. Validate after implementation
+   - Use the screenshot scenario: one clip near Opening and another near Word 1 on another track.
+   - Verify that pressing Preview at the playhead cannot leave the first clip playing when the second starts.
+   - Verify scrubbing stops all previous audio immediately.
+   - Verify the waveform is visually readable and the filename no longer overlays it.
