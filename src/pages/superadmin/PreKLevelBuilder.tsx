@@ -177,9 +177,27 @@ const PreKLevelBuilder = () => {
       supabase.from("prek_levels").select("*").eq("id", levelId).maybeSingle(),
       supabase.from("prek_level_words").select("*").eq("level_id", levelId).order("sort_order"),
     ]);
-    setLevel(l as LevelRow | null);
-    setWords((ws ?? []) as WordRow[]);
+    const levelRow = l as LevelRow | null;
+    const wordRows = (ws ?? []) as WordRow[];
+    setLevel(levelRow);
+    setWords(wordRows);
     setLoading(false);
+
+    // Auto-probe any missing video durations so the audio overlay editor's
+    // scene graph has accurate timing. Runs in the background — if it updates
+    // anything, silently re-fetch so the editor picks up the new values.
+    if (levelRow) {
+      void backfillLevelVideoDurations(levelRow, wordRows).then(async (n) => {
+        if (n > 0) {
+          const [{ data: l2 }, { data: ws2 }] = await Promise.all([
+            supabase.from("prek_levels").select("*").eq("id", levelId).maybeSingle(),
+            supabase.from("prek_level_words").select("*").eq("level_id", levelId).order("sort_order"),
+          ]);
+          setLevel(l2 as LevelRow | null);
+          setWords((ws2 ?? []) as WordRow[]);
+        }
+      });
+    }
   };
 
   useEffect(() => { load(); }, [levelId]);
