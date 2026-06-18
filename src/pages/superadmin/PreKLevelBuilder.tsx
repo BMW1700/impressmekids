@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
+import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 
 interface LevelRow {
   id: string;
@@ -30,6 +31,10 @@ interface LevelRow {
   opening_video_url: string | null;
   closing_video_url: string | null;
   is_published: boolean;
+  opening_video_duration_seconds: number | null;
+  closing_video_duration_seconds: number | null;
+  audio_master_volume: number | null;
+  mute_source_video_audio: boolean | null;
 }
 interface WordRow {
   id: string;
@@ -41,6 +46,9 @@ interface WordRow {
   first_video_url: string | null;
   second_video_url: string | null;
   hold_poster_url: string | null;
+  word_hold_seconds: number | null;
+  first_video_duration_seconds: number | null;
+  second_video_duration_seconds: number | null;
 }
 
 // Component that renders a video URL/path with playback. For storage paths it
