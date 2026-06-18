@@ -74,6 +74,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const mix = usePreKAudioMix(levelId);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [soloTrackIndex, setSoloTrackIndex] = useState<number | null>(null);
+  const [muteAll, setMuteAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [wallClock, setWallClock] = useState(true);
 
