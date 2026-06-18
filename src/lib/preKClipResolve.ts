@@ -59,7 +59,9 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
   // fixed
   const rawDur = clip.duration_seconds ?? 1;
   const trimEndCut = clip.trim_end_seconds != null ? Math.max(0, rawDur - clip.trim_end_seconds) : 0;
-  const effective = Math.max(0.1, rawDur - clip.trim_start_seconds - trimEndCut);
+  const rate = Math.max(0.05, clip.playback_rate || 1);
+  const effectiveAudioSeconds = Math.max(0.1, rawDur - clip.trim_start_seconds - trimEndCut);
+  const effective = effectiveAudioSeconds / rate;
   return { startSec, endSec: startSec + effective, anchorScene: anchor.scene };
 }
 
