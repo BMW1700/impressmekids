@@ -653,6 +653,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             wallClock={wallClock}
             playheadSec={effectivePlayhead > 0 || previewPlaying ? effectivePlayhead : null}
             signedUrls={mix.signedUrls}
+            videoUrls={videoUrlsState.videoUrls}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}

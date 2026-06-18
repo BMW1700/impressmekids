@@ -23,6 +23,7 @@ const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is o
 const TRACK_HEIGHT = 78;
 const TRACK_GAP = 6;
 const HEADER_HEIGHT = 32;
+const VIDEO_LANE_HEIGHT = 56; // read-only source-video waveform lane
 
 interface Props {
   graph: SceneGraph;
@@ -33,6 +34,8 @@ interface Props {
   playheadSec?: number | null;
   /** storage_path -> signed audio URL, for waveform decode + isolated preview. */
   signedUrls?: Record<string, string>;
+  /** sceneKey -> signed video URL. Used to render the read-only "Video" lane. */
+  videoUrls?: Record<string, string>;
   onSelectClip: (id: string | null) => void;
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
@@ -45,6 +48,7 @@ interface Props {
   onBeforeIsolatedPreview?: () => void;
 }
 
+
 interface DragState {
   clipId: string;
   mode: "body" | "end";
@@ -56,7 +60,7 @@ interface DragState {
 }
 
 export function TimelineCanvas({
-  graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls,
+  graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls, videoUrls,
   onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview, onBeforeIsolatedPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -210,7 +214,9 @@ export function TimelineCanvas({
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
   const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
-  const canvasHeight = HEADER_HEIGHT + 8 + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
+  const videoLaneTop = HEADER_HEIGHT + 4;
+  const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
+  const canvasHeight = tracksTopOffset + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
 
   return (
     <div
@@ -268,10 +274,51 @@ export function TimelineCanvas({
           />
         ))}
 
+        {/* Track 0 — read-only source video audio lane */}
+        <div
+          className="absolute left-0 right-1 rounded-md border border-border/50 bg-slate-500/5"
+          style={{ top: videoLaneTop, height: VIDEO_LANE_HEIGHT }}
+        >
+          <div className="absolute left-2 top-1 text-[10px] text-muted-foreground pointer-events-none z-[1]">
+            Video
+          </div>
+          {segs.items.map(({ scene, left, width, isCard }) => {
+            if (isCard) return null;
+            const url = videoUrls?.[scene.key] ?? null;
+            const blockLeft = left + 2;
+            const blockWidth = Math.max(8, width - 4);
+            const waveLeft = 4;
+            const waveRight = 4;
+            return (
+              <div
+                key={`video-${scene.key}`}
+                className="absolute top-5 bottom-2 rounded-md border-2 bg-slate-500/20 border-slate-500/60 overflow-hidden pointer-events-none shadow-sm"
+                style={{ left: blockLeft, width: blockWidth }}
+                title={scene.label}
+              >
+                <div
+                  className="absolute top-1 rounded-sm bg-background/35 border border-background/30 flex items-center overflow-hidden"
+                  style={{ left: waveLeft, right: waveRight, bottom: 14 }}
+                >
+                  <ClipWaveform
+                    url={url}
+                    widthPx={Math.max(1, blockWidth - waveLeft - waveRight)}
+                    heightPx={22}
+                    colorClass="text-slate-700 dark:text-slate-200"
+                  />
+                </div>
+                <div className="absolute left-0 right-0 bottom-0 h-3.5 px-1.5 bg-background/80 border-t border-background/40 flex items-center pointer-events-none">
+                  <span className="truncate text-[9px] leading-none opacity-90">{scene.label}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
         {/* Track lanes */}
         {lanes.map((t, rowIdx) => {
           const isNew = t === null;
-          const top = HEADER_HEIGHT + 4 + rowIdx * (TRACK_HEIGHT + TRACK_GAP);
+          const top = tracksTopOffset + rowIdx * (TRACK_HEIGHT + TRACK_GAP);
           const targetRowIdx = drag && drag.mode === "body"
             ? Math.max(0, Math.min(lanes.length - 1, drag.rowIndex + Math.round(drag.dy / (TRACK_HEIGHT + TRACK_GAP))))
             : -1;
