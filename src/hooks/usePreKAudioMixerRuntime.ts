@@ -37,6 +37,10 @@ interface UseArgs {
   enabled: boolean;
   /** Bumps to publish a scene event. */
   event: PreKAudioMixerEvent | null;
+  /** Editor-only: when set, only this track plays. Pass null at runtime. */
+  soloTrackIndex?: number | null;
+  /** Editor-only: session-only master kill switch. */
+  muteAll?: boolean;
 }
 
 interface ClipState {
@@ -46,7 +50,7 @@ interface ClipState {
   loaded: boolean;
 }
 
-export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolume, enabled, event }: UseArgs) {
+export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolume, enabled, event, soloTrackIndex = null, muteAll = false }: UseArgs) {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const trackGainsRef = useRef<Map<number, GainNode>>(new Map());
@@ -73,13 +77,14 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
     return ctxRef.current;
   };
 
-  // Update master volume reactively
+  // Update master volume reactively (respects session-only muteAll)
   useEffect(() => {
     const ctx = ctxRef.current; const m = masterGainRef.current;
-    if (ctx && m) m.gain.setTargetAtTime(masterVolume, ctx.currentTime, FADE_RAMP_SEC);
-  }, [masterVolume]);
+    if (ctx && m) m.gain.setTargetAtTime(muteAll ? 0 : masterVolume, ctx.currentTime, FADE_RAMP_SEC);
+  }, [masterVolume, muteAll]);
 
-  // Track gains: create/update per track row
+  // Track gains: create/update per track row. If any track is soloed (editor),
+  // non-soloed tracks drop to 0.
   useEffect(() => {
     if (!enabled) return;
     const ctx = ensureCtx(); if (!ctx || !masterGainRef.current) return;
@@ -91,10 +96,12 @@ export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolu
         g.connect(masterGainRef.current);
         map.set(t.track_index, g);
       }
-      const target = t.muted ? 0 : t.volume;
+      const soloActive = soloTrackIndex !== null;
+      const soloMutes = soloActive && t.track_index !== soloTrackIndex;
+      const target = (t.muted || soloMutes) ? 0 : t.volume;
       g.gain.setTargetAtTime(target, ctx.currentTime, FADE_RAMP_SEC);
     }
-  }, [tracks, enabled]);
+  }, [tracks, enabled, soloTrackIndex]);
 
   // Prepare clip audio elements (load on demand the first time)
   const ensureClipState = (clip: PreKAudioClip): ClipState | null => {

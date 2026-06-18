@@ -74,6 +74,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const mix = usePreKAudioMix(levelId);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [soloTrackIndex, setSoloTrackIndex] = useState<number | null>(null);
+  const [muteAll, setMuteAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [wallClock, setWallClock] = useState(true);
 
@@ -462,6 +463,17 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             <span className="text-xs text-muted-foreground w-10">{Math.round(mix.settings.audio_master_volume * 100)}%</span>
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              size="sm"
+              variant={muteAll ? "default" : "outline"}
+              onClick={() => setMuteAll((v) => !v)}
+              title="Session-only kill switch — does not save"
+            >
+              {muteAll ? <VolumeX className="h-3 w-3 mr-1"/> : <Volume2 className="h-3 w-3 mr-1"/>}
+              {muteAll ? "Unmute all" : "Mute all"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-3">
             <Switch
               checked={mix.settings.mute_source_video_audio}
               onCheckedChange={(v) => updateLevelSetting({ mute_source_video_audio: v })}
@@ -521,7 +533,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           <CardTitle className="text-base">Mixer</CardTitle>
           <Button size="sm" variant="outline" onClick={() => addTrack()}><Plus className="h-3 w-3 mr-1"/> Add Track</Button>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
           {mix.tracks.map((t, i) => {
             const isSolo = soloTrackIndex === t.track_index;
             const effectivelyMuted = t.muted || (soloTrackIndex !== null && !isSolo);
