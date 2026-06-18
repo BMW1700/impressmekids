@@ -44,6 +44,8 @@ interface Props {
     legacy_key?: string | null;
     opening_video_duration_seconds?: number | null;
     closing_video_duration_seconds?: number | null;
+    opening_video_url?: string | null;
+    closing_video_url?: string | null;
     audio_master_volume?: number | null;
     mute_source_video_audio?: boolean | null;
   };
@@ -54,6 +56,9 @@ interface Props {
     word_hold_seconds?: number | null;
     first_video_duration_seconds?: number | null;
     second_video_duration_seconds?: number | null;
+    first_video_url?: string | null;
+    second_video_url?: string | null;
+    hold_poster_url?: string | null;
   }>;
 }
 
