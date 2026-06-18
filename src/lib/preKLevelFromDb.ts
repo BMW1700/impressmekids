@@ -134,28 +134,30 @@ export async function buildVideoLevelFromDb(
  */
 export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
   const [level, setLevel] = useState<VideoLevel | null>(null);
+  const [dbLevelId, setDbLevelId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    buildVideoLevelFromDb(worldNumber, levelNumber)
-      .then((v) => {
-        if (!cancelled) {
-          setLevel(v);
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLevel(null);
-          setLoading(false);
-        }
-      });
+    (async () => {
+      const built = await buildVideoLevelFromDb(worldNumber, levelNumber);
+      const fetched = await fetchPreKDbLevel(worldNumber, levelNumber);
+      if (cancelled) return;
+      setLevel(built);
+      setDbLevelId(fetched?.level.id ?? null);
+      setLoading(false);
+    })().catch(() => {
+      if (!cancelled) {
+        setLevel(null);
+        setDbLevelId(null);
+        setLoading(false);
+      }
+    });
     return () => {
       cancelled = true;
     };
   }, [worldNumber, levelNumber]);
 
-  return { level, loading };
+  return { level, dbLevelId, loading };
 }
