@@ -55,6 +55,8 @@ import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModa
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
