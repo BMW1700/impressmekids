@@ -48,7 +48,7 @@ export const NabuEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) 
 
 const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
   const levelNumber = typeof level.id === "number" ? level.id : Number(level.id);
-  const { level: dbLevel, loading } = usePreKVideoLevel(world.id, levelNumber);
+  const { level: dbLevel, dbLevelId, loading } = usePreKVideoLevel(world.id, levelNumber);
 
   if (loading) {
     return (
@@ -66,6 +66,7 @@ const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
         onBack={onBack}
         onComplete={onComplete}
         overrideLevel={dbLevel}
+        dbLevelId={dbLevelId}
       />
     );
   }
