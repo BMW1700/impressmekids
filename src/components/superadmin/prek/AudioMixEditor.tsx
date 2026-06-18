@@ -656,6 +656,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             return (
               <div
                 key={t.id}
+                ref={registerMixerRow(t.id)}
                 className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""} ${dragging ? "ring-2 ring-primary shadow-lg" : ""}`}
                 style={dragging ? { transform: `translateY(${mixerDrag!.dy}px)`, zIndex: 30, position: "relative" } : undefined}
               >
