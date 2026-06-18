@@ -612,5 +612,3 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, onUpdat
   );
 };
 
-// Imported icon used inline above
-import { Zap } from "lucide-react";
