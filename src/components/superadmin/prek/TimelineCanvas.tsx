@@ -29,6 +29,7 @@ interface Props {
   clips: PreKAudioClip[];
   selectedClipId: string | null;
   wallClock: boolean;
+  playheadSec?: number | null;
   onSelectClip: (id: string | null) => void;
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
