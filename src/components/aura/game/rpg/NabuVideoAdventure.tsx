@@ -101,13 +101,32 @@ const ensureSparkleStyle = () => {
 type Slot = "A" | "B";
 const otherSlot = (s: Slot): Slot => (s === "A" ? "B" : "A");
 
-export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel }: Props) => {
+export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel, dbLevelId }: Props) => {
   const adventure = useMemo<VideoLevel | null>(
     () => overrideLevel ?? getVideoLevel(world.id, level.id),
     [overrideLevel, world.id, level.id]
   );
 
   const steps = adventure?.steps ?? EMPTY_VIDEO_STEPS;
+
+  // Number of "word" steps — needed to compute scene keys from step index.
+  const wordCount = useMemo(() => steps.filter((s) => s.kind === "word").length, [steps]);
+
+  // Audio overlay mix (no-op when dbLevelId is null)
+  const mix = usePreKAudioMix(dbLevelId ?? null);
+  const [sceneEvent, setSceneEvent] = useState<PreKAudioMixerEvent | null>(null);
+  const emitScene = useCallback((sceneKey: string, edge: "start" | "end") => {
+    setSceneEvent({ sceneKey, edge, isWordCard: sceneKey.endsWith("-card") });
+  }, []);
+  usePreKAudioMixerRuntime({
+    tracks: mix.tracks,
+    clips: mix.clips,
+    signedUrls: mix.signedUrls,
+    masterVolume: mix.settings.audio_master_volume,
+    enabled: !!dbLevelId,
+    event: sceneEvent,
+  });
+  const muteSourceVideo = !!dbLevelId && mix.settings.mute_source_video_audio;
 
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("tap-to-begin");
