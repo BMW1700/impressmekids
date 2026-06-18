@@ -146,6 +146,15 @@ export function TimelineCanvas({
       style={{ userSelect: "none" }}
     >
       <div style={{ width: Math.max(800, segs.totalRenderPx), height: canvasHeight, position: "relative" }}>
+        {/* Playhead */}
+        {playheadSec != null && playheadSec >= 0 && (
+          <div
+            className="absolute top-0 bottom-0 w-px bg-red-500/80 pointer-events-none z-20"
+            style={{ left: secToPx(playheadSec) }}
+          >
+            <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500" />
+          </div>
+        )}
         {/* Sticky scene header */}
         <div className="absolute top-0 left-0 right-0 bg-background/95 border-b z-10" style={{ height: HEADER_HEIGHT }}>
           {segs.items.map(({ scene, left, width }) => (
