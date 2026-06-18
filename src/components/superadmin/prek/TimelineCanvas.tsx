@@ -305,6 +305,8 @@ export function TimelineCanvas({
                     widthPx={Math.max(1, blockWidth - waveLeft - waveRight)}
                     heightPx={48}
                     colorClass="text-slate-900 dark:text-slate-50"
+                    normalize
+                    gain={0.95}
                   />
                 </div>
                 <div className="absolute left-0 right-0 bottom-0 h-3.5 px-1.5 bg-background/80 border-t border-background/40 flex items-center pointer-events-none">
