@@ -172,17 +172,15 @@ const AuraPractice = () => {
     unlockSpeechSynthesis();
   }, []);
 
-  // Auth is handled by the user query - no need for redundant checkAuth
+  // Auth comes from the centralized AuthContext so we don't race a separate
+  // supabase.auth.getUser() call — that race left `user` undefined on first
+  // paint, which made GamificationHeader/SmartNotifications render empty
+  // bars and made the RPG Mode button look like it "did nothing" because
+  // the `user?.id` render gate dropped through.
+  const { user, isLoading: isAuthLoading } = useAuth();
 
-  const { data: user } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
-
-  // Get user profile for role checking
+  // Profile (role + default grade mode) still needs its own query because
+  // AuthContext's profile shape doesn't carry default_grade_mode.
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
@@ -197,6 +195,7 @@ const AuraPractice = () => {
     },
     enabled: !!user?.id,
   });
+
 
   // Auto-select grade mode from profile default on page load
   // Only applies to the Reading Stories library (non-game routes).
