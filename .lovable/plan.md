@@ -1,51 +1,40 @@
-Brutally honest audit:
+## Problem
 
-1. The overlap fix is incomplete.
-   - The current mixer only stops sibling clips when a new scene event starts a clip.
-   - It does not own one central transport timeline; it reacts to scene edges, so clips that should start inside the current scene after a scrub/preview restart can be missed or left running.
-   - `stopAll()` fades instead of hard-stopping immediately, and it reuses the same scheduled fade helper after clearing timers, so there is still a timing window where old audio can remain audible.
-   - The editor preview emits only scene start/end events, not true clip start/stop events. That is the wrong architecture for timeline editing.
+In the editor wall-clock timeline, every scene (including the yellow word-card "child speaks" scene) takes up real seconds. That means a clip placed in the second video of a word visually starts much later than the end of the first video clip — and worse, the playback transport happily plays audio while the playhead is sitting inside the yellow card zone. At runtime the card zone is open-ended (we wait for the child), so any audio anchored across that boundary is meaningless.
 
-2. The timeline clip UI is genuinely bad.
-   - The waveform is rendered behind the file name and play button in a tiny lane, so it visually collides with text.
-   - The filename is still the dominant visual even though the user needs the waveform to be the dominant signal.
-   - The clip height is too short for a readable waveform plus controls.
+Word-card scenes should be **zero-width skip zones** on the editor timeline: audio jumps directly from the end of the previous video to the start of the next video, with nothing playing in between.
 
-3. The current preview behavior is too fragile.
-   - Scrubbing, pressing preview, and dragging clips all call stop/start paths, but there is no single source of truth that says: “at this playhead time, these exact clips should be playing, and no others.”
+## Fix Plan
 
-Plan to fix it properly:
+### 1. Treat word-card scenes as zero-duration on the editor timeline
+- In `src/lib/preKSceneGraph.ts`, keep `word-card` scenes in the `scenes[]` list (the canvas still renders the yellow column as a thin "skip notch"), but set their effective wall-clock width to `0` in a new field — `nominalDurationSeconds` stays for legacy callers, add `timelineDurationSeconds` that is `0` for `word-card` and equal to `nominalDurationSeconds` otherwise.
+- Update `nominalDurationTotal` to sum `timelineDurationSeconds` so the editor's wall-clock length excludes card time.
 
-1. Replace editor preview playback with a deterministic timeline transport
-   - In `AudioMixEditor`, stop driving audio from scene-edge events for editor preview.
-   - Add a preview-only transport that evaluates every clip against `previewTime` on each tick.
-   - Rule: if the playhead is inside a clip’s resolved time range, that clip may play; if it is outside, it must be stopped.
-   - Rule: within a single track, only the top/current clip is allowed to play. If a second clip becomes active on that same track, the first is hard-stopped immediately.
-   - Scrub and reset will hard-stop every audio element synchronously before moving the playhead.
+### 2. Update the resolver so clips can't overlap card scenes
+- In `src/lib/preKClipResolve.ts`, switch `buildSpans` to use `timelineDurationSeconds`. Card scenes become zero-width spans whose `start === end` at the boundary between the first and second video.
+- Anchors on `word-card` scenes resolve to that single boundary instant; clips anchored to "card start"/"card end" collapse to the same point, which is the intended teleport boundary.
+- `findSceneAt` keeps preferring the next non-zero span, so scrubbing never lands inside a card.
 
-2. Make stopping actually stop
-   - Add a hard stop path that immediately pauses, zeros volume/gain, clears timers, clears active IDs, and resets audio elements as needed.
-   - Use hard stop for editor preview, scrubbing, pause, reset, clip drag, and preview restart.
-   - Keep fades only for runtime/gameplay scene transitions where fades are desirable.
+### 3. Transport must never play across a card boundary
+- In `src/hooks/usePreKAudioTimelineTransport.ts`, when picking the active clip for `playheadSec`, additionally reject any clip whose `[startSec, endSec)` straddles a card boundary AND whose anchor scene is on the opposite side of the playhead. In practice, because card spans are zero-width, a clip's resolved range now lives entirely in one video region; clips authored before this change that visually crossed the yellow zone will get clamped to end at the card boundary.
+- Add a clamp step in `resolveClip` for `fixed` and `span-videos` modes: if the resolved `[startSec, endSec]` would cross a card boundary, clamp `endSec` down to that boundary (audio is cut at the teleport point, not continued on the other side).
 
-3. Fix clip start offsets correctly
-   - When preview begins at 11.2s and a clip started at 10.8s, the audio should start 0.4s into that clip, not from the beginning and not be skipped.
-   - Apply trim start and playback speed correctly when setting `audio.currentTime`.
-   - Respect trim end and clip duration when deciding active ranges.
+### 4. Canvas rendering
+- In `src/components/superadmin/prek/TimelineCanvas.tsx`, render the word-card column with a fixed small visual width (e.g. 24px "skip notch" with the lightning icon) but use `timelineDurationSeconds` (= 0) for time-to-pixel math for clips. Clips on either side now butt right up against the notch.
+- Keep the header label/notch interactive for scrubbing video preview, but scrubbing onto the notch snaps the playhead to the next video's start.
 
-4. Rebuild timeline clip visuals
-   - Increase lane/clip height enough for a real waveform.
-   - Render waveform as the primary visual in a dedicated top/body area.
-   - Move filename into a separate footer strip below the waveform so it no longer sits on top of the waveform.
-   - Keep the small play button separate from the waveform and prevent it from obscuring peaks.
-   - Add a cleaner speed badge only when playback rate is not 1.0x.
+### 5. Preview tick + scrub safety
+- In `AudioMixEditor.tsx`, when the preview tick advances `previewTimeRef` past a card boundary, snap it directly to the next video's start (teleport) and call `transport.stopAll()` once at the boundary to guarantee a clean cut.
+- Same teleport-snap behavior when the user drags the playhead onto a card notch.
 
-5. Prevent isolated clip preview from fighting transport preview
-   - When the small clip play button is used, stop the main timeline preview first.
-   - Maintain one shared isolated preview audio element so multiple clip preview buttons cannot overlap.
+### 6. Validation
+- Scenario from the screenshot: clip 1 ends at the end of `word-1-first`; clip 2 starts at the start of `word-1-second`. After the fix, the two clips visually touch across the yellow notch and there is zero audible content over the card region during preview.
+- Drag clip 1's right edge past the boundary → it visually clamps at the notch.
+- Scrub onto the yellow notch → playhead snaps to start of `word-1-second`, no audio plays.
 
-6. Validate after implementation
-   - Use the screenshot scenario: one clip near Opening and another near Word 1 on another track.
-   - Verify that pressing Preview at the playhead cannot leave the first clip playing when the second starts.
-   - Verify scrubbing stops all previous audio immediately.
-   - Verify the waveform is visually readable and the filename no longer overlays it.
+## Files To Touch
+- `src/lib/preKSceneGraph.ts` — add `timelineDurationSeconds`, update totals.
+- `src/lib/preKClipResolve.ts` — zero-width card spans, clamp clip ranges at card boundaries.
+- `src/hooks/usePreKAudioTimelineTransport.ts` — reject/clamp clips at card boundaries.
+- `src/components/superadmin/prek/TimelineCanvas.tsx` — render card column as a fixed-width skip notch decoupled from time math.
+- `src/components/superadmin/prek/AudioMixEditor.tsx` — teleport-snap preview tick and scrub across card boundaries.
