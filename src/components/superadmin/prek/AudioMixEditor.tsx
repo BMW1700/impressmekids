@@ -533,7 +533,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           <CardTitle className="text-base">Mixer</CardTitle>
           <Button size="sm" variant="outline" onClick={() => addTrack()}><Plus className="h-3 w-3 mr-1"/> Add Track</Button>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
           {mix.tracks.map((t, i) => {
             const isSolo = soloTrackIndex === t.track_index;
             const effectivelyMuted = t.muted || (soloTrackIndex !== null && !isSolo);
