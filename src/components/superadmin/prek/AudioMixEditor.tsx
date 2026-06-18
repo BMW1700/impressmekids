@@ -204,14 +204,13 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   };
   const moveTrackBy = async (t: PreKAudioTrack, delta: number) => {
     const step = delta > 0 ? 1 : -1;
-    let current = t;
     for (let i = 0; i < Math.abs(delta); i++) {
-      const idx = mix.tracks.findIndex((x) => x.id === current.id);
+      const idx = mix.tracks.findIndex((x) => x.id === t.id);
       const ni = idx + step;
       if (ni < 0 || ni >= mix.tracks.length) break;
-      await moveTrack(current, step);
+      await moveTrack(t, step);
       // mix.tracks won't reflect the swap synchronously, but moveTrack only relies on `t.track_index`
-      // so we keep the same `current` reference (its identity stays valid).
+      // so we keep the same track reference (its identity stays valid).
     }
   };
 
@@ -477,10 +476,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   // start/end events to the runtime mixer when the cursor crosses scene edges.
   const previewStartedAtRef = useRef<number>(0);
   const previewBaseTimeRef = useRef<number>(0);
+  const previewTimeRef = useRef<number>(0);
+  useEffect(() => { previewTimeRef.current = previewTime; }, [previewTime]);
   useEffect(() => {
     if (!previewPlaying) return;
     previewStartedAtRef.current = performance.now();
-    previewBaseTimeRef.current = previewTime;
+    previewBaseTimeRef.current = previewTimeRef.current;
     let raf = 0;
     const tick = () => {
       const elapsed = (performance.now() - previewStartedAtRef.current) / 1000;
