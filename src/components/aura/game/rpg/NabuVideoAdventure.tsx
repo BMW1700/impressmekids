@@ -26,6 +26,9 @@ import { submitPreKAuraReading } from "@/lib/preKAuraSubmit";
 import { RPGWordReader } from "./RPGWordReader";
 import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
+import { usePreKAudioMix } from "@/hooks/usePreKAudioMix";
+import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
+import { sceneKeyForStep, SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 interface Props {
   world: CampaignWorld;
@@ -34,6 +37,8 @@ interface Props {
   onComplete: (stats: { wordsRead: number; correctWords: number; stars: number }) => void;
   /** Optional DB-loaded level override. When provided, takes precedence over the hardcoded data file. */
   overrideLevel?: VideoLevel | null;
+  /** Database level UUID — when set, loads & plays the audio overlay mix and applies source-video mute. */
+  dbLevelId?: string | null;
 }
 
 type Phase = "tap-to-begin" | "clip" | "ask" | "reading" | "advancing" | "ending";
