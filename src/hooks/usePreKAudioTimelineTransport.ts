@@ -4,7 +4,8 @@
 // playhead: every tick it decides which clips should be audible at the current
 // timeline second, starts those clips at the correct audio offset, and hard
 // stops everything else. This prevents old preview audio from leaking across
-// scrubs, restarts, and overlapping clip regions.
+// scrubs, restarts, and overlapping clip regions, even when clips sit on
+// different visual tracks.
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
@@ -97,7 +98,7 @@ export function usePreKAudioTimelineTransport({
       return;
     }
 
-    const desiredByTrack = new Map<number, { clip: PreKAudioClip; startSec: number; endSec: number }>();
+    let desired: { clip: PreKAudioClip; startSec: number; endSec: number } | null = null;
 
     for (const clip of clips) {
       const track = tracksByIndex.get(clip.track_index);
@@ -108,26 +109,27 @@ export function usePreKAudioTimelineTransport({
       const resolved = resolveClip(clip, graph);
       if (playheadSec < resolved.startSec || playheadSec >= resolved.endSec) continue;
 
-      const current = desiredByTrack.get(clip.track_index);
+      const current = desired;
       if (
         !current ||
         resolved.startSec > current.startSec ||
         (resolved.startSec === current.startSec && clip.sort_order > current.clip.sort_order)
       ) {
-        desiredByTrack.set(clip.track_index, { clip, startSec: resolved.startSec, endSec: resolved.endSec });
+        desired = { clip, startSec: resolved.startSec, endSec: resolved.endSec };
       }
     }
 
-    const desiredIds = new Set(Array.from(desiredByTrack.values()).map(({ clip }) => clip.id));
+    const desiredIds = new Set(desired ? [desired.clip.id] : []);
 
     for (const id of Array.from(activeRef.current)) {
       if (!desiredIds.has(id)) hardStopClip(id, true);
     }
 
-    for (const { clip, startSec } of desiredByTrack.values()) {
+    if (desired) {
+      const { clip, startSec } = desired;
       const track = tracksByIndex.get(clip.track_index);
       const st = ensureState(clip);
-      if (!track || !st) continue;
+      if (!track || !st) return;
 
       const rate = Math.max(0.05, clip.playback_rate || 1);
       const targetAudioTime = audioTimeForClip(clip, startSec, playheadSec);
