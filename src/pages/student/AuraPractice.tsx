@@ -960,7 +960,13 @@ const AuraPractice = () => {
               <StoryLibrary 
                 onSelectStory={handleStorySelect} 
                 onStartCampaign={() => setIsCampaignMode(true)}
-                onStartRpgMode={() => setIsRpgMode(true)}
+                onStartRpgMode={() => {
+                  if (!user?.id) {
+                    toast({ title: "Loading your profile…", description: "Try again in a moment." });
+                    return;
+                  }
+                  setIsRpgMode(true);
+                }}
                 onStartCastle={() => navigate('/game/castle-swarm')}
                 categoryFilter={categoryFilter}
                 gradeMode={currentGradeMode}
