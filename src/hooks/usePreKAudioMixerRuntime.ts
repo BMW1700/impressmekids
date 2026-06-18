@@ -37,6 +37,10 @@ interface UseArgs {
   enabled: boolean;
   /** Bumps to publish a scene event. */
   event: PreKAudioMixerEvent | null;
+  /** Editor-only: when set, only this track plays. Pass null at runtime. */
+  soloTrackIndex?: number | null;
+  /** Editor-only: session-only master kill switch. */
+  muteAll?: boolean;
 }
 
 interface ClipState {
@@ -46,7 +50,7 @@ interface ClipState {
   loaded: boolean;
 }
 
-export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolume, enabled, event }: UseArgs) {
+export function usePreKAudioMixerRuntime({ tracks, clips, signedUrls, masterVolume, enabled, event, soloTrackIndex = null, muteAll = false }: UseArgs) {
   const ctxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
   const trackGainsRef = useRef<Map<number, GainNode>>(new Map());
