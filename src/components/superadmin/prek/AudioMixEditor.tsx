@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical,
+  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical, Play, Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ import {
   type PreKAudioDurationMode,
   type PreKAudioTrack,
 } from "@/hooks/usePreKAudioMix";
+import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
 import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
@@ -77,6 +78,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const [muteAll, setMuteAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const [wallClock, setWallClock] = useState(true);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [previewTime, setPreviewTime] = useState(0);
+  const [previewEvent, setPreviewEvent] = useState<PreKAudioMixerEvent | null>(null);
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
@@ -410,6 +414,82 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const selectedClip = mix.clips.find((c) => c.id === selectedClipId) || null;
   const selectedTrack = selectedClip ? mix.tracks.find((t) => t.track_index === selectedClip.track_index) ?? null : null;
 
+  // ── Preview transport ─────────────────────────────────────────────────────
+  // Mount the runtime mixer for editor preview. Solo + Mute-all are session-only.
+  usePreKAudioMixerRuntime({
+    tracks: mix.tracks,
+    clips: mix.clips,
+    signedUrls: mix.signedUrls,
+    masterVolume: mix.settings.audio_master_volume,
+    enabled: previewPlaying || previewTime > 0,
+    event: previewEvent,
+    soloTrackIndex,
+    muteAll,
+  });
+
+  // rAF-driven cursor that walks through scenes by wall-clock time and emits
+  // start/end events to the runtime mixer when the cursor crosses scene edges.
+  const lastEdgeRef = useRef<{ idx: number; edge: "start" | "end" } | null>(null);
+  const previewStartedAtRef = useRef<number>(0);
+  const previewBaseTimeRef = useRef<number>(0);
+  useEffect(() => {
+    if (!previewPlaying) return;
+    previewStartedAtRef.current = performance.now();
+    previewBaseTimeRef.current = previewTime;
+    let raf = 0;
+    const tick = () => {
+      const elapsed = (performance.now() - previewStartedAtRef.current) / 1000;
+      const t = previewBaseTimeRef.current + elapsed;
+      setPreviewTime(t);
+      // Find current scene index for time t
+      let acc = 0;
+      let idx = 0;
+      for (; idx < sceneGraph.scenes.length; idx++) {
+        const s = sceneGraph.scenes[idx];
+        if (t < acc + s.nominalDurationSeconds) break;
+        acc += s.nominalDurationSeconds;
+      }
+      if (idx >= sceneGraph.scenes.length) {
+        setPreviewPlaying(false);
+        return;
+      }
+      const scene = sceneGraph.scenes[idx];
+      const prev = lastEdgeRef.current;
+      if (!prev || prev.idx !== idx) {
+        // Emit end of previous scene (if any), then start of new scene
+        if (prev) {
+          const prevScene = sceneGraph.scenes[prev.idx];
+          if (prevScene) {
+            setPreviewEvent({ sceneKey: prevScene.key, edge: "end", isWordCard: prevScene.kind === "word-card" });
+          }
+        }
+        // Defer start emit to next frame so the runtime sees them as distinct events
+        requestAnimationFrame(() => {
+          setPreviewEvent({ sceneKey: scene.key, edge: "start", isWordCard: scene.kind === "word-card" });
+        });
+        lastEdgeRef.current = { idx, edge: "start" };
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [previewPlaying, sceneGraph]);
+
+  const startPreview = () => {
+    if (previewPlaying) return;
+    if (previewTime >= sceneGraph.nominalDurationTotal - 0.05) {
+      setPreviewTime(0);
+      lastEdgeRef.current = null;
+    }
+    setPreviewPlaying(true);
+  };
+  const stopPreview = () => {
+    setPreviewPlaying(false);
+    setPreviewTime(0);
+    lastEdgeRef.current = null;
+    setPreviewEvent(null);
+  };
+
   // ── Warnings ──────────────────────────────────────────────────────────────
   const warnings = useMemo(() => {
     const out: string[] = [];
@@ -485,6 +565,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             <Label className="text-sm flex items-center gap-1"><Clock className="h-3 w-3"/> Wall-clock timeline</Label>
           </div>
           <div className="flex-1" />
+          <Button size="sm" variant={previewPlaying ? "default" : "outline"} onClick={previewPlaying ? () => setPreviewPlaying(false) : startPreview}>
+            {previewPlaying ? <Square className="h-3 w-3 mr-1"/> : <Play className="h-3 w-3 mr-1"/>}
+            {previewPlaying ? "Pause" : "Preview"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={stopPreview} disabled={!previewPlaying && previewTime === 0}>Reset</Button>
+          <span className="text-[10px] text-muted-foreground tabular-nums w-12 text-right">{previewTime.toFixed(1)}s</span>
           <Button size="sm" variant="outline" onClick={undo}><Undo2 className="h-3 w-3 mr-1"/> Undo</Button>
           <Button size="sm" variant="outline" onClick={redo}><Redo2 className="h-3 w-3 mr-1"/> Redo</Button>
         </CardContent>
@@ -516,6 +602,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             clips={mix.clips}
             selectedClipId={selectedClipId}
             wallClock={wallClock}
+            playheadSec={previewPlaying || previewTime > 0 ? previewTime : null}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
