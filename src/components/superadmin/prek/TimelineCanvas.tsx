@@ -20,7 +20,7 @@ import { ClipWaveform } from "./ClipWaveform";
 
 const PX_PER_SEC_FULL = 48;
 const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is off
-const TRACK_HEIGHT = 56;
+const TRACK_HEIGHT = 78;
 const TRACK_GAP = 6;
 const HEADER_HEIGHT = 32;
 
@@ -41,6 +41,8 @@ interface Props {
   onScrub?: (sec: number) => void;
   /** Fired during clip drags so the preview can scrub to the drop target. */
   onDragPreview?: (sec: number | null) => void;
+  /** Stops the main transport before isolated clip-button playback. */
+  onBeforeIsolatedPreview?: () => void;
 }
 
 interface DragState {
@@ -55,7 +57,7 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview, onBeforeIsolatedPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -71,6 +73,7 @@ export function TimelineCanvas({
     setPreviewingClipId(null);
   }, []);
   const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number) => {
+    onBeforeIsolatedPreview?.();
     stopClipPreview();
     const a = new Audio(url);
     a.playbackRate = rate || 1;
@@ -79,7 +82,7 @@ export function TimelineCanvas({
     a.onended = () => setPreviewingClipId((id) => id === clipId ? null : id);
     a.play().catch(() => setPreviewingClipId(null));
     setPreviewingClipId(clipId);
-  }, [stopClipPreview]);
+  }, [onBeforeIsolatedPreview, stopClipPreview]);
   useEffect(() => () => stopClipPreview(), [stopClipPreview]);
 
   // Per-scene rendered width. When wallClock=false, card scenes shrink to a notch.
