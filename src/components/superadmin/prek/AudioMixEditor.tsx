@@ -28,7 +28,7 @@ import {
   type PreKAudioDurationMode,
   type PreKAudioTrack,
 } from "@/hooks/usePreKAudioMix";
-import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
+import { usePreKAudioTimelineTransport } from "@/hooks/usePreKAudioTimelineTransport";
 import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
@@ -87,7 +87,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const [wallClock, setWallClock] = useState(true);
   const [previewPlaying, setPreviewPlaying] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
-  const [previewEvent, setPreviewEvent] = useState<PreKAudioMixerEvent | null>(null);
 
   const undoStack = useRef<UndoEntry[]>([]);
   const redoStack = useRef<UndoEntry[]>([]);
@@ -460,14 +459,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const selectedTrack = selectedClip ? mix.tracks.find((t) => t.track_index === selectedClip.track_index) ?? null : null;
 
   // ── Preview transport ─────────────────────────────────────────────────────
-  // Mount the runtime mixer for editor preview. Solo + Mute-all are session-only.
-  const mixer = usePreKAudioMixerRuntime({
+  // Editor preview is playhead-owned, not scene-event-owned: every tick it
+  // decides exactly which clips are allowed to play and hard-stops the rest.
+  const mixer = usePreKAudioTimelineTransport({
+    graph: sceneGraph,
     tracks: mix.tracks,
     clips: mix.clips,
     signedUrls: mix.signedUrls,
     masterVolume: mix.settings.audio_master_volume,
     enabled: previewPlaying,
-    event: previewEvent,
+    playheadSec: previewTime,
     soloTrackIndex,
     muteAll,
   });
@@ -486,39 +487,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       const elapsed = (performance.now() - previewStartedAtRef.current) / 1000;
       const t = previewBaseTimeRef.current + elapsed;
       setPreviewTime(t);
-      // Find current scene index for time t
-      let acc = 0;
-      let idx = 0;
-      for (; idx < sceneGraph.scenes.length; idx++) {
-        const s = sceneGraph.scenes[idx];
-        if (t < acc + s.nominalDurationSeconds) break;
-        acc += s.nominalDurationSeconds;
-      }
-      if (idx >= sceneGraph.scenes.length) {
+      if (t >= sceneGraph.nominalDurationTotal) {
         setPreviewPlaying(false);
+        mixer.stopAll();
         return;
-      }
-      const scene = sceneGraph.scenes[idx];
-      const prev = lastEdgeRef.current;
-      if (!prev || prev.idx !== idx) {
-        // Emit end of previous scene (if any), then start of new scene
-        if (prev) {
-          const prevScene = sceneGraph.scenes[prev.idx];
-          if (prevScene) {
-            setPreviewEvent({ sceneKey: prevScene.key, edge: "end", isWordCard: prevScene.kind === "word-card" });
-          }
-        }
-        // Defer start emit to next frame so the runtime sees them as distinct events
-        requestAnimationFrame(() => {
-          setPreviewEvent({ sceneKey: scene.key, edge: "start", isWordCard: scene.kind === "word-card" });
-        });
-        lastEdgeRef.current = { idx, edge: "start" };
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [previewPlaying, sceneGraph]);
+  }, [previewPlaying, sceneGraph, mixer]);
 
   const startPreview = () => {
     if (previewPlaying) return;
@@ -537,14 +515,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     setPreviewPlaying(false);
     setPreviewTime(0);
     lastEdgeRef.current = null;
-    setPreviewEvent(null);
     mixer.stopAll();
   };
   const scrubTo = (sec: number) => {
     mixer.stopAll();
     setPreviewPlaying(false);
     lastEdgeRef.current = null;
-    setPreviewEvent(null);
     setPreviewTime(sec);
   };
 
