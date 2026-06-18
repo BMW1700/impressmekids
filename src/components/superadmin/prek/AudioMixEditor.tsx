@@ -7,10 +7,10 @@
 //   ├ Track mixer strips (name, M, S, volume, add audio, reorder, delete)
 //   └ Clip Inspector (anchor, mode, fades, trim, effective gain)
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
-  ArrowUp, ArrowDown, Undo2, AlertTriangle, Clock, Zap,
+  Undo2, Redo2, AlertTriangle, Clock, Zap, GripVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ import {
   type PreKAudioDurationMode,
   type PreKAudioTrack,
 } from "@/hooks/usePreKAudioMix";
-import { uploadPreKAudio, deletePreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
+import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
 import { TimelineCanvas } from "./TimelineCanvas";
@@ -64,7 +64,11 @@ const MODE_LABELS: Record<PreKAudioDurationMode, string> = {
 type UndoEntry =
   | { kind: "clip"; id: string; before: Partial<PreKAudioClip> }
   | { kind: "track"; id: string; before: Partial<PreKAudioTrack> }
-  | { kind: "level"; before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> };
+  | { kind: "level"; before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> }
+  | { kind: "track-soft-delete"; id: string }      // undo = restore (clear deleted_at)
+  | { kind: "track-restore"; id: string }          // undo = re-soft-delete (set deleted_at)
+  | { kind: "clip-soft-delete"; id: string }
+  | { kind: "clip-restore"; id: string };
 
 export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const mix = usePreKAudioMix(levelId);
@@ -74,9 +78,15 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const [wallClock, setWallClock] = useState(true);
 
   const undoStack = useRef<UndoEntry[]>([]);
-  const pushUndo = (e: UndoEntry) => {
+  const redoStack = useRef<UndoEntry[]>([]);
+  const pushUndo = (e: UndoEntry, clearRedo = true) => {
     undoStack.current.push(e);
     if (undoStack.current.length > 50) undoStack.current.shift();
+    if (clearRedo) redoStack.current = [];
+  };
+  const pushRedo = (e: UndoEntry) => {
+    redoStack.current.push(e);
+    if (redoStack.current.length > 50) redoStack.current.shift();
   };
 
   const sceneGraph = useMemo(() => buildSceneGraph(level, words), [level, words]);
@@ -100,14 +110,29 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   };
 
   // ── Track CRUD ────────────────────────────────────────────────────────────
-  const addTrack = async (name?: string): Promise<PreKAudioTrack | null> => {
-    const next_index = (mix.tracks.at(-1)?.track_index ?? -1) + 1;
+  // Compute next track_index across BOTH active and soft-deleted rows so we never
+  // collide with the UNIQUE(level_id, track_index) constraint.
+  const computeNextTrackIndex = async (): Promise<number> => {
+    const { data } = await supabase
+      .from("prek_level_audio_tracks")
+      .select("track_index")
+      .eq("level_id", levelId)
+      .order("track_index", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const max = (data?.track_index as number | undefined) ?? -1;
+    return max + 1;
+  };
+
+  const addTrack = async (name?: string, skipUndo = false): Promise<PreKAudioTrack | null> => {
+    const next_index = await computeNextTrackIndex();
     const { data, error } = await supabase
       .from("prek_level_audio_tracks")
       .insert({ level_id: levelId, track_index: next_index, name: name ?? `Track ${next_index + 1}` })
       .select("*")
       .maybeSingle();
     if (error) { toast.error(error.message); return null; }
+    if (!skipUndo && data?.id) pushUndo({ kind: "track-restore", id: data.id });
     await mix.reload();
     return (data as unknown as PreKAudioTrack) ?? null;
   };
@@ -130,15 +155,19 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     mix.reload();
   };
 
+  // Soft-delete a track + cascade-soft-delete its clips. Undoable.
   const deleteTrack = async (t: PreKAudioTrack) => {
     const trackClips = mix.clips.filter((c) => c.track_index === t.track_index);
-    if (trackClips.length > 0 && !confirm(`Delete "${t.name}" and its ${trackClips.length} clip(s)?`)) return;
-    for (const c of trackClips) await deletePreKAudio(c.storage_path);
-    await supabase.from("prek_level_audio_clips").delete().eq("level_id", levelId).eq("track_index", t.track_index);
-    await supabase.from("prek_level_audio_tracks").delete().eq("id", t.id);
+    if (trackClips.length > 0 && !confirm(`Delete "${t.name}" and its ${trackClips.length} clip(s)? You can undo this.`)) return;
+    const now = new Date().toISOString();
+    await supabase.from("prek_level_audio_clips").update({ deleted_at: now }).eq("level_id", levelId).eq("track_index", t.track_index).is("deleted_at", null);
+    await supabase.from("prek_level_audio_tracks").update({ deleted_at: now }).eq("id", t.id);
+    // Undo: restore the track (clips with matching track_index are restored too)
+    pushUndo({ kind: "track-soft-delete", id: t.id });
     mix.reload();
   };
 
+  // Drag-handle reorder: swap rows pairwise toward target index.
   const moveTrack = async (t: PreKAudioTrack, dir: -1 | 1) => {
     const idx = mix.tracks.findIndex((x) => x.id === t.id);
     const ni = idx + dir;
@@ -152,8 +181,49 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     await supabase.from("prek_level_audio_clips").update({ track_index: other.track_index }).eq("level_id", levelId).eq("track_index", -8888);
     mix.reload();
   };
+  const moveTrackBy = async (t: PreKAudioTrack, delta: number) => {
+    const step = delta > 0 ? 1 : -1;
+    let current = t;
+    for (let i = 0; i < Math.abs(delta); i++) {
+      const idx = mix.tracks.findIndex((x) => x.id === current.id);
+      const ni = idx + step;
+      if (ni < 0 || ni >= mix.tracks.length) break;
+      await moveTrack(current, step);
+      // mix.tracks won't reflect the swap synchronously, but moveTrack only relies on `t.track_index`
+      // so we keep the same `current` reference (its identity stays valid).
+    }
+  };
 
-  // ── Clip CRUD ─────────────────────────────────────────────────────────────
+  // ── Mixer row drag (reorder by grip handle) ───────────────────────────────
+  const MIXER_ROW_PX = 64; // border+padding row stride
+  const [mixerDrag, setMixerDrag] = useState<{ id: string; fromIdx: number; dy: number } | null>(null);
+  const mixerDragRef = useRef<typeof mixerDrag>(null);
+  mixerDragRef.current = mixerDrag;
+  const beginMixerDrag = (e: RPointerEvent, t: PreKAudioTrack, fromIdx: number) => {
+    e.preventDefault();
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+    const startY = e.clientY;
+    setMixerDrag({ id: t.id, fromIdx, dy: 0 });
+    const move = (ev: PointerEvent) => {
+      const d = mixerDragRef.current;
+      if (!d) return;
+      setMixerDrag({ ...d, dy: ev.clientY - startY });
+    };
+    const up = async () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const d = mixerDragRef.current;
+      setMixerDrag(null);
+      if (!d) return;
+      const delta = Math.round(d.dy / MIXER_ROW_PX);
+      if (delta !== 0) await moveTrackBy(t, delta);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pendingTrackRef = useRef<PreKAudioTrack | null>(null);
   const pickClipFor = (t: PreKAudioTrack) => {
@@ -181,7 +251,10 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         duration_mode: "fixed" as PreKAudioDurationMode,
       }).select("id").maybeSingle();
       if (error) throw error;
-      if (data?.id) setSelectedClipId(data.id);
+      if (data?.id) {
+        setSelectedClipId(data.id);
+        pushUndo({ kind: "clip-restore", id: data.id });
+      }
       toast.success("Audio clip added");
       mix.reload();
     } catch (e) {
@@ -192,10 +265,10 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     }
   };
   const deleteClip = async (c: PreKAudioClip) => {
-    if (!confirm(`Delete "${c.display_name}"?`)) return;
-    await deletePreKAudio(c.storage_path);
-    await supabase.from("prek_level_audio_clips").delete().eq("id", c.id);
+    if (!confirm(`Delete "${c.display_name}"? You can undo this.`)) return;
+    await supabase.from("prek_level_audio_clips").update({ deleted_at: new Date().toISOString() }).eq("id", c.id);
     if (selectedClipId === c.id) setSelectedClipId(null);
+    pushUndo({ kind: "clip-soft-delete", id: c.id });
     mix.reload();
   };
   const updateClip = async (c: PreKAudioClip, patch: Partial<PreKAudioClip>, skipUndo = false) => {
@@ -210,19 +283,84 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     if (error) toast.error(error.message); else mix.reload();
   };
 
-  // ── Undo ───────────────────────────────────────────────────────────────────
+  // ── Undo / Redo ────────────────────────────────────────────────────────────
+  // Returns the inverse op so the caller can push it onto the opposite stack.
+  const applyEntry = async (entry: UndoEntry): Promise<UndoEntry | null> => {
+    if (entry.kind === "clip") {
+      const cur = mix.clips.find((c) => c.id === entry.id);
+      if (!cur) return null;
+      const inverse: Partial<PreKAudioClip> = {};
+      for (const k of Object.keys(entry.before) as (keyof PreKAudioClip)[]) {
+        (inverse as Record<string, unknown>)[k] = cur[k];
+      }
+      await supabase.from("prek_level_audio_clips").update(entry.before).eq("id", entry.id);
+      return { kind: "clip", id: entry.id, before: inverse };
+    }
+    if (entry.kind === "track") {
+      const cur = mix.tracks.find((t) => t.id === entry.id);
+      if (!cur) return null;
+      const inverse: Partial<PreKAudioTrack> = {};
+      for (const k of Object.keys(entry.before) as (keyof PreKAudioTrack)[]) {
+        (inverse as Record<string, unknown>)[k] = cur[k];
+      }
+      await supabase.from("prek_level_audio_tracks").update(entry.before).eq("id", entry.id);
+      return { kind: "track", id: entry.id, before: inverse };
+    }
+    if (entry.kind === "level") {
+      const inverse: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> = {};
+      for (const k of Object.keys(entry.before) as Array<keyof typeof entry.before>) {
+        (inverse as Record<string, unknown>)[k] = mix.settings[k];
+      }
+      await supabase.from("prek_levels").update(entry.before).eq("id", levelId);
+      return { kind: "level", before: inverse };
+    }
+    if (entry.kind === "track-soft-delete") {
+      // Restore the track and any clips that were cascade-soft-deleted with it.
+      const { data: tr } = await supabase.from("prek_level_audio_tracks").select("track_index").eq("id", entry.id).maybeSingle();
+      await supabase.from("prek_level_audio_tracks").update({ deleted_at: null }).eq("id", entry.id);
+      if (tr?.track_index != null) {
+        await supabase.from("prek_level_audio_clips").update({ deleted_at: null })
+          .eq("level_id", levelId).eq("track_index", tr.track_index);
+      }
+      return { kind: "track-restore", id: entry.id };
+    }
+    if (entry.kind === "track-restore") {
+      // Re-soft-delete the track + its clips.
+      const { data: tr } = await supabase.from("prek_level_audio_tracks").select("track_index").eq("id", entry.id).maybeSingle();
+      const now = new Date().toISOString();
+      if (tr?.track_index != null) {
+        await supabase.from("prek_level_audio_clips").update({ deleted_at: now })
+          .eq("level_id", levelId).eq("track_index", tr.track_index).is("deleted_at", null);
+      }
+      await supabase.from("prek_level_audio_tracks").update({ deleted_at: now }).eq("id", entry.id);
+      return { kind: "track-soft-delete", id: entry.id };
+    }
+    if (entry.kind === "clip-soft-delete") {
+      await supabase.from("prek_level_audio_clips").update({ deleted_at: null }).eq("id", entry.id);
+      return { kind: "clip-restore", id: entry.id };
+    }
+    if (entry.kind === "clip-restore") {
+      await supabase.from("prek_level_audio_clips").update({ deleted_at: new Date().toISOString() }).eq("id", entry.id);
+      return { kind: "clip-soft-delete", id: entry.id };
+    }
+    return null;
+  };
+
   const undo = async () => {
     const entry = undoStack.current.pop();
     if (!entry) { toast("Nothing to undo"); return; }
-    if (entry.kind === "clip") {
-      await supabase.from("prek_level_audio_clips").update(entry.before).eq("id", entry.id);
-    } else if (entry.kind === "track") {
-      await supabase.from("prek_level_audio_tracks").update(entry.before).eq("id", entry.id);
-    } else {
-      await supabase.from("prek_levels").update(entry.before).eq("id", levelId);
-    }
+    const inverse = await applyEntry(entry);
+    if (inverse) pushRedo(inverse);
     mix.reload();
   };
+  const redo = async () => {
+    const entry = redoStack.current.pop();
+    if (!entry) { toast("Nothing to redo"); return; }
+    const inverse = await applyEntry(entry);
+    if (inverse) pushUndo(inverse, false);
+    mix.reload();
+  };
+
 
   // ── Canvas drag callbacks ─────────────────────────────────────────────────
   const onMoveClipStart = async (c: PreKAudioClip, newStartSec: number, newTrackIndex: number) => {
@@ -284,12 +422,22 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         out.push(`"${c.display_name}" spans ${(res.endSec - res.startSec).toFixed(1)}s but the audio is only ${c.duration_seconds.toFixed(1)}s — enable loop or shorten the span.`);
       }
     }
-    const tplKey = (level.template_key ?? level.legacy_key ?? "").toUpperCase();
-    if (mix.settings.mute_source_video_audio && (tplKey.includes("W101_L1") || tplKey === "W101L1")) {
-      out.push(`This level's narration lives inside the video clips. Muting source audio will remove the spoken story — add a VO track first.`);
+    // Narration-baked-in warning: if the source video is muted but the new mix doesn't cover
+    // most of the level, the child will hear silence where the original narration was.
+    if (mix.settings.mute_source_video_audio) {
+      const totalDur = sceneGraph.nominalDurationTotal;
+      let covered = 0;
+      for (const c of mix.clips) {
+        if (c.duration_mode === "fill-level") { covered = totalDur; break; }
+        const res = resolveClip(c, sceneGraph);
+        covered += Math.max(0, res.endSec - res.startSec);
+      }
+      if (covered < totalDur * 0.5) {
+        out.push(`Original video audio is muted but your tracks only cover ${Math.round((covered / Math.max(0.1, totalDur)) * 100)}% of the level. If the source video has narration baked in, the child will hear silence — add a VO track first.`);
+      }
     }
     return out;
-  }, [mix.clips, mix.settings.mute_source_video_audio, sceneGraph, sceneByKey, level.template_key, level.legacy_key]);
+  }, [mix.clips, mix.settings.mute_source_video_audio, sceneGraph, sceneByKey]);
 
   if (mix.loading) {
     return <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Loading audio mix…</div>;
@@ -326,6 +474,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           </div>
           <div className="flex-1" />
           <Button size="sm" variant="outline" onClick={undo}><Undo2 className="h-3 w-3 mr-1"/> Undo</Button>
+          <Button size="sm" variant="outline" onClick={redo}><Redo2 className="h-3 w-3 mr-1"/> Redo</Button>
         </CardContent>
       </Card>
 
@@ -376,13 +525,22 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           {mix.tracks.map((t, i) => {
             const isSolo = soloTrackIndex === t.track_index;
             const effectivelyMuted = t.muted || (soloTrackIndex !== null && !isSolo);
+            const dragging = mixerDrag?.id === t.id;
             return (
-              <div key={t.id} className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""}`}>
+              <div
+                key={t.id}
+                className={`rounded-lg border p-3 ${effectivelyMuted ? "opacity-60" : ""} ${dragging ? "ring-2 ring-primary shadow-lg" : ""}`}
+                style={dragging ? { transform: `translateY(${mixerDrag!.dy}px)`, zIndex: 30, position: "relative" } : undefined}
+              >
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => moveTrack(t, -1)} disabled={i === 0}><ArrowUp className="h-3 w-3"/></Button>
-                    <Button size="icon" variant="ghost" onClick={() => moveTrack(t, 1)} disabled={i === mix.tracks.length - 1}><ArrowDown className="h-3 w-3"/></Button>
-                  </div>
+                  <button
+                    type="button"
+                    aria-label="Drag to reorder"
+                    onPointerDown={(e) => beginMixerDrag(e, t, i)}
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -ml-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <GripVertical className="h-4 w-4"/>
+                  </button>
                   <Input
                     className="w-44"
                     defaultValue={t.name}

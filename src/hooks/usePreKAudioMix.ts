@@ -91,8 +91,8 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     }
     setLoading(true);
     const [{ data: ts }, { data: cs }, { data: lv }] = await Promise.all([
-      supabase.from("prek_level_audio_tracks").select("*").eq("level_id", levelId).order("track_index"),
-      supabase.from("prek_level_audio_clips").select("*").eq("level_id", levelId).order("sort_order"),
+      supabase.from("prek_level_audio_tracks").select("*").eq("level_id", levelId).is("deleted_at", null).order("track_index"),
+      supabase.from("prek_level_audio_clips").select("*").eq("level_id", levelId).is("deleted_at", null).order("sort_order"),
       supabase.from("prek_levels").select("audio_master_volume, mute_source_video_audio").eq("id", levelId).maybeSingle(),
     ]);
     const tracksRows = (ts ?? []) as unknown as PreKAudioTrack[];
