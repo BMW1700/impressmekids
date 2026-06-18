@@ -554,6 +554,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         className="absolute inset-0 h-full w-full object-cover"
         src={src}
         playsInline
+        muted={muteSourceVideo}
         preload="auto"
         controls={false}
         disablePictureInPicture
