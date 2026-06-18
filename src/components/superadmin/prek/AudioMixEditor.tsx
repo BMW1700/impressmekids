@@ -475,7 +475,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   // rAF-driven cursor that walks through scenes by wall-clock time and emits
   // start/end events to the runtime mixer when the cursor crosses scene edges.
-  const lastEdgeRef = useRef<{ idx: number; edge: "start" | "end" } | null>(null);
   const previewStartedAtRef = useRef<number>(0);
   const previewBaseTimeRef = useRef<number>(0);
   useEffect(() => {
@@ -501,7 +500,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const startPreview = () => {
     if (previewPlaying) return;
     mixer.stopAll();
-    lastEdgeRef.current = null;
     if (previewTime >= sceneGraph.nominalDurationTotal - 0.05) {
       setPreviewTime(0);
     }
@@ -514,13 +512,11 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const stopPreview = () => {
     setPreviewPlaying(false);
     setPreviewTime(0);
-    lastEdgeRef.current = null;
     mixer.stopAll();
   };
   const scrubTo = (sec: number) => {
     mixer.stopAll();
     setPreviewPlaying(false);
-    lastEdgeRef.current = null;
     setPreviewTime(sec);
   };
 
