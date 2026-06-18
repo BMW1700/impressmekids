@@ -316,8 +316,22 @@ const AuraPractice = () => {
     setSelectedStory(null);
   };
 
+  // Auth-loading gate: while AuthContext is resolving the session, render a
+  // spinner instead of the full layout. This prevents the page from painting
+  // empty GamificationHeader / SmartNotifications bars (the "blank rectangles"
+  // the user was seeing) and prevents click handlers from firing before
+  // `user?.id` is available (which made buttons look like they did nothing).
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // Campaign mode takes over the whole screen
   if (isCampaignMode && user?.id) {
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
