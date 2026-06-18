@@ -4922,45 +4922,181 @@ export type Database = {
           },
         ]
       }
+      prek_level_audio_clips: {
+        Row: {
+          anchor_edge: string
+          anchor_offset_seconds: number
+          anchor_scene_key: string
+          created_at: string
+          display_name: string
+          duration_mode: string
+          duration_seconds: number | null
+          end_anchor_edge: string | null
+          end_anchor_offset_seconds: number | null
+          end_anchor_scene_key: string | null
+          fade_in_seconds: number
+          fade_out_seconds: number
+          id: string
+          level_id: string
+          loop_clip: boolean
+          pause_on_word_card: boolean
+          sort_order: number
+          storage_path: string
+          track_index: number
+          trim_end_seconds: number | null
+          trim_start_seconds: number
+          updated_at: string
+          volume: number
+        }
+        Insert: {
+          anchor_edge?: string
+          anchor_offset_seconds?: number
+          anchor_scene_key: string
+          created_at?: string
+          display_name?: string
+          duration_mode?: string
+          duration_seconds?: number | null
+          end_anchor_edge?: string | null
+          end_anchor_offset_seconds?: number | null
+          end_anchor_scene_key?: string | null
+          fade_in_seconds?: number
+          fade_out_seconds?: number
+          id?: string
+          level_id: string
+          loop_clip?: boolean
+          pause_on_word_card?: boolean
+          sort_order?: number
+          storage_path: string
+          track_index: number
+          trim_end_seconds?: number | null
+          trim_start_seconds?: number
+          updated_at?: string
+          volume?: number
+        }
+        Update: {
+          anchor_edge?: string
+          anchor_offset_seconds?: number
+          anchor_scene_key?: string
+          created_at?: string
+          display_name?: string
+          duration_mode?: string
+          duration_seconds?: number | null
+          end_anchor_edge?: string | null
+          end_anchor_offset_seconds?: number | null
+          end_anchor_scene_key?: string | null
+          fade_in_seconds?: number
+          fade_out_seconds?: number
+          id?: string
+          level_id?: string
+          loop_clip?: boolean
+          pause_on_word_card?: boolean
+          sort_order?: number
+          storage_path?: string
+          track_index?: number
+          trim_end_seconds?: number | null
+          trim_start_seconds?: number
+          updated_at?: string
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prek_level_audio_clips_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "prek_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prek_level_audio_tracks: {
+        Row: {
+          created_at: string
+          id: string
+          level_id: string
+          muted: boolean
+          name: string
+          track_index: number
+          updated_at: string
+          volume: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level_id: string
+          muted?: boolean
+          name?: string
+          track_index: number
+          updated_at?: string
+          volume?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level_id?: string
+          muted?: boolean
+          name?: string
+          track_index?: number
+          updated_at?: string
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prek_level_audio_tracks_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "prek_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prek_level_words: {
         Row: {
           ask_line: string
           created_at: string
+          first_video_duration_seconds: number | null
           first_video_url: string | null
           hold_poster_url: string | null
           id: string
           level_id: string
+          second_video_duration_seconds: number | null
           second_video_url: string | null
           sort_order: number
           success_line: string
           updated_at: string
           word: string
+          word_hold_seconds: number
         }
         Insert: {
           ask_line?: string
           created_at?: string
+          first_video_duration_seconds?: number | null
           first_video_url?: string | null
           hold_poster_url?: string | null
           id?: string
           level_id: string
+          second_video_duration_seconds?: number | null
           second_video_url?: string | null
           sort_order?: number
           success_line?: string
           updated_at?: string
           word: string
+          word_hold_seconds?: number
         }
         Update: {
           ask_line?: string
           created_at?: string
+          first_video_duration_seconds?: number | null
           first_video_url?: string | null
           hold_poster_url?: string | null
           id?: string
           level_id?: string
+          second_video_duration_seconds?: number | null
           second_video_url?: string | null
           sort_order?: number
           success_line?: string
           updated_at?: string
           word?: string
+          word_hold_seconds?: number
         }
         Relationships: [
           {
@@ -4974,6 +5110,8 @@ export type Database = {
       }
       prek_levels: {
         Row: {
+          audio_master_volume: number
+          closing_video_duration_seconds: number | null
           closing_video_url: string | null
           created_at: string
           created_by: string | null
@@ -4983,6 +5121,8 @@ export type Database = {
           id: string
           is_published: boolean
           level_number: number
+          mute_source_video_audio: boolean
+          opening_video_duration_seconds: number | null
           opening_video_url: string | null
           sort_order: number
           title: string
@@ -4990,6 +5130,8 @@ export type Database = {
           world_id: string
         }
         Insert: {
+          audio_master_volume?: number
+          closing_video_duration_seconds?: number | null
           closing_video_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -4999,6 +5141,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           level_number: number
+          mute_source_video_audio?: boolean
+          opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
           sort_order?: number
           title: string
@@ -5006,6 +5150,8 @@ export type Database = {
           world_id: string
         }
         Update: {
+          audio_master_volume?: number
+          closing_video_duration_seconds?: number | null
           closing_video_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -5015,6 +5161,8 @@ export type Database = {
           id?: string
           is_published?: boolean
           level_number?: number
+          mute_source_video_audio?: boolean
+          opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
           sort_order?: number
           title?: string
