@@ -33,6 +33,8 @@ import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
 import { TimelineCanvas } from "./TimelineCanvas";
+import { TimelinePreviewPlayer } from "./TimelinePreviewPlayer";
+import { usePreKLevelVideoUrls } from "@/hooks/usePreKLevelVideoUrls";
 
 interface Props {
   levelId: string;
@@ -42,6 +44,8 @@ interface Props {
     legacy_key?: string | null;
     opening_video_duration_seconds?: number | null;
     closing_video_duration_seconds?: number | null;
+    opening_video_url?: string | null;
+    closing_video_url?: string | null;
     audio_master_volume?: number | null;
     mute_source_video_audio?: boolean | null;
   };
@@ -52,6 +56,9 @@ interface Props {
     word_hold_seconds?: number | null;
     first_video_duration_seconds?: number | null;
     second_video_duration_seconds?: number | null;
+    first_video_url?: string | null;
+    second_video_url?: string | null;
+    hold_poster_url?: string | null;
   }>;
 }
 
@@ -97,6 +104,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const sceneGraph = useMemo(() => buildSceneGraph(level, words), [level, words]);
   const sceneByKey = useMemo(() => new Map(sceneGraph.scenes.map((s) => [s.key, s])), [sceneGraph]);
   const videoScenes = sceneGraph.scenes.filter(isVideoScene);
+  const videoUrlsState = usePreKLevelVideoUrls(level, words);
+  const wordsByIndex = useMemo(() => {
+    const out: Record<number, string> = {};
+    [...words].sort((a, b) => a.sort_order - b.sort_order).forEach((w, i) => { out[i + 1] = w.word; });
+    return out;
+  }, [words]);
+  // Drag-preview override: while dragging a clip, scrub the video to the
+  // proposed drop point. Clears on pointer-up.
+  const [dragPreviewSec, setDragPreviewSec] = useState<number | null>(null);
+  const effectivePlayhead = dragPreviewSec ?? previewTime;
 
   // ── Level settings ─────────────────────────────────────────────────────────
   const updateLevelSetting = async (
@@ -618,6 +635,24 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         </Card>
       )}
 
+      {/* Video preview synced to the timeline playhead */}
+      <Card>
+        <CardHeader className="py-3">
+          <CardTitle className="text-base flex items-center gap-2">Video preview <span className="text-xs font-normal text-muted-foreground">(scrub the timeline header or drag a clip to align audio with video)</span></CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TimelinePreviewPlayer
+            graph={sceneGraph}
+            videoUrls={videoUrlsState.videoUrls}
+            posterUrls={videoUrlsState.posterUrls}
+            playheadSec={effectivePlayhead}
+            playing={previewPlaying && dragPreviewSec === null}
+            muteSourceVideo={mix.settings.mute_source_video_audio}
+            wordsByIndex={wordsByIndex}
+          />
+        </CardContent>
+      </Card>
+
       {/* Timeline canvas */}
       <Card>
         <CardHeader className="py-3">
@@ -630,14 +665,16 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             clips={mix.clips}
             selectedClipId={selectedClipId}
             wallClock={wallClock}
-            playheadSec={previewPlaying || previewTime > 0 ? previewTime : null}
+            playheadSec={effectivePlayhead > 0 || previewPlaying ? effectivePlayhead : null}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
             onDropOnNewTrack={onDropOnNewTrack}
+            onScrub={(sec) => { setPreviewPlaying(false); setPreviewTime(sec); }}
+            onDragPreview={setDragPreviewSec}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.
+            Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Click or drag the scene header to scrub the video. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.
           </p>
         </CardContent>
       </Card>

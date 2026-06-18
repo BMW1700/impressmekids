@@ -34,6 +34,10 @@ interface Props {
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
   onDropOnNewTrack: (clip: PreKAudioClip, newStartSec: number) => void;
+  /** Click/drag on the timeline header to move the playhead. */
+  onScrub?: (sec: number) => void;
+  /** Fired during clip drags so the preview can scrub to the drop target. */
+  onDragPreview?: (sec: number | null) => void;
 }
 
 interface DragState {
@@ -48,7 +52,7 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -106,13 +110,29 @@ export function TimelineCanvas({
 
   const onPointerMove = (e: RPointerEvent) => {
     const d = dragRef.current; if (!d) return;
-    setDrag({ ...d, dx: e.clientX - d.startX, dy: e.clientY - d.startY });
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    setDrag({ ...d, dx, dy });
+    // Live scrub preview to the proposed drop position
+    if (onDragPreview) {
+      const clip = clips.find((c) => c.id === d.clipId);
+      if (clip) {
+        const res = resolveClip(clip, graph);
+        if (d.mode === "end") {
+          const endPx = secToPx(res.endSec);
+          onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(endPx + dx))));
+        } else {
+          const startPx = secToPx(res.startSec);
+          onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(startPx + dx))));
+        }
+      }
+    }
   };
 
   const onPointerUp = () => {
     const d = dragRef.current; if (!d) { return; }
     const clip = clips.find((c) => c.id === d.clipId);
-    if (!clip) { setDrag(null); return; }
+    if (!clip) { setDrag(null); onDragPreview?.(null); return; }
     const res = resolveClip(clip, graph);
     const startPx = secToPx(res.startSec);
     const endPx = secToPx(res.endSec);
@@ -132,7 +152,29 @@ export function TimelineCanvas({
       }
     }
     setDrag(null);
+    onDragPreview?.(null);
   };
+
+  // Scrub by clicking/dragging the scene header (or empty canvas area)
+  const scrubFromEvent = (e: RPointerEvent) => {
+    if (!onScrub) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX - rect.left + (e.currentTarget as HTMLElement).scrollLeft;
+    onScrub(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(x))));
+  };
+  const scrubbingRef = useRef(false);
+  const onHeaderPointerDown = (e: RPointerEvent) => {
+    if (!onScrub) return;
+    e.preventDefault();
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* noop */ }
+    scrubbingRef.current = true;
+    scrubFromEvent(e);
+  };
+  const onHeaderPointerMove = (e: RPointerEvent) => {
+    if (!scrubbingRef.current) return;
+    scrubFromEvent(e);
+  };
+  const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
   const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const canvasHeight = HEADER_HEIGHT + 8 + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
@@ -155,8 +197,15 @@ export function TimelineCanvas({
             <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-red-500" />
           </div>
         )}
-        {/* Sticky scene header */}
-        <div className="absolute top-0 left-0 right-0 bg-background/95 border-b z-10" style={{ height: HEADER_HEIGHT }}>
+        {/* Sticky scene header (also acts as the scrub strip) */}
+        <div
+          className="absolute top-0 left-0 right-0 bg-background/95 border-b z-10 cursor-ew-resize touch-none"
+          style={{ height: HEADER_HEIGHT }}
+          onPointerDown={onHeaderPointerDown}
+          onPointerMove={onHeaderPointerMove}
+          onPointerUp={onHeaderPointerUp}
+          onPointerCancel={onHeaderPointerUp}
+        >
           {segs.items.map(({ scene, left, width }) => (
             <div
               key={scene.key}
