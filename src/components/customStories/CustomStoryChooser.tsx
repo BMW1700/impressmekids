@@ -43,6 +43,7 @@ export const CustomStoryChooser = ({
 }: Props) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stories, setStories] = useState<CustomStory[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -51,15 +52,43 @@ export const CustomStoryChooser = ({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setLoading(true);
+    setLoadError(null);
+    setStories([]);
+    setSelectedId(null);
+
     const load = target.kind === "rpg_level"
       ? listStoriesForRpgLevel(target.worldId, target.levelId)
       : listStoriesForCastleBand(target.castleBand);
-    load.then((s) => {
-      setStories(s);
-      // Auto-pick most recent if user has any, otherwise default.
-      setSelectedId(null);
-    }).finally(() => setLoading(false));
+
+    // Hard timeout so a hung Supabase request can never pin the spinner forever.
+    const timeout = new Promise<CustomStory[]>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), 8000),
+    );
+
+    Promise.race([load, timeout])
+      .then((s) => {
+        if (cancelled) return;
+        setStories(s);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("[CustomStoryChooser] failed to load stories", err);
+        setLoadError(
+          err?.message === "timeout"
+            ? "Custom stories took too long to load. You can still play the built-in story."
+            : "Couldn't load your custom stories. You can still play the built-in story.",
+        );
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, targetKey]);
 
