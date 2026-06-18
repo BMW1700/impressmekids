@@ -662,6 +662,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             onDropOnNewTrack={onDropOnNewTrack}
             onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
+            onBeforeIsolatedPreview={pausePreview}
           />
           <p className="mt-2 text-[11px] text-muted-foreground">
             Drag clips horizontally to re-anchor, vertically to change tracks, or onto the dashed lane to create a new track. Click or drag the scene header to scrub the video. Word-card scenes are shown as <Zap className="inline h-3 w-3 mx-0.5 text-amber-500"/> notches when wall-clock is off.
