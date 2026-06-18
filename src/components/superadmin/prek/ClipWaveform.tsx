@@ -106,13 +106,19 @@ export function ClipWaveform({ url, widthPx, heightPx, colorClass = "text-foregr
     const startBin = Math.floor(s * bins);
     const endBin = Math.max(startBin + 1, Math.ceil(e * bins));
     const sliceBins = endBin - startBin;
+    let scale = gain;
+    if (normalize) {
+      let maxV = 0;
+      for (let i = startBin; i < endBin; i++) if (peaks[i] > maxV) maxV = peaks[i];
+      if (maxV > 0) scale = gain / maxV;
+    }
     for (let x = 0; x < w; x++) {
       const idx = Math.min(bins - 1, startBin + Math.floor((x / w) * sliceBins));
-      const v = peaks[idx];
+      const v = Math.min(1, peaks[idx] * scale);
       const barH = Math.max(1, v * (h - 2));
       g.fillRect(x, mid - barH / 2, 1, barH);
     }
-  }, [peaks, widthPx, heightPx, peakStart, peakEnd]);
+  }, [peaks, widthPx, heightPx, peakStart, peakEnd, gain, normalize]);
 
   return (
     <canvas
