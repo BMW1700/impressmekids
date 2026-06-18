@@ -177,16 +177,22 @@ export function TimelineCanvas({
         ))}
 
         {/* Track lanes */}
+        {/* Compute target row for drop-highlight */}
+        {(() => null)()}
         {lanes.map((t, rowIdx) => {
           const isNew = t === null;
           const top = HEADER_HEIGHT + 4 + rowIdx * (TRACK_HEIGHT + TRACK_GAP);
+          const targetRowIdx = drag && drag.mode === "body"
+            ? Math.max(0, Math.min(lanes.length - 1, drag.rowIndex + Math.round(drag.dy / (TRACK_HEIGHT + TRACK_GAP))))
+            : -1;
+          const isDropTarget = targetRowIdx === rowIdx;
           return (
             <div
               key={isNew ? "__new" : t!.id}
-              className={`absolute left-0 right-1 rounded-md ${
+              className={`absolute left-0 right-1 rounded-md transition-colors ${
                 isNew
-                  ? "border-2 border-dashed border-muted-foreground/30 bg-transparent"
-                  : "border border-border/50 bg-background/40"
+                  ? `border-2 border-dashed ${isDropTarget ? "border-primary bg-primary/10" : "border-muted-foreground/30 bg-transparent"}`
+                  : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
               }`}
               style={{ top, height: TRACK_HEIGHT }}
             >
