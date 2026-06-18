@@ -1,0 +1,89 @@
+// Resolves a PreKAudioClip's start/end on the nominal wall-clock timeline
+// produced by buildSceneGraph(). The editor canvas and warnings both use this.
+
+import type { PreKAudioClip } from "@/hooks/usePreKAudioMix";
+import type { Scene, SceneGraph } from "./preKSceneGraph";
+
+export interface ResolvedClip {
+  startSec: number;
+  endSec: number;
+  /** Anchor scene at the clip's start, if any (always set unless fill-level). */
+  anchorScene?: Scene;
+  /** Anchor scene at the clip's end, if any (span-videos only). */
+  endAnchorScene?: Scene;
+}
+
+interface SceneSpan { scene: Scene; start: number; end: number }
+
+function buildSpans(graph: SceneGraph): SceneSpan[] {
+  const out: SceneSpan[] = [];
+  let cur = 0;
+  for (const s of graph.scenes) {
+    out.push({ scene: s, start: cur, end: cur + s.nominalDurationSeconds });
+    cur += s.nominalDurationSeconds;
+  }
+  return out;
+}
+
+export function getSceneSpans(graph: SceneGraph): SceneSpan[] {
+  return buildSpans(graph);
+}
+
+function find(spans: SceneSpan[], key: string): SceneSpan | undefined {
+  return spans.find((s) => s.scene.key === key);
+}
+
+export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedClip {
+  const totalDur = graph.nominalDurationTotal;
+  const spans = buildSpans(graph);
+
+  if (clip.duration_mode === "fill-level") {
+    return { startSec: 0, endSec: totalDur };
+  }
+
+  const anchor = find(spans, clip.anchor_scene_key) ?? spans[0];
+  const startBase = clip.anchor_edge === "start" ? anchor.start : anchor.end;
+  const startSec = Math.max(0, Math.min(totalDur, startBase + clip.anchor_offset_seconds));
+
+  if (clip.duration_mode === "fill-scene") {
+    return { startSec: anchor.start, endSec: anchor.end, anchorScene: anchor.scene, endAnchorScene: anchor.scene };
+  }
+
+  if (clip.duration_mode === "span-videos") {
+    const endAnchor = clip.end_anchor_scene_key ? find(spans, clip.end_anchor_scene_key) ?? anchor : anchor;
+    const endBase = (clip.end_anchor_edge ?? "end") === "start" ? endAnchor.start : endAnchor.end;
+    const endSec = Math.max(startSec + 0.1, Math.min(totalDur, endBase + (clip.end_anchor_offset_seconds ?? 0)));
+    return { startSec, endSec, anchorScene: anchor.scene, endAnchorScene: endAnchor.scene };
+  }
+
+  // fixed
+  const rawDur = clip.duration_seconds ?? 1;
+  const trimEndCut = clip.trim_end_seconds != null ? Math.max(0, rawDur - clip.trim_end_seconds) : 0;
+  const effective = Math.max(0.1, rawDur - clip.trim_start_seconds - trimEndCut);
+  return { startSec, endSec: startSec + effective, anchorScene: anchor.scene };
+}
+
+export interface SceneHit { scene: Scene; sceneStart: number; sceneEnd: number }
+
+export function findSceneAt(graph: SceneGraph, sec: number): SceneHit {
+  const spans = buildSpans(graph);
+  for (const sp of spans) if (sec < sp.end) return { scene: sp.scene, sceneStart: sp.start, sceneEnd: sp.end };
+  const last = spans[spans.length - 1];
+  return { scene: last.scene, sceneStart: last.start, sceneEnd: last.end };
+}
+
+/** Snap a wall-clock second to an anchor: prefer the scene containing it; use start edge with offset. */
+export function snapToAnchor(graph: SceneGraph, sec: number): { scene_key: string; edge: "start" | "end"; offset: number } {
+  const hit = findSceneAt(graph, sec);
+  return { scene_key: hit.scene.key, edge: "start", offset: Math.round((sec - hit.sceneStart) * 10) / 10 };
+}
+
+/** Same, but restricted to video scenes (used for span-videos end-anchor). */
+export function snapToVideoAnchor(graph: SceneGraph, sec: number): { scene_key: string; edge: "start" | "end"; offset: number } {
+  const spans = buildSpans(graph).filter((sp) => sp.scene.kind !== "word-card");
+  for (const sp of spans) {
+    if (sec < sp.end) return { scene_key: sp.scene.key, edge: "start", offset: Math.round((sec - sp.start) * 10) / 10 };
+  }
+  const last = spans[spans.length - 1];
+  return { scene_key: last.scene.key, edge: "end", offset: Math.round((sec - last.end) * 10) / 10 };
+}
