@@ -602,6 +602,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             clips={mix.clips}
             selectedClipId={selectedClipId}
             wallClock={wallClock}
+            playheadSec={previewPlaying || previewTime > 0 ? previewTime : null}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
