@@ -565,6 +565,12 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             <Label className="text-sm flex items-center gap-1"><Clock className="h-3 w-3"/> Wall-clock timeline</Label>
           </div>
           <div className="flex-1" />
+          <Button size="sm" variant={previewPlaying ? "default" : "outline"} onClick={previewPlaying ? () => setPreviewPlaying(false) : startPreview}>
+            {previewPlaying ? <Square className="h-3 w-3 mr-1"/> : <Play className="h-3 w-3 mr-1"/>}
+            {previewPlaying ? "Pause" : "Preview"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={stopPreview} disabled={!previewPlaying && previewTime === 0}>Reset</Button>
+          <span className="text-[10px] text-muted-foreground tabular-nums w-12 text-right">{previewTime.toFixed(1)}s</span>
           <Button size="sm" variant="outline" onClick={undo}><Undo2 className="h-3 w-3 mr-1"/> Undo</Button>
           <Button size="sm" variant="outline" onClick={redo}><Redo2 className="h-3 w-3 mr-1"/> Redo</Button>
         </CardContent>
