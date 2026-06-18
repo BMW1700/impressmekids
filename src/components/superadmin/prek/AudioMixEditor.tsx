@@ -33,6 +33,8 @@ import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
 import { TimelineCanvas } from "./TimelineCanvas";
+import { TimelinePreviewPlayer } from "./TimelinePreviewPlayer";
+import { usePreKLevelVideoUrls } from "@/hooks/usePreKLevelVideoUrls";
 
 interface Props {
   levelId: string;
