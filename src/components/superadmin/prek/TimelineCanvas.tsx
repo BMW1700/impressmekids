@@ -177,8 +177,6 @@ export function TimelineCanvas({
         ))}
 
         {/* Track lanes */}
-        {/* Compute target row for drop-highlight */}
-        {(() => null)()}
         {lanes.map((t, rowIdx) => {
           const isNew = t === null;
           const top = HEADER_HEIGHT + 4 + rowIdx * (TRACK_HEIGHT + TRACK_GAP);
