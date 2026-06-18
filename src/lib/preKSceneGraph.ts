@@ -19,8 +19,15 @@ export interface Scene {
   wordRowId?: string;
   /** Display text — e.g. "Opening", "Word 2 — first clip", "Word 2 — card (JUMP)". */
   label: string;
-  /** Fixed for videos, nominal for cards. */
+  /** Fixed for videos, nominal for cards. Used for legacy wall-clock previews. */
   nominalDurationSeconds: number;
+  /**
+   * Effective duration the editor timeline uses for layout & playhead math.
+   * Word-card scenes are zero-width "skip notches": audio teleports from the
+   * end of the previous video directly to the start of the next video, never
+   * sounding during the open-ended "child speaks" pause.
+   */
+  timelineDurationSeconds: number;
 }
 
 export interface VideoTimelineEntry {
@@ -73,6 +80,7 @@ export function buildSceneGraph(
     kind: "opening",
     label: "Opening",
     nominalDurationSeconds: openingDur,
+    timelineDurationSeconds: openingDur,
   });
   videoTimeline.push({ sceneKey: SCENE_KEYS.opening, startSec: videoCursor, endSec: videoCursor + openingDur });
   videoCursor += openingDur;
@@ -93,6 +101,7 @@ export function buildSceneGraph(
       wordRowId: w.id,
       label: `Word ${i} — first clip${wordLabel ? ` (${wordLabel})` : ""}`,
       nominalDurationSeconds: firstDur,
+      timelineDurationSeconds: firstDur,
     });
     videoTimeline.push({ sceneKey: SCENE_KEYS.wordFirst(i), startSec: videoCursor, endSec: videoCursor + firstDur });
     videoCursor += firstDur;
@@ -104,6 +113,8 @@ export function buildSceneGraph(
       wordRowId: w.id,
       label: `Word ${i} — card${wordLabel ? ` (${wordLabel})` : ""}`,
       nominalDurationSeconds: cardDur,
+      // Zero-width on the editor timeline: audio teleports across this scene.
+      timelineDurationSeconds: 0,
     });
 
     scenes.push({
@@ -113,6 +124,7 @@ export function buildSceneGraph(
       wordRowId: w.id,
       label: `Word ${i} — second clip${wordLabel ? ` (${wordLabel})` : ""}`,
       nominalDurationSeconds: secondDur,
+      timelineDurationSeconds: secondDur,
     });
     videoTimeline.push({ sceneKey: SCENE_KEYS.wordSecond(i), startSec: videoCursor, endSec: videoCursor + secondDur });
     videoCursor += secondDur;
@@ -124,11 +136,12 @@ export function buildSceneGraph(
     kind: "closing",
     label: "Closing",
     nominalDurationSeconds: closingDur,
+    timelineDurationSeconds: closingDur,
   });
   videoTimeline.push({ sceneKey: SCENE_KEYS.closing, startSec: videoCursor, endSec: videoCursor + closingDur });
   videoCursor += closingDur;
 
-  const nominalDurationTotal = scenes.reduce((s, sc) => s + sc.nominalDurationSeconds, 0);
+  const nominalDurationTotal = scenes.reduce((s, sc) => s + sc.timelineDurationSeconds, 0);
 
   return {
     scenes,

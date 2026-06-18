@@ -19,8 +19,11 @@ function buildSpans(graph: SceneGraph): SceneSpan[] {
   const out: SceneSpan[] = [];
   let cur = 0;
   for (const s of graph.scenes) {
-    out.push({ scene: s, start: cur, end: cur + s.nominalDurationSeconds });
-    cur += s.nominalDurationSeconds;
+    // Word-card scenes are zero-width on the editor timeline so audio teleports
+    // straight from end-of-first-video to start-of-second-video.
+    const dur = s.timelineDurationSeconds;
+    out.push({ scene: s, start: cur, end: cur + dur });
+    cur += dur;
   }
   return out;
 }
@@ -56,13 +59,16 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
     return { startSec, endSec, anchorScene: anchor.scene, endAnchorScene: endAnchor.scene };
   }
 
-  // fixed
+  // fixed — clamp the audible end at the next card-scene boundary so a clip
+  // anchored in one video can never bleed into a later word's video.
   const rawDur = clip.duration_seconds ?? 1;
   const trimEndCut = clip.trim_end_seconds != null ? Math.max(0, rawDur - clip.trim_end_seconds) : 0;
   const rate = Math.max(0.05, clip.playback_rate || 1);
   const effectiveAudioSeconds = Math.max(0.1, rawDur - clip.trim_start_seconds - trimEndCut);
   const effective = effectiveAudioSeconds / rate;
-  return { startSec, endSec: startSec + effective, anchorScene: anchor.scene };
+  const nextBoundary = spans.find((sp) => sp.scene.kind === "word-card" && sp.start > startSec)?.start ?? totalDur;
+  const clampedEnd = Math.min(startSec + effective, nextBoundary);
+  return { startSec, endSec: Math.max(startSec + 0.05, clampedEnd), anchorScene: anchor.scene };
 }
 
 export interface SceneHit { scene: Scene; sceneStart: number; sceneEnd: number }

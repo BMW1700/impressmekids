@@ -85,27 +85,31 @@ export function TimelineCanvas({
   }, [onBeforeIsolatedPreview, stopClipPreview]);
   useEffect(() => () => stopClipPreview(), [stopClipPreview]);
 
-  // Per-scene rendered width. When wallClock=false, card scenes shrink to a notch.
+  // Per-scene rendered width. Word-card scenes are zero-width on the timeline
+  // and always render as a fixed-width "skip notch"; clip time math uses
+  // timelineDurationSeconds so audio teleports across cards.
   const segs = useMemo(() => {
     let cursor = 0;
     let renderCursor = 0;
     const out = graph.scenes.map((s) => {
+      const tlDur = s.timelineDurationSeconds;
+      const isCard = s.kind === "word-card";
       const realStart = cursor;
-      cursor += s.nominalDurationSeconds;
-      const renderWidth = wallClock || s.kind !== "word-card"
-        ? s.nominalDurationSeconds * PX_PER_SEC_FULL
-        : PX_PER_SEC_COMPACT_CARD;
+      cursor += tlDur;
+      const renderWidth = isCard ? PX_PER_SEC_COMPACT_CARD : tlDur * PX_PER_SEC_FULL;
       const left = renderCursor;
       renderCursor += renderWidth;
-      const pxPerSec = renderWidth / Math.max(0.1, s.nominalDurationSeconds);
-      return { scene: s, realStart, realEnd: cursor, left, width: renderWidth, pxPerSec };
+      const pxPerSec = isCard || tlDur <= 0 ? 0 : renderWidth / tlDur;
+      return { scene: s, realStart, realEnd: cursor, left, width: renderWidth, pxPerSec, isCard };
     });
     return { items: out, totalRenderPx: renderCursor };
-  }, [graph, wallClock]);
+  }, [graph]);
 
-  // Convert a wall-clock second to canvas-x (handles wallClock=false squish)
+  // Convert a wall-clock second to canvas-x. Card scenes are zero-width in
+  // time, so a sec exactly at a boundary maps to the notch's left edge.
   const secToPx = useCallback((sec: number) => {
     for (const it of segs.items) {
+      if (it.isCard) continue;
       if (sec <= it.realEnd) {
         const localSec = Math.max(0, sec - it.realStart);
         return it.left + localSec * it.pxPerSec;
@@ -114,10 +118,12 @@ export function TimelineCanvas({
     return segs.totalRenderPx;
   }, [segs]);
 
-  // Convert canvas-x back to a wall-clock second
+  // Convert canvas-x back to a wall-clock second. Clicking on a card notch
+  // snaps to the start of the next video scene (teleport target).
   const pxToSec = useCallback((px: number) => {
     for (const it of segs.items) {
       if (px <= it.left + it.width) {
+        if (it.isCard) return it.realEnd; // == realStart, snaps to next video start
         const localPx = Math.max(0, px - it.left);
         return it.realStart + localPx / it.pxPerSec;
       }
