@@ -11,11 +11,12 @@
 //   • Drag span-end handle → re-anchor end of span-videos clip
 //   • Drop onto bottom "+" lane → create a new track and move the clip there
 
-import { useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
-import { Zap } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
+import { Zap, Play, Pause } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
+import { ClipWaveform } from "./ClipWaveform";
 
 const PX_PER_SEC_FULL = 48;
 const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is off
@@ -30,6 +31,8 @@ interface Props {
   selectedClipId: string | null;
   wallClock: boolean;
   playheadSec?: number | null;
+  /** storage_path -> signed audio URL, for waveform decode + isolated preview. */
+  signedUrls?: Record<string, string>;
   onSelectClip: (id: string | null) => void;
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
@@ -51,12 +54,33 @@ interface DragState {
 }
 
 export function TimelineCanvas({
-  graph, tracks, clips, selectedClipId, wallClock, playheadSec,
+  graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls,
   onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   dragRef.current = drag;
+
+  // Single shared audio element for clip-isolated previews (▶ button on each
+  // clip). Guarantees only one preview plays at a time.
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [previewingClipId, setPreviewingClipId] = useState<string | null>(null);
+  const stopClipPreview = useCallback(() => {
+    const a = previewAudioRef.current;
+    if (a) { try { a.pause(); } catch { /* noop */ } }
+    setPreviewingClipId(null);
+  }, []);
+  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number) => {
+    stopClipPreview();
+    const a = new Audio(url);
+    a.playbackRate = rate || 1;
+    try { a.currentTime = trim || 0; } catch { /* noop */ }
+    previewAudioRef.current = a;
+    a.onended = () => setPreviewingClipId((id) => id === clipId ? null : id);
+    a.play().catch(() => setPreviewingClipId(null));
+    setPreviewingClipId(clipId);
+  }, [stopClipPreview]);
+  useEffect(() => () => stopClipPreview(), [stopClipPreview]);
 
   // Per-scene rendered width. When wallClock=false, card scenes shrink to a notch.
   const segs = useMemo(() => {

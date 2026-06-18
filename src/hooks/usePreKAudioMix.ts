@@ -43,6 +43,8 @@ export interface PreKAudioClip {
 
   trim_start_seconds: number;
   trim_end_seconds: number | null;
+
+  playback_rate: number;
 }
 
 export interface PreKLevelAudioSettings {
