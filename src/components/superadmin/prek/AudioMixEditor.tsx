@@ -713,14 +713,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
                     />
                     <span className="text-xs text-muted-foreground w-10">{Math.round(t.volume * 100)}%</span>
                   </div>
-                  <TrackSpeedControl
-                    track={t}
-                    clips={mix.clips.filter((c) => c.track_index === t.track_index)}
-                    onChange={(rate) => {
-                      const targets = mix.clips.filter((c) => c.track_index === t.track_index);
-                      targets.forEach((c) => { void updateClip(c, { playback_rate: rate }, true); });
-                    }}
-                  />
                   <div className="flex-1" />
                   <Button size="sm" variant="outline" onClick={() => pickClipFor(t)} disabled={busy}>
                     {busy ? <Loader2 className="h-3 w-3 mr-1 animate-spin"/> : <Upload className="h-3 w-3 mr-1"/>} Add audio
