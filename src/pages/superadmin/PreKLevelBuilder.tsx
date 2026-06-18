@@ -20,6 +20,7 @@ import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
+import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
 
 interface LevelRow {
   id: string;
