@@ -925,7 +925,7 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, onUpdat
             <Button size="sm" variant="ghost" onClick={() => onUpdate(clip, { playback_rate: 1 })}>Reset</Button>
           </div>
           <Slider
-            min={50} max={200} step={5}
+            min={50} max={200} step={1}
             value={[Math.round((clip.playback_rate || 1) * 100)]}
             onValueChange={(v) => onUpdate(clip, { playback_rate: v[0] / 100 })}
           />
