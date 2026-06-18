@@ -422,12 +422,22 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         out.push(`"${c.display_name}" spans ${(res.endSec - res.startSec).toFixed(1)}s but the audio is only ${c.duration_seconds.toFixed(1)}s — enable loop or shorten the span.`);
       }
     }
-    const tplKey = (level.template_key ?? level.legacy_key ?? "").toUpperCase();
-    if (mix.settings.mute_source_video_audio && (tplKey.includes("W101_L1") || tplKey === "W101L1")) {
-      out.push(`This level's narration lives inside the video clips. Muting source audio will remove the spoken story — add a VO track first.`);
+    // Narration-baked-in warning: if the source video is muted but the new mix doesn't cover
+    // most of the level, the child will hear silence where the original narration was.
+    if (mix.settings.mute_source_video_audio) {
+      const totalDur = sceneGraph.nominalDurationTotal;
+      let covered = 0;
+      for (const c of mix.clips) {
+        if (c.duration_mode === "fill-level") { covered = totalDur; break; }
+        const res = resolveClip(c, sceneGraph);
+        covered += Math.max(0, res.endSec - res.startSec);
+      }
+      if (covered < totalDur * 0.5) {
+        out.push(`Original video audio is muted but your tracks only cover ${Math.round((covered / Math.max(0.1, totalDur)) * 100)}% of the level. If the source video has narration baked in, the child will hear silence — add a VO track first.`);
+      }
     }
     return out;
-  }, [mix.clips, mix.settings.mute_source_video_audio, sceneGraph, sceneByKey, level.template_key, level.legacy_key]);
+  }, [mix.clips, mix.settings.mute_source_video_audio, sceneGraph, sceneByKey]);
 
   if (mix.loading) {
     return <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Loading audio mix…</div>;
