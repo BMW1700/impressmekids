@@ -1,42 +1,35 @@
-# Add Track 0 — original video audio waveform
+## What's broken
 
-Adds a non-editable lane at the top of the timeline that shows the source video's audio as a waveform, one segment per video scene (Opening, Word N first, Word N second, Closing), aligned exactly to the scene columns above.
+From the screenshots and code audit, three things are stacking on top of each other on the AURA Reading page:
 
-## What the user sees
+1. **"Checking your session…" never resolves.** `RequireAuth` reads `isLoading` from `AuthContext`, but the game route is gated until session resolves. If `supabase.auth.getSession()` is slow or the listener fires before the initial `getSession` resolves, users get parked on the "Still loading…" notice.
+2. **Empty "header" boxes that just sit there.** Inside `AuraPractice`, `GamificationHeader` and `SmartNotifications` render before `user` is known. Because `AuraPractice` fetches the user with its own `useQuery(['user'])` calling `supabase.auth.getUser()` (separate from `AuthContext`), `user` is `undefined` for the first paint and these two components render empty placeholder bars — exactly the blank rectangles in your screenshots.
+3. **Clicking "Enter World Map" (RPG Mode) does nothing.** The RPG render branch in `AuraPractice` is gated on `isRpgMode && rpgView === 'world_map' && user?.id`. When the local `useQuery(['user'])` hasn't resolved (or returns null in game mode), `user?.id` is falsy, so `setIsRpgMode(true)` flips state but the conditional drops through to the default tabs view — the button "does nothing" from the user's perspective. Same root cause applies to the Castle Mode button when it routes into a `/game/*` protected route that's still stuck on RequireAuth.
 
-```text
-┌────────────── Opening ─────────── │↯│ ── Word 1 first ── │↯│ ── Word 1 second ── ...
-│ Video        [▰▰▱▱▰▰▰▱▱▰▰▰]         [▰▰▰▱▰▰▱▱▰▰▰]         [▰▱▱▰▰▰▱▱▰▰▰▰]
-│ Track 1      [── clip ──]                    [── clip ──]
-│ Track 2                                                  [── clip ──]
-│ + Drop here to create a new track
-```
+## Fix plan
 
-- New lane labelled "Video", rendered above Track 1.
-- One waveform block per video scene, sitting exactly under its scene-header column (skips card notches, like audio clips do today).
-- Visual styling matches existing clip blocks (rounded, bordered, same waveform component) but uses a distinct neutral color (slate/zinc) so it reads as "source", not an editable clip.
-- No drag, no resize, no track-change, no delete. Clicking it does nothing (or optionally selects nothing — clears selection).
-- Each block shows the video's filename truncated at the bottom edge, same as audio clips.
+### 1. Single source of truth for `user` in `AuraPractice`
+- Replace the local `useQuery(['user'])` + `useQuery(['profile', user?.id])` block with values from `useAuth()` (`user`, `profile`, `isLoading`).
+- Delete the duplicate `supabase.auth.getUser()` call so we stop racing the centralized listener.
 
-## Technical details
+### 2. Gate the page on auth resolution
+- While `isLoading` from `AuthContext` is true, render the existing spinner instead of the full layout. This eliminates the flicker where `GamificationHeader` / `SmartNotifications` mount with no user and paint empty bars.
+- After `isLoading` resolves, render normally. `GamificationHeader` and `SmartNotifications` will now always receive a real `studentId`.
 
-Files to touch:
+### 3. Make the RPG/Castle buttons resilient
+- In the `onStartRpgMode` handler, if `user?.id` isn't ready yet, show a toast ("Loading your profile…") instead of silently flipping state.
+- Loosen the render gate so `isRpgMode && rpgView === 'world_map'` renders the world map shell even if `user?.id` arrives a tick later — pass `user?.id` down and let child components handle the brief loading state. This guarantees the click always produces a visible UI change.
 
-1. `src/components/superadmin/prek/TimelineCanvas.tsx`
-   - New prop: `videoUrls?: Record<string, string>` (sceneKey → signed mp4 URL).
-   - Insert a synthetic lane row at `rowIdx = 0` (before existing track lanes). Adjust `top` math for all subsequent lanes and `canvasHeight` to include it. Update `targetRowIdx` drop-zone math to account for the offset so existing drag-to-track behavior is unchanged (the video lane is never a valid drop target).
-   - For each `segs.items` entry where `!isCard`, render a read-only block at `(left, width)` that mounts `<ClipWaveform url={videoUrls[scene.key]} ...>` with `peakStart=0, peakEnd=1`. No pointer handlers.
-   - Lane label "Video" on the left, same styling as track name labels.
+### 4. Quick audit of `RequireAuth` / `AuthContext`
+- Confirm the `onAuthStateChange` callback doesn't `await` Supabase calls inside the callback (it doesn't today — profile fetch is in a separate effect — keep it that way).
+- Keep the existing "preserve previous profile on transient errors" behavior so tab returns don't blank the UI.
+- No schema changes; this is frontend-only.
 
-2. `src/components/superadmin/prek/ClipWaveform.tsx`
-   - No changes required. `decodePeaks` already does `fetch + AudioContext.decodeAudioData`, which decodes the audio track out of mp4/mov containers in Chromium and Safari. Cached per-URL, so each video decodes once.
-   - If decode fails (rare codec), it silently falls back to the thin baseline — the lane still renders, just flat. That's acceptable for v1.
+### Files to edit
+- `src/pages/student/AuraPractice.tsx` — swap local user query for `useAuth()`, add `isLoading` gate, guard RPG button.
+- (Reference only, no changes expected) `src/contexts/AuthContext.tsx`, `src/components/auth/RequireAuth.tsx`.
 
-3. `src/components/superadmin/prek/AudioMixEditor.tsx`
-   - Pass `videoUrls={videoUrlsState.videoUrls}` to `<TimelineCanvas>` (already loaded for the preview player).
-
-## Out of scope
-
-- No playback of video audio through the mixer — this lane is purely visual reference.
-- No waveform for card scenes (they have no source video, and they're zero-width on the timeline anyway).
-- No changes to clip resolution, transport, or scene graph.
+### Out of scope
+- No backend / RLS changes.
+- No design changes to the AURA Reading layout itself.
+- The earlier audio-mix editor work is untouched.

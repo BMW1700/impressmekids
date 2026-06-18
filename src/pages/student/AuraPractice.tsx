@@ -55,6 +55,8 @@ import { crossModalNetwork, type PresentationFeatures } from "@/lib/ml/crossModa
 import { useActiveScreeningPassage, type ActiveScreening } from "@/hooks/useActiveScreeningPassage";
 import type { CuratedStory as Story } from "@/data/curatedStories";
 import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2 } from "lucide-react";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
@@ -172,17 +174,15 @@ const AuraPractice = () => {
     unlockSpeechSynthesis();
   }, []);
 
-  // Auth is handled by the user query - no need for redundant checkAuth
+  // Auth comes from the centralized AuthContext so we don't race a separate
+  // supabase.auth.getUser() call — that race left `user` undefined on first
+  // paint, which made GamificationHeader/SmartNotifications render empty
+  // bars and made the RPG Mode button look like it "did nothing" because
+  // the `user?.id` render gate dropped through.
+  const { user, isLoading: isAuthLoading } = useAuth();
 
-  const { data: user } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
-
-  // Get user profile for role checking
+  // Profile (role + default grade mode) still needs its own query because
+  // AuthContext's profile shape doesn't carry default_grade_mode.
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
@@ -197,6 +197,7 @@ const AuraPractice = () => {
     },
     enabled: !!user?.id,
   });
+
 
   // Auto-select grade mode from profile default on page load
   // Only applies to the Reading Stories library (non-game routes).
@@ -315,8 +316,22 @@ const AuraPractice = () => {
     setSelectedStory(null);
   };
 
+  // Auth-loading gate: while AuthContext is resolving the session, render a
+  // spinner instead of the full layout. This prevents the page from painting
+  // empty GamificationHeader / SmartNotifications bars (the "blank rectangles"
+  // the user was seeing) and prevents click handlers from firing before
+  // `user?.id` is available (which made buttons look like they did nothing).
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   // Campaign mode takes over the whole screen
   if (isCampaignMode && user?.id) {
+
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
         {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
@@ -945,7 +960,13 @@ const AuraPractice = () => {
               <StoryLibrary 
                 onSelectStory={handleStorySelect} 
                 onStartCampaign={() => setIsCampaignMode(true)}
-                onStartRpgMode={() => setIsRpgMode(true)}
+                onStartRpgMode={() => {
+                  if (!user?.id) {
+                    toast({ title: "Loading your profile…", description: "Try again in a moment." });
+                    return;
+                  }
+                  setIsRpgMode(true);
+                }}
                 onStartCastle={() => navigate('/game/castle-swarm')}
                 categoryFilter={categoryFilter}
                 gradeMode={currentGradeMode}
