@@ -142,7 +142,11 @@ export const CustomStoryChooser = ({
               </div>
             )}
 
-            {!loading && stories.length === 0 && (
+            {!loading && loadError && (
+              <p className="text-sm text-destructive py-2">{loadError}</p>
+            )}
+
+            {!loading && !loadError && stories.length === 0 && (
               <p className="text-sm text-muted-foreground py-2">
                 You don't have any custom stories for this yet.
               </p>
