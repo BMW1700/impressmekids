@@ -28,18 +28,17 @@ export function resolveTimelineFrame(
   let lastVideoKey: string | null = null;
   for (let i = 0; i < graph.scenes.length; i++) {
     const s = graph.scenes[i];
-    const end = cursor + s.nominalDurationSeconds;
+    // Use the editor timeline duration so the playhead skips over zero-width
+    // card scenes — the preview teleports from end-of-first to start-of-second.
+    const end = cursor + s.timelineDurationSeconds;
     if (s.kind !== "word-card") lastVideoKey = s.key;
+    if (s.kind === "word-card") {
+      // Zero-width card: only land here if the playhead is exactly on it AND
+      // no later video scene exists. Normally we fall through to the next video.
+      cursor = end;
+      continue;
+    }
     if (t < end || i === graph.scenes.length - 1) {
-      if (s.kind === "word-card") {
-        return {
-          sceneKey: s.key,
-          isCard: true,
-          src: null,
-          localTime: 0,
-          posterUrl: (lastVideoKey && posterUrls[lastVideoKey]) || null,
-        };
-      }
       return {
         sceneKey: s.key,
         isCard: false,
@@ -50,5 +49,7 @@ export function resolveTimelineFrame(
     }
     cursor = end;
   }
+  void lastVideoKey;
+  return { sceneKey: graph.scenes[0]?.key ?? "", isCard: false, src: null, localTime: 0, posterUrl: null };
   return { sceneKey: graph.scenes[0]?.key ?? "", isCard: false, src: null, localTime: 0, posterUrl: null };
 }
