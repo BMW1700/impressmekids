@@ -462,12 +462,43 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         // Respect the per-level mute_source_video_audio setting; only unmute
         // when the level keeps its baked-in narration.
         v.muted = muteSourceVideo;
-        v.currentTime = 0;
+        const trim = v.currentSrc ? trimsBySrc.get(v.currentSrc) : undefined
+          ?? (firstClipSrc ? trimsBySrc.get(firstClipSrc) : undefined);
+        v.currentTime = trim?.trimIn ?? 0;
       } catch { /* ignore */ }
       playSlot(activeSlotRef.current);
     }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
+
+  // Seek a slot's <video> to its trim-in point if one is configured.
+  const seekToTrimIn = (slot: Slot) => {
+    const v = videoRefs.current[slot];
+    if (!v) return;
+    const src = v.currentSrc || v.src;
+    const trim = trimsBySrc.get(src);
+    if (!trim) return;
+    try {
+      if (Math.abs(v.currentTime - trim.trimIn) > 0.05) {
+        v.currentTime = trim.trimIn;
+      }
+    } catch { /* noop */ }
+  };
+
+  // Synthesize an early "ended" when playback reaches the trim-out point.
+  const handleTimeUpdate = (slot: Slot) => {
+    if (slot !== activeSlotRef.current) return;
+    const v = videoRefs.current[slot];
+    if (!v) return;
+    const src = v.currentSrc || v.src;
+    const trim = trimsBySrc.get(src);
+    if (!trim?.trimOut) return;
+    if (v.currentTime >= trim.trimOut - 0.02) {
+      try { v.pause(); } catch { /* noop */ }
+      handleClipEnded(slot);
+    }
+  };
+
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
   const handleClipEnded = (slot: Slot) => {
