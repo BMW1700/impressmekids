@@ -61,9 +61,8 @@ interface WordRow {
   second_trim_out_seconds: number | null;
 }
 
-// Component that renders a video URL/path with playback. For storage paths it
-// fetches a signed URL on mount.
-const VideoPreview = ({ pathOrUrl }: { pathOrUrl: string | null }) => {
+// Resolves a storage path or full URL into something a <video> can play.
+function useSignedSrc(pathOrUrl: string | null): string | null {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -83,16 +82,8 @@ const VideoPreview = ({ pathOrUrl }: { pathOrUrl: string | null }) => {
       });
     return () => { cancelled = true; };
   }, [pathOrUrl]);
-  if (!src) return null;
-  return (
-    <video
-      src={src}
-      controls
-      preload="metadata"
-      className="w-full max-w-sm rounded border bg-black aspect-video"
-    />
-  );
-};
+  return src;
+}
 
 const VideoSlot = ({
   label,
@@ -100,20 +91,32 @@ const VideoSlot = ({
   uploading,
   onPick,
   onClear,
+  trimIn,
+  trimOut,
+  onTrimChange,
 }: {
   label: string;
   pathOrUrl: string | null;
   uploading: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
+  trimIn: number | null;
+  trimOut: number | null;
+  onTrimChange: (next: { trimIn: number | null; trimOut: number | null }) => void;
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const src = useSignedSrc(pathOrUrl);
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {pathOrUrl ? (
         <div className="space-y-2">
-          <VideoPreview pathOrUrl={pathOrUrl} />
+          <VideoTrimEditor
+            src={src}
+            trimIn={trimIn}
+            trimOut={trimOut}
+            onChange={onTrimChange}
+          />
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
