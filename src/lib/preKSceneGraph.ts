@@ -165,7 +165,12 @@ export function buildSceneGraph(
     videoCursor += secondDur;
   });
 
-  const closingDur = Number(level.closing_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+  const closingDur = effective(
+    level.closing_video_duration_seconds,
+    level.closing_trim_in_seconds,
+    level.closing_trim_out_seconds,
+    DEFAULT_VIDEO_SECONDS,
+  );
   scenes.push({
     key: SCENE_KEYS.closing,
     kind: "closing",
