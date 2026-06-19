@@ -614,9 +614,11 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
           transition: `opacity ${CROSSFADE_MS}ms ease-in-out`,
           zIndex: isActive ? 2 : 1,
         }}
-        onLoadedData={() => handleVideoReady(slot)}
+        onLoadedMetadata={() => seekToTrimIn(slot)}
+        onLoadedData={() => { seekToTrimIn(slot); handleVideoReady(slot); }}
         onCanPlay={() => handleVideoReady(slot)}
         onPlaying={() => handleVideoPlaying(slot)}
+        onTimeUpdate={() => handleTimeUpdate(slot)}
         onError={() => handleVideoError(slot)}
         onEnded={() => handleClipEnded(slot)}
       />
