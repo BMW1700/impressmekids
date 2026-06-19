@@ -257,8 +257,39 @@ const PreKLevelBuilder = () => {
     const column = slot === "opening" ? "opening_video_url" : "closing_video_url";
     const prior = slot === "opening" ? level.opening_video_url : level.closing_video_url;
     if (prior) await deletePreKVideo(prior);
-    await supabase.from("prek_levels").update({ [column]: null }).eq("id", level.id);
+    await supabase.from("prek_levels").update({
+      [column]: null,
+      [`${slot}_trim_in_seconds`]: null,
+      [`${slot}_trim_out_seconds`]: null,
+    }).eq("id", level.id);
     load();
+  };
+
+  const updateLevelTrim = async (
+    slot: "opening" | "closing",
+    next: { trimIn: number | null; trimOut: number | null },
+  ) => {
+    const patch = {
+      [`${slot}_trim_in_seconds`]: next.trimIn,
+      [`${slot}_trim_out_seconds`]: next.trimOut,
+    };
+    setLevel((cur) => (cur ? ({ ...cur, ...patch } as LevelRow) : cur));
+    const { error } = await supabase.from("prek_levels").update(patch).eq("id", level.id);
+    if (error) toast.error(error.message);
+  };
+
+  const updateWordTrim = async (
+    wordId: string,
+    slot: "first" | "second",
+    next: { trimIn: number | null; trimOut: number | null },
+  ) => {
+    const patch = {
+      [`${slot}_trim_in_seconds`]: next.trimIn,
+      [`${slot}_trim_out_seconds`]: next.trimOut,
+    };
+    setWords((cur) => cur.map((w) => (w.id === wordId ? ({ ...w, ...patch } as WordRow) : w)));
+    const { error } = await supabase.from("prek_level_words").update(patch).eq("id", wordId);
+    if (error) toast.error(error.message);
   };
 
   // ---- Word-level operations -------------------------------------------------
