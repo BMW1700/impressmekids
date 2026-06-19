@@ -428,6 +428,9 @@ const PreKLevelBuilder = () => {
               uploading={uploadingKey === "level-opening"}
               onPick={(f) => uploadLevelVideo("opening", f)}
               onClear={() => clearLevelVideo("opening")}
+              trimIn={level.opening_trim_in_seconds}
+              trimOut={level.opening_trim_out_seconds}
+              onTrimChange={(next) => updateLevelTrim("opening", next)}
             />
           </CardContent>
         </Card>
