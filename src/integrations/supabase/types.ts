@@ -5062,11 +5062,15 @@ export type Database = {
         Row: {
           ask_line: string
           created_at: string
+          first_trim_in_seconds: number | null
+          first_trim_out_seconds: number | null
           first_video_duration_seconds: number | null
           first_video_url: string | null
           hold_poster_url: string | null
           id: string
           level_id: string
+          second_trim_in_seconds: number | null
+          second_trim_out_seconds: number | null
           second_video_duration_seconds: number | null
           second_video_url: string | null
           sort_order: number
@@ -5078,11 +5082,15 @@ export type Database = {
         Insert: {
           ask_line?: string
           created_at?: string
+          first_trim_in_seconds?: number | null
+          first_trim_out_seconds?: number | null
           first_video_duration_seconds?: number | null
           first_video_url?: string | null
           hold_poster_url?: string | null
           id?: string
           level_id: string
+          second_trim_in_seconds?: number | null
+          second_trim_out_seconds?: number | null
           second_video_duration_seconds?: number | null
           second_video_url?: string | null
           sort_order?: number
@@ -5094,11 +5102,15 @@ export type Database = {
         Update: {
           ask_line?: string
           created_at?: string
+          first_trim_in_seconds?: number | null
+          first_trim_out_seconds?: number | null
           first_video_duration_seconds?: number | null
           first_video_url?: string | null
           hold_poster_url?: string | null
           id?: string
           level_id?: string
+          second_trim_in_seconds?: number | null
+          second_trim_out_seconds?: number | null
           second_video_duration_seconds?: number | null
           second_video_url?: string | null
           sort_order?: number
@@ -5120,6 +5132,8 @@ export type Database = {
       prek_levels: {
         Row: {
           audio_master_volume: number
+          closing_trim_in_seconds: number | null
+          closing_trim_out_seconds: number | null
           closing_video_duration_seconds: number | null
           closing_video_url: string | null
           created_at: string
@@ -5131,6 +5145,8 @@ export type Database = {
           is_published: boolean
           level_number: number
           mute_source_video_audio: boolean
+          opening_trim_in_seconds: number | null
+          opening_trim_out_seconds: number | null
           opening_video_duration_seconds: number | null
           opening_video_url: string | null
           sort_order: number
@@ -5140,6 +5156,8 @@ export type Database = {
         }
         Insert: {
           audio_master_volume?: number
+          closing_trim_in_seconds?: number | null
+          closing_trim_out_seconds?: number | null
           closing_video_duration_seconds?: number | null
           closing_video_url?: string | null
           created_at?: string
@@ -5151,6 +5169,8 @@ export type Database = {
           is_published?: boolean
           level_number: number
           mute_source_video_audio?: boolean
+          opening_trim_in_seconds?: number | null
+          opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
           sort_order?: number
@@ -5160,6 +5180,8 @@ export type Database = {
         }
         Update: {
           audio_master_volume?: number
+          closing_trim_in_seconds?: number | null
+          closing_trim_out_seconds?: number | null
           closing_video_duration_seconds?: number | null
           closing_video_url?: string | null
           created_at?: string
@@ -5171,6 +5193,8 @@ export type Database = {
           is_published?: boolean
           level_number?: number
           mute_source_video_audio?: boolean
+          opening_trim_in_seconds?: number | null
+          opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
           sort_order?: number
