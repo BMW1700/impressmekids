@@ -52,12 +52,26 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
     const v = videoRef.current;
     if (!v) return;
     if (isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+    // Snap preview to the trim-in point so admins see what runtime will see.
+    try {
+      const startAt = Math.max(0, Number(trimIn ?? 0));
+      if (startAt > 0) v.currentTime = startAt;
+    } catch { /* noop */ }
   };
 
   const onTimeUpdate = () => {
     const v = videoRef.current;
     if (!v) return;
     setPlayhead(v.currentTime);
+    // Enforce trim-out: pause and rewind to In when playhead crosses Out.
+    const outAt = draftOut ?? (duration || 0);
+    const inAt = Math.max(0, draftIn ?? 0);
+    if (outAt > 0 && v.currentTime >= outAt - 0.02 && !v.paused) {
+      try {
+        v.pause();
+        v.currentTime = inAt;
+      } catch { /* noop */ }
+    }
   };
 
   const seek = useCallback((t: number) => {

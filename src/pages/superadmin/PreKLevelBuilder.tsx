@@ -239,9 +239,15 @@ const PreKLevelBuilder = () => {
 
       const { path } = await uploadPreKVideo(file, level.world_id, level.id, slot);
       const column = slot === "opening" ? "opening_video_url" : "closing_video_url";
+      // Reset trim + cached duration so the new file isn't cut by the old clip's marks.
       const { error } = await supabase
         .from("prek_levels")
-        .update({ [column]: path })
+        .update({
+          [column]: path,
+          [`${slot}_trim_in_seconds`]: null,
+          [`${slot}_trim_out_seconds`]: null,
+          [`${slot}_video_duration_seconds`]: null,
+        })
         .eq("id", level.id);
       if (error) throw error;
       toast.success(`${slot === "opening" ? "Opening" : "Closing"} video saved`);
@@ -325,9 +331,15 @@ const PreKLevelBuilder = () => {
         `word-${word.sort_order}-${slot}`,
       );
       const column = slot === "first" ? "first_video_url" : "second_video_url";
+      // Reset trim + cached duration so the new file isn't cut by the old clip's marks.
       const { error } = await supabase
         .from("prek_level_words")
-        .update({ [column]: path })
+        .update({
+          [column]: path,
+          [`${slot}_trim_in_seconds`]: null,
+          [`${slot}_trim_out_seconds`]: null,
+          [`${slot}_video_duration_seconds`]: null,
+        })
         .eq("id", word.id);
       if (error) throw error;
       toast.success(`Word video saved`);
@@ -343,7 +355,12 @@ const PreKLevelBuilder = () => {
     const prior = slot === "first" ? word.first_video_url : word.second_video_url;
     if (prior) await deletePreKVideo(prior);
     const column = slot === "first" ? "first_video_url" : "second_video_url";
-    await supabase.from("prek_level_words").update({ [column]: null }).eq("id", word.id);
+    await supabase.from("prek_level_words").update({
+      [column]: null,
+      [`${slot}_trim_in_seconds`]: null,
+      [`${slot}_trim_out_seconds`]: null,
+      [`${slot}_video_duration_seconds`]: null,
+    }).eq("id", word.id);
     load();
   };
 
