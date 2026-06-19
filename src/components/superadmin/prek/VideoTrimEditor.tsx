@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Scissors, RotateCcw } from "lucide-react";
+import { Scissors, RotateCcw, Play, Pause } from "lucide-react";
 
 interface Props {
   /** Resolved playable URL (signed URL or asset URL). */
@@ -38,6 +38,7 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
 
   const [duration, setDuration] = useState<number>(0);
   const [playhead, setPlayhead] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   // Local draft values during a drag so we don't spam onChange.
   const [draftIn, setDraftIn] = useState<number | null>(trimIn);
@@ -63,14 +64,19 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
     const v = videoRef.current;
     if (!v) return;
     setPlayhead(v.currentTime);
-    // Enforce trim-out: pause and rewind to In when playhead crosses Out.
     const outAt = draftOut ?? (duration || 0);
     const inAt = Math.max(0, draftIn ?? 0);
+    // Enforce trim-out: pause and rewind to In when playhead crosses Out.
     if (outAt > 0 && v.currentTime >= outAt - 0.02 && !v.paused) {
       try {
         v.pause();
         v.currentTime = inAt;
       } catch { /* noop */ }
+      return;
+    }
+    // Enforce trim-in: if currentTime drifts before In, snap forward.
+    if (v.currentTime < inAt - 0.05) {
+      try { v.currentTime = inAt; } catch { /* noop */ }
     }
   };
 
@@ -81,6 +87,22 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
       v.currentTime = Math.max(0, Math.min(duration || t, t));
     } catch { /* noop */ }
   }, [duration]);
+
+  // ── Transport (custom play/pause — native controls are hidden) ────────────
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      const inAt = Math.max(0, draftIn ?? 0);
+      const outAt = draftOut ?? (duration || 0);
+      if (v.currentTime < inAt || (outAt > 0 && v.currentTime >= outAt - 0.02)) {
+        try { v.currentTime = inAt; } catch { /* noop */ }
+      }
+      try { void v.play(); } catch { /* noop */ }
+    } else {
+      try { v.pause(); } catch { /* noop */ }
+    }
+  };
 
   // ── Drag handling ──────────────────────────────────────────────────────────
   const draggingRef = useRef<"in" | "out" | null>(null);
