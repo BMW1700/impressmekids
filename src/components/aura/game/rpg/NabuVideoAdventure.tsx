@@ -215,6 +215,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     return null;
   }, [stepIndex, steps]);
 
+  // src → {trimIn, trimOut} lookup used by the <video> elements to seek to
+  // the in-point on load and synthesize an early "ended" at the out-point.
+  // Non-destructive: the file in storage is untouched.
+  const trimsBySrc = useMemo(() => {
+    const m = new Map<string, { trimIn: number; trimOut: number | null }>();
+    for (const s of steps) {
+      if (s.kind !== "clip") continue;
+      const tIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
+      const tOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
+      if (tIn > 0 || tOut !== null) m.set(s.src, { trimIn: tIn, trimOut: tOut });
+    }
+    return m;
+  }, [steps]);
+
+
   // Initial mount — put first clip on slot A so tap-to-begin can hit play.
   useEffect(() => {
     if (phase !== "tap-to-begin") return;
