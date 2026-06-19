@@ -215,6 +215,21 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     return null;
   }, [stepIndex, steps]);
 
+  // src → {trimIn, trimOut} lookup used by the <video> elements to seek to
+  // the in-point on load and synthesize an early "ended" at the out-point.
+  // Non-destructive: the file in storage is untouched.
+  const trimsBySrc = useMemo(() => {
+    const m = new Map<string, { trimIn: number; trimOut: number | null }>();
+    for (const s of steps) {
+      if (s.kind !== "clip") continue;
+      const tIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
+      const tOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
+      if (tIn > 0 || tOut !== null) m.set(s.src, { trimIn: tIn, trimOut: tOut });
+    }
+    return m;
+  }, [steps]);
+
+
   // Initial mount — put first clip on slot A so tap-to-begin can hit play.
   useEffect(() => {
     if (phase !== "tap-to-begin") return;
@@ -447,12 +462,43 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         // Respect the per-level mute_source_video_audio setting; only unmute
         // when the level keeps its baked-in narration.
         v.muted = muteSourceVideo;
-        v.currentTime = 0;
+        const srcForTrim = v.currentSrc || firstClipSrc || "";
+        const trim = trimsBySrc.get(srcForTrim);
+        v.currentTime = trim?.trimIn ?? 0;
       } catch { /* ignore */ }
       playSlot(activeSlotRef.current);
     }
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
+
+  // Seek a slot's <video> to its trim-in point if one is configured.
+  const seekToTrimIn = (slot: Slot) => {
+    const v = videoRefs.current[slot];
+    if (!v) return;
+    const src = v.currentSrc || v.src;
+    const trim = trimsBySrc.get(src);
+    if (!trim) return;
+    try {
+      if (Math.abs(v.currentTime - trim.trimIn) > 0.05) {
+        v.currentTime = trim.trimIn;
+      }
+    } catch { /* noop */ }
+  };
+
+  // Synthesize an early "ended" when playback reaches the trim-out point.
+  const handleTimeUpdate = (slot: Slot) => {
+    if (slot !== activeSlotRef.current) return;
+    const v = videoRefs.current[slot];
+    if (!v) return;
+    const src = v.currentSrc || v.src;
+    const trim = trimsBySrc.get(src);
+    if (!trim?.trimOut) return;
+    if (v.currentTime >= trim.trimOut - 0.02) {
+      try { v.pause(); } catch { /* noop */ }
+      handleClipEnded(slot);
+    }
+  };
+
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
   const handleClipEnded = (slot: Slot) => {
@@ -568,9 +614,11 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
           transition: `opacity ${CROSSFADE_MS}ms ease-in-out`,
           zIndex: isActive ? 2 : 1,
         }}
-        onLoadedData={() => handleVideoReady(slot)}
+        onLoadedMetadata={() => seekToTrimIn(slot)}
+        onLoadedData={() => { seekToTrimIn(slot); handleVideoReady(slot); }}
         onCanPlay={() => handleVideoReady(slot)}
         onPlaying={() => handleVideoPlaying(slot)}
+        onTimeUpdate={() => handleTimeUpdate(slot)}
         onError={() => handleVideoError(slot)}
         onEnded={() => handleClipEnded(slot)}
       />

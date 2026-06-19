@@ -61,20 +61,45 @@ export function buildSceneGraph(
   level: Pick<PreKDbLevelRow, "id"> & {
     opening_video_duration_seconds?: number | null;
     closing_video_duration_seconds?: number | null;
+    opening_trim_in_seconds?: number | null;
+    opening_trim_out_seconds?: number | null;
+    closing_trim_in_seconds?: number | null;
+    closing_trim_out_seconds?: number | null;
   },
   words: Array<
     Pick<PreKDbWordRow, "id" | "sort_order" | "word"> & {
       word_hold_seconds?: number | null;
       first_video_duration_seconds?: number | null;
       second_video_duration_seconds?: number | null;
+      first_trim_in_seconds?: number | null;
+      first_trim_out_seconds?: number | null;
+      second_trim_in_seconds?: number | null;
+      second_trim_out_seconds?: number | null;
     }
   >,
 ): SceneGraph {
+  const effective = (
+    rawDur: number | null | undefined,
+    tIn: number | null | undefined,
+    tOut: number | null | undefined,
+    fallback: number,
+  ): number => {
+    const dur = Number(rawDur) || fallback;
+    const lo = Math.max(0, Number(tIn ?? 0));
+    const hi = Math.min(dur, Number(tOut ?? dur));
+    return Math.max(0.1, hi - lo);
+  };
+
   const scenes: Scene[] = [];
   const videoTimeline: VideoTimelineEntry[] = [];
   let videoCursor = 0;
 
-  const openingDur = Number(level.opening_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+  const openingDur = effective(
+    level.opening_video_duration_seconds,
+    level.opening_trim_in_seconds,
+    level.opening_trim_out_seconds,
+    DEFAULT_VIDEO_SECONDS,
+  );
   scenes.push({
     key: SCENE_KEYS.opening,
     kind: "opening",
@@ -88,9 +113,19 @@ export function buildSceneGraph(
   const sorted = [...words].sort((a, b) => a.sort_order - b.sort_order);
   sorted.forEach((w, idx) => {
     const i = idx + 1;
-    const firstDur = Number(w.first_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+    const firstDur = effective(
+      w.first_video_duration_seconds,
+      w.first_trim_in_seconds,
+      w.first_trim_out_seconds,
+      DEFAULT_VIDEO_SECONDS,
+    );
     const cardDur = Number(w.word_hold_seconds) || DEFAULT_CARD_SECONDS;
-    const secondDur = Number(w.second_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+    const secondDur = effective(
+      w.second_video_duration_seconds,
+      w.second_trim_in_seconds,
+      w.second_trim_out_seconds,
+      DEFAULT_VIDEO_SECONDS,
+    );
 
     const wordLabel = (w.word || "").toUpperCase();
 
@@ -130,7 +165,12 @@ export function buildSceneGraph(
     videoCursor += secondDur;
   });
 
-  const closingDur = Number(level.closing_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+  const closingDur = effective(
+    level.closing_video_duration_seconds,
+    level.closing_trim_in_seconds,
+    level.closing_trim_out_seconds,
+    DEFAULT_VIDEO_SECONDS,
+  );
   scenes.push({
     key: SCENE_KEYS.closing,
     kind: "closing",

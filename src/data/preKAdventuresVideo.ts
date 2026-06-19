@@ -28,7 +28,15 @@ import L1_SNEAK_ACTION from "@/assets/L1-sneak-action.mp4.asset.json";
 import L1_GRANDMA_ENDING from "@/assets/L1-grandma-ending.mp4.asset.json";
 
 export type VideoStep =
-  | { kind: "clip"; src: string; poster?: string }
+  | {
+      kind: "clip";
+      src: string;
+      poster?: string;
+      /** Non-destructive trim. Playback starts at trimIn (default 0) and treats
+       *  the moment currentTime >= trimOut as the natural "ended" point. */
+      trimIn?: number;
+      trimOut?: number;
+    }
   | {
       kind: "word";
       word: string;

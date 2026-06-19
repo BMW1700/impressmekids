@@ -34,6 +34,10 @@ export interface PreKDbLevelRow {
   opening_video_url: string | null;
   closing_video_url: string | null;
   is_published: boolean;
+  opening_trim_in_seconds: number | null;
+  opening_trim_out_seconds: number | null;
+  closing_trim_in_seconds: number | null;
+  closing_trim_out_seconds: number | null;
 }
 
 export interface PreKDbWordRow {
@@ -46,6 +50,10 @@ export interface PreKDbWordRow {
   first_video_url: string | null;
   second_video_url: string | null;
   hold_poster_url: string | null;
+  first_trim_in_seconds: number | null;
+  first_trim_out_seconds: number | null;
+  second_trim_in_seconds: number | null;
+  second_trim_out_seconds: number | null;
 }
 
 /** Fetch a DB level + words by world_number + level_number. */
@@ -63,7 +71,7 @@ export async function fetchPreKDbLevel(
   const { data: level } = await supabase
     .from("prek_levels")
     .select(
-      "id, world_id, level_number, title, goal, ending_line, opening_video_url, closing_video_url, is_published",
+      "id, world_id, level_number, title, goal, ending_line, opening_video_url, closing_video_url, is_published, opening_trim_in_seconds, opening_trim_out_seconds, closing_trim_in_seconds, closing_trim_out_seconds",
     )
     .eq("world_id", world.id)
     .eq("level_number", levelNumber)
@@ -73,12 +81,16 @@ export async function fetchPreKDbLevel(
   const { data: words } = await supabase
     .from("prek_level_words")
     .select(
-      "id, level_id, sort_order, word, ask_line, success_line, first_video_url, second_video_url, hold_poster_url",
+      "id, level_id, sort_order, word, ask_line, success_line, first_video_url, second_video_url, hold_poster_url, first_trim_in_seconds, first_trim_out_seconds, second_trim_in_seconds, second_trim_out_seconds",
     )
     .eq("level_id", level.id)
     .order("sort_order", { ascending: true });
 
   return { level: level as PreKDbLevelRow, words: (words ?? []) as PreKDbWordRow[] };
+}
+
+function trimOrUndef(n: number | null): number | undefined {
+  return n === null || n === undefined ? undefined : Number(n);
 }
 
 /**
@@ -98,7 +110,12 @@ export async function buildVideoLevelFromDb(
   const closing = await resolveUrl(level.closing_video_url);
   if (!opening || !closing || words.length === 0) return null;
 
-  const steps: VideoStep[] = [{ kind: "clip", src: opening }];
+  const steps: VideoStep[] = [{
+    kind: "clip",
+    src: opening,
+    trimIn: trimOrUndef(level.opening_trim_in_seconds),
+    trimOut: trimOrUndef(level.opening_trim_out_seconds),
+  }];
 
   for (const w of words) {
     const first = await resolveUrl(w.first_video_url);
@@ -106,7 +123,13 @@ export async function buildVideoLevelFromDb(
     const poster = await resolveUrl(w.hold_poster_url);
     if (!first || !second) return null;
 
-    steps.push({ kind: "clip", src: first, poster: poster ?? undefined });
+    steps.push({
+      kind: "clip",
+      src: first,
+      poster: poster ?? undefined,
+      trimIn: trimOrUndef(w.first_trim_in_seconds),
+      trimOut: trimOrUndef(w.first_trim_out_seconds),
+    });
     steps.push({
       kind: "word",
       word: w.word,
@@ -114,10 +137,20 @@ export async function buildVideoLevelFromDb(
       successLine: w.success_line || undefined,
       holdPoster: poster ?? undefined,
     });
-    steps.push({ kind: "clip", src: second });
+    steps.push({
+      kind: "clip",
+      src: second,
+      trimIn: trimOrUndef(w.second_trim_in_seconds),
+      trimOut: trimOrUndef(w.second_trim_out_seconds),
+    });
   }
 
-  steps.push({ kind: "clip", src: closing });
+  steps.push({
+    kind: "clip",
+    src: closing,
+    trimIn: trimOrUndef(level.closing_trim_in_seconds),
+    trimOut: trimOrUndef(level.closing_trim_out_seconds),
+  });
 
   return {
     id: `db-w${worldNumber}-l${levelNumber}`,

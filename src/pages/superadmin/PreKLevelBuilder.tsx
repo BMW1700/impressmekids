@@ -21,6 +21,7 @@ import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
+import { VideoTrimEditor } from "@/components/superadmin/prek/VideoTrimEditor";
 
 interface LevelRow {
   id: string;
@@ -36,6 +37,10 @@ interface LevelRow {
   closing_video_duration_seconds: number | null;
   audio_master_volume: number | null;
   mute_source_video_audio: boolean | null;
+  opening_trim_in_seconds: number | null;
+  opening_trim_out_seconds: number | null;
+  closing_trim_in_seconds: number | null;
+  closing_trim_out_seconds: number | null;
 }
 interface WordRow {
   id: string;
@@ -50,11 +55,14 @@ interface WordRow {
   word_hold_seconds: number | null;
   first_video_duration_seconds: number | null;
   second_video_duration_seconds: number | null;
+  first_trim_in_seconds: number | null;
+  first_trim_out_seconds: number | null;
+  second_trim_in_seconds: number | null;
+  second_trim_out_seconds: number | null;
 }
 
-// Component that renders a video URL/path with playback. For storage paths it
-// fetches a signed URL on mount.
-const VideoPreview = ({ pathOrUrl }: { pathOrUrl: string | null }) => {
+// Resolves a storage path or full URL into something a <video> can play.
+function useSignedSrc(pathOrUrl: string | null): string | null {
   const [src, setSrc] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -74,16 +82,8 @@ const VideoPreview = ({ pathOrUrl }: { pathOrUrl: string | null }) => {
       });
     return () => { cancelled = true; };
   }, [pathOrUrl]);
-  if (!src) return null;
-  return (
-    <video
-      src={src}
-      controls
-      preload="metadata"
-      className="w-full max-w-sm rounded border bg-black aspect-video"
-    />
-  );
-};
+  return src;
+}
 
 const VideoSlot = ({
   label,
@@ -91,20 +91,32 @@ const VideoSlot = ({
   uploading,
   onPick,
   onClear,
+  trimIn,
+  trimOut,
+  onTrimChange,
 }: {
   label: string;
   pathOrUrl: string | null;
   uploading: boolean;
   onPick: (file: File) => void;
   onClear: () => void;
+  trimIn: number | null;
+  trimOut: number | null;
+  onTrimChange: (next: { trimIn: number | null; trimOut: number | null }) => void;
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const src = useSignedSrc(pathOrUrl);
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {pathOrUrl ? (
         <div className="space-y-2">
-          <VideoPreview pathOrUrl={pathOrUrl} />
+          <VideoTrimEditor
+            src={src}
+            trimIn={trimIn}
+            trimOut={trimOut}
+            onChange={onTrimChange}
+          />
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
               {uploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Upload className="h-3 w-3 mr-1" />}
@@ -245,8 +257,39 @@ const PreKLevelBuilder = () => {
     const column = slot === "opening" ? "opening_video_url" : "closing_video_url";
     const prior = slot === "opening" ? level.opening_video_url : level.closing_video_url;
     if (prior) await deletePreKVideo(prior);
-    await supabase.from("prek_levels").update({ [column]: null }).eq("id", level.id);
+    await supabase.from("prek_levels").update({
+      [column]: null,
+      [`${slot}_trim_in_seconds`]: null,
+      [`${slot}_trim_out_seconds`]: null,
+    }).eq("id", level.id);
     load();
+  };
+
+  const updateLevelTrim = async (
+    slot: "opening" | "closing",
+    next: { trimIn: number | null; trimOut: number | null },
+  ) => {
+    const patch = {
+      [`${slot}_trim_in_seconds`]: next.trimIn,
+      [`${slot}_trim_out_seconds`]: next.trimOut,
+    };
+    setLevel((cur) => (cur ? ({ ...cur, ...patch } as LevelRow) : cur));
+    const { error } = await supabase.from("prek_levels").update(patch).eq("id", level.id);
+    if (error) toast.error(error.message);
+  };
+
+  const updateWordTrim = async (
+    wordId: string,
+    slot: "first" | "second",
+    next: { trimIn: number | null; trimOut: number | null },
+  ) => {
+    const patch = {
+      [`${slot}_trim_in_seconds`]: next.trimIn,
+      [`${slot}_trim_out_seconds`]: next.trimOut,
+    };
+    setWords((cur) => cur.map((w) => (w.id === wordId ? ({ ...w, ...patch } as WordRow) : w)));
+    const { error } = await supabase.from("prek_level_words").update(patch).eq("id", wordId);
+    if (error) toast.error(error.message);
   };
 
   // ---- Word-level operations -------------------------------------------------
@@ -385,6 +428,9 @@ const PreKLevelBuilder = () => {
               uploading={uploadingKey === "level-opening"}
               onPick={(f) => uploadLevelVideo("opening", f)}
               onClear={() => clearLevelVideo("opening")}
+              trimIn={level.opening_trim_in_seconds}
+              trimOut={level.opening_trim_out_seconds}
+              onTrimChange={(next) => updateLevelTrim("opening", next)}
             />
           </CardContent>
         </Card>
@@ -447,6 +493,9 @@ const PreKLevelBuilder = () => {
                   uploading={uploadingKey === `word-${w.id}-first`}
                   onPick={(f) => uploadWordVideo(w, "first", f)}
                   onClear={() => clearWordVideo(w, "first")}
+                  trimIn={w.first_trim_in_seconds}
+                  trimOut={w.first_trim_out_seconds}
+                  onTrimChange={(next) => updateWordTrim(w.id, "first", next)}
                 />
                 <VideoSlot
                   label="Second Video (after word)"
@@ -454,6 +503,9 @@ const PreKLevelBuilder = () => {
                   uploading={uploadingKey === `word-${w.id}-second`}
                   onPick={(f) => uploadWordVideo(w, "second", f)}
                   onClear={() => clearWordVideo(w, "second")}
+                  trimIn={w.second_trim_in_seconds}
+                  trimOut={w.second_trim_out_seconds}
+                  onTrimChange={(next) => updateWordTrim(w.id, "second", next)}
                 />
               </div>
             </CardContent>
@@ -476,6 +528,9 @@ const PreKLevelBuilder = () => {
               uploading={uploadingKey === "level-closing"}
               onPick={(f) => uploadLevelVideo("closing", f)}
               onClear={() => clearLevelVideo("closing")}
+              trimIn={level.closing_trim_in_seconds}
+              trimOut={level.closing_trim_out_seconds}
+              onTrimChange={(next) => updateLevelTrim("closing", next)}
             />
           </CardContent>
         </Card>
