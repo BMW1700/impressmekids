@@ -462,8 +462,8 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         // Respect the per-level mute_source_video_audio setting; only unmute
         // when the level keeps its baked-in narration.
         v.muted = muteSourceVideo;
-        const trim = v.currentSrc ? trimsBySrc.get(v.currentSrc) : undefined
-          ?? (firstClipSrc ? trimsBySrc.get(firstClipSrc) : undefined);
+        const srcForTrim = v.currentSrc || firstClipSrc || "";
+        const trim = trimsBySrc.get(srcForTrim);
         v.currentTime = trim?.trimIn ?? 0;
       } catch { /* ignore */ }
       playSlot(activeSlotRef.current);
