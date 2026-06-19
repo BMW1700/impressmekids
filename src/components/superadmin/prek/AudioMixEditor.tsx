@@ -48,6 +48,10 @@ interface Props {
     closing_video_url?: string | null;
     audio_master_volume?: number | null;
     mute_source_video_audio?: boolean | null;
+    opening_trim_in_seconds?: number | null;
+    opening_trim_out_seconds?: number | null;
+    closing_trim_in_seconds?: number | null;
+    closing_trim_out_seconds?: number | null;
   };
   words: Array<{
     id: string;
@@ -59,6 +63,10 @@ interface Props {
     first_video_url?: string | null;
     second_video_url?: string | null;
     hold_poster_url?: string | null;
+    first_trim_in_seconds?: number | null;
+    first_trim_out_seconds?: number | null;
+    second_trim_in_seconds?: number | null;
+    second_trim_out_seconds?: number | null;
   }>;
 }
 
