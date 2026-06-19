@@ -113,9 +113,19 @@ export function buildSceneGraph(
   const sorted = [...words].sort((a, b) => a.sort_order - b.sort_order);
   sorted.forEach((w, idx) => {
     const i = idx + 1;
-    const firstDur = Number(w.first_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+    const firstDur = effective(
+      w.first_video_duration_seconds,
+      w.first_trim_in_seconds,
+      w.first_trim_out_seconds,
+      DEFAULT_VIDEO_SECONDS,
+    );
     const cardDur = Number(w.word_hold_seconds) || DEFAULT_CARD_SECONDS;
-    const secondDur = Number(w.second_video_duration_seconds) || DEFAULT_VIDEO_SECONDS;
+    const secondDur = effective(
+      w.second_video_duration_seconds,
+      w.second_trim_in_seconds,
+      w.second_trim_out_seconds,
+      DEFAULT_VIDEO_SECONDS,
+    );
 
     const wordLabel = (w.word || "").toUpperCase();
 
