@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Scissors, RotateCcw } from "lucide-react";
+import { Scissors, RotateCcw, Play, Pause } from "lucide-react";
 
 interface Props {
   /** Resolved playable URL (signed URL or asset URL). */
@@ -38,6 +38,7 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
 
   const [duration, setDuration] = useState<number>(0);
   const [playhead, setPlayhead] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
 
   // Local draft values during a drag so we don't spam onChange.
   const [draftIn, setDraftIn] = useState<number | null>(trimIn);
@@ -63,14 +64,19 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
     const v = videoRef.current;
     if (!v) return;
     setPlayhead(v.currentTime);
-    // Enforce trim-out: pause and rewind to In when playhead crosses Out.
     const outAt = draftOut ?? (duration || 0);
     const inAt = Math.max(0, draftIn ?? 0);
+    // Enforce trim-out: pause and rewind to In when playhead crosses Out.
     if (outAt > 0 && v.currentTime >= outAt - 0.02 && !v.paused) {
       try {
         v.pause();
         v.currentTime = inAt;
       } catch { /* noop */ }
+      return;
+    }
+    // Enforce trim-in: if currentTime drifts before In, snap forward.
+    if (v.currentTime < inAt - 0.05) {
+      try { v.currentTime = inAt; } catch { /* noop */ }
     }
   };
 
@@ -81,6 +87,22 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
       v.currentTime = Math.max(0, Math.min(duration || t, t));
     } catch { /* noop */ }
   }, [duration]);
+
+  // ── Transport (custom play/pause — native controls are hidden) ────────────
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      const inAt = Math.max(0, draftIn ?? 0);
+      const outAt = draftOut ?? (duration || 0);
+      if (v.currentTime < inAt || (outAt > 0 && v.currentTime >= outAt - 0.02)) {
+        try { v.currentTime = inAt; } catch { /* noop */ }
+      }
+      try { void v.play(); } catch { /* noop */ }
+    } else {
+      try { v.pause(); } catch { /* noop */ }
+    }
+  };
 
   // ── Drag handling ──────────────────────────────────────────────────────────
   const draggingRef = useRef<"in" | "out" | null>(null);
@@ -157,28 +179,48 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
 
   if (!src) return null;
 
+  // Click-to-seek anywhere inside the kept region of the trim bar.
+  const onBarClick = (e: React.MouseEvent) => {
+    // Ignore if a handle drag is in progress.
+    if (draggingRef.current) return;
+    const t = pctToTime(e.clientX);
+    const inAt = Math.max(0, draftIn ?? 0);
+    const outAt = draftOut ?? (duration || 0);
+    // Clamp clicks in the trimmed-away regions back to the kept window edge.
+    const clamped = Math.max(inAt, Math.min(outAt > 0 ? outAt - 0.02 : t, t));
+    seek(clamped);
+  };
+
   return (
     <div className="space-y-2">
       <video
         ref={videoRef}
         src={src}
-        controls
         preload="metadata"
+        playsInline
         className="w-full max-w-sm rounded border bg-black aspect-video"
         onLoadedMetadata={onLoadedMeta}
         onTimeUpdate={onTimeUpdate}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+        onClick={togglePlay}
       />
 
-      {/* Trim bar */}
+      {/* Trim bar — the SINGLE source of truth for playback position. */}
       <div className="max-w-sm space-y-2">
         <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
           <span>In {fmt(effIn)}s</span>
-          <span>Playhead {fmt(playhead)}s</span>
+          <span>
+            Playhead {fmt(Math.max(0, playhead - effIn))}s
+            <span className="opacity-50"> / {fmt(Math.max(0, effOut - effIn))}s</span>
+          </span>
           <span>Out {fmt(effOut)}s</span>
         </div>
         <div
           ref={barRef}
-          className="relative h-7 w-full rounded bg-muted/40 border border-border select-none"
+          onClick={onBarClick}
+          className="relative h-7 w-full rounded bg-muted/40 border border-border select-none cursor-pointer"
         >
           {/* Trimmed-away regions (faded) */}
           <div
@@ -206,6 +248,7 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
             className="absolute top-0 bottom-0 w-3 -ml-1.5 bg-primary rounded cursor-ew-resize shadow"
             style={{ left: pct(effIn) }}
             onPointerDown={startDrag("in")}
+            onClick={(e) => e.stopPropagation()}
           />
           {/* Out handle */}
           <div
@@ -214,10 +257,15 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
             className="absolute top-0 bottom-0 w-3 -ml-1.5 bg-primary rounded cursor-ew-resize shadow"
             style={{ left: pct(effOut) }}
             onPointerDown={startDrag("out")}
+            onClick={(e) => e.stopPropagation()}
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="default" type="button" onClick={togglePlay}>
+            {isPlaying ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
+            {isPlaying ? "Pause" : "Play"}
+          </Button>
           <Button size="sm" variant="outline" type="button" onClick={setInAtPlayhead}>
             <Scissors className="h-3 w-3 mr-1" /> Set In
           </Button>
