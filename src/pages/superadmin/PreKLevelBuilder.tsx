@@ -493,6 +493,9 @@ const PreKLevelBuilder = () => {
                   uploading={uploadingKey === `word-${w.id}-first`}
                   onPick={(f) => uploadWordVideo(w, "first", f)}
                   onClear={() => clearWordVideo(w, "first")}
+                  trimIn={w.first_trim_in_seconds}
+                  trimOut={w.first_trim_out_seconds}
+                  onTrimChange={(next) => updateWordTrim(w.id, "first", next)}
                 />
                 <VideoSlot
                   label="Second Video (after word)"
@@ -500,6 +503,9 @@ const PreKLevelBuilder = () => {
                   uploading={uploadingKey === `word-${w.id}-second`}
                   onPick={(f) => uploadWordVideo(w, "second", f)}
                   onClear={() => clearWordVideo(w, "second")}
+                  trimIn={w.second_trim_in_seconds}
+                  trimOut={w.second_trim_out_seconds}
+                  onTrimChange={(next) => updateWordTrim(w.id, "second", next)}
                 />
               </div>
             </CardContent>
