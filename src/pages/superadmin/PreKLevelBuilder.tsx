@@ -21,6 +21,7 @@ import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
+import { VideoTrimEditor } from "@/components/superadmin/prek/VideoTrimEditor";
 
 interface LevelRow {
   id: string;
@@ -36,6 +37,10 @@ interface LevelRow {
   closing_video_duration_seconds: number | null;
   audio_master_volume: number | null;
   mute_source_video_audio: boolean | null;
+  opening_trim_in_seconds: number | null;
+  opening_trim_out_seconds: number | null;
+  closing_trim_in_seconds: number | null;
+  closing_trim_out_seconds: number | null;
 }
 interface WordRow {
   id: string;
@@ -50,6 +55,10 @@ interface WordRow {
   word_hold_seconds: number | null;
   first_video_duration_seconds: number | null;
   second_video_duration_seconds: number | null;
+  first_trim_in_seconds: number | null;
+  first_trim_out_seconds: number | null;
+  second_trim_in_seconds: number | null;
+  second_trim_out_seconds: number | null;
 }
 
 // Component that renders a video URL/path with playback. For storage paths it
