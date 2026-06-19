@@ -471,18 +471,39 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setPhase(steps[0]?.kind === "clip" ? "clip" : "ask");
   };
 
+  // Track which slots are still waiting to confirm a trim-in seek before we
+  // allow them to start playing (prevents a one-frame flash of the original
+  // pre-trim opening on Safari/iOS).
+  const pendingTrimSeekRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
+
   // Seek a slot's <video> to its trim-in point if one is configured.
   const seekToTrimIn = (slot: Slot) => {
     const v = videoRefs.current[slot];
     if (!v) return;
     const src = v.currentSrc || v.src;
     const trim = trimsBySrc.get(src);
-    if (!trim) return;
+    if (!trim || trim.trimIn <= 0) {
+      pendingTrimSeekRef.current[slot] = false;
+      return;
+    }
     try {
       if (Math.abs(v.currentTime - trim.trimIn) > 0.05) {
+        pendingTrimSeekRef.current[slot] = true;
         v.currentTime = trim.trimIn;
+      } else {
+        pendingTrimSeekRef.current[slot] = false;
       }
     } catch { /* noop */ }
+  };
+
+  const handleVideoSeeked = (slot: Slot) => {
+    if (pendingTrimSeekRef.current[slot]) {
+      pendingTrimSeekRef.current[slot] = false;
+      // Now safe to start playback — first painted frame will be the trimmed-in one.
+      if (incomingSlotRef.current === slot || slot === activeSlotRef.current) {
+        playSlot(slot);
+      }
+    }
   };
 
   // Synthesize an early "ended" when playback reaches the trim-out point.
@@ -546,6 +567,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   const handleVideoReady = (slot: Slot) => {
     if (phase === "tap-to-begin") return;
+    // If a trim-in seek is still pending for this slot, wait for `seeked`
+    // before starting playback — handleVideoSeeked will call playSlot.
+    if (pendingTrimSeekRef.current[slot]) return;
     // If this slot is the incoming swap target, start it playing so onPlaying fires.
     if (incomingSlotRef.current === slot) {
       playSlot(slot);
@@ -617,6 +641,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         onLoadedMetadata={() => seekToTrimIn(slot)}
         onLoadedData={() => { seekToTrimIn(slot); handleVideoReady(slot); }}
         onCanPlay={() => handleVideoReady(slot)}
+        onSeeked={() => handleVideoSeeked(slot)}
         onPlaying={() => handleVideoPlaying(slot)}
         onTimeUpdate={() => handleTimeUpdate(slot)}
         onError={() => handleVideoError(slot)}
