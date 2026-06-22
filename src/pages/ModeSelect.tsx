@@ -170,10 +170,17 @@ const ModeSelect = () => {
               />
 
               <div className="mx-auto w-full max-w-2xl">
-                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(48_100%_75%)]">
+                <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(48_100%_75%)]">
                   <Sparkles className="h-3.5 w-3.5" />
                   Ages 2–5 · Pre-K
                 </div>
+                <p
+                  className={`mb-5 text-sm font-medium transition-all duration-300 ${
+                    bennyActive ? "text-[hsl(48_100%_82%)] translate-y-0" : "text-white/55 translate-y-0"
+                  }`}
+                >
+                  For daycares, preschools &amp; 2–5 year-olds
+                </p>
                 <h1 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
                   Reading. With their{" "}
                   <span className="bg-gradient-to-r from-[hsl(48_100%_78%)] via-[hsl(48_100%_62%)] to-[hsl(30_100%_60%)] bg-clip-text text-transparent">
@@ -192,13 +199,18 @@ const ModeSelect = () => {
                 <div className="mt-7">
                   <Button
                     size="lg"
-                    asChild
+                    onClick={() => {
+                      setStoredTheme("prek");
+                      if (user) {
+                        navigate("/game/play?tab=rpg");
+                      } else {
+                        navigate("/game/auth");
+                      }
+                    }}
                     className="group h-14 w-full rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white sm:w-auto"
                   >
-                    <Link to="/game">
-                      Start Benny's adventure
-                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
+                    Start Benny's adventure
+                    <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 </div>
               </div>
