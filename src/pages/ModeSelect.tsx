@@ -24,10 +24,26 @@ const ModeSelect = () => {
   const { isSuperAdmin } = useIsSuperAdmin();
   const [showShowcase, setShowShowcase] = useState(false);
   const [hover, setHover] = useState<HoverSide>(null);
+  const reduceMotion = useReducedMotion();
+  const hoverTimerRef = useRef<number | null>(null);
+
+  const requestHover = (side: HoverSide) => {
+    if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
+    if (side === null) {
+      // small exit delay to avoid flicker when crossing the seam
+      hoverTimerRef.current = window.setTimeout(() => setHover(null), 80);
+    } else {
+      // hover-intent delay so a mouse passing through doesn't trigger blur
+      hoverTimerRef.current = window.setTimeout(() => setHover(side), 140);
+    }
+  };
 
   useEffect(() => {
     const t = window.setTimeout(() => setShowShowcase(true), 900);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
