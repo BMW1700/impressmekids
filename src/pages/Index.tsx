@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { PremiumHero } from "@/components/landing/PremiumHero";
+import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
 import { BentoFeatures } from "@/components/landing/BentoFeatures";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { OutcomesStrip } from "@/components/landing/OutcomesStrip";
@@ -20,6 +21,9 @@ const Index = () => {
       <main>
         {/* 1. Cinematic hero — kinetic type, animated mesh */}
         <PremiumHero />
+
+        {/* 1b. Audience doorway — Families / K-12 Schools / Districts */}
+        <AudienceTrifurcation />
 
         {/* 2. Outcomes strip — lead with the proof points superintendents care about */}
         <OutcomesStrip />

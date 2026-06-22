@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 
 // Lazy-loaded routes for code splitting
 const Index = lazy(() => import("./pages/Index"));
+const ForFamilies = lazy(() => import("./pages/ForFamilies"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Demos = lazy(() => import("./pages/Demos"));
 const StudentDemo = lazy(() => import("./pages/demos/StudentDemo"));
@@ -167,6 +168,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<ModeSelect />} />
                   <Route path="/school" element={<Index />} />
+                  <Route path="/for-families" element={<ForFamilies />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/account/delete" element={<AccountDeletion />} />
                   <Route path="/pending-verification" element={<PendingVerification />} />
