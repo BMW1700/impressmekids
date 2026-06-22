@@ -471,7 +471,7 @@ const MetricsRail = ({ story, phase, paused = false }: { story: StoryConfig; pha
       setWpm(98);
       setAccuracy(96);
     }
-  }, [phase, story.key]);
+  }, [phase, story.key, paused]);
 
   const wcpm = Math.max(0, Math.round(wpm * (accuracy / 100)));
   const phonemeAvg = Math.round(
