@@ -460,16 +460,21 @@ const ModeSelect = () => {
       </main>
 
       {/* ── Legal footer ── */}
-      <nav className="border-t border-white/5 py-8">
-        <div className="container mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 text-xs text-white/45">
-          <a href="/game/legal/privacy" className="hover:text-white/90">Privacy</a>
-          <a href="/game/legal/terms" className="hover:text-white/90">Terms</a>
-          <a href="/game/legal/coppa" className="hover:text-white/90">COPPA &amp; Parent Rights</a>
-          <a href="/game/legal/security" className="hover:text-white/90">Security</a>
-          <a href="/game/legal/dpa" className="hover:text-white/90">DPA</a>
-          <a href="/game/legal" className="hover:text-white/90">All legal</a>
+      <nav className={`border-t py-8 ${isLight ? "border-[hsl(270_45%_20%)]/10" : "border-white/5"}`}>
+        <div
+          className={`container mx-auto flex flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 text-xs ${
+            isLight ? "text-[hsl(270_45%_22%)]/55" : "text-white/45"
+          }`}
+        >
+          <a href="/game/legal/privacy" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>Privacy</a>
+          <a href="/game/legal/terms" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>Terms</a>
+          <a href="/game/legal/coppa" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>COPPA &amp; Parent Rights</a>
+          <a href="/game/legal/security" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>Security</a>
+          <a href="/game/legal/dpa" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>DPA</a>
+          <a href="/game/legal" className={isLight ? "hover:text-[hsl(270_45%_18%)]" : "hover:text-white/90"}>All legal</a>
         </div>
       </nav>
+
     </div>
   );
 };
