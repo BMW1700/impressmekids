@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Loader2, ShieldCheck, ArrowRight, Sparkles, Swords } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,26 @@ const ModeSelect = () => {
   const { isSuperAdmin } = useIsSuperAdmin();
   const [showShowcase, setShowShowcase] = useState(false);
   const [hover, setHover] = useState<HoverSide>(null);
+  const reduceMotion = useReducedMotion();
+  const hoverTimerRef = useRef<number | null>(null);
+
+  const requestHover = (side: HoverSide) => {
+    if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
+    if (side === null) {
+      // small exit delay to avoid flicker when crossing the seam
+      hoverTimerRef.current = window.setTimeout(() => setHover(null), 80);
+    } else {
+      // hover-intent delay so a mouse passing through doesn't trigger blur
+      hoverTimerRef.current = window.setTimeout(() => setHover(side), 140);
+    }
+  };
 
   useEffect(() => {
     const t = window.setTimeout(() => setShowShowcase(true), 900);
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -72,10 +88,20 @@ const ModeSelect = () => {
 
   const bennyActive = hover === "benny";
   const rpgActive = hover === "rpg";
-  const otherDim = (side: "benny" | "rpg") =>
-    hover && hover !== side ? "opacity-60 md:scale-[0.985]" : "opacity-100 md:scale-100";
-  const selfBoost = (side: "benny" | "rpg") =>
-    hover === side ? "md:scale-[1.012]" : "";
+
+  // Flex weights: neutral 55/45 → hovered side expands to 68/32 (60/40 if reduced-motion).
+  const expanded = reduceMotion ? 60 : 68;
+  const shrunken = reduceMotion ? 40 : 32;
+  const bennyFlex = hover === null ? 55 : bennyActive ? expanded : shrunken;
+  const rpgFlex = hover === null ? 45 : rpgActive ? expanded : shrunken;
+
+  const inactiveFx = (side: "benny" | "rpg") => {
+    if (!hover || hover === side) return "";
+    if (reduceMotion) return "opacity-70";
+    return "blur-[2px] brightness-[0.55] md:scale-[0.98]";
+  };
+  const activeFx = (side: "benny" | "rpg") =>
+    hover === side && !reduceMotion ? "md:scale-[1.015]" : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
@@ -97,43 +123,38 @@ const ModeSelect = () => {
 
       {/* ── Minimal top bar ── */}
       <header className="relative z-30 border-b border-white/5">
-        <div className="container mx-auto flex flex-col items-center px-4 py-4">
-          <div className="flex w-full items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <span className="text-lg font-bold tracking-tight">
-                Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
-              </span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                <Link to="/pricing">Pricing</Link>
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold tracking-tight">
+              Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+              <Link to="/pricing">Pricing</Link>
+            </Button>
+            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+              <Link to="/auth">Sign in</Link>
+            </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                aria-label="Super Admin"
+                className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
+              >
+                <Link to="/super-admin">
+                  <ShieldCheck className="h-5 w-5" />
+                </Link>
               </Button>
-              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  aria-label="Super Admin"
-                  className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
-                >
-                  <Link to="/super-admin">
-                    <ShieldCheck className="h-5 w-5" />
-                  </Link>
-                </Button>
-              )}
-            </div>
+            )}
           </div>
-          <p className="mt-1.5 text-[13px] font-medium tracking-wide text-white/55">
-            Welcome to <span className="text-[hsl(48_100%_75%)]">NabuLearn</span>!
-          </p>
         </div>
       </header>
 
       <main className="flex-1">
-        {/* ── Weighted split: Benny (55) vs K–12 RPG (45) ── */}
+        {/* ── Weighted split: Benny vs K–12 RPG. Hover expands the active side and blurs the other. ── */}
         <section className="relative isolate overflow-hidden">
           <div
             aria-hidden
@@ -145,19 +166,21 @@ const ModeSelect = () => {
             }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-[55fr_45fr] min-h-[calc(100vh-72px)]">
+          <div className="flex flex-col md:flex-row min-h-[calc(100vh-72px)]">
             {/* ─── BENNY PANEL ─── */}
             <motion.div
               initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              onMouseEnter={() => setHover("benny")}
-              onMouseLeave={() => setHover(null)}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-all duration-500 ease-out ${selfBoost("benny")} ${otherDim("benny")}`}
+              onMouseEnter={() => requestHover("benny")}
+              onMouseLeave={() => requestHover(null)}
               style={{
+                flexGrow: bennyFlex,
+                flexBasis: 0,
                 background:
                   "linear-gradient(135deg, hsl(270 60% 14%) 0%, hsl(285 55% 16%) 50%, hsl(35 80% 22%) 100%)",
               }}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-[flex-grow,filter,transform,opacity] duration-700 ease-out will-change-[flex-grow,filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
             >
               {/* warm glow */}
               <div
@@ -221,13 +244,15 @@ const ModeSelect = () => {
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              onMouseEnter={() => setHover("rpg")}
-              onMouseLeave={() => setHover(null)}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-all duration-500 ease-out ${selfBoost("rpg")} ${otherDim("rpg")}`}
+              onMouseEnter={() => requestHover("rpg")}
+              onMouseLeave={() => requestHover(null)}
               style={{
+                flexGrow: rpgFlex,
+                flexBasis: 0,
                 background:
                   "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
               }}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[flex-grow,filter,transform,opacity] duration-700 ease-out will-change-[flex-grow,filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
             >
               {/* cool glow */}
               <div
