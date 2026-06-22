@@ -30,7 +30,8 @@ export async function uploadPreKAudio(
   const { error } = await supabase.storage
     .from(PREK_AUDIO_BUCKET)
     .upload(path, file, {
-      cacheControl: "3600",
+      // 1 year, immutable — path is timestamped per upload (see line 29).
+      cacheControl: "31536000, immutable",
       contentType: file.type || `audio/${ext}`,
       upsert: false,
     });

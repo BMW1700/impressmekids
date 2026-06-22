@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
-const TTL = 60 * 60;
+// 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
+// lets a CDN / browser cache hold the bytes between sessions.
+const TTL = 60 * 60 * 24 * 7;
 
 interface LevelInput {
   opening_video_url?: string | null;

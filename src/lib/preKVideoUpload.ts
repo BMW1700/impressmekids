@@ -36,7 +36,10 @@ export async function uploadPreKVideo(
   const { error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
     .upload(path, file, {
-      cacheControl: "3600",
+      // 1 year, immutable — every upload writes to a new timestamped path,
+      // so the bytes at any given URL never change. This lets browsers and
+      // any CDN in front of Storage cache aggressively.
+      cacheControl: "31536000, immutable",
       contentType: file.type,
       upsert: false,
     });

@@ -1,0 +1,11 @@
+CREATE INDEX IF NOT EXISTS idx_student_behavior_stats_student_id ON public.student_behavior_stats (student_id);
+CREATE INDEX IF NOT EXISTS idx_classroom_students_student_id ON public.classroom_students (student_id);
+CREATE INDEX IF NOT EXISTS idx_classroom_students_classroom_id ON public.classroom_students (classroom_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_battle_sessions_student_grade_created ON public.campaign_battle_sessions (student_id, grade_mode, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_classroom_student ON public.attendance_records (classroom_id, student_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_classroom_due ON public.assignments (classroom_id, due_date) WHERE is_posted = true;
+CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment_id ON public.assignment_submissions (assignment_id);
+CREATE INDEX IF NOT EXISTS idx_prek_levels_world_level ON public.prek_levels (world_id, level_number);
+CREATE INDEX IF NOT EXISTS idx_prek_level_words_level_sort ON public.prek_level_words (level_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_aura_records_profile_created ON public.aura_records (profile_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_student_reading_stats_student_id ON public.student_reading_stats (student_id);
