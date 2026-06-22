@@ -316,7 +316,7 @@ export const RPGShowcase = ({ variant = "hero", className = "", paused = false }
         </motion.div>
 
         {/* METRICS RAIL */}
-        <MetricsRail story={story} phase={phase} />
+        <MetricsRail story={story} phase={phase} paused={paused} />
       </div>
 
       {reduce && (
