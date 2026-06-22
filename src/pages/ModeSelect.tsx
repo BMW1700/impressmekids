@@ -244,13 +244,15 @@ const ModeSelect = () => {
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              onMouseEnter={() => setHover("rpg")}
-              onMouseLeave={() => setHover(null)}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-all duration-500 ease-out ${selfBoost("rpg")} ${otherDim("rpg")}`}
+              onMouseEnter={() => requestHover("rpg")}
+              onMouseLeave={() => requestHover(null)}
               style={{
+                flexGrow: rpgFlex,
+                flexBasis: 0,
                 background:
                   "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
               }}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[flex-grow,filter,transform,opacity] duration-700 ease-out will-change-[flex-grow,filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
             >
               {/* cool glow */}
               <div
