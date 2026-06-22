@@ -246,7 +246,7 @@ const ModeSelect = () => {
                 background:
                   "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
+              className={`relative flex flex-col justify-start px-6 pt-16 pb-14 md:px-12 md:pt-24 md:pb-20 border-t md:border-t-0 md:border-l border-white/10 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
             >
               {/* cool glow */}
               <div
