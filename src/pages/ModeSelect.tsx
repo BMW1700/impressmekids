@@ -89,19 +89,13 @@ const ModeSelect = () => {
   const bennyActive = hover === "benny";
   const rpgActive = hover === "rpg";
 
-  // Flex weights: neutral 55/45 → hovered side expands to 68/32 (60/40 if reduced-motion).
-  const expanded = reduceMotion ? 60 : 68;
-  const shrunken = reduceMotion ? 40 : 32;
-  const bennyFlex = hover === null ? 55 : bennyActive ? expanded : shrunken;
-  const rpgFlex = hover === null ? 45 : rpgActive ? expanded : shrunken;
-
   const inactiveFx = (side: "benny" | "rpg") => {
     if (!hover || hover === side) return "";
-    if (reduceMotion) return "opacity-30";
-    return "blur-[8px] brightness-[0.25] opacity-40 md:scale-[0.96]";
+    if (reduceMotion) return "opacity-[0.1]";
+    return "blur-[20px] brightness-[0.08] opacity-[0.06] md:scale-[0.95]";
   };
   const activeFx = (side: "benny" | "rpg") =>
-    hover === side && !reduceMotion ? "md:scale-[1.02]" : "";
+    hover === side && !reduceMotion ? "md:scale-[1.025]" : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
@@ -175,12 +169,11 @@ const ModeSelect = () => {
               onMouseEnter={() => requestHover("benny")}
               onMouseLeave={() => requestHover(null)}
               style={{
-                flexGrow: bennyFlex,
-                flexBasis: 0,
+                flex: "1 1 0",
                 background:
                   "linear-gradient(135deg, hsl(270 60% 14%) 0%, hsl(285 55% 16%) 50%, hsl(35 80% 22%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-[flex-grow,filter,transform,opacity] duration-700 ease-out will-change-[flex-grow,filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
             >
               {/* warm glow */}
               <div
@@ -247,12 +240,11 @@ const ModeSelect = () => {
               onMouseEnter={() => requestHover("rpg")}
               onMouseLeave={() => requestHover(null)}
               style={{
-                flexGrow: rpgFlex,
-                flexBasis: 0,
+                flex: "1 1 0",
                 background:
                   "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[flex-grow,filter,transform,opacity] duration-700 ease-out will-change-[flex-grow,filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
             >
               {/* cool glow */}
               <div
@@ -264,7 +256,7 @@ const ModeSelect = () => {
                 }}
               />
 
-              <div className="mx-auto w-full max-w-2xl">
+              <div className="mx-auto w-full max-w-xl">
                 <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
                   <Swords className="h-3.5 w-3.5" />
                   Ages 6–18 · Grades K–12
