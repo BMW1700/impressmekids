@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Heart, GraduationCap, Building2, ArrowRight } from "lucide-react";
+
 
 interface Door {
   to: string;
@@ -43,17 +45,25 @@ const DOORS: Door[] = [
 ];
 
 export const AudienceTrifurcation = () => {
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
+
   return (
     <section
       aria-label="Choose your path"
-      className="relative bg-[hsl(270_45%_6%)] py-24 text-white md:py-32"
+      className={`relative py-24 md:py-32 ${
+        isLight
+          ? "bg-gradient-to-b from-[hsl(280_70%_92%)] via-[hsl(320_75%_92%)] to-[hsl(30_90%_92%)] text-[hsl(270_45%_18%)]"
+          : "bg-[hsl(270_45%_6%)] text-white"
+      }`}
     >
       <div
         aria-hidden
         className="absolute inset-0 opacity-60"
         style={{
-          background:
-            "radial-gradient(50% 50% at 50% 0%, hsl(270 80% 25% / 0.6), transparent 70%)",
+          background: isLight
+            ? "radial-gradient(50% 50% at 50% 0%, hsl(280 90% 80% / 0.7), transparent 70%)"
+            : "radial-gradient(50% 50% at 50% 0%, hsl(270 80% 25% / 0.6), transparent 70%)",
         }}
       />
       <div className="container relative mx-auto px-4">
@@ -64,12 +74,22 @@ export const AudienceTrifurcation = () => {
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto mb-14 max-w-2xl text-center"
         >
-          <p className="mb-4 text-xs uppercase tracking-[0.24em] text-white/50">
+          <p
+            className={`mb-4 text-xs uppercase tracking-[0.24em] ${
+              isLight ? "text-[hsl(270_45%_22%)]/60" : "text-white/50"
+            }`}
+          >
             Choose your path
           </p>
           <h2 className="text-balance text-3xl font-bold leading-tight tracking-tight md:text-5xl">
             One platform.{" "}
-            <span className="bg-gradient-to-r from-[hsl(48_100%_75%)] to-[hsl(35_100%_60%)] bg-clip-text text-transparent">
+            <span
+              className={
+                isLight
+                  ? "bg-gradient-to-r from-[hsl(28_95%_45%)] to-[hsl(20_95%_50%)] bg-clip-text text-transparent"
+                  : "bg-gradient-to-r from-[hsl(48_100%_75%)] to-[hsl(35_100%_60%)] bg-clip-text text-transparent"
+              }
+            >
               Three doors in.
             </span>
           </h2>
@@ -88,9 +108,15 @@ export const AudienceTrifurcation = () => {
               >
                 <Link
                   to={d.to}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] p-8 transition-all hover:-translate-y-1 hover:border-white/25 hover:bg-white/[0.06]"
+                  className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border p-8 transition-all hover:-translate-y-1 ${
+                    isLight
+                      ? "border-white/70 bg-white/50 backdrop-blur-xl hover:border-white/90 hover:bg-white/65"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.06]"
+                  }`}
                   style={{
-                    boxShadow: `0 20px 60px -30px hsl(${d.accent} / 0.5)`,
+                    boxShadow: isLight
+                      ? `0 20px 60px -25px hsl(${d.accent} / 0.55)`
+                      : `0 20px 60px -30px hsl(${d.accent} / 0.5)`,
                   }}
                 >
                   <div
@@ -102,20 +128,32 @@ export const AudienceTrifurcation = () => {
                   <div
                     className="relative mb-6 inline-flex h-12 w-12 items-center justify-center rounded-2xl"
                     style={{
-                      background: `hsl(${d.accent} / 0.15)`,
+                      background: `hsl(${d.accent} / ${isLight ? 0.22 : 0.15})`,
                       color: `hsl(${d.accent})`,
                     }}
                   >
                     <Icon className="h-6 w-6" />
                   </div>
 
-                  <p className="relative mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/55">
+                  <p
+                    className={`relative mb-2 text-xs font-semibold uppercase tracking-[0.18em] ${
+                      isLight ? "text-[hsl(270_45%_22%)]/60" : "text-white/55"
+                    }`}
+                  >
                     {d.eyebrow}
                   </p>
-                  <h3 className="relative mb-3 text-2xl font-bold leading-tight tracking-tight md:text-3xl">
+                  <h3
+                    className={`relative mb-3 text-2xl font-bold leading-tight tracking-tight md:text-3xl ${
+                      isLight ? "text-[hsl(270_45%_15%)]" : ""
+                    }`}
+                  >
                     {d.title}
                   </h3>
-                  <p className="relative mb-8 text-sm leading-relaxed text-white/65 md:text-base">
+                  <p
+                    className={`relative mb-8 text-sm leading-relaxed md:text-base ${
+                      isLight ? "text-[hsl(270_30%_28%)]" : "text-white/65"
+                    }`}
+                  >
                     {d.body}
                   </p>
 
@@ -135,3 +173,4 @@ export const AudienceTrifurcation = () => {
     </section>
   );
 };
+
