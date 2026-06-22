@@ -17,9 +17,12 @@ export const PREK_VIDEO_BUCKET = "prek-level-videos";
 async function resolveUrl(value: string | null | undefined): Promise<string | null> {
   if (!value) return null;
   if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  // 7-day signed URL so a CDN (Cloudflare) / browser cache in front of Storage
+  // can hold the bytes long-term. Pre-K video files are immutable — a new
+  // upload always gets a new path — so a long TTL is safe.
   const { data, error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
-    .createSignedUrl(value, 60 * 60);
+    .createSignedUrl(value, 60 * 60 * 24 * 7);
   if (error || !data?.signedUrl) return null;
   return data.signedUrl;
 }
