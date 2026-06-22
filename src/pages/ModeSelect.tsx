@@ -3,12 +3,15 @@ import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Loader2, ShieldCheck, ArrowRight, Sparkles, Swords } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { setStoredTheme } from "@/lib/gameTheme";
+
 
 const RPGShowcase = lazy(() =>
   import("@/components/landing/RPGShowcase").then((module) => ({ default: module.RPGShowcase }))
