@@ -240,10 +240,17 @@ const ModeSelect = () => {
               />
 
               <div className="mx-auto w-full max-w-xl">
-                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
+                <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
                   <Swords className="h-3.5 w-3.5" />
                   Ages 6–18 · Grades K–12
                 </div>
+                <p
+                  className={`mb-5 text-sm font-medium transition-all duration-300 ${
+                    rpgActive ? "text-[hsl(280_90%_85%)]" : "text-white/55"
+                  }`}
+                >
+                  For K–12 students, at-home learning, schools &amp; districts
+                </p>
                 <h2 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
                   Reading IS the{" "}
                   <span className="bg-gradient-to-r from-[hsl(280_90%_75%)] via-[hsl(265_90%_65%)] to-[hsl(220_90%_65%)] bg-clip-text text-transparent">
