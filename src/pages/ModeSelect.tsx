@@ -285,7 +285,7 @@ const ModeSelect = () => {
                 <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(270_45%_8%)] shadow-[0_20px_80px_-20px_hsl(265_90%_55%/0.4)]">
                   {showShowcase ? (
                     <Suspense fallback={<div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />}>
-                      <RPGShowcase variant="hero" />
+                      <RPGShowcase variant="hero" paused={rpgPaused} />
                     </Suspense>
                   ) : (
                     <div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />
