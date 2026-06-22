@@ -429,21 +429,30 @@ const ModeSelect = () => {
             <div className="container mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 text-sm">
               <Link
                 to="/demos"
-                className="group inline-flex items-center gap-1.5 text-white/65 transition hover:text-white"
+                className={`group inline-flex items-center gap-1.5 transition ${
+                  isLight
+                    ? "text-[hsl(270_45%_22%)]/70 hover:text-[hsl(270_45%_18%)]"
+                    : "text-white/65 hover:text-white"
+                }`}
               >
                 I'm a teacher / school
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <span className="text-white/20">·</span>
+              <span className={isLight ? "text-[hsl(270_45%_22%)]/30" : "text-white/20"}>·</span>
               <Link
                 to="/game"
-                className="group inline-flex items-center gap-1.5 text-white/55 transition hover:text-white"
+                className={`group inline-flex items-center gap-1.5 transition ${
+                  isLight
+                    ? "text-[hsl(270_45%_22%)]/60 hover:text-[hsl(270_45%_18%)]"
+                    : "text-white/55 hover:text-white"
+                }`}
               >
                 Returning player? Jump back in
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
           </div>
+
         </section>
 
         {/* ── Below the fold: audience doorway ── */}
