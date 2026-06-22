@@ -264,7 +264,7 @@ const ModeSelect = () => {
                 }}
               />
 
-              <div className="mx-auto w-full max-w-xl">
+              <div className="mx-auto w-full max-w-2xl">
                 <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
                   <Swords className="h-3.5 w-3.5" />
                   Ages 6–18 · Grades K–12
