@@ -211,7 +211,7 @@ const ModeSelect = () => {
                 </p>
 
                 <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)]">
-                  <BennyVideoHero />
+                  <BennyVideoHero paused={bennyPaused} />
                 </div>
 
                 <div className="mt-7">
