@@ -478,6 +478,12 @@ export const RPGWorldMap = ({
               ? 'Your Nabu Village adventure awaits!'
               : 'Your reading adventure awaits, hero!'}
         </p>
+
+        {mapTheme === 'prek' && (
+          <div className="mt-4 flex justify-center">
+            <PreKStatsButton studentId={studentId} />
+          </div>
+        )}
         
         {/* Sparkle decorations */}
         <motion.div
