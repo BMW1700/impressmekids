@@ -93,6 +93,9 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             {/* Only show auth buttons when NOT logged in */}
             {shouldShowAuthButtons && (
               <>
+                <Button variant="ghost" asChild className="hidden md:inline-flex">
+                  <Link to="/for-families">Families</Link>
+                </Button>
                 <Button variant="ghost" asChild>
                   <Link to="/pricing">Pricing</Link>
                 </Button>
