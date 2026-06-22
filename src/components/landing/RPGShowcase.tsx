@@ -140,7 +140,7 @@ export const RPGShowcase = ({ variant = "hero", className = "", paused = false }
   }, []);
 
   useEffect(() => {
-    if (reduce || !visible) return;
+    if (reduce || !visible || paused) return;
     const t = setTimeout(() => {
       const next = NEXT[phase];
       if (next === "heroAttack" || next === "enemyAttack") {
@@ -162,7 +162,7 @@ export const RPGShowcase = ({ variant = "hero", className = "", paused = false }
       setPhase(next);
     }, TIMINGS[phase]);
     return () => clearTimeout(t);
-  }, [phase, reduce, visible]);
+  }, [phase, reduce, visible, paused]);
 
   const heroState =
     phase === "heroHit"
