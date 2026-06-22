@@ -97,11 +97,11 @@ const ModeSelect = () => {
 
   const inactiveFx = (side: "benny" | "rpg") => {
     if (!hover || hover === side) return "";
-    if (reduceMotion) return "opacity-70";
-    return "blur-[2px] brightness-[0.55] md:scale-[0.98]";
+    if (reduceMotion) return "opacity-30";
+    return "blur-[8px] brightness-[0.25] opacity-40 md:scale-[0.96]";
   };
   const activeFx = (side: "benny" | "rpg") =>
-    hover === side && !reduceMotion ? "md:scale-[1.015]" : "";
+    hover === side && !reduceMotion ? "md:scale-[1.02]" : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
@@ -264,7 +264,7 @@ const ModeSelect = () => {
                 }}
               />
 
-              <div className="mx-auto w-full max-w-xl">
+              <div className="mx-auto w-full max-w-2xl">
                 <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
                   <Swords className="h-3.5 w-3.5" />
                   Ages 6–18 · Grades K–12

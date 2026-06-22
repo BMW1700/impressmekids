@@ -1,47 +1,51 @@
-## My honest pick: Expand + subtle blur (combo)
+## What's actually broken
 
-I tried all four mentally against your real concern ("the pathways are confusing / distracting"):
+Both panels DO change `flex-grow` to 68 on hover — the math is symmetric. The reason the right side *looks* like it isn't expanding:
 
-- **Expand only (75/25):** good, but both sides still compete for attention because both stay sharp.
-- **Blur only:** focuses attention, but the panels stay the same size so it doesn't feel as "alive" or rewarding to hover.
-- **Full takeover (95/5):** dramatic, but it hides the other door so much it basically becomes a single-panel page — defeats the point of the split.
-- **Combo (expand to ~68/32 + blur+dim the inactive side):** the active side clearly wins the screen AND the inactive side stops shouting. Cinematic, focuses the user, still shows both doors exist. **This is the right call.**
+- **Benny panel** uses `max-w-2xl` (672px) and the video fills the full container width, so when the panel grows wider, the video grows with it and you clearly see it expand.
+- **RPG panel** uses `max-w-xl` (576px) — narrower cap. When its panel grows from 45% → 68% of the screen, the inner content stays locked at 576px and just gets more empty side-padding. The panel *is* wider, you just can't tell because nothing inside it stretches.
 
-So: **combo it is**, tuned conservatively so it feels premium, not jumpy.
+So it's not a bug, it's a content-width mismatch.
 
----
+## My recommendation: keep the expansion, AND go heavier on the blur
 
-## Changes
+You asked me to pick. I'd do **both**, because each one fixes a different problem:
 
-### 1. Remove "Welcome to NabuLearn!"
-Delete the centered eyebrow line from the header bar in `src/pages/ModeSelect.tsx`. Header goes back to just logo (left) + Pricing / Sign in / Super Admin shield (right). Cleaner, lets Benny and the RPG headlines own the stage.
+1. **Fix the RPG expansion so it's actually visible** — match Benny's content cap, so when the panel grows, the content visibly grows with it.
+2. **Crank the inactive-side blur way up** so the focused side really wins the screen. Right now `blur-[2px] brightness-[0.55]` is too polite — it reads as "slightly faded" instead of "out of focus." Push it to near-invisible.
 
-### 2. Hover behavior — expand + blur the inactive side
+Combined effect: hover Benny → Benny visibly expands AND RPG nearly disappears. Hover RPG → same thing in reverse. Fully symmetric, much more dramatic.
 
-In `src/pages/ModeSelect.tsx`:
+## Changes (file: `src/pages/ModeSelect.tsx`)
 
-- Change the grid from a fixed `grid-cols-[55fr_45fr]` to a **dynamic flex** layout where each panel's `flex-grow` is driven by hover state:
-  - Neutral (no hover): `55 / 45` (current default — Benny still gets the slight lead).
-  - Hover Benny: `68 / 32`.
-  - Hover RPG: `32 / 68`.
-- Animate the flex transition with `transition-[flex-grow] duration-700 ease-out` so it glides, doesn't snap.
-- On the **inactive** side, apply:
-  - `blur-[2px]` (subtle — text still readable so user knows it's there)
-  - `brightness-[0.55]` (dims it without going black)
-  - `scale-[0.98]` (tiny pull-back, reinforces "you're not focused here")
-  - `transition-all duration-500`
-- On the **active** side: keep current `scale-[1.02]` lift + full brightness/sharpness.
-- Click target stays the whole panel — clicking the dimmed/blurred side still works (no need to "un-blur" first). Hovering it for ~150ms swaps focus.
-- Touch / mobile: blur effect disabled (no hover state on touch). Mobile keeps the stacked vertical layout from before. No regression.
+### 1. Make RPG content width match Benny's
+- Change the RPG panel's inner wrapper from `max-w-xl` → `max-w-2xl` (line 267).
+- This alone makes the right side's expansion visible.
 
-### 3. Polish details
-- Add a 150ms hover-intent delay before the blur kicks in, so a mouse just passing through doesn't trigger the effect (prevents flicker).
-- Reduce motion: respect `prefers-reduced-motion` — skip blur and shrink the expand to 60/40 max.
+### 2. Heavier blur + fade on the inactive side
+Update `inactiveFx()` (lines 98–102):
+- From: `blur-[2px] brightness-[0.55] md:scale-[0.98]`
+- To: `blur-[8px] brightness-[0.25] opacity-40 md:scale-[0.96]`
+- Reduced-motion fallback: `opacity-30` (no blur, no scale — just fade).
+
+This makes the non-hovered side read as clearly "not the focus" — almost ghosted. Still clickable, still visible enough that you know the door exists, but it stops competing for attention.
+
+### 3. Slightly stronger active lift (optional polish)
+Update `activeFx()`:
+- From: `md:scale-[1.015]`
+- To: `md:scale-[1.02]` — tiny bit more confident.
+
+### 4. Keep everything else
+- Flex weights stay 55/45 neutral → 68/32 hover. Symmetric.
+- 140ms hover-intent delay stays (prevents flicker on quick mouse passes).
+- 700ms transition stays.
+- Touch / mobile stacked layout unchanged.
+- Header, copy, audience sub-labels, CTAs, routes — all untouched.
 
 ## Files touched
-- `src/pages/ModeSelect.tsx` — remove welcome line; refactor split-screen hover from scale-only to flex-grow + blur/dim on inactive side; add hover-intent delay and reduced-motion guard.
+- `src/pages/ModeSelect.tsx` — bump RPG `max-w-xl` → `max-w-2xl`, strengthen `inactiveFx`, nudge `activeFx`.
 
 ## Not touching
-- The audience sub-labels, the Benny CTA (still goes straight into Pre-K), the Pre-K Stats button, the video crop, panel content, fonts, gradients, routes, or anything backend.
+Backend, routes, copy, the Pre-K Stats button, video components, BennyVideoHero, RPGShowcase.
 
 Approve and I'll build it.
