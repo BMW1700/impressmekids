@@ -1,94 +1,71 @@
-# Plan: Benny takes over `/` (Option A)
+## My brutally honest call: Weighted Split (Benny-dominant)
 
-`/` becomes a real landing page that leads with Benny. The current generic "Welcome to NabuLearn" + two-glass-card layout is replaced. Existing access paths (Adventure / Super Admin) are preserved as secondary actions so no signed-in user loses their flow.
+Equal 50/50 reads as "we have two products and don't know which matters." Benny-only buries the K–12 RPG that's already shipped and paying the bills. The winning move is **one screen, two panels, Benny visually dominant, both reachable in one click.**
+
+This is what I'm building.
 
 ---
 
-## New `/` structure, top to bottom
+## New `/` (ModeSelect.tsx) layout
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  [logo]  NabuLearn                    [Sign in] [Pricing]│  ← minimal top bar
-│                                                         │
-│        Reading. With their first best friend.           │
-│         Meet Benny. Ages 2–5. Read-along adventures.    │
-│                                                         │
-│        ╔═══════════════════════════════════════╗        │
-│        ║                                       ║        │
-│        ║    [ BENNY VIDEO — autoplaying ]      ║        │
-│        ║                                       ║        │
-│        ╚═══════════════════════════════════════╝        │
-│                                                         │
-│        [ Start Benny's adventure → ]  [ I'm a teacher ] │
-│                                                         │
-├─────────────────────────────────────────────────────────┤
-│              Choose your path                           │
-│                                                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐               │
-│  │ Families │  │   K–12   │  │Districts │               │
-│  │ /for-fam │  │ /demos   │  │/pricing  │               │
-│  └──────────┘  └──────────┘  └──────────┘               │
-├─────────────────────────────────────────────────────────┤
-│        [ Live RPG showcase — Whispers in the Dark ]     │
-├─────────────────────────────────────────────────────────┤
-│   Returning players →  [ Enter the Adventure ]          │
-│   (small, quiet, link-style, NOT a hero card)           │
-├─────────────────────────────────────────────────────────┤
-│   Privacy · Terms · COPPA · Security · DPA · All legal  │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Header: NabuLearn logo · Pricing · Sign in · 🛡 (super admin)│
+├──────────────────────────────┬──────────────────────────────┤
+│                              │                              │
+│   BENNY PANEL (~55%)         │   K–12 RPG PANEL (~45%)      │
+│   Warm gradient bg           │   Dark RPG bg                │
+│                              │                              │
+│   [Benny video / poster]     │   [RPG screenshot still]     │
+│                              │                              │
+│   "Reading. With their       │   "Reading IS the combat     │
+│    first best friend."       │    mechanic."                │
+│   Ages 2–5                   │   Ages 6–18 · Grades K–12    │
+│                              │                              │
+│   [Start Benny's adventure→] │   [Enter the Adventure →]    │
+│                              │                              │
+└──────────────────────────────┴──────────────────────────────┘
+  Tiny center link: "I'm a teacher / school →"  ·  scroll ↓ for more
 ```
 
----
+**Interaction:**
+- Hover (desktop) or tap (touch) a panel → it scales to ~60%, other dims to ~75% opacity. Smooth 400ms ease.
+- Click the CTA inside the panel → routes (`/game` for Benny, `/game?mode=rpg` or existing K-12 entry for RPG).
+- Mobile/iPad portrait: panels stack vertically (Benny top, RPG bottom), each ~50vh, equally tall, no hover state.
 
-## What changes
-
-**Replace** the entire visible body of `src/pages/ModeSelect.tsx` with a Benny-first hero:
-
-1. **Hero block** — Reuse `BennyVideoHero` (already built for `/for-families`). Headline: **"Reading. With their first best friend."** Subhead: "Meet Benny. Ages 2–5. Adventures kids ask for by name." Two CTAs:
-   - Primary: "Start Benny's adventure" → `/game`
-   - Secondary: "I'm a teacher / school" → `/demos`
-2. **Doorway trifurcation** — Reuse the existing `<AudienceTrifurcation />` component as-is.
-3. **RPG showcase** — Keep the existing lazy-loaded `<RPGShowcase variant="hero" />` block exactly where it is in markup, just lower in the page. Proof the product is real.
-4. **"Returning players" footer row** — A small, quiet text link `Returning player? Enter the Adventure →` that routes to `/game`. Replaces the current giant glass card. Game-mode users keep their path; new visitors aren't distracted by it.
-5. **Super Admin entry** — Stays gated to `super_admin` role, but moves to a small icon-button in the top-right header area (next to Sign in / Pricing), not a hero card. Same `useIsSuperAdmin` check, same destination `/super-admin`.
-
-**Preserve** all existing auth-redirect logic at the top of `ModeSelect.tsx`. Signed-in school users with a district still auto-redirect to their dashboard. `skipRedirect` still works. Game-player role still auto-routes to `/game/dashboard`. None of that logic changes — only the visible layout for the unsignedinor-still-on-page state changes.
-
-**Keep** the existing `<Helmet>` SEO block, but update the title/description to match the new Benny-led framing:
-- title: `"NabuLearn — Reading adventures with Benny. K–12 literacy that feels like a game."`
-- description: `"Meet Benny — read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG. FERPA, COPPA & SOC 2 aligned."`
+**Below the fold (scroll reveals, doesn't compete):**
+1. `<AudienceTrifurcation />` — Families / Teachers / Schools doorways (reuse existing)
+2. `<RPGShowcase variant="hero" />` — keep existing lazy-loaded demo
+3. Returning-players quiet link + legal footer
 
 ---
 
-## Files
+## Veo3 watermark fix
 
-**Edited:**
-- `src/pages/ModeSelect.tsx` — full layout rewrite of the rendered JSX. Auth logic + helmet + super-admin gate logic untouched.
-
-**Untouched:**
-- `src/components/landing/BennyVideoHero.tsx` (reused as-is)
-- `src/components/landing/AudienceTrifurcation.tsx` (reused as-is)
-- `src/components/landing/RPGShowcase.tsx` (reused as-is)
-- `src/pages/ForFamilies.tsx` (already shipped)
-- `src/pages/Index.tsx` and `/school` route (still hidden, untouched — trifurcation already present there is harmless)
-- `App.tsx` routes — no changes
-- All game / dashboard / auth code
+Inside `BennyVideoHero.tsx`, wrap the `<video>` in a container with `overflow-hidden` and apply `object-cover` + a slight negative right/bottom offset (or `clip-path: inset(0 4% 5% 0)`). This crops the bottom-right corner where "Veo" sits — we lose ~5% of the frame edge but Benny stays centered. No re-render needed.
 
 ---
 
-## Why this is the right call
+## Files touched
 
-- **Benny in 2 seconds.** Patrick can screen-share `/` to any partner and Benny is the first thing they see. Today, he isn't on `/` at all.
-- **Audience self-select stays.** The trifurcation right below the hero means superintendents and district CFOs aren't confused — they have a labeled door.
-- **No returning user loses their path.** "Enter the Adventure" still exists as a quiet returning-player link. Super Admin still exists for you. Auto-redirects for signed-in school users still fire before the page even renders.
-- **Reversible.** If it doesn't perform in 2 weeks, the old layout is one commit away — same component imports, just reordered.
+- **`src/pages/ModeSelect.tsx`** — full rewrite to weighted-split layout. Keeps all existing auth-redirect logic, `useAuth`, `useIsSuperAdmin`, game-player auto-routes, `skipRedirect`, and `<Helmet>` SEO.
+- **`src/components/landing/BennyVideoHero.tsx`** — add `clip-path` / overflow crop on the video wrapper to hide "Veo" watermark.
+- **No changes** to: `BennyVideoHero` video asset, `AudienceTrifurcation`, `RPGShowcase`, `ForFamilies`, `Index.tsx`, `/school`, header, routes, backend.
 
----
+## Design tokens
 
-## Out of scope
+- Benny panel bg: warm gradient using existing `--accent` / soft gold tokens already in `index.css`
+- RPG panel bg: existing dark RPG palette already in use on the showcase
+- Headline font: existing project sans (no new font installs)
+- Gold accent on "first best friend": existing gold gradient token
+- Hover scale: `scale-[1.02]` + sibling `opacity-75 scale-[0.98]`, `transition-all duration-500 ease-out`
 
-- No video re-edit, no Veo watermark removal.
-- No new routes.
-- No backend / auth changes.
-- No removal of `Index.tsx` or `/school`.
-- No copy changes outside `ModeSelect.tsx` and its `<Helmet>`.
+## Why this is the right call (one more time)
+
+1. **One screen, one click to action** — fixes your "pathways are confusing" complaint.
+2. **Benny dominates visually** (55%, warmer art, animated video) — Patrick's partner sees Benny first.
+3. **K–12 RPG isn't hidden** — your real revenue product stays on the front page.
+4. **Mobile/iPad survives** — stacks cleanly; no broken split.
+5. **Reversible** — one file rewrite; if it flops in 2 weeks we revert.
+
+Approve and I'll build it.

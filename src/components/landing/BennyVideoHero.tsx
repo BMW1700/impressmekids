@@ -61,7 +61,8 @@ export const BennyVideoHero = () => {
             loop
             playsInline
             preload="metadata"
-            className="h-full w-full object-cover"
+            // scale + translate to push the Veo watermark off the cropped frame
+            className="h-full w-full object-cover origin-center scale-[1.08] -translate-x-[1.5%] -translate-y-[1.5%]"
           />
         ) : (
           <>
@@ -75,7 +76,7 @@ export const BennyVideoHero = () => {
               preload="metadata"
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover origin-center scale-[1.08] -translate-x-[1.5%] -translate-y-[1.5%]"
             />
             {!playing && (
               <button
@@ -91,6 +92,7 @@ export const BennyVideoHero = () => {
             )}
           </>
         )}
+
 
         {/* Cinema letterboxing (subtle inner bars) */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-black/80" />

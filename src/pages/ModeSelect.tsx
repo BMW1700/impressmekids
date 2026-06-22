@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { Loader2, ShieldCheck, ArrowRight } from "lucide-react";
+import { Loader2, ShieldCheck, ArrowRight, Sparkles, Swords } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
@@ -13,6 +13,8 @@ const RPGShowcase = lazy(() =>
   import("@/components/landing/RPGShowcase").then((module) => ({ default: module.RPGShowcase }))
 );
 
+type HoverSide = "benny" | "rpg" | null;
+
 const ModeSelect = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -20,6 +22,7 @@ const ModeSelect = () => {
   const { user, profile, isLoading, isProfileLoading } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
   const [showShowcase, setShowShowcase] = useState(false);
+  const [hover, setHover] = useState<HoverSide>(null);
 
   useEffect(() => {
     const t = window.setTimeout(() => setShowShowcase(true), 900);
@@ -66,6 +69,13 @@ const ModeSelect = () => {
     );
   }
 
+  const bennyActive = hover === "benny";
+  const rpgActive = hover === "rpg";
+  const otherDim = (side: "benny" | "rpg") =>
+    hover && hover !== side ? "opacity-60 md:scale-[0.985]" : "opacity-100 md:scale-100";
+  const selfBoost = (side: "benny" | "rpg") =>
+    hover === side ? "md:scale-[1.012]" : "";
+
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
       <Helmet>
@@ -85,7 +95,7 @@ const ModeSelect = () => {
       </Helmet>
 
       {/* ── Minimal top bar ── */}
-      <header className="relative z-20 border-b border-white/5">
+      <header className="relative z-30 border-b border-white/5">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-lg font-bold tracking-tight">
@@ -117,113 +127,167 @@ const ModeSelect = () => {
       </header>
 
       <main className="flex-1">
-        {/* ── Hero: Benny ── */}
-        <section className="relative isolate overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28">
+        {/* ── Weighted split: Benny (55) vs K–12 RPG (45) ── */}
+        <section className="relative isolate overflow-hidden">
           <div
             aria-hidden
             className="absolute inset-0 -z-10"
             style={{
               background:
-                "radial-gradient(50% 40% at 50% 0%, hsl(48 100% 55% / 0.18), transparent 70%)," +
-                "radial-gradient(70% 60% at 50% 100%, hsl(270 80% 25% / 0.6), transparent 70%)",
+                "radial-gradient(50% 40% at 30% 20%, hsl(48 100% 55% / 0.18), transparent 70%)," +
+                "radial-gradient(50% 40% at 80% 80%, hsl(270 80% 35% / 0.5), transparent 70%)",
             }}
           />
-          <div className="container relative mx-auto px-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-[55fr_45fr] min-h-[calc(100vh-72px)]">
+            {/* ─── BENNY PANEL ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -24 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="mx-auto mb-10 max-w-3xl text-center"
+              onMouseEnter={() => setHover("benny")}
+              onMouseLeave={() => setHover(null)}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-all duration-500 ease-out ${selfBoost("benny")} ${otherDim("benny")}`}
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(270 60% 14%) 0%, hsl(285 55% 16%) 50%, hsl(35 80% 22%) 100%)",
+              }}
             >
-              <h1 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
-                Reading. With their{" "}
-                <span className="bg-gradient-to-r from-[hsl(48_100%_75%)] via-[hsl(48_100%_60%)] to-[hsl(35_100%_60%)] bg-clip-text text-transparent">
-                  first best friend.
-                </span>
-              </h1>
-              <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-white/70 md:text-xl">
-                Meet Benny. Ages 2–5. Adventures kids ask for by name — and the
-                words they say out loud are the words that unlock the story.
-              </p>
+              {/* warm glow */}
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 -z-10 transition-opacity duration-500 ${bennyActive ? "opacity-100" : "opacity-70"}`}
+                style={{
+                  background:
+                    "radial-gradient(60% 50% at 50% 40%, hsl(48 100% 55% / 0.22), transparent 70%)",
+                }}
+              />
+
+              <div className="mx-auto w-full max-w-2xl">
+                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(48_100%_75%)]">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Ages 2–5 · Pre-K
+                </div>
+                <h1 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                  Reading. With their{" "}
+                  <span className="bg-gradient-to-r from-[hsl(48_100%_78%)] via-[hsl(48_100%_62%)] to-[hsl(30_100%_60%)] bg-clip-text text-transparent">
+                    first best friend.
+                  </span>
+                </h1>
+                <p className="mt-5 max-w-xl text-base text-white/75 md:text-lg">
+                  Meet Benny. Adventures kids ask for by name — and the words
+                  they say out loud unlock the story.
+                </p>
+
+                <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)]">
+                  <BennyVideoHero />
+                </div>
+
+                <div className="mt-7">
+                  <Button
+                    size="lg"
+                    asChild
+                    className="group h-14 w-full rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white sm:w-auto"
+                  >
+                    <Link to="/game">
+                      Start Benny's adventure
+                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
             </motion.div>
 
-            <BennyVideoHero />
-
+            {/* ─── K–12 RPG PANEL ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              onMouseEnter={() => setHover("rpg")}
+              onMouseLeave={() => setHover(null)}
+              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-all duration-500 ease-out ${selfBoost("rpg")} ${otherDim("rpg")}`}
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
+              }}
             >
-              <Button
-                size="lg"
-                asChild
-                className="group h-14 rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white"
-              >
-                <Link to="/game">
-                  Start Benny's adventure
-                  <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                asChild
-                className="h-14 rounded-full border-white/20 bg-white/5 px-8 text-base font-medium text-white backdrop-blur hover:border-white/40 hover:bg-white/10 hover:text-white"
-              >
-                <Link to="/demos">I'm a teacher / school</Link>
-              </Button>
+              {/* cool glow */}
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-0 -z-10 transition-opacity duration-500 ${rpgActive ? "opacity-100" : "opacity-70"}`}
+                style={{
+                  background:
+                    "radial-gradient(60% 50% at 50% 40%, hsl(265 90% 55% / 0.25), transparent 70%)",
+                }}
+              />
+
+              <div className="mx-auto w-full max-w-xl">
+                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
+                  <Swords className="h-3.5 w-3.5" />
+                  Ages 6–18 · Grades K–12
+                </div>
+                <h2 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
+                  Reading IS the{" "}
+                  <span className="bg-gradient-to-r from-[hsl(280_90%_75%)] via-[hsl(265_90%_65%)] to-[hsl(220_90%_65%)] bg-clip-text text-transparent">
+                    combat mechanic.
+                  </span>
+                </h2>
+                <p className="mt-5 text-base text-white/75 md:text-lg">
+                  An AI-powered literacy RPG. Speak words to cast spells, defeat
+                  bosses, and level up — fluency goes up because the game won't
+                  work otherwise.
+                </p>
+
+                <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(270_45%_8%)] shadow-[0_20px_80px_-20px_hsl(265_90%_55%/0.4)]">
+                  {showShowcase ? (
+                    <Suspense fallback={<div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />}>
+                      <RPGShowcase variant="hero" />
+                    </Suspense>
+                  ) : (
+                    <div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />
+                  )}
+                </div>
+
+                <div className="mt-7">
+                  <Button
+                    size="lg"
+                    asChild
+                    className="group h-14 w-full rounded-full bg-[hsl(265_90%_60%)] px-8 text-base font-semibold text-white hover:bg-[hsl(265_90%_65%)] sm:w-auto"
+                  >
+                    <Link to="/game">
+                      Enter the Adventure
+                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
             </motion.div>
           </div>
-        </section>
 
-        {/* ── Audience doorway ── */}
-        <AudienceTrifurcation />
-
-        {/* ── RPG live showcase ── */}
-        <section className="border-t border-white/5 py-20 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="mx-auto mb-10 max-w-2xl text-center">
-              <p className="mb-4 text-xs uppercase tracking-[0.24em] text-white/50">
-                Inside the K–12 RPG
-              </p>
-              <h2 className="text-balance text-3xl font-bold leading-tight tracking-tight md:text-5xl">
-                Reading as the{" "}
-                <span className="bg-gradient-to-r from-[hsl(48_100%_75%)] to-[hsl(35_100%_60%)] bg-clip-text text-transparent">
-                  combat mechanic.
-                </span>
-              </h2>
+          {/* Tiny center link for teachers/schools */}
+          <div className="border-t border-white/5 bg-[hsl(270_45%_5%)]/60 py-5">
+            <div className="container mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4 text-sm">
+              <Link
+                to="/demos"
+                className="group inline-flex items-center gap-1.5 text-white/65 transition hover:text-white"
+              >
+                I'm a teacher / school
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+              <span className="text-white/20">·</span>
+              <Link
+                to="/game"
+                className="group inline-flex items-center gap-1.5 text-white/55 transition hover:text-white"
+              >
+                Returning player? Jump back in
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
             </div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.7 }}
-              className="mx-auto max-w-5xl rounded-3xl border border-white/10 bg-[hsl(270_45%_8%)] overflow-hidden shadow-[0_20px_80px_-20px_hsl(270_80%_30%/0.6)]"
-            >
-              {showShowcase ? (
-                <Suspense fallback={<div className="h-[min(620px,78vh)] bg-[hsl(270_45%_8%)]" aria-hidden="true" />}>
-                  <RPGShowcase variant="hero" />
-                </Suspense>
-              ) : (
-                <div className="h-[min(620px,78vh)] bg-[hsl(270_45%_8%)]" aria-hidden="true" />
-              )}
-            </motion.div>
           </div>
         </section>
 
-        {/* ── Returning players ── */}
-        <section className="border-t border-white/5 py-14">
-          <div className="container mx-auto px-4 text-center">
-            <Link
-              to="/game"
-              className="group inline-flex items-center gap-2 text-sm text-white/55 transition hover:text-white"
-            >
-              Returning player? Enter the Adventure
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
-        </section>
+        {/* ── Below the fold: audience doorway ── */}
+        <AudienceTrifurcation />
       </main>
 
       {/* ── Legal footer ── */}
