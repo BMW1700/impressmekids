@@ -316,7 +316,7 @@ export const RPGShowcase = ({ variant = "hero", className = "", paused = false }
         </motion.div>
 
         {/* METRICS RAIL */}
-        <MetricsRail story={story} phase={phase} />
+        <MetricsRail story={story} phase={phase} paused={paused} />
       </div>
 
       {reduce && (
@@ -449,11 +449,12 @@ const StoryPanel = ({
 };
 
 // ─── Metrics Rail ────────────────────────────────────────────────────
-const MetricsRail = ({ story, phase }: { story: StoryConfig; phase: Phase }) => {
+const MetricsRail = ({ story, phase, paused = false }: { story: StoryConfig; phase: Phase; paused?: boolean }) => {
   const [wpm, setWpm] = useState(98);
   const [accuracy, setAccuracy] = useState(96);
 
   useEffect(() => {
+    if (paused) return;
     if (phase === "reading") {
       // Climb WPM during reading
       const start = Date.now();
@@ -470,7 +471,7 @@ const MetricsRail = ({ story, phase }: { story: StoryConfig; phase: Phase }) => 
       setWpm(98);
       setAccuracy(96);
     }
-  }, [phase, story.key]);
+  }, [phase, story.key, paused]);
 
   const wcpm = Math.max(0, Math.round(wpm * (accuracy / 100)));
   const phonemeAvg = Math.round(
