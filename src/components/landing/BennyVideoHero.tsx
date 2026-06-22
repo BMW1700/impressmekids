@@ -26,6 +26,16 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
 
   const shouldAutoplay = !reduce && !isMobile;
 
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !shouldAutoplay) return;
+    if (paused) {
+      v.pause();
+    } else {
+      v.play().catch(() => undefined);
+    }
+  }, [paused, shouldAutoplay]);
+
   const handlePlay = () => {
     const v = videoRef.current;
     if (!v) return;
