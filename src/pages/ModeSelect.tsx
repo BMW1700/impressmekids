@@ -25,10 +25,13 @@ const ModeSelect = () => {
   const skipRedirect = (location.state as any)?.skipRedirect === true;
   const { user, profile, isLoading, isProfileLoading } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
+  const { resolvedTheme } = useTheme();
+  const isLight = resolvedTheme === "light";
   const [showShowcase, setShowShowcase] = useState(false);
   const [hover, setHover] = useState<HoverSide>(null);
   const reduceMotion = useReducedMotion();
   const hoverTimerRef = useRef<number | null>(null);
+
 
   const requestHover = (side: HoverSide) => {
     if (hoverTimerRef.current) window.clearTimeout(hoverTimerRef.current);
