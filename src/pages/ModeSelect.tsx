@@ -8,6 +8,7 @@ import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
+import { setStoredTheme } from "@/lib/gameTheme";
 
 const RPGShowcase = lazy(() =>
   import("@/components/landing/RPGShowcase").then((module) => ({ default: module.RPGShowcase }))
