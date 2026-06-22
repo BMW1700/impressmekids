@@ -175,7 +175,7 @@ const ModeSelect = () => {
                 background:
                   "linear-gradient(135deg, hsl(270 60% 14%) 0%, hsl(285 55% 16%) 50%, hsl(35 80% 22%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
+              className={`relative flex flex-col justify-start px-6 pt-16 pb-14 md:px-12 md:pt-24 md:pb-20 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
             >
               {/* warm glow */}
               <div
