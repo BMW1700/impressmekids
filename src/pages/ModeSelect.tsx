@@ -89,19 +89,13 @@ const ModeSelect = () => {
   const bennyActive = hover === "benny";
   const rpgActive = hover === "rpg";
 
-  // Flex weights: neutral 55/45 → hovered side expands to 68/32 (60/40 if reduced-motion).
-  const expanded = reduceMotion ? 60 : 68;
-  const shrunken = reduceMotion ? 40 : 32;
-  const bennyFlex = hover === null ? 55 : bennyActive ? expanded : shrunken;
-  const rpgFlex = hover === null ? 45 : rpgActive ? expanded : shrunken;
-
   const inactiveFx = (side: "benny" | "rpg") => {
     if (!hover || hover === side) return "";
-    if (reduceMotion) return "opacity-30";
-    return "blur-[8px] brightness-[0.25] opacity-40 md:scale-[0.96]";
+    if (reduceMotion) return "opacity-[0.1]";
+    return "blur-[20px] brightness-[0.08] opacity-[0.06] md:scale-[0.95]";
   };
   const activeFx = (side: "benny" | "rpg") =>
-    hover === side && !reduceMotion ? "md:scale-[1.02]" : "";
+    hover === side && !reduceMotion ? "md:scale-[1.025]" : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
