@@ -449,11 +449,12 @@ const StoryPanel = ({
 };
 
 // ─── Metrics Rail ────────────────────────────────────────────────────
-const MetricsRail = ({ story, phase }: { story: StoryConfig; phase: Phase }) => {
+const MetricsRail = ({ story, phase, paused = false }: { story: StoryConfig; phase: Phase; paused?: boolean }) => {
   const [wpm, setWpm] = useState(98);
   const [accuracy, setAccuracy] = useState(96);
 
   useEffect(() => {
+    if (paused) return;
     if (phase === "reading") {
       // Climb WPM during reading
       const start = Date.now();
