@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Heart, GraduationCap, Building2, ArrowRight } from "lucide-react";
+
 
 interface Door {
   to: string;
