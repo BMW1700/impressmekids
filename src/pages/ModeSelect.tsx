@@ -8,6 +8,7 @@ import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
+import { setStoredTheme } from "@/lib/gameTheme";
 
 const RPGShowcase = lazy(() =>
   import("@/components/landing/RPGShowcase").then((module) => ({ default: module.RPGShowcase }))
@@ -96,33 +97,38 @@ const ModeSelect = () => {
 
       {/* ── Minimal top bar ── */}
       <header className="relative z-30 border-b border-white/5">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight">
-              Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-              <Link to="/pricing">Pricing</Link>
-            </Button>
-            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-              <Link to="/auth">Sign in</Link>
-            </Button>
-            {isSuperAdmin && (
-              <Button
-                variant="ghost"
-                size="icon"
-                asChild
-                aria-label="Super Admin"
-                className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
-              >
-                <Link to="/super-admin">
-                  <ShieldCheck className="h-5 w-5" />
-                </Link>
+        <div className="container mx-auto flex flex-col items-center px-4 py-4">
+          <div className="flex w-full items-center justify-between">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="text-lg font-bold tracking-tight">
+                Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
+              </span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+                <Link to="/pricing">Pricing</Link>
               </Button>
-            )}
+              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  asChild
+                  aria-label="Super Admin"
+                  className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
+                >
+                  <Link to="/super-admin">
+                    <ShieldCheck className="h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
+          <p className="mt-1.5 text-[13px] font-medium tracking-wide text-white/55">
+            Welcome to <span className="text-[hsl(48_100%_75%)]">NabuLearn</span>!
+          </p>
         </div>
       </header>
 
@@ -164,10 +170,17 @@ const ModeSelect = () => {
               />
 
               <div className="mx-auto w-full max-w-2xl">
-                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(48_100%_75%)]">
+                <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(48_100%_75%)]">
                   <Sparkles className="h-3.5 w-3.5" />
                   Ages 2–5 · Pre-K
                 </div>
+                <p
+                  className={`mb-5 text-sm font-medium transition-all duration-300 ${
+                    bennyActive ? "text-[hsl(48_100%_82%)] translate-y-0" : "text-white/55 translate-y-0"
+                  }`}
+                >
+                  For daycares, preschools &amp; 2–5 year-olds
+                </p>
                 <h1 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
                   Reading. With their{" "}
                   <span className="bg-gradient-to-r from-[hsl(48_100%_78%)] via-[hsl(48_100%_62%)] to-[hsl(30_100%_60%)] bg-clip-text text-transparent">
@@ -186,13 +199,18 @@ const ModeSelect = () => {
                 <div className="mt-7">
                   <Button
                     size="lg"
-                    asChild
+                    onClick={() => {
+                      setStoredTheme("prek");
+                      if (user) {
+                        navigate("/game/play?tab=rpg");
+                      } else {
+                        navigate("/game/auth");
+                      }
+                    }}
                     className="group h-14 w-full rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white sm:w-auto"
                   >
-                    <Link to="/game">
-                      Start Benny's adventure
-                      <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
+                    Start Benny's adventure
+                    <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 </div>
               </div>
@@ -222,10 +240,17 @@ const ModeSelect = () => {
               />
 
               <div className="mx-auto w-full max-w-xl">
-                <div className="mb-5 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
+                <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.24em] text-[hsl(265_90%_80%)]">
                   <Swords className="h-3.5 w-3.5" />
                   Ages 6–18 · Grades K–12
                 </div>
+                <p
+                  className={`mb-5 text-sm font-medium transition-all duration-300 ${
+                    rpgActive ? "text-[hsl(280_90%_85%)]" : "text-white/55"
+                  }`}
+                >
+                  For K–12 students, at-home learning, schools &amp; districts
+                </p>
                 <h2 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl">
                   Reading IS the{" "}
                   <span className="bg-gradient-to-r from-[hsl(280_90%_75%)] via-[hsl(265_90%_65%)] to-[hsl(220_90%_65%)] bg-clip-text text-transparent">

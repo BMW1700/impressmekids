@@ -9,6 +9,7 @@ import { campaignWorlds, CampaignWorld, CampaignLevel } from "@/lib/campaignData
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
+import { PreKStatsButton } from "@/components/prek/PreKStatsButton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -477,6 +478,12 @@ export const RPGWorldMap = ({
               ? 'Your Nabu Village adventure awaits!'
               : 'Your reading adventure awaits, hero!'}
         </p>
+
+        {mapTheme === 'prek' && (
+          <div className="mt-4 flex justify-center">
+            <PreKStatsButton studentId={studentId} />
+          </div>
+        )}
         
         {/* Sparkle decorations */}
         <motion.div
