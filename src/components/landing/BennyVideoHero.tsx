@@ -10,7 +10,7 @@ import posterAsset from "@/assets/nabu-hero-poster.jpg.asset.json";
  * - Mobile / reduced motion: poster + tap-to-play
  * - Always letterboxed inside a 16:9 frame with a gold radial glow
  */
-export const BennyVideoHero = () => {
+export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) => {
   const reduce = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -25,6 +25,16 @@ export const BennyVideoHero = () => {
   }, []);
 
   const shouldAutoplay = !reduce && !isMobile;
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !shouldAutoplay) return;
+    if (paused) {
+      v.pause();
+    } else {
+      v.play().catch(() => undefined);
+    }
+  }, [paused, shouldAutoplay]);
 
   const handlePlay = () => {
     const v = videoRef.current;

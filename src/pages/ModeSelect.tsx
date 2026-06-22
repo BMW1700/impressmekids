@@ -88,6 +88,8 @@ const ModeSelect = () => {
 
   const bennyActive = hover === "benny";
   const rpgActive = hover === "rpg";
+  const bennyPaused = hover === "rpg";
+  const rpgPaused = hover === "benny";
 
   const inactiveFx = (side: "benny" | "rpg") => {
     if (!hover || hover === side) return "";
@@ -173,7 +175,7 @@ const ModeSelect = () => {
                 background:
                   "linear-gradient(135deg, hsl(270 60% 14%) 0%, hsl(285 55% 16%) 50%, hsl(35 80% 22%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
+              className={`relative flex flex-col justify-start px-6 pt-16 pb-14 md:px-12 md:pt-24 md:pb-20 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("benny")} ${inactiveFx("benny")}`}
             >
               {/* warm glow */}
               <div
@@ -209,7 +211,7 @@ const ModeSelect = () => {
                 </p>
 
                 <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)]">
-                  <BennyVideoHero />
+                  <BennyVideoHero paused={bennyPaused} />
                 </div>
 
                 <div className="mt-7">
@@ -244,7 +246,7 @@ const ModeSelect = () => {
                 background:
                   "linear-gradient(135deg, hsl(270 55% 10%) 0%, hsl(265 70% 14%) 50%, hsl(255 60% 18%) 100%)",
               }}
-              className={`relative flex flex-col justify-center px-6 py-14 md:px-12 md:py-20 border-t md:border-t-0 md:border-l border-white/10 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
+              className={`relative flex flex-col justify-start px-6 pt-16 pb-14 md:px-12 md:pt-24 md:pb-20 border-t md:border-t-0 md:border-l border-white/10 transition-[filter,transform,opacity] duration-700 ease-out will-change-[filter,transform] ${activeFx("rpg")} ${inactiveFx("rpg")}`}
             >
               {/* cool glow */}
               <div
@@ -283,7 +285,7 @@ const ModeSelect = () => {
                 <div className="mt-7 overflow-hidden rounded-2xl border border-white/10 bg-[hsl(270_45%_8%)] shadow-[0_20px_80px_-20px_hsl(265_90%_55%/0.4)]">
                   {showShowcase ? (
                     <Suspense fallback={<div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />}>
-                      <RPGShowcase variant="hero" />
+                      <RPGShowcase variant="hero" paused={rpgPaused} />
                     </Suspense>
                   ) : (
                     <div className="aspect-video w-full bg-[hsl(270_45%_8%)]" aria-hidden="true" />

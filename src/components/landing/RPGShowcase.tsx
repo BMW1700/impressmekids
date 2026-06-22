@@ -14,6 +14,7 @@ import { BookOpen, Check, Sparkles, TrendingUp } from "lucide-react";
 interface RPGShowcaseProps {
   variant?: "hero" | "compact";
   className?: string;
+  paused?: boolean;
 }
 
 type Phase =
@@ -114,7 +115,7 @@ const STORIES: StoryConfig[] = [
 
 const HERO_ATTACK: ParentAttackKind = "fireball";
 
-export const RPGShowcase = ({ variant = "hero", className = "" }: RPGShowcaseProps) => {
+export const RPGShowcase = ({ variant = "hero", className = "", paused = false }: RPGShowcaseProps) => {
   const reduce = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("reading");
   const [fireKey, setFireKey] = useState(0);
@@ -139,7 +140,7 @@ export const RPGShowcase = ({ variant = "hero", className = "" }: RPGShowcasePro
   }, []);
 
   useEffect(() => {
-    if (reduce || !visible) return;
+    if (reduce || !visible || paused) return;
     const t = setTimeout(() => {
       const next = NEXT[phase];
       if (next === "heroAttack" || next === "enemyAttack") {
@@ -161,7 +162,7 @@ export const RPGShowcase = ({ variant = "hero", className = "" }: RPGShowcasePro
       setPhase(next);
     }, TIMINGS[phase]);
     return () => clearTimeout(t);
-  }, [phase, reduce, visible]);
+  }, [phase, reduce, visible, paused]);
 
   const heroState =
     phase === "heroHit"
