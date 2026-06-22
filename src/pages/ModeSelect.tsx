@@ -123,43 +123,38 @@ const ModeSelect = () => {
 
       {/* ── Minimal top bar ── */}
       <header className="relative z-30 border-b border-white/5">
-        <div className="container mx-auto flex flex-col items-center px-4 py-4">
-          <div className="flex w-full items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <span className="text-lg font-bold tracking-tight">
-                Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
-              </span>
-            </Link>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                <Link to="/pricing">Pricing</Link>
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="text-lg font-bold tracking-tight">
+              Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+              <Link to="/pricing">Pricing</Link>
+            </Button>
+            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+              <Link to="/auth">Sign in</Link>
+            </Button>
+            {isSuperAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                aria-label="Super Admin"
+                className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
+              >
+                <Link to="/super-admin">
+                  <ShieldCheck className="h-5 w-5" />
+                </Link>
               </Button>
-              <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-              {isSuperAdmin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  aria-label="Super Admin"
-                  className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
-                >
-                  <Link to="/super-admin">
-                    <ShieldCheck className="h-5 w-5" />
-                  </Link>
-                </Button>
-              )}
-            </div>
+            )}
           </div>
-          <p className="mt-1.5 text-[13px] font-medium tracking-wide text-white/55">
-            Welcome to <span className="text-[hsl(48_100%_75%)]">NabuLearn</span>!
-          </p>
         </div>
       </header>
 
       <main className="flex-1">
-        {/* ── Weighted split: Benny (55) vs K–12 RPG (45) ── */}
+        {/* ── Weighted split: Benny vs K–12 RPG. Hover expands the active side and blurs the other. ── */}
         <section className="relative isolate overflow-hidden">
           <div
             aria-hidden
@@ -171,7 +166,7 @@ const ModeSelect = () => {
             }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-[55fr_45fr] min-h-[calc(100vh-72px)]">
+          <div className="flex flex-col md:flex-row min-h-[calc(100vh-72px)]">
             {/* ─── BENNY PANEL ─── */}
             <motion.div
               initial={{ opacity: 0, x: -24 }}
