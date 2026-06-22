@@ -115,7 +115,7 @@ const STORIES: StoryConfig[] = [
 
 const HERO_ATTACK: ParentAttackKind = "fireball";
 
-export const RPGShowcase = ({ variant = "hero", className = "" }: RPGShowcaseProps) => {
+export const RPGShowcase = ({ variant = "hero", className = "", paused = false }: RPGShowcaseProps) => {
   const reduce = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("reading");
   const [fireKey, setFireKey] = useState(0);
