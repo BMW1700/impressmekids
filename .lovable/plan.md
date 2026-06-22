@@ -1,71 +1,63 @@
-## My brutally honest call: Weighted Split (Benny-dominant)
+## Honest take
 
-Equal 50/50 reads as "we have two products and don't know which matters." Benny-only buries the K–12 RPG that's already shipped and paying the bills. The winning move is **one screen, two panels, Benny visually dominant, both reachable in one click.**
+Your three asks are all good — they make intent crystal clear and shorten the click-path. The only one I'd tweak slightly is "Welcome to Nabu Learn!!" as a top banner. A loud welcome line above the split competes with the two headlines and pushes the panels below the fold. **Better placement:** small, centered eyebrow text *inside* the header bar (next to the NabuLearn logo or right under it) — still says "Welcome to NabuLearn" prominently, but doesn't steal the stage from Benny / RPG. If you really want it big, we can do a thin banner strip ~40px tall — I'll offer both in the build and you pick after seeing it.
 
-This is what I'm building.
+Everything else I fully agree with. Here's the plan.
 
 ---
 
-## New `/` (ModeSelect.tsx) layout
+## 1. Audience labels on each panel
+
+Add a second small label under the existing "Ages 2–5 · Pre-K" / "Ages 6–18 · Grades K–12" eyebrows, that becomes more prominent (brighter + slight scale) on hover/tap:
+
+- **Benny panel:** "For daycares, preschools & 2–5 year-olds"
+- **RPG panel:** "For K–12 students, at-home learning, schools & districts"
+
+Implementation: a second `<p>` under the eyebrow, opacity `0.6 → 1` and `translate-y` on hover, tied to existing `hover` state. No new components.
+
+## 2. Benny CTA goes straight into Pre-K mode
+
+Currently `Start Benny's adventure → /game` (the dashboard). We change it to land directly in the Pre-K experience.
+
+How Pre-K is entered today: `GameDashboard.handleModeSelect('prek')` calls `setStoredTheme('prek')` then navigates to `/game/play?tab=rpg`. We replicate that on the CTA:
+
+- New click handler on the Benny button: `setStoredTheme('prek')` → if signed in → `navigate('/game/play?tab=rpg')`; if not signed in → `navigate('/game/auth')` (same auth gate the dashboard already uses).
+- Reuses the existing `setStoredTheme` helper from `@/lib/gameTheme`. No new routes, no backend.
+
+## 3. "Overall stats" button inside Pre-K mode
+
+Add a small **Stats** button (chart icon + label) to the Pre-K mode header inside `/game/play` when `tab=rpg` + theme is `prek`. Clicking it opens a modal (or navigates to an existing reading-summary view) showing:
+
+- Words mastered
+- Levels completed
+- Time spent / streak
+- Pulled from existing `useGameReadingSummary` / `useReadingSessions` hooks already wired into GamePlay — no new tables.
+
+Exact placement: top-right of the Pre-K mode chrome, next to the existing settings gear (per the Game Header Settings memory). One small icon button, no layout shift.
+
+## 4. "Welcome to NabuLearn" — my recommendation
+
+Add `Welcome to NabuLearn` as a **small centered eyebrow line inside the existing header bar**, under the logo row, in muted white at ~13px:
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ Header: NabuLearn logo · Pricing · Sign in · 🛡 (super admin)│
-├──────────────────────────────┬──────────────────────────────┤
-│                              │                              │
-│   BENNY PANEL (~55%)         │   K–12 RPG PANEL (~45%)      │
-│   Warm gradient bg           │   Dark RPG bg                │
-│                              │                              │
-│   [Benny video / poster]     │   [RPG screenshot still]     │
-│                              │                              │
-│   "Reading. With their       │   "Reading IS the combat     │
-│    first best friend."       │    mechanic."                │
-│   Ages 2–5                   │   Ages 6–18 · Grades K–12    │
-│                              │                              │
-│   [Start Benny's adventure→] │   [Enter the Adventure →]    │
-│                              │                              │
-└──────────────────────────────┴──────────────────────────────┘
-  Tiny center link: "I'm a teacher / school →"  ·  scroll ↓ for more
+┌─────────────────────────────────────────────┐
+│  NabuLearn               Pricing · Sign in   │
+│         Welcome to NabuLearn                 │
+└─────────────────────────────────────────────┘
 ```
 
-**Interaction:**
-- Hover (desktop) or tap (touch) a panel → it scales to ~60%, other dims to ~75% opacity. Smooth 400ms ease.
-- Click the CTA inside the panel → routes (`/game` for Benny, `/game?mode=rpg` or existing K-12 entry for RPG).
-- Mobile/iPad portrait: panels stack vertically (Benny top, RPG bottom), each ~50vh, equally tall, no hover state.
-
-**Below the fold (scroll reveals, doesn't compete):**
-1. `<AudienceTrifurcation />` — Families / Teachers / Schools doorways (reuse existing)
-2. `<RPGShowcase variant="hero" />` — keep existing lazy-loaded demo
-3. Returning-players quiet link + legal footer
-
----
-
-## Veo3 watermark fix
-
-Inside `BennyVideoHero.tsx`, wrap the `<video>` in a container with `overflow-hidden` and apply `object-cover` + a slight negative right/bottom offset (or `clip-path: inset(0 4% 5% 0)`). This crops the bottom-right corner where "Veo" sits — we lose ~5% of the frame edge but Benny stays centered. No re-render needed.
+If after seeing it you'd rather have a louder banner, we flip one class and it becomes a 40px strip. I think the small version wins because it doesn't fight Benny.
 
 ---
 
 ## Files touched
 
-- **`src/pages/ModeSelect.tsx`** — full rewrite to weighted-split layout. Keeps all existing auth-redirect logic, `useAuth`, `useIsSuperAdmin`, game-player auto-routes, `skipRedirect`, and `<Helmet>` SEO.
-- **`src/components/landing/BennyVideoHero.tsx`** — add `clip-path` / overflow crop on the video wrapper to hide "Veo" watermark.
-- **No changes** to: `BennyVideoHero` video asset, `AudienceTrifurcation`, `RPGShowcase`, `ForFamilies`, `Index.tsx`, `/school`, header, routes, backend.
+- `src/pages/ModeSelect.tsx` — add audience-label sub-line on each panel; change Benny CTA to a click handler that calls `setStoredTheme('prek')` then navigates; add small "Welcome to NabuLearn" line in the header.
+- `src/pages/game/GamePlay.tsx` (or whichever component renders the Pre-K mode chrome) — add a **Stats** icon button in the header when theme is `prek`, opening a stats modal. (I'll confirm the exact host component on first read in build mode and only add the button there; no behavior change for non-Pre-K themes.)
+- New tiny component `src/components/prek/PreKStatsButton.tsx` — icon button + dialog that reads from the existing reading-summary hooks.
 
-## Design tokens
+## What I'm NOT changing
 
-- Benny panel bg: warm gradient using existing `--accent` / soft gold tokens already in `index.css`
-- RPG panel bg: existing dark RPG palette already in use on the showcase
-- Headline font: existing project sans (no new font installs)
-- Gold accent on "first best friend": existing gold gradient token
-- Hover scale: `scale-[1.02]` + sibling `opacity-75 scale-[0.98]`, `transition-all duration-500 ease-out`
-
-## Why this is the right call (one more time)
-
-1. **One screen, one click to action** — fixes your "pathways are confusing" complaint.
-2. **Benny dominates visually** (55%, warmer art, animated video) — Patrick's partner sees Benny first.
-3. **K–12 RPG isn't hidden** — your real revenue product stays on the front page.
-4. **Mobile/iPad survives** — stacks cleanly; no broken split.
-5. **Reversible** — one file rewrite; if it flops in 2 weeks we revert.
+- The hover-scale interaction, panel proportions (55/45), gradients, fonts, video crop, AudienceTrifurcation section, footer, routes, or any backend. Just adds the four things above.
 
 Approve and I'll build it.
