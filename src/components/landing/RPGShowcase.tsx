@@ -14,6 +14,7 @@ import { BookOpen, Check, Sparkles, TrendingUp } from "lucide-react";
 interface RPGShowcaseProps {
   variant?: "hero" | "compact";
   className?: string;
+  paused?: boolean;
 }
 
 type Phase =
