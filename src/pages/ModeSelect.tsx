@@ -106,7 +106,13 @@ const ModeSelect = () => {
     hover === side && !reduceMotion ? "md:scale-[1.025]" : "";
 
   return (
-    <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
+    <div
+      className={`min-h-screen flex flex-col transition-colors duration-500 ${
+        isLight
+          ? "bg-gradient-to-br from-[hsl(270_75%_82%)] via-[hsl(320_80%_88%)] to-[hsl(30_95%_85%)] text-[hsl(270_45%_18%)]"
+          : "bg-[hsl(270_45%_6%)] text-white"
+      }`}
+    >
       <Helmet>
         <title>NabuLearn — Reading adventures with Benny. K–12 literacy that feels like a game.</title>
         <meta
@@ -124,18 +130,42 @@ const ModeSelect = () => {
       </Helmet>
 
       {/* ── Minimal top bar ── */}
-      <header className="relative z-30 border-b border-white/5">
+      <header
+        className={`relative z-30 border-b ${
+          isLight ? "border-[hsl(270_40%_18%)]/10 bg-white/30 backdrop-blur-md" : "border-white/5"
+        }`}
+      >
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-lg font-bold tracking-tight">
-              Nabu<span className="text-[hsl(48_100%_70%)]">Learn</span>
+              Nabu
+              <span className={isLight ? "text-[hsl(35_95%_45%)]" : "text-[hsl(48_100%_70%)]"}>
+                Learn
+              </span>
             </span>
           </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              asChild
+              className={
+                isLight
+                  ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              }
+            >
               <Link to="/pricing">Pricing</Link>
             </Button>
-            <Button variant="ghost" asChild className="text-white/80 hover:bg-white/10 hover:text-white">
+            <Button
+              variant="ghost"
+              asChild
+              className={
+                isLight
+                  ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              }
+            >
               <Link to="/auth">Sign in</Link>
             </Button>
             {isSuperAdmin && (
@@ -144,7 +174,11 @@ const ModeSelect = () => {
                 size="icon"
                 asChild
                 aria-label="Super Admin"
-                className="text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
+                className={
+                  isLight
+                    ? "text-[hsl(35_95%_45%)] hover:bg-[hsl(270_45%_22%)]/10"
+                    : "text-[hsl(48_100%_70%)] hover:bg-white/10 hover:text-[hsl(48_100%_75%)]"
+                }
               >
                 <Link to="/super-admin">
                   <ShieldCheck className="h-5 w-5" />
@@ -156,6 +190,7 @@ const ModeSelect = () => {
       </header>
 
       <main className="flex-1">
+
         {/* ── Weighted split: Benny vs K–12 RPG. Hover expands the active side and blurs the other. ── */}
         <section className="relative isolate overflow-hidden">
           <div
