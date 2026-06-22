@@ -97,11 +97,11 @@ const ModeSelect = () => {
 
   const inactiveFx = (side: "benny" | "rpg") => {
     if (!hover || hover === side) return "";
-    if (reduceMotion) return "opacity-70";
-    return "blur-[2px] brightness-[0.55] md:scale-[0.98]";
+    if (reduceMotion) return "opacity-30";
+    return "blur-[8px] brightness-[0.25] opacity-40 md:scale-[0.96]";
   };
   const activeFx = (side: "benny" | "rpg") =>
-    hover === side && !reduceMotion ? "md:scale-[1.015]" : "";
+    hover === side && !reduceMotion ? "md:scale-[1.02]" : "";
 
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
