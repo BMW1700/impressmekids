@@ -43,22 +43,20 @@ export const useStudentOverviewData = (studentId: string | undefined) => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Step 1: Get classroom IDs first (lightweight)
+      // Step 1: Get classroom context via RPC (single indexed query, no PostgREST LATERAL)
       const { data: classroomsData, error: classroomsError } = await supabase
-        .from("classroom_students")
-        .select(`
-          classroom_id,
-          classrooms (
-            id,
-            name,
-            profiles:teacher_id (full_name)
-          )
-        `)
-        .eq("student_id", studentId);
+        .rpc("get_student_classroom_context", { _student_id: studentId });
 
       if (classroomsError) throw classroomsError;
-      
-      const classrooms = classroomsData || [];
+
+      const classrooms = (classroomsData || []).map((row: any) => ({
+        classroom_id: row.classroom_id,
+        classrooms: {
+          id: row.id,
+          name: row.name,
+          profiles: { full_name: row.teacher_full_name },
+        },
+      }));
       const classroomIds = classrooms.map((c: any) => c.classroom_id);
 
       // Step 2: Use COUNT queries instead of fetching full rows

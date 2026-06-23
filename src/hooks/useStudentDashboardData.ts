@@ -9,34 +9,27 @@ export const useStudentClassrooms = () => {
     queryKey: ["student-classrooms", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      
-      const { data, error } = await supabase
-        .from("classroom_students")
-        .select(`
-          classroom_id,
-          joined_at,
-          classrooms:classroom_id (
-            id,
-            name,
-            subject,
-            grade,
-            join_code,
-            teacher_id,
-            created_at,
-            profiles:teacher_id (full_name)
-          )
-        `)
-        .eq("student_id", user.id);
-      
+
+      const { data, error } = await supabase.rpc("get_student_classroom_context", {
+        _student_id: user.id,
+      });
+
       if (error) throw error;
-      return (data || []).map((item: any) => ({
-        ...item.classrooms,
-        joined_at: item.joined_at,
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        subject: row.subject,
+        grade: row.grade,
+        join_code: row.join_code,
+        teacher_id: row.teacher_id,
+        created_at: row.created_at,
+        profiles: { full_name: row.teacher_full_name },
+        joined_at: row.joined_at,
       }));
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // 5 min
-    gcTime: 30 * 60 * 1000, // 30 min cache
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 };
 
