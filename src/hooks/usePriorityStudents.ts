@@ -42,64 +42,76 @@ export const usePriorityStudents = () => {
         return { urgent: [], monitor: [] };
       }
 
-      // For each student, calculate risk score
-      const studentsWithRisk = await Promise.all(
-        students.map(async (student) => {
-          // Fetch AURA records
-          const { data: auraRecords } = await supabase
-            .from('aura_records')
-            .select('*')
-            .eq('profile_id', student.student_id)
-            .order('created_at', { ascending: false })
-            .limit(10);
+      // Batch-fetch all per-student data in 3 queries instead of N*3.
+      // For a class of 30 students this collapses ~90 sequential queries → 3.
+      const studentIds = Array.from(new Set(students.map((s) => s.student_id)));
 
-          // Fetch skill vector
-          const { data: skillVector } = await supabase
-            .from('student_skill_vectors')
-            .select('*')
-            .eq('student_id', student.student_id)
-            .maybeSingle();
+      const [auraRes, skillRes, profileRes] = await Promise.all([
+        supabase
+          .from('aura_records')
+          .select('*')
+          .in('profile_id', studentIds)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('student_skill_vectors')
+          .select('*')
+          .in('student_id', studentIds),
+        supabase
+          .from('student_profiles')
+          .select('*')
+          .in('user_id', studentIds),
+      ]);
 
-          // Fetch student profile
-          const { data: studentProfile } = await supabase
-            .from('student_profiles')
-            .select('*')
-            .eq('user_id', student.student_id)
-            .maybeSingle();
-
-          if (!auraRecords || auraRecords.length === 0) {
-            return null; // Skip students with no data
-          }
-
-          const features = extractFeatures(auraRecords, skillVector, studentProfile);
-          const riskScore = calculateRiskScore(features);
-
-          return {
-            studentId: student.student_id,
-            studentName: student.profiles?.full_name || 'Unknown',
-            classroomId: student.classroom_id,
-            classroomName: student.classrooms?.name || 'Unknown',
-            riskScore,
-            lastActivity: auraRecords[0]?.created_at,
-          };
-        })
+      // Index by student_id for O(1) lookup.
+      const auraByStudent = new Map<string, any[]>();
+      for (const rec of auraRes.data ?? []) {
+        const arr = auraByStudent.get(rec.profile_id) ?? [];
+        if (arr.length < 10) arr.push(rec); // already ordered DESC, keep latest 10
+        auraByStudent.set(rec.profile_id, arr);
+      }
+      const skillByStudent = new Map<string, any>(
+        (skillRes.data ?? []).map((s: any) => [s.student_id, s])
+      );
+      const profileByStudent = new Map<string, any>(
+        (profileRes.data ?? []).map((p: any) => [p.user_id, p])
       );
 
+      const studentsWithRisk = students.map((student) => {
+        const auraRecords = auraByStudent.get(student.student_id) ?? [];
+        if (auraRecords.length === 0) return null;
+
+        const skillVector = skillByStudent.get(student.student_id) ?? null;
+        const studentProfile = profileByStudent.get(student.student_id) ?? null;
+
+        const features = extractFeatures(auraRecords, skillVector, studentProfile);
+        const riskScore = calculateRiskScore(features);
+
+        return {
+          studentId: student.student_id,
+          studentName: student.profiles?.full_name || 'Unknown',
+          classroomId: student.classroom_id,
+          classroomName: student.classrooms?.name || 'Unknown',
+          riskScore,
+          lastActivity: auraRecords[0]?.created_at,
+        };
+      });
+
       // Filter and categorize
-      const validStudents = studentsWithRisk.filter(s => s !== null);
-      const urgent = validStudents.filter(s => s!.riskScore >= 75);
-      const monitor = validStudents.filter(s => s!.riskScore >= 50 && s!.riskScore < 75);
+      const validStudents = studentsWithRisk.filter((s) => s !== null);
+      const urgent = validStudents.filter((s) => s!.riskScore >= 75);
+      const monitor = validStudents.filter((s) => s!.riskScore >= 50 && s!.riskScore < 75);
 
       // Sort by risk score (highest first)
       urgent.sort((a, b) => b!.riskScore - a!.riskScore);
       monitor.sort((a, b) => b!.riskScore - a!.riskScore);
 
       return {
-        urgent: urgent.slice(0, 10), // Top 10 urgent
-        monitor: monitor.slice(0, 10), // Top 10 monitor
+        urgent: urgent.slice(0, 10),
+        monitor: monitor.slice(0, 10),
       };
     },
   });
+
 
   return {
     urgentStudents: data?.urgent || [],
