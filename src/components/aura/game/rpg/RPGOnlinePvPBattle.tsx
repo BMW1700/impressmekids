@@ -25,7 +25,8 @@ import {
 
 const battleSounds = new SoundEffects();
 const BATCH_SIZE = 5;
-const POLL_MS = 1000;
+// Scale: realtime is primary; this only fires while waiting on peer's turn. Was 1000ms.
+const POLL_MS = 5000;
 
 interface BattleStats {
   wordsRead: number;

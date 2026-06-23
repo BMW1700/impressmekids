@@ -173,8 +173,8 @@ export const RPGMultiplayerLobby = ({
       )
       .subscribe();
 
-    // Polling fallback every 2s
-    const poll = setInterval(checkRoom, 2000);
+    // Polling fallback (realtime UPDATE is primary). Was 2000ms; backed off for DB load.
+    const poll = setInterval(checkRoom, 10000);
 
     return () => {
       transitionedRef.current = true;

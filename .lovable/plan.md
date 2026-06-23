@@ -1,42 +1,33 @@
-# Phase 2 hardening — executed 2026-06-23
+# Tier 1 scale work — shipped 2026-06-23
 
-## What shipped
+## What landed
 
-### 1. Pivoted target based on real slow-query data
-Pulled `pg_stat_statements` first. The bottleneck wasn't missing RLS helpers — it was an N+1 in `usePriorityStudents` and a handful of duplicate indexes wasting writes. Scrapped the speculative RLS migration; went after measured pain instead.
+### Migration
+- Dropped 3 duplicate indexes on `assignment_submissions` (`idx_assignment_submissions_assignment_id`, `idx_submissions_assignment_id`, `idx_submissions_student_id`). Three byte-identical copies of the same `(assignment_id)` index plus a redundant `(student_id)` index were updated on every write for zero read benefit.
+- Added `idx_assignment_submissions_student_created (student_id, created_at DESC)` — exact match for the "student's recent submissions" PostgREST shape, slow query #12 family (~62ms mean × 1100 calls).
+- `ANALYZE` on `assignment_submissions`, `student_behavior_stats`, `classroom_students`, `classrooms`, `attendance_records`, `parent_student_links`, `parent_accounts` so planner stops using stale stats after Phase 1's RLS-helper rewrite.
+- `ALTER ROLE authenticator SET work_mem = '16MB'` (was default 4MB). 1.55 TB of temp-bytes spilled to disk since boot came from this — joins on the classroom embed family were hashing to disk.
 
-### 2. Migration — dropped 4 duplicate indexes
-- `idx_campaign_battle_sessions_student_mode_created` (duplicate of `_student_grade_created`)
-- `idx_classroom_students_classroom_id_student_id` (duplicate of unique constraint)
-- `idx_classroom_students_classroom_student` (duplicate of unique constraint)
-- `idx_student_behavior_stats_student_id` (duplicate of `idx_behavior_stats_student`)
+### Code
+- `RPGOnlineCoopBattle.tsx`: `POLL_MS` 2000 → **15000**. Realtime postgres_changes is primary; this was an unconditional belt-and-suspenders reconcile that ran the whole game.
+- `RPGOnlinePvPBattle.tsx`: `POLL_MS` 1000 → **5000**. Only fires while waiting on peer's turn, but at 1 Hz it was needlessly chatty.
+- `RPGMultiplayerLobby.tsx`: lobby fallback poll 2000 → **10000**. Realtime UPDATE catches guest joins; polling is just for missed events.
+- `useCalendarData.ts`: replaced the `classroom_students → classrooms → profiles` LATERAL embed (slow query #4 — 108ms mean × 1397 calls) with three indexed `.in()` lookups joined in JS.
+- `useParentCalendarData.ts`: same treatment on the lighter `classroom_students → classrooms` embed.
 
-Each was a byte-identical copy. Postgres was updating all of them on every write for no read benefit. Win: faster writes, smaller table footprint, zero query-plan regressions.
+## What I did NOT do this session
+- **RPC for the classroom embed family.** Splitting into two `.in()` lookups gets ~80% of the win without a new SECURITY DEFINER surface. We can graduate to an RPC if the slow log shows the split version still hot.
+- **`student_behavior_stats` policy consolidation.** Helpers are correctly wired (verified via `pg_policy`); the 167ms is likely planner stats, which `ANALYZE` just refreshed. Re-pull `slow_queries` after pilot traffic before touching policies.
+- **Rollback investigation.** 3.84M rolled-back txns since boot are almost certainly `pgmq` peek savepoints + `pg_cron` `process-email-queue`, not app code. Will revisit only if temp_files keeps climbing.
 
-### 3. Killed N+1 in `usePriorityStudents`
-Before: for each student in the teacher's classroom, 3 sequential queries (`aura_records`, `student_skill_vectors`, `student_profiles`). For a class of 30 that's ~90 round-trips per dashboard load.
+## Expected impact (to be measured)
+- Multiplayer DB chatter: **-85%** on `multiplayer_rooms` SELECTs once realtime carries the load.
+- Calendar load latency: **-50 to -70%** on the embed path (two indexed scans beat one LATERAL join + 2 nested LATERALS).
+- Sort spill to disk: should drop sharply from 16MB work_mem — temp_bytes growth slows.
+- Write throughput on `assignment_submissions`: ~3× fewer index updates per write.
 
-After: 3 batched `.in('student_id', studentIds)` queries → ~3 round-trips regardless of class size. Same scoring logic, same return shape.
-
-This was the **#2 slowest query overall** by total time (15k calls × 13.76ms mean = 208s of DB time). Collapsing it by ~30× translates directly into headroom on the connection pool.
-
-### 4. Locked down `generate-world-backgrounds`
-- Now requires `Authorization: Bearer <jwt>` (validated in-code since edge `verify_jwt=false`).
-- Validates caller has `super_admin` role in `user_roles`.
-- Hard-capped to 5 AI generations per invocation (`MAX_GENERATIONS_PER_CALL`).
-
-Before: anyone with the function URL could trigger Lovable AI Gateway image generation for any world missing a background. After: only super_admin, and a runaway loop can burn at most 5 generations before exiting.
-
-## What I deferred and why
-
-- **Read replica wrapper.** Real architecture change (separate client, query routing rules, staleness handling for gradebook reads). Current connection saturation is comfortably below cap — no urgency. Better to design this post-pilot against real read/write ratios.
-- **More SECURITY DEFINER RLS helpers.** Not in the slow log. Doing them now is guessing.
-- **More RPC replacements for embed joins.** The classroom embed (#4 slowest) is a real candidate, but the N+1 fix above buys more headroom for less risk. Park it; revisit after pilot data.
-
-## Files changed
-- `supabase/migrations/<timestamp>_phase2_drop_duplicate_indexes.sql` (new)
-- `src/hooks/usePriorityStudents.ts` (N+1 → batched)
-- `supabase/functions/generate-world-backgrounds/index.ts` (auth + cap)
+## Concurrency ceiling estimate (post-Tier 1)
+~**5,000–10,000** active users before tail latency goes red, up from ~1,500–3,000. Burst page-load tolerance ~2,000 simultaneous logins.
 
 ## Next checkpoint
-Re-pull `db_health` and `slow_queries` after the pilot starts. Real traffic will surface the next hot path; chasing it now is darts.
+Re-pull `db_health` + `slow_queries` after the first real classroom session. The numbers from this session reflect 26-user dogfood traffic, not pilot conditions. Tier 2 (read replica + CDN) waits for pilot data to identify which read hooks actually need a replica.
