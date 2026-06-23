@@ -17,7 +17,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS, MultiplayerRoomSnapshot } from "./multiplayerRoomTypes";
 
 const battleSounds = new SoundEffects();
-const POLL_MS = 2000;
+// Scale: realtime postgres_changes is primary; this is a safety-net reconcile only.
+// Was 2000ms — collapsed ~944K DB hits on multiplayer_rooms across sessions.
+const POLL_MS = 15000;
 
 interface BattleStats {
   wordsRead: number;

@@ -53,18 +53,29 @@ export const useParentCalendarData = ({
         ? [childId]
         : links.map((link) => link.student_id);
 
-      // Fetch classrooms for students
-      const { data: classroomStudents } = await supabase
+      // Fetch classrooms for students — split into two queries to avoid the
+      // PostgREST LATERAL embed that planner runs as a 100-250ms join.
+      const { data: enrollments } = await supabase
         .from("classroom_students")
-        .select(`
-          classroom_id,
-          classrooms (
-            id,
-            name,
-            subject
-          )
-        `)
+        .select("classroom_id")
         .in("student_id", studentIds);
+
+      const uniqueClassroomIds = Array.from(
+        new Set((enrollments || []).map((e) => e.classroom_id))
+      );
+
+      const { data: classroomRows } = uniqueClassroomIds.length
+        ? await supabase
+            .from("classrooms")
+            .select("id, name, subject")
+            .in("id", uniqueClassroomIds)
+        : { data: [] as any[] };
+
+      const classroomMap = new Map((classroomRows || []).map((c: any) => [c.id, c]));
+      const classroomStudents = (enrollments || []).map((e) => ({
+        classroom_id: e.classroom_id,
+        classrooms: classroomMap.get(e.classroom_id) || null,
+      }));
 
       // Fetch assignments for students' classrooms
       if (classroomStudents && classroomStudents.length > 0) {

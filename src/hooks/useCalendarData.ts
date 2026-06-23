@@ -55,22 +55,43 @@ export const useCalendarData = ({ startDate, endDate, userId, userRole, childId 
 
       // 1. Fetch classes (only for students and parents viewing child)
       if (userRole === "student" || (userRole === "parent" && childId)) {
-        const { data: classrooms } = await supabase
+        // Split the PostgREST embed into two indexed lookups; the LATERAL embed
+        // was the #4 slowest query (~108ms mean × 1397 calls).
+        const { data: enrollmentRows } = await supabase
           .from("classroom_students")
-          .select(`
-            classroom_id,
-            classrooms!inner(
-              id,
-              name,
-              meeting_days,
-              start_time,
-              end_time,
-              location,
-              schedule_start_date,
-              profiles!classrooms_teacher_id_fkey(full_name)
-            )
-          `)
+          .select("classroom_id")
           .eq("student_id", effectiveUserId);
+
+        const enrollmentClassroomIds = Array.from(
+          new Set((enrollmentRows || []).map((e: any) => e.classroom_id))
+        );
+
+        const { data: classroomRows } = enrollmentClassroomIds.length
+          ? await supabase
+              .from("classrooms")
+              .select("id, name, meeting_days, start_time, end_time, location, schedule_start_date, teacher_id")
+              .in("id", enrollmentClassroomIds)
+          : { data: [] as any[] };
+
+        const teacherIds = Array.from(
+          new Set((classroomRows || []).map((c: any) => c.teacher_id).filter(Boolean))
+        );
+
+        const { data: teacherRows } = teacherIds.length
+          ? await supabase
+              .from("profiles")
+              .select("id, full_name")
+              .in("id", teacherIds)
+          : { data: [] as any[] };
+
+        const teacherMap = new Map((teacherRows || []).map((t: any) => [t.id, t.full_name]));
+        const classrooms = (classroomRows || []).map((c: any) => ({
+          classroom_id: c.id,
+          classrooms: {
+            ...c,
+            profiles: { full_name: teacherMap.get(c.teacher_id) || null },
+          },
+        }));
 
         // Fetch school events that block classes
         const { data: blockingEvents } = await supabase
