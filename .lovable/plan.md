@@ -1,66 +1,62 @@
-# Light + Dark Mode on the Landing Page
+# Scale Readiness Plan: Path to 1M+ Users
 
-Right now the landing sections are hard-locked to dark (`bg-[hsl(270_45%_8%)]`, `text-white`) — even though `ThemeProvider` from `next-themes` is already wired up at the app root, flipping themes does nothing on `/`. We'll fix that and add a whimsical light palette inspired by pic 3 (purple → peach gradient, frosted glass cards, sunny yellow accents).
+Parking the Pre-K banner idea. The visuals are good enough; the scale path is the real risk to pilot contracts.
 
-## 1. Add a theme toggle to the Header
+## Goal
 
-- New `ThemeToggle` button (sun/moon icon, swaps with `setTheme` from `next-themes`), placed in `src/components/Header.tsx` next to **Sign in**.
-- Animated icon swap (rotate + fade). Persists via next-themes localStorage automatically.
+Produce a concrete, prioritized readiness report covering the seven systems most likely to fail between 10K and 1M concurrent users, with fixes ranked by **contract risk × effort**.
 
-## 2. Make landing sections theme-aware
+## Scope (audit only — no code changes yet)
 
-Update the four sections that are currently hard-dark so they respond to the `.dark` class:
+### 1. Database & RLS hotpaths
+- Run `supabase--linter` and `supabase--slow_queries` to surface missing indexes, sequential scans, and recursive RLS.
+- Inventory the 530+ RLS policies (per memory) — flag any policy that does a subquery per row instead of using `has_role()` security-definer.
+- Check `reading_sessions`, `aura_recordings`, `student_assignment_stats`, `safety_audit_log` for partitioning candidates (these grow per-student-per-day).
+- Verify atomic upsert RPCs (per memory: `atomic-stats-and-offline-resilience`) actually have unique constraints behind them.
 
-- `src/components/landing/PremiumHero.tsx`
-- `src/components/landing/AudienceTrifurcation.tsx`
-- `src/components/landing/BennyVideoHero.tsx` (Benny side of split hero)
-- `src/components/landing/RPGShowcase.tsx` (RPG side of split hero)
-- Closing CTA block inside `src/pages/Index.tsx`
+### 2. Edge function cold starts & cost
+- List all deployed edge functions, pull recent logs via `supabase--edge_function_logs`.
+- Flag any function calling Lovable AI on every student keystroke (AURA phoneme path is the prime suspect).
+- Identify functions that should be client-side (CMU dict lookups, homophone checks) to cut invocations.
 
-Pattern: replace hard `bg-[hsl(...)] text-white` with semantic tokens that have dark + light variants, e.g.
-```tsx
-className="bg-[hsl(var(--landing-bg))] text-[hsl(var(--landing-fg))]"
-```
-and the gradient/glow overlays get a light-mode counterpart via `dark:` modifier.
+### 3. Realtime channels
+- Audit multiplayer (`multiplayer-sync-system`), classroom presence, and tournament realtime for per-classroom channel fanout.
+- At 1M users / ~30K classrooms, naive presence broadcasting melts. Recommend channel sharding or polling fallback.
 
-## 3. Light theme — whimsical, like pic 3
+### 4. Asset & CDN cost
+- Inventory `assignment-question-images`, Pre-K video assets, Benny sprite sheets.
+- Verify everything heavy is on Lovable Assets CDN (not Supabase storage egress).
+- Check video assets have proper `Cache-Control` and are served as `.mp4` not `.mov`.
 
-Add new tokens to `src/index.css` under `:root` (light) and keep the existing dark values under `.dark`.
+### 5. Client bundle & iPad performance
+- Measure current bundle size, code-splitting boundaries.
+- Per memory (`k5-ipad-as-primary-classroom-device`), iPad 7th gen is the floor — verify TensorFlow.js + Web Speech doesn't OOM.
+- Confirm Service Worker stays removed (per memory `service-worker-removal-and-tab-switch-stability`).
 
-Light landing palette:
-- **Background**: animated diagonal gradient `from-[hsl(270_70%_75%)] via-[hsl(320_75%_82%)] to-[hsl(30_95%_80%)]` (lavender → pink → peach, exactly the pic-3 mood).
-- **Foreground text**: deep ink `hsl(270 40% 18%)` for headlines, `hsl(270 25% 35%)` for body.
-- **Headline accent gradient**: keep the yellow→orange but warm it slightly for legibility on the light bg.
-- **Cards (Benny panel, RPG panel, trifurcation cards)**: frosted glass — `bg-white/40 backdrop-blur-xl border border-white/60 shadow-[0_20px_60px_-20px_hsl(270_60%_50%/0.35)]`.
-- **Eyebrow chips**: warmer yellow on translucent white pill.
-- **Mesh / glow blobs**: stay but recolored to peach/lavender at lower opacity instead of deep purple.
+### 6. AI cost model
+- Per memory (`aura-pricing-model-confirmed`): $5–7/student/year requires $0/month AURA cost at scale.
+- Audit every Lovable AI Gateway call site. Anything not strictly needed → kill or move to local ML.
+- Verify pseudonymization (`_shared/pseudonymize.ts`) still strips PII before every prompt.
 
-Dark theme stays exactly as it is today — no regressions to the current cosmic look.
+### 7. Auth & onboarding throughput
+- Student-ID dual login flow (per memory) — rate limits, brute-force protection at scale.
+- Clever SSO edge function under 30K concurrent August-rollout sign-ins.
+- COPPA consent flow can't bottleneck on synchronous email sends.
 
-## 4. Default behavior
+## Deliverable
 
-- Keep `defaultTheme="system"` (already set in `App.tsx`), so users get whatever their OS prefers.
-- Toggle in header lets them override.
+A ranked findings document with:
+- **Severity** (contract-blocker / degradation / cost)
+- **Effort** (hours)
+- **Recommended fix** (specific file + approach, not vague)
+- **Quick wins** section for anything ≤2 hours
 
-## Out of scope
+## Out of scope (deferred)
 
-- Re-theming internal app routes (dashboards, game, admin). They already have their own dark styling and aren't what the user is reviewing. Only the public landing surfaces change here.
-- No copy changes, no layout changes, no animation changes — purely color/contrast + a toggle button.
+- Pre-K hero banners and any other landing/UI polish
+- New features
+- Marketing copy
 
-## Files touched
+## Next step after approval
 
-- `src/components/Header.tsx` — add ThemeToggle button
-- `src/components/ThemeToggle.tsx` *(new)* — sun/moon switcher
-- `src/index.css` — add `--landing-*` tokens for light + dark
-- `src/components/landing/PremiumHero.tsx`
-- `src/components/landing/AudienceTrifurcation.tsx`
-- `src/components/landing/BennyVideoHero.tsx`
-- `src/components/landing/RPGShowcase.tsx`
-- `src/pages/Index.tsx` (closing CTA only)
-
-## Verification
-
-After build, drive Playwright to:
-1. Load `/` in default (dark) — screenshot, confirm unchanged.
-2. Click the toggle — screenshot, confirm purple→peach gradient, glass cards, dark text, headlines legible.
-3. Toggle back — confirm clean return to dark.
+I run the audit (read-only — `supabase--linter`, `slow_queries`, `edge_function_logs`, asset inventory, bundle analysis) and come back with the ranked findings. You pick which items to fix first.
