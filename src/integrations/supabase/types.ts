@@ -9105,18 +9105,23 @@ export type Database = {
       is_coppa_blocked: { Args: { _user_id: string }; Returns: boolean }
       is_district_manager: { Args: { _user_id: string }; Returns: boolean }
       is_parent: { Args: { _user_id: string }; Returns: boolean }
-      is_parent_of_student: {
-        Args: { _student_id: string; _user_id: string }
-        Returns: boolean
-      }
+      is_parent_of_student:
+        | { Args: { _student_id: string }; Returns: boolean }
+        | { Args: { _student_id: string; _user_id: string }; Returns: boolean }
       is_submission_teacher: {
         Args: { _submission_id: string; _user_id: string }
         Returns: boolean
       }
-      is_teacher_of_student: {
-        Args: { _student_id: string; _teacher_id: string }
+      is_teacher_of_classroom: {
+        Args: { _classroom_id: string }
         Returns: boolean
       }
+      is_teacher_of_student:
+        | { Args: { _student_id: string }; Returns: boolean }
+        | {
+            Args: { _student_id: string; _teacher_id: string }
+            Returns: boolean
+          }
       is_teacher_of_student_classroom: {
         Args: { _student_id: string; _teacher_id: string }
         Returns: boolean
@@ -9176,6 +9181,10 @@ export type Database = {
       }
       parent_can_see_student: {
         Args: { _parent_id: string; _student_id: string }
+        Returns: boolean
+      }
+      parent_has_aura_consent: {
+        Args: { _student_id: string }
         Returns: boolean
       }
       peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
