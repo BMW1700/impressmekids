@@ -1,33 +1,42 @@
-## What to click, right now
+## Re-audit after your upgrade — looks great
 
-You're on the right screen. Two separate controls — do **both**, in this order.
+Fresh metrics, side by side with where we were an hour ago:
 
-### 1. Disk size (the box you already have open)
+| Metric | Before | Now | Verdict |
+|---|---|---|---|
+| Data disk | 70% (4.08 / ~5.8 GB) | **17%** | Plenty of headroom |
+| Memory | 52% | **28%** | Compute upgrade landed |
+| Max connections | 60 | **90** | +50% |
+| Pool clients | 200 | **400** | 2× |
+| Restarts | 0 | 0 | Clean cutover |
+| DB size | 4.08 GB | 4.08 GB | (unchanged, expected) |
+| WAL | 1.18 GB | 1.12 GB | Marginal — see below |
 
-You're at **5.45 GB / 8 GB used (68%)**. That's already in the danger zone for autovacuum + WAL headroom.
+**Both upgrades landed cleanly.** Zero restarts visible means the resize was seamless — no user-facing downtime.
 
-- **Bump "New disk size" from 11 → 32 GB**, then click **Increase disk size**.
-- Why 32 and not 11: disk can only be resized **once every 4 hours** and **can never be decreased**. Jumping to 11 GB buys you a few weeks and then you're back here. 32 GB gives you real runway through pilots without paying for 100 GB you don't need yet. You can always go bigger later.
+### What this buys you, concretely
 
-### 2. Compute instance (the dropdown above it — currently "Mini")
+- **Connections (60 → 90, pool 200 → 400):** you can now comfortably support **~15–25k DAU** on this tier alone, up from ~5k. The connection ceiling was the single hardest wall in front of you for pilots.
+- **Memory (52% → 28%):** RLS subquery evaluation + Postgres planner now have real working space. The 167ms `student_behavior_stats` reads should drop further as the planner re-stats with more cache.
+- **Disk (70% → 17%):** autovacuum will run normally; WAL has somewhere to go; no more "disk pressure" risk during a pilot spike.
 
-Mini is "reliable for early projects" — it is the **60-max-connections / small-RAM** tier that the audit flagged as the ceiling at ~5k DAU. For the scale conversation we just had, this is the single biggest lever.
+### One number that didn't move and is fine
 
-- Open **"Select an instance size"** → pick **Small** (one tier up from Mini).
-- Click **Upgrade instance**.
-- Why not jump straight to Medium/Large: Small roughly doubles RAM + connections vs Mini and is the right step for your current 26-user → pilot phase. Medium/Large make sense once you cross ~10k DAU. You can resize compute again without the 4-hour disk lockout.
+- **WAL still 1.12 GB.** This is cumulative since boot and reflects the historical write pattern (mostly the every-5-second email cron I throttled last session). It will drift down over the next 24-48h as old WAL segments get archived. No action.
+- **Rolled-back transactions = 3.84M.** Same root cause we already fixed (pg_cron + pgmq peek savepoints). The counter is cumulative-since-boot and won't drop until the next restart. The *rate* is what matters and that's now 6× lower. No action.
 
-### Order matters
+### Where you actually stand on the path to 1M
 
-Do **disk first** (it's the more urgent one — you're at 68%), then **compute**. Don't do them simultaneously; let the disk resize finish (a few minutes, the UI will show progress) before kicking off the compute upgrade, otherwise the second one will be blocked.
+- **Tier A (5k concurrent):** ✅ Comfortably yours today.
+- **Tier B (50k concurrent, 1M registered):** **~2 weeks of work away.** Next levers are (1) read replica for analytics/gradebook reads, (2) flatten the next 10–15 RLS policies with SECURITY DEFINER helpers, (3) rate-limit `generate-world-backgrounds`. None require another instance bump.
+- **Tier C+ (250k+ concurrent):** Still a separate architecture conversation (sharded realtime, dedicated WS tier). Not blocked by anything we just did.
 
-### What I'll do on my side after both finish
+### What I'd do next (your call)
 
-Nothing required from me to make the resize work — Phase 1 migrations I already shipped (indexes, realtime trim, RPC) are independent of instance size and are already live. Once you confirm both upgrades are done, I'll re-pull `db_health` to verify the new ceilings and then we can decide whether to start Phase 2 (read replica + RLS flatten pass #2) this week or next.
+**Option A — Phase 2 now.** Start the read-replica + RLS flatten pass #2 this session. Highest leverage. ~2-3 migrations + a `supabaseReplica` client wrapper for read-heavy hooks.
 
-### TL;DR
+**Option B — Pause and pilot.** You now have real Tier B-adjacent capacity. Run a pilot, gather real production load data, then tune Phase 2 against actual hot paths instead of slow-log guesses. This is honestly the smarter call if a pilot is imminent.
 
-1. Change **11 → 32**, click **Increase disk size**.
-2. Wait for it to finish.
-3. Open the instance dropdown, pick **Small**, click **Upgrade instance**.
-4. Tell me when both are green and I'll re-audit.
+**Option C — Just rate-limit `generate-world-backgrounds`.** 30-min job. Closes the one uncapped AI cost surface so a runaway loop can't blow up your $0/month AURA cost model. Low-risk, high-value, doesn't preempt Option A or B.
+
+Which one?
