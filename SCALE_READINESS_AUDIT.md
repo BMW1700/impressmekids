@@ -1,8 +1,16 @@
 # Scale Readiness Audit — Path to 1M+ Users
 
 **Date:** 2026-06-23  
-**Mode:** Read-only audit. No code changes made.  
-**Current health:** DB up, 4.07 GB, memory 52%, disk 57%, 24/60 connections. **Pilot-safe today, will not survive 100K+ DAUs without the P0 fixes below.**
+**Mode:** Audit + P0-1 & P0-2 applied.  
+**Current health:** DB up, 4.07 GB, memory 52%, disk 57%, 24/60 connections.
+
+## ✅ Shipped this session
+- **P0-1**: `idx_user_roles_user_id_role` covering index added (preventive — table is only 26 rows today, but planner will switch to index scan as it grows).
+- **P0-2**: RLS subquery flattening complete. 4 `SECURITY DEFINER` helpers (`is_teacher_of_student`, `is_teacher_of_classroom`, `is_parent_of_student`, `parent_has_aura_consent`) now back 12 hot policies on `student_behavior_stats`, `reading_sessions`, `aura_records`, `campaign_battle_sessions`, `parent_student_links`, `student_reading_stats`. Helpers `REVOKE`d from public, granted only to authenticated + service_role. `ANALYZE` run on all affected tables.
+- **Expected impact**: 167ms `student_behavior_stats` mean → sub-10ms once new stats settle. Removes per-row planner explosion on the parent + teacher access paths.
+
+## ⏭️ Remaining P0
+- **P0-3**: Locate source of 3.8M rolled-back transactions. Needs `pg_stat_statements` access I don't have from here — requires running the existing `supabase--slow_queries` and cross-referencing with edge function logs once the app sees normal traffic again.
 
 ---
 
