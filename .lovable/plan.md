@@ -1,42 +1,42 @@
-## Re-audit after your upgrade — looks great
+# Phase 2 hardening — executed 2026-06-23
 
-Fresh metrics, side by side with where we were an hour ago:
+## What shipped
 
-| Metric | Before | Now | Verdict |
-|---|---|---|---|
-| Data disk | 70% (4.08 / ~5.8 GB) | **17%** | Plenty of headroom |
-| Memory | 52% | **28%** | Compute upgrade landed |
-| Max connections | 60 | **90** | +50% |
-| Pool clients | 200 | **400** | 2× |
-| Restarts | 0 | 0 | Clean cutover |
-| DB size | 4.08 GB | 4.08 GB | (unchanged, expected) |
-| WAL | 1.18 GB | 1.12 GB | Marginal — see below |
+### 1. Pivoted target based on real slow-query data
+Pulled `pg_stat_statements` first. The bottleneck wasn't missing RLS helpers — it was an N+1 in `usePriorityStudents` and a handful of duplicate indexes wasting writes. Scrapped the speculative RLS migration; went after measured pain instead.
 
-**Both upgrades landed cleanly.** Zero restarts visible means the resize was seamless — no user-facing downtime.
+### 2. Migration — dropped 4 duplicate indexes
+- `idx_campaign_battle_sessions_student_mode_created` (duplicate of `_student_grade_created`)
+- `idx_classroom_students_classroom_id_student_id` (duplicate of unique constraint)
+- `idx_classroom_students_classroom_student` (duplicate of unique constraint)
+- `idx_student_behavior_stats_student_id` (duplicate of `idx_behavior_stats_student`)
 
-### What this buys you, concretely
+Each was a byte-identical copy. Postgres was updating all of them on every write for no read benefit. Win: faster writes, smaller table footprint, zero query-plan regressions.
 
-- **Connections (60 → 90, pool 200 → 400):** you can now comfortably support **~15–25k DAU** on this tier alone, up from ~5k. The connection ceiling was the single hardest wall in front of you for pilots.
-- **Memory (52% → 28%):** RLS subquery evaluation + Postgres planner now have real working space. The 167ms `student_behavior_stats` reads should drop further as the planner re-stats with more cache.
-- **Disk (70% → 17%):** autovacuum will run normally; WAL has somewhere to go; no more "disk pressure" risk during a pilot spike.
+### 3. Killed N+1 in `usePriorityStudents`
+Before: for each student in the teacher's classroom, 3 sequential queries (`aura_records`, `student_skill_vectors`, `student_profiles`). For a class of 30 that's ~90 round-trips per dashboard load.
 
-### One number that didn't move and is fine
+After: 3 batched `.in('student_id', studentIds)` queries → ~3 round-trips regardless of class size. Same scoring logic, same return shape.
 
-- **WAL still 1.12 GB.** This is cumulative since boot and reflects the historical write pattern (mostly the every-5-second email cron I throttled last session). It will drift down over the next 24-48h as old WAL segments get archived. No action.
-- **Rolled-back transactions = 3.84M.** Same root cause we already fixed (pg_cron + pgmq peek savepoints). The counter is cumulative-since-boot and won't drop until the next restart. The *rate* is what matters and that's now 6× lower. No action.
+This was the **#2 slowest query overall** by total time (15k calls × 13.76ms mean = 208s of DB time). Collapsing it by ~30× translates directly into headroom on the connection pool.
 
-### Where you actually stand on the path to 1M
+### 4. Locked down `generate-world-backgrounds`
+- Now requires `Authorization: Bearer <jwt>` (validated in-code since edge `verify_jwt=false`).
+- Validates caller has `super_admin` role in `user_roles`.
+- Hard-capped to 5 AI generations per invocation (`MAX_GENERATIONS_PER_CALL`).
 
-- **Tier A (5k concurrent):** ✅ Comfortably yours today.
-- **Tier B (50k concurrent, 1M registered):** **~2 weeks of work away.** Next levers are (1) read replica for analytics/gradebook reads, (2) flatten the next 10–15 RLS policies with SECURITY DEFINER helpers, (3) rate-limit `generate-world-backgrounds`. None require another instance bump.
-- **Tier C+ (250k+ concurrent):** Still a separate architecture conversation (sharded realtime, dedicated WS tier). Not blocked by anything we just did.
+Before: anyone with the function URL could trigger Lovable AI Gateway image generation for any world missing a background. After: only super_admin, and a runaway loop can burn at most 5 generations before exiting.
 
-### What I'd do next (your call)
+## What I deferred and why
 
-**Option A — Phase 2 now.** Start the read-replica + RLS flatten pass #2 this session. Highest leverage. ~2-3 migrations + a `supabaseReplica` client wrapper for read-heavy hooks.
+- **Read replica wrapper.** Real architecture change (separate client, query routing rules, staleness handling for gradebook reads). Current connection saturation is comfortably below cap — no urgency. Better to design this post-pilot against real read/write ratios.
+- **More SECURITY DEFINER RLS helpers.** Not in the slow log. Doing them now is guessing.
+- **More RPC replacements for embed joins.** The classroom embed (#4 slowest) is a real candidate, but the N+1 fix above buys more headroom for less risk. Park it; revisit after pilot data.
 
-**Option B — Pause and pilot.** You now have real Tier B-adjacent capacity. Run a pilot, gather real production load data, then tune Phase 2 against actual hot paths instead of slow-log guesses. This is honestly the smarter call if a pilot is imminent.
+## Files changed
+- `supabase/migrations/<timestamp>_phase2_drop_duplicate_indexes.sql` (new)
+- `src/hooks/usePriorityStudents.ts` (N+1 → batched)
+- `supabase/functions/generate-world-backgrounds/index.ts` (auth + cap)
 
-**Option C — Just rate-limit `generate-world-backgrounds`.** 30-min job. Closes the one uncapped AI cost surface so a runaway loop can't blow up your $0/month AURA cost model. Low-risk, high-value, doesn't preempt Option A or B.
-
-Which one?
+## Next checkpoint
+Re-pull `db_health` and `slow_queries` after the pilot starts. Real traffic will surface the next hot path; chasing it now is darts.
