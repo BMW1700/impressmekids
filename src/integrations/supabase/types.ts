@@ -8973,6 +8973,21 @@ export type Database = {
           total_assignments: number
         }[]
       }
+      get_student_classroom_context: {
+        Args: { _student_id: string }
+        Returns: {
+          classroom_id: string
+          created_at: string
+          grade: string
+          id: string
+          join_code: string
+          joined_at: string
+          name: string
+          subject: string
+          teacher_full_name: string
+          teacher_id: string
+        }[]
+      }
       get_student_classrooms: {
         Args: { _user_id: string }
         Returns: {
