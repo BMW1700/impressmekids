@@ -107,11 +107,16 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
               </>
             )}
             
-            {/* Show Sign Out button when logged in */}
+            {/* Show Pricing + Sign Out when logged in */}
             {shouldShowSignOut && (
-              <Button variant="outline" onClick={handleSignOut}>
-                {t('nav.signOut')}
-              </Button>
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/pricing">Pricing</Link>
+                </Button>
+                <Button variant="outline" onClick={handleSignOut}>
+                  {t('nav.signOut')}
+                </Button>
+              </>
             )}
           </div>
         </div>
