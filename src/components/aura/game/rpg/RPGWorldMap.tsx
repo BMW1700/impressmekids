@@ -36,6 +36,8 @@ import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
 import { MilestoneCelebration } from "../effects/MilestoneCelebration";
 import { RPGPlayerHUD } from "./RPGPlayerHUD";
 import { ReadingProgressPanel } from "./ReadingProgressPanel";
+import { BennyStanding } from "./BennyStanding";
+import prekBedroomBg from "@/assets/prek-bedroom-bg.png.asset.json";
 
 export interface WorldProgress {
   worldId: number;
@@ -318,33 +320,60 @@ export const RPGWorldMap = ({
     return prevWorld.levelsCompleted >= world.unlockRequirement;
   };
 
+  const isPrek = mapTheme === 'prek';
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden z-0">
+    <div
+      className={`min-h-screen p-4 relative overflow-hidden z-0 ${isPrek ? '' : 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900'}`}
+    >
       {/* Milestone celebrations */}
       <MilestoneCelebration currentCount={totalBooksRescued} />
 
-      {/* Animated background particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
-            }}
-            animate={{
-              y: [null, -100],
-              opacity: [0, 0.8, 0],
-            }}
-            transition={{
-              duration: 4 + Math.random() * 4,
-              delay: Math.random() * 5,
-              repeat: Infinity,
-            }}
+      {/* Pre-K bedroom background */}
+      {isPrek && (
+        <>
+          <img
+            src={prekBedroomBg.url}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
           />
-        ))}
-      </div>
+          <div className="absolute inset-0 bg-slate-950/45 pointer-events-none" aria-hidden />
+        </>
+      )}
+
+      {/* Animated background particles (non-Pre-K) */}
+      {!isPrek && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
+              initial={{
+                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+              }}
+              animate={{
+                y: [null, -100],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: 4 + Math.random() * 4,
+                delay: Math.random() * 5,
+                repeat: Infinity,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Benny standing on the left (Pre-K only, desktop) */}
+      {isPrek && (
+        <div className="hidden lg:block absolute left-6 xl:left-10 top-[360px] z-[6] pointer-events-none">
+          <BennyStanding size={280} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="relative z-[5] flex items-center justify-between mb-6 flex-wrap gap-3">
@@ -502,8 +531,16 @@ export const RPGWorldMap = ({
         </motion.div>
       </motion.div>
 
+      {/* Pre-K horizontal Reading Journey strip */}
+      {isPrek && studentId && (
+        <div className="hidden lg:block max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[320px] xl:ml-[360px] lg:mr-auto px-1">
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
+        </div>
+      )}
+
       {/* World 0: Phonics Foundations — prominent entry banner */}
-      <div className="max-w-4xl mx-auto relative z-[5] mb-6">
+      <div className={`max-w-4xl mx-auto relative z-[5] mb-6 ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
+
         <motion.button
           type="button"
           onClick={() => navigate('/game/phonics-foundations')}
@@ -551,7 +588,7 @@ export const RPGWorldMap = ({
       </div>
 
       {/* World Cards with Enhanced Connecting Paths */}
-      <div className="max-w-4xl mx-auto relative z-[5]">
+      <div className={`max-w-4xl mx-auto relative z-[5] ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = mapTheme;
@@ -755,17 +792,24 @@ export const RPGWorldMap = ({
         </div>
       </div>
 
-      {/* Reading Progress Panel - Fixed position on left side */}
-      {studentId && (
+      {/* Reading Progress Panel - Fixed position on left side (non-Pre-K) */}
+      {studentId && !isPrek && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
         </div>
       )}
 
-      {/* Mobile Reading Progress Panel */}
-      {studentId && (
+      {/* Mobile Reading Progress Panel (non-Pre-K; Pre-K renders horizontal panel inline above) */}
+      {studentId && !isPrek && (
         <div className="lg:hidden mt-4 px-4 relative z-10">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
+        </div>
+      )}
+
+      {/* Pre-K mobile Reading Journey strip (horizontal panel already shown above on desktop) */}
+      {studentId && isPrek && (
+        <div className="lg:hidden mt-4 px-4 relative z-10">
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
         </div>
       )}
 

@@ -1,29 +1,52 @@
-## Goal
+# Pre-K Mode Layout + Benny Redesign
 
-On `/super-admin/prek` (Pre-K Worlds list), show worlds in their saved sort order and let the admin reorder them with up/down arrows that swap a world with its neighbor.
+Scope: **only `mapTheme === 'prek'**` in `src/components/aura/game/rpg/RPGWorldMap.tsx`. Classic/Agent modes stay untouched.
 
-## Why the current screenshot looks "out of order"
+## 1. Upload images as CDN assets
 
-The list already queries `prek_worlds` ordered by `sort_order` ASC. The reason you see `#1, #4, #5, #2` is that the badge `#N` shows `world_number` (an identifier), not the position. The actual row position IS the sort order. So "show in order" = keep ordering by `sort_order` (already correct), and the new arrows mutate `sort_order` so the visible row order matches what you want.
+- `user-uploads://image-20.png` → `src/assets/prek-bedroom-bg.png.asset.json` (bedroom background)
+- `user-uploads://f13d61f5-8662-4f6b-a638-5c961b2d8847_9.37.12_PM.png` → `src/assets/benny-standing.png.asset.json` (Benny standing pose, transparent PNG)
 
-## Changes — single file: `src/pages/superadmin/PreKWorldsList.tsx`
+Uploaded via `lovable-assets create --file /mnt/user-uploads/... --filename ...`.
 
-1. **Normalize sort_order on load.** After fetching, reassign `sort_order` to `0..n-1` in memory based on the returned order so swaps are always well-defined even if values are duplicated or sparse.
-2. **Add `moveWorld(index, direction)`** — swaps the world at `index` with the one at `index ± 1`:
-   - Optimistically reorder the local `worlds` array (snappy UI).
-   - Persist both rows' new `sort_order` with two `update`s against `prek_worlds` (by `id`). On error, revert + toast.
-3. **UI: add a small vertical arrow stack on the left of each card** (next to the `#N` badge):
-   - `ChevronUp` button — disabled on the first row.
-   - `ChevronDown` button — disabled on the last row.
-   - `variant="ghost"`, `size="icon"`, `h-6 w-6`, tight stack so it doesn't crowd the title row.
-4. **New-world default sort_order** stays `worlds.length` (appends to end) — already correct.
+## 2. Background (Pre-K only)
 
-## Not changing
+In `RPGWorldMap.tsx`, when `mapTheme === 'prek'`, add an absolutely-positioned background `<img>` at the root of the map container (behind everything, `z-0`), using `prek-bedroom-bg.png`. Apply a subtle dark overlay (e.g. `bg-black/30`) above the image so text + cards remain legible. Existing star/particle background stays for non-prek modes only.
 
-- DB schema (the `sort_order` column already exists on `prek_worlds`).
-- Student-facing ordering — `usePublishedPrekLevels` already orders by `sort_order`, so admin reorders flow through automatically.
-- The `#world_number` badge stays as the stable world identifier; only row position changes.
+## 3. Reposition "My Reading Journey" (Pre-K only)
 
-## Files touched
+- Remove the fixed-left `ReadingProgressPanel` positioning for Pre-K only. Classic/Agent keep their existing fixed-left/mobile layout.
+- In Pre-K, render a new **horizontal** Reading Journey strip directly under the Stats button (i.e. after the `PreKStatsButton`, before the Phonics Foundations banner).
+- Build a new `<ReadingProgressPanelHorizontal />` component (or pass a `layout="horizontal"` prop into `ReadingProgressPanel`) that renders the same stats (Reading Level bar, WCPM, Accuracy, Words Mastered, Stories Read, View Full Stats) in a single horizontal row spanning the content width.
 
-- `src/pages/superadmin/PreKWorldsList.tsx` — add `moveWorld`, two chevron buttons per row, normalize sort_order on load.
+## 4. Shift content right (Pre-K only)
+
+For Pre-K, the Phonics Foundations banner + the world cards grid + the Reading Journey horizontal strip get a left margin so Benny has room on the left:
+
+- Wrap the Pre-K content column in a container with `lg:ml-[280px] xl:ml-[320px]` (kept `max-w-4xl mx-auto` on smaller breakpoints so phones/tablets stay centered).
+- No internal layout changes to the Phonics Foundations card or the 2-column world-card grid — they keep their current formatting, just shifted right.
+
+## 5. Benny on the left (Pre-K only)
+
+Add a new `<BennyStanding />` element absolutely positioned on the left side of the map container, vertically aligned with the level grid, hidden below `lg`:
+
+- `position: absolute; left: 24px; top: ~360px` (roughly under the Reading Journey strip, alongside the worlds).
+- Width ~240–280px, transparent PNG.
+- Wrapped in framer-motion to apply three idle animations simultaneously:
+  - **Head tilt**: rotate body `[0, -4deg, 0, 3deg, 0]` every ~6s (eased, infinite).
+  - **Blink**: a thin dark overlay strip on the eye region opacity `[0,0,1,0]` ~every 4s to simulate blinking (cheap; no separate eye sprite needed).
+  - **Tail wag**: a CSS-masked tail region rotating `[0, 8deg, -4deg, 0]` ~every 1.2s. Implemented by overlaying a duplicate of the Benny PNG clipped to the tail area on the left, with `transform-origin` at the base of the tail.
+
+Implementation detail: simplest path is one motion.img for the whole body (slow head tilt + occasional whole-frame tilt), plus a second motion.div with the same image masked via `clip-path` over the tail bounding box that wags faster. Eye blink is a small dark `<div>` positioned over the eyes whose opacity pulses. Coordinates of tail/eye clip regions are hand-tuned against the provided PNG.
+
+`prefers-reduced-motion`: respect it — disable all three animations.
+
+## Files changed
+
+- `src/components/aura/game/rpg/RPGWorldMap.tsx` — Pre-K branch gets background image, ml shift, Benny block, and moves ReadingProgressPanel into the inline flow.
+- `src/components/aura/game/rpg/ReadingProgressPanel.tsx` — add `layout?: 'vertical' | 'horizontal'` prop and a horizontal render path.
+- `src/components/aura/game/rpg/BennyStanding.tsx` — new file, owns the three idle animations.
+- `src/assets/prek-bedroom-bg.png.asset.json` — new asset pointer.
+- `src/assets/benny-standing.png.asset.json` — new asset pointer.
+
+No backend changes. No changes to Classic or Agent mode layouts.
