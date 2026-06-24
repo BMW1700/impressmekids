@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff, Wrench } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff, Wrench, FolderInput } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,11 @@ const PreKLevelsList = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Level | null>(null);
+  const [allWorlds, setAllWorlds] = useState<World[]>([]);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moving, setMoving] = useState<Level | null>(null);
+  const [targetWorldId, setTargetWorldId] = useState<string>("");
+  const [targetLevelNumber, setTargetLevelNumber] = useState<number>(1);
 
   // form
   const [levelNumber, setLevelNumber] = useState<number>(1);
@@ -44,12 +50,14 @@ const PreKLevelsList = () => {
   const load = async () => {
     if (!worldId) return;
     setLoading(true);
-    const [{ data: w }, { data: ls }] = await Promise.all([
+    const [{ data: w }, { data: ls }, { data: ws }] = await Promise.all([
       supabase.from("prek_worlds").select("id, title, world_number").eq("id", worldId).maybeSingle(),
       supabase.from("prek_levels").select("*, prek_level_words(count)").eq("world_id", worldId).order("level_number"),
+      supabase.from("prek_worlds").select("id, title, world_number").order("world_number"),
     ]);
     setWorld(w as World | null);
     setLevels((ls ?? []).map((l: any) => ({ ...l, word_count: l.prek_level_words?.[0]?.count ?? 0 })));
+    setAllWorlds((ws ?? []) as World[]);
     setLoading(false);
   };
 
@@ -118,6 +126,51 @@ const PreKLevelsList = () => {
     }
   };
 
+  const openMove = async (l: Level) => {
+    setMoving(l);
+    const others = allWorlds.filter((w) => w.id !== l.world_id);
+    setTargetWorldId(others[0]?.id ?? "");
+    if (others[0]?.id) {
+      const { data } = await supabase
+        .from("prek_levels")
+        .select("level_number")
+        .eq("world_id", others[0].id)
+        .order("level_number", { ascending: false })
+        .limit(1);
+      setTargetLevelNumber((data?.[0]?.level_number ?? 0) + 1);
+    } else {
+      setTargetLevelNumber(1);
+    }
+    setMoveDialogOpen(true);
+  };
+
+  const onTargetWorldChange = async (id: string) => {
+    setTargetWorldId(id);
+    const { data } = await supabase
+      .from("prek_levels")
+      .select("level_number")
+      .eq("world_id", id)
+      .order("level_number", { ascending: false })
+      .limit(1);
+    setTargetLevelNumber((data?.[0]?.level_number ?? 0) + 1);
+  };
+
+  const confirmMove = async () => {
+    if (!moving || !targetWorldId) return;
+    const { error } = await supabase
+      .from("prek_levels")
+      .update({ world_id: targetWorldId, level_number: Number(targetLevelNumber) })
+      .eq("id", moving.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Level moved");
+    setMoveDialogOpen(false);
+    setMoving(null);
+    load();
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -168,6 +221,9 @@ const PreKLevelsList = () => {
                       <Button variant="ghost" size="icon" onClick={() => togglePublish(l)} title={l.is_published ? "Unpublish" : "Publish"}>
                         {l.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openMove(l)} title="Move to another world">
+                        <FolderInput className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
@@ -209,6 +265,37 @@ const PreKLevelsList = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move "{moving?.title}" to another world</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Target World</Label>
+                <Select value={targetWorldId} onValueChange={onTargetWorldChange}>
+                  <SelectTrigger><SelectValue placeholder="Pick a world" /></SelectTrigger>
+                  <SelectContent>
+                    {allWorlds.filter((w) => w.id !== moving?.world_id).map((w) => (
+                      <SelectItem key={w.id} value={w.id}>#{w.world_number} — {w.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Level Number in target world</Label>
+                <Input type="number" value={targetLevelNumber} onChange={(e) => setTargetLevelNumber(Number(e.target.value))} />
+                <p className="text-xs text-muted-foreground mt-1">Must be unique within the target world.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>Cancel</Button>
+              <Button onClick={confirmMove} disabled={!targetWorldId}>Move</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
