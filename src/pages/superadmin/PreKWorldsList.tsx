@@ -47,8 +47,9 @@ const PreKWorldsList = () => {
       toast.error("Failed to load worlds");
     } else {
       setWorlds(
-        (data ?? []).map((w: any) => ({
+        (data ?? []).map((w: any, i: number) => ({
           ...w,
+          sort_order: i,
           level_count: w.prek_levels?.[0]?.count ?? 0,
         })),
       );
