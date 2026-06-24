@@ -171,6 +171,26 @@ const PreKLevelsList = () => {
     load();
   };
 
+  const moveLevel = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= levels.length) return;
+    const a = levels[index];
+    const b = levels[target];
+    const prev = levels;
+    const next = [...levels];
+    next[index] = { ...b, level_number: a.level_number };
+    next[target] = { ...a, level_number: b.level_number };
+    setLevels(next);
+    // Swap via temp number to avoid unique-constraint collision on (world_id, level_number).
+    const temp = -Math.abs(Date.now() % 1000000) - 1;
+    const r1 = await supabase.from("prek_levels").update({ level_number: temp }).eq("id", a.id);
+    if (r1.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+    const r2 = await supabase.from("prek_levels").update({ level_number: a.level_number }).eq("id", b.id);
+    if (r2.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+    const r3 = await supabase.from("prek_levels").update({ level_number: b.level_number }).eq("id", a.id);
+    if (r3.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
