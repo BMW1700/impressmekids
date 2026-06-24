@@ -332,12 +332,13 @@ export const RPGWorldMap = ({
       {/* Pre-K bedroom background */}
       {isPrek && (
         <>
+          <div className="absolute inset-0 bg-slate-900 pointer-events-none" aria-hidden />
           <img
             src={prekBedroomBg.url}
             alt=""
             aria-hidden
             draggable={false}
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+            className="absolute inset-0 w-full h-full object-contain object-top pointer-events-none select-none"
           />
           <div className="absolute inset-0 bg-slate-950/45 pointer-events-none" aria-hidden />
         </>
