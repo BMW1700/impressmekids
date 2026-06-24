@@ -462,6 +462,10 @@ const PreKLevelBuilder = () => {
               {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
               Save Progress
             </Button>
+            <Button onClick={pushLive} variant="default" disabled={saving} title="Force any open student session to reload this level with your latest edits.">
+              <Radio className="h-4 w-4 mr-1" />
+              Update Live
+            </Button>
             <Button onClick={togglePublish} variant={level.is_published ? "outline" : "default"}>
               {level.is_published ? "Unpublish" : "Publish"}
             </Button>
