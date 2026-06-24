@@ -221,6 +221,9 @@ const PreKLevelsList = () => {
                       <Button variant="ghost" size="icon" onClick={() => togglePublish(l)} title={l.is_published ? "Unpublish" : "Publish"}>
                         {l.is_published ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => openMove(l)} title="Move to another world">
+                        <FolderInput className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(l)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => remove(l)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </div>
