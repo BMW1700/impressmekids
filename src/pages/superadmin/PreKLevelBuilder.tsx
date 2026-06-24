@@ -270,7 +270,8 @@ const PreKLevelBuilder = () => {
         })
         .eq("id", level.id);
       if (error) throw error;
-      toast.success(`${slot === "opening" ? "Opening" : "Closing"} video saved`);
+      invalidatePreKLevelCacheByDbId(level.id);
+      toast.success(`${slot === "opening" ? "Opening" : "Closing"} video saved — live for the next play`);
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
@@ -288,6 +289,7 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_in_seconds`]: null,
       [`${slot}_trim_out_seconds`]: null,
     }).eq("id", level.id);
+    invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
 
@@ -302,6 +304,7 @@ const PreKLevelBuilder = () => {
     setLevel((cur) => (cur ? ({ ...cur, ...patch } as LevelRow) : cur));
     const { error } = await supabase.from("prek_levels").update(patch).eq("id", level.id);
     if (error) toast.error(error.message);
+    else invalidatePreKLevelCacheByDbId(level.id);
   };
 
   const updateWordTrim = async (
@@ -316,6 +319,7 @@ const PreKLevelBuilder = () => {
     setWords((cur) => cur.map((w) => (w.id === wordId ? ({ ...w, ...patch } as WordRow) : w)));
     const { error } = await supabase.from("prek_level_words").update(patch).eq("id", wordId);
     if (error) toast.error(error.message);
+    else invalidatePreKLevelCacheByDbId(level.id);
   };
 
   // ---- Word-level operations -------------------------------------------------
@@ -325,13 +329,17 @@ const PreKLevelBuilder = () => {
       .from("prek_level_words")
       .insert({ level_id: level.id, sort_order, word: "NEW", ask_line: "", success_line: "" });
     if (error) toast.error(error.message);
-    else load();
+    else {
+      invalidatePreKLevelCacheByDbId(level.id);
+      load();
+    }
   };
 
   const updateWord = async (id: string, patch: Partial<WordRow>) => {
     setWords((cur) => cur.map((w) => (w.id === id ? { ...w, ...patch } : w)));
     const { error } = await supabase.from("prek_level_words").update(patch).eq("id", id);
     if (error) toast.error(error.message);
+    else invalidatePreKLevelCacheByDbId(level.id);
   };
 
   const uploadWordVideo = async (
@@ -362,7 +370,8 @@ const PreKLevelBuilder = () => {
         })
         .eq("id", word.id);
       if (error) throw error;
-      toast.success(`Word video saved`);
+      invalidatePreKLevelCacheByDbId(level.id);
+      toast.success("Word video saved — live for the next play");
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
@@ -381,6 +390,7 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_out_seconds`]: null,
       [`${slot}_video_duration_seconds`]: null,
     }).eq("id", word.id);
+    invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
 
@@ -390,7 +400,10 @@ const PreKLevelBuilder = () => {
     await deletePreKVideo(word.second_video_url);
     const { error } = await supabase.from("prek_level_words").delete().eq("id", word.id);
     if (error) toast.error(error.message);
-    else load();
+    else {
+      invalidatePreKLevelCacheByDbId(level.id);
+      load();
+    }
   };
 
   const moveWord = async (word: WordRow, dir: -1 | 1) => {
@@ -402,8 +415,10 @@ const PreKLevelBuilder = () => {
       supabase.from("prek_level_words").update({ sort_order: neighbor.sort_order }).eq("id", word.id),
       supabase.from("prek_level_words").update({ sort_order: word.sort_order }).eq("id", neighbor.id),
     ]);
+    invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
+
 
   const togglePublish = async () => {
     const ready =
