@@ -76,8 +76,8 @@ export const GameModeSection = () => {
                 asChild
                 className="group h-12 rounded-full bg-white px-7 text-sm font-semibold text-[hsl(270_45%_8%)] hover:bg-white"
               >
-                <Link to="/demos">
-                  See game mode
+                <Link to="/auth">
+                  Start playing
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </Button>
