@@ -146,28 +146,34 @@ const ModeSelect = () => {
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button
-              variant="ghost"
-              asChild
-              className={
-                isLight
-                  ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              }
-            >
-              <Link to="/pricing">Pricing</Link>
-            </Button>
-            <Button
-              variant="ghost"
-              asChild
-              className={
-                isLight
-                  ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
-              }
-            >
-              <Link to="/auth">Sign in</Link>
-            </Button>
+            {session ? (
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  await signOut();
+                  navigate("/auth", { replace: true });
+                }}
+                className={
+                  isLight
+                    ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }
+              >
+                Sign out
+              </Button>
+            ) : !isLoading ? (
+              <Button
+                variant="ghost"
+                asChild
+                className={
+                  isLight
+                    ? "text-[hsl(270_45%_22%)]/80 hover:bg-[hsl(270_45%_22%)]/10 hover:text-[hsl(270_45%_18%)]"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }
+              >
+                <Link to="/auth">Sign in</Link>
+              </Button>
+            ) : null}
             {isSuperAdmin && (
               <Button
                 variant="ghost"
