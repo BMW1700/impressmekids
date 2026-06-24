@@ -588,7 +588,7 @@ export const RPGWorldMap = ({
       </div>
 
       {/* World Cards with Enhanced Connecting Paths */}
-      <div className="max-w-4xl mx-auto relative z-[5]">
+      <div className={`max-w-4xl mx-auto relative z-[5] ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = mapTheme;
