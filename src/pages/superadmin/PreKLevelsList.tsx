@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff, Wrench, FolderInput } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff, Wrench, FolderInput, ChevronUp, ChevronDown } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -171,6 +171,26 @@ const PreKLevelsList = () => {
     load();
   };
 
+  const moveLevel = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= levels.length) return;
+    const a = levels[index];
+    const b = levels[target];
+    const prev = levels;
+    const next = [...levels];
+    next[index] = { ...b, level_number: a.level_number };
+    next[target] = { ...a, level_number: b.level_number };
+    setLevels(next);
+    // Swap via temp number to avoid unique-constraint collision on (world_id, level_number).
+    const temp = -Math.abs(Date.now() % 1000000) - 1;
+    const r1 = await supabase.from("prek_levels").update({ level_number: temp }).eq("id", a.id);
+    if (r1.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+    const r2 = await supabase.from("prek_levels").update({ level_number: a.level_number }).eq("id", b.id);
+    if (r2.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+    const r3 = await supabase.from("prek_levels").update({ level_number: b.level_number }).eq("id", a.id);
+    if (r3.error) { toast.error("Reorder failed"); setLevels(prev); return; }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -193,26 +213,50 @@ const PreKLevelsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {levels.map((l) => {
+            {levels.map((l, idx) => {
               const hasOpen = !!l.opening_video_url;
               const hasClose = !!l.closing_video_url;
               const ready = hasOpen && hasClose && (l.word_count ?? 0) > 0;
               return (
                 <Card key={l.id}>
                   <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-mono">L{l.level_number}</span>
-                        <CardTitle className="text-lg">{l.title}</CardTitle>
-                        <Badge variant={l.is_published ? "default" : "secondary"}>
-                          {l.is_published ? "Published" : "Draft"}
-                        </Badge>
-                        <Badge variant="outline">{l.word_count} word{l.word_count === 1 ? "" : "s"}</Badge>
-                        {!ready && <Badge variant="destructive">Needs videos</Badge>}
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === 0}
+                          onClick={() => moveLevel(idx, -1)}
+                          title="Move up"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === levels.length - 1}
+                          onClick={() => moveLevel(idx, 1)}
+                          title="Move down"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
                       </div>
-                      {l.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{l.description}</p>
-                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-muted-foreground font-mono">L{l.level_number}</span>
+                          <CardTitle className="text-lg">{l.title}</CardTitle>
+                          <Badge variant={l.is_published ? "default" : "secondary"}>
+                            {l.is_published ? "Published" : "Draft"}
+                          </Badge>
+                          <Badge variant="outline">{l.word_count} word{l.word_count === 1 ? "" : "s"}</Badge>
+                          {!ready && <Badge variant="destructive">Needs videos</Badge>}
+                        </div>
+                        {l.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{l.description}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button asChild size="sm"><Link to={`/super-admin/prek/${worldId}/${l.id}/edit`}>
