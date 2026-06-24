@@ -792,17 +792,24 @@ export const RPGWorldMap = ({
         </div>
       </div>
 
-      {/* Reading Progress Panel - Fixed position on left side */}
-      {studentId && (
+      {/* Reading Progress Panel - Fixed position on left side (non-Pre-K) */}
+      {studentId && !isPrek && (
         <div className="fixed left-4 top-1/2 -translate-y-1/2 z-20 hidden lg:block">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
         </div>
       )}
 
-      {/* Mobile Reading Progress Panel */}
-      {studentId && (
+      {/* Mobile Reading Progress Panel (non-Pre-K; Pre-K renders horizontal panel inline above) */}
+      {studentId && !isPrek && (
         <div className="lg:hidden mt-4 px-4 relative z-10">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} />
+        </div>
+      )}
+
+      {/* Pre-K mobile Reading Journey strip (horizontal panel already shown above on desktop) */}
+      {studentId && isPrek && (
+        <div className="lg:hidden mt-4 px-4 relative z-10">
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
         </div>
       )}
 
