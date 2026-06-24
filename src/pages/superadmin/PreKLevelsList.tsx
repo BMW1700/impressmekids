@@ -213,26 +213,50 @@ const PreKLevelsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {levels.map((l) => {
+            {levels.map((l, idx) => {
               const hasOpen = !!l.opening_video_url;
               const hasClose = !!l.closing_video_url;
               const ready = hasOpen && hasClose && (l.word_count ?? 0) > 0;
               return (
                 <Card key={l.id}>
                   <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-mono">L{l.level_number}</span>
-                        <CardTitle className="text-lg">{l.title}</CardTitle>
-                        <Badge variant={l.is_published ? "default" : "secondary"}>
-                          {l.is_published ? "Published" : "Draft"}
-                        </Badge>
-                        <Badge variant="outline">{l.word_count} word{l.word_count === 1 ? "" : "s"}</Badge>
-                        {!ready && <Badge variant="destructive">Needs videos</Badge>}
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === 0}
+                          onClick={() => moveLevel(idx, -1)}
+                          title="Move up"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          disabled={idx === levels.length - 1}
+                          onClick={() => moveLevel(idx, 1)}
+                          title="Move down"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
                       </div>
-                      {l.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{l.description}</p>
-                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-muted-foreground font-mono">L{l.level_number}</span>
+                          <CardTitle className="text-lg">{l.title}</CardTitle>
+                          <Badge variant={l.is_published ? "default" : "secondary"}>
+                            {l.is_published ? "Published" : "Draft"}
+                          </Badge>
+                          <Badge variant="outline">{l.word_count} word{l.word_count === 1 ? "" : "s"}</Badge>
+                          {!ready && <Badge variant="destructive">Needs videos</Badge>}
+                        </div>
+                        {l.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{l.description}</p>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button asChild size="sm"><Link to={`/super-admin/prek/${worldId}/${l.id}/edit`}>
