@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Eye, EyeOff, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -47,8 +47,9 @@ const PreKWorldsList = () => {
       toast.error("Failed to load worlds");
     } else {
       setWorlds(
-        (data ?? []).map((w: any) => ({
+        (data ?? []).map((w: any, i: number) => ({
           ...w,
+          sort_order: i,
           level_count: w.prek_levels?.[0]?.count ?? 0,
         })),
       );
@@ -123,6 +124,26 @@ const PreKWorldsList = () => {
     }
   };
 
+  const moveWorld = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= worlds.length) return;
+    const a = worlds[index];
+    const b = worlds[target];
+    const prev = worlds;
+    const next = [...worlds];
+    next[index] = { ...b, sort_order: index };
+    next[target] = { ...a, sort_order: target };
+    setWorlds(next);
+    const [r1, r2] = await Promise.all([
+      supabase.from("prek_worlds").update({ sort_order: target }).eq("id", a.id),
+      supabase.from("prek_worlds").update({ sort_order: index }).eq("id", b.id),
+    ]);
+    if (r1.error || r2.error) {
+      toast.error("Reorder failed");
+      setWorlds(prev);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -144,22 +165,46 @@ const PreKWorldsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {worlds.map((w) => (
+            {worlds.map((w, idx) => (
               <Card key={w.id}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
-                      <CardTitle className="text-lg">{w.title}</CardTitle>
-                      <Badge variant={w.is_published ? "default" : "secondary"}>
-                        {w.is_published ? "Published" : "Draft"}
-                      </Badge>
-                      <Badge variant="outline">{w.difficulty}</Badge>
-                      <Badge variant="outline">{w.level_count} level{w.level_count === 1 ? "" : "s"}</Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={idx === 0}
+                        onClick={() => moveWorld(idx, -1)}
+                        title="Move up"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={idx === worlds.length - 1}
+                        onClick={() => moveWorld(idx, 1)}
+                        title="Move down"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
                     </div>
-                    {w.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{w.description}</p>
-                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
+                        <CardTitle className="text-lg">{w.title}</CardTitle>
+                        <Badge variant={w.is_published ? "default" : "secondary"}>
+                          {w.is_published ? "Published" : "Draft"}
+                        </Badge>
+                        <Badge variant="outline">{w.difficulty}</Badge>
+                        <Badge variant="outline">{w.level_count} level{w.level_count === 1 ? "" : "s"}</Badge>
+                      </div>
+                      {w.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{w.description}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button asChild variant="outline" size="sm"><Link to={`/super-admin/prek/${w.id}`}>Open</Link></Button>
