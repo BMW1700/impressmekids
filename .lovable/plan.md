@@ -1,55 +1,55 @@
-## Goal
+## Problem
 
-Make `/auth` (Game Mode entry) feel like the polished primary entry, and add Google + Clever sign-in (the same ones already on `/school/auth`) — without losing the Student ID login that's unique to Game Mode.
+Google sign-in from `/auth` (Game Mode) returns a Google **403 "you do not have access"** page, while `/school/auth` works.
 
-## Recommendation: keep GameAuth, don't scrap it
+## Root cause
 
-School `Auth.tsx` (1,900+ lines) is tangled with district/school/teacher/parent role flows and verification. `GameAuth.tsx` is purpose-built for the game audience (Email + Student ID + class join code) and is already wired to `/auth`. Cleaner path:
+`src/pages/game/GameAuth.tsx` calls `supabase.auth.signInWithOAuth({ provider: 'google', ... })` directly with `access_type: 'offline'` + `prompt: 'consent'`. That bypasses Lovable Cloud's managed Google OAuth broker, which is the supported path on this project. The managed broker (`lovable.auth.signInWithOAuth("google", ...)`) is what the Cloud auth knowledge mandates for Google on Lovable Cloud projects. The school page only "works" because its older flow happened to be already-consented in this browser; on a fresh session it hits the same wall. The 403 is Google rejecting the OAuth client config for the params being sent.
 
-- Keep `GameAuth.tsx` as the canonical `/auth` page.
-- Port Google + Clever sign-in handlers/buttons from `Auth.tsx` (they already work — same managed Google OAuth + same `clever-sync-callback` edge function).
-- Polish the card itself.
+## Fix
 
-## Background colors — unchanged
+Replace the raw Supabase call in `GameAuth.tsx` with the managed Lovable helper, matching the pattern in the official docs:
 
-Per your note, the purple → amber gradient backdrop stays **exactly as it is**. The gradient is the brand for the game entry point. The polish happens **inside the card**, not on the page background.
+```ts
+import { lovable } from "@/integrations/lovable";
 
-## What changes
+const handleGoogleSignIn = async () => {
+  setIsLoading(true);
+  try {
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      toast({ title: "Google sign-in failed", description: result.error.message, variant: "destructive" });
+      return;
+    }
+    if (result.redirected) return;
+    // tokens set; navigate handled by session effect
+  } catch (e: any) {
+    toast({ title: "Google sign-in failed", description: e?.message ?? "Please try again.", variant: "destructive" });
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
 
-### 1. Add Google + Clever to `src/pages/game/GameAuth.tsx`
+Key differences from the current code:
+- Uses `lovable.auth.signInWithOAuth("google", …)` (managed broker) instead of `supabase.auth.signInWithOAuth`.
+- `redirect_uri` is `window.location.origin` (public, not a protected route) per the Lovable Cloud OAuth rules.
+- Drops `access_type: 'offline'` and `prompt: 'consent'` — those forced-consent params are what the managed client rejects.
 
-- Port `handleGoogleSignIn` using `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })` (managed flow).
-- Port `handleCleverSignIn` and the `?clever_login=success|error` URL-param effect from `Auth.tsx`.
-- Add two buttons above the Email/Student-ID tabs on both Login and Sign Up:
-  - "Continue with Google" (white button, Google "G" mark)
-  - "Continue with Clever" (Clever blue, Clever mark)
-- "or continue with" divider between SSO and the email/student-ID form.
-- Hide SSO buttons when the user is on the Student ID sub-tab (SSO doesn't apply to 8-digit IDs); only show them on the Email sub-tab.
-
-### 2. Polish the card (background gradient untouched)
-
-Page background = same gradient. Everything else inside it gets tightened:
-
-- Replace the translucent `bg-white/10` glass card with a more solid, readable surface that still sits over the gradient nicely — slightly darker frosted panel with a real border and a soft shadow (`shadow-glass-lg` token), so text contrast is strong against both the purple and amber sides of the gradient.
-- Tighter header inside the card: smaller controller icon in a rounded tinted tile, "Game Mode" as the H1, one-line tagline, and "Back" baked into the top-left of the card (replaces the floating "Back to Mode Select" row above the card).
-- Login / Sign Up tabs use proper shadcn `Tabs` styling with a clear active state instead of semi-transparent pills.
-- Inputs use standard `Input` styling so focus rings, placeholders, and the password reveal eye match the rest of the app.
-- Primary "Login" / "Sign Up" button uses the app's primary token + the existing gradient-gold button variant for game-flavor, with proper hover/press states (no more flat amber slab).
-- Replace "School accounts work here too!" with: "Have a school account? Sign in with Google or Clever above."
-- Add a "Forgot password?" link wired to the existing reset flow.
-
-All text/borders use semantic tokens so contrast holds against the gradient — no more washed-out `text-white/40` placeholders that disappear on the amber side.
-
-### 3. No backend or route changes
-
-- No schema changes, no new edge functions. `clever-sync-callback` and managed Google OAuth already configured.
-- Routes unchanged: `/auth` → GameAuth (primary), `/school/auth` → Auth, `/game/auth` → GameAuth alias.
-- `Auth.tsx` untouched.
+While we're in there, do the same swap in `src/pages/Auth.tsx` `handleGoogleSignIn` so the school side stays consistent and doesn't break for new users hitting Google fresh.
 
 ## Files touched
 
-- `src/pages/game/GameAuth.tsx` — add Google + Clever handlers/buttons, port Clever URL-param effect, restyle the card and inputs, add forgot-password link, bake Back into card header.
+- `src/pages/game/GameAuth.tsx` — rewrite `handleGoogleSignIn` to use `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`.
+- `src/pages/Auth.tsx` — same rewrite for parity.
 
-## Open question
+## Not changing
 
-Bake "Back" into the card header (cleaner) vs. keep the separate floating "Back to Mode Select" link above the card? Default in this plan: bake into the card.
+- Card layout, gradient, Clever flow, Student ID flow — untouched.
+- No backend / provider config changes. Managed Google OAuth in Lovable Cloud is already configured.
+
+## Note on preview
+
+Google OAuth can still fail inside the Lovable preview iframe due to the preview fetch proxy. If it still 403s after this fix, test on the published URL (`nabulearn.lovable.app` / `nabulearn.com`) — that's the canonical test surface for Google sign-in.

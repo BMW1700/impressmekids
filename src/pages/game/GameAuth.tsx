@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,19 +202,15 @@ const GameAuth = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/auth',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
       });
-      if (error) {
-        toast({ title: "Google sign-in failed", description: error.message, variant: "destructive" });
+      if (result.error) {
+        toast({ title: "Google sign-in failed", description: result.error.message || "Please try again.", variant: "destructive" });
+        return;
       }
+      if (result.redirected) return;
+      // tokens set; session effect will navigate
     } catch (error: any) {
       toast({ title: "Google sign-in failed", description: error?.message ?? "Please try again.", variant: "destructive" });
     } finally {
