@@ -1,64 +1,56 @@
-# Phase B — RLS pass on the next tier of hot tables
+# Phase C — `user_roles` indexing + `has_role()` hardening
 
-## Goal
-Apply the same proven pattern (consolidate overlapping SELECT policies, wrap `auth.uid()` in `(SELECT auth.uid())`) to the next tier of frequently-read tables. Then stop, measure, and decide what's next based on real numbers.
+## Why this matters
 
-## Scope — tables touched
-One migration, policy changes only. No schema changes, no data changes, no frontend changes.
+The slow-query report showed `user_roles` taking ~4.77M sequential scans since the last DB restart. Every authenticated request on the platform calls `has_role()` somewhere in its RLS chain, which in turn scans `user_roles`. Fixing this affects **every request on the entire app**, not just school-mode pages.
 
-- `reading_sessions` — 8 policies, hit on every game session save
-- `aura_records` — 13 policies (worst offender by policy count)
-- `aura_access_log` — 2 policies, written on every AURA view
-- `campaign_battle_sessions` — 7 policies, hit during LexiQuest battles
-- `parent_student_links` — 9 policies, referenced by many other policies as a subquery
-- `student_reading_stats` — 4 policies, hit on dashboard loads
-- `parent_accounts` — 6 policies, hit on every parent request
-- `classrooms` — 6 policies, hit on every classroom page
+This is the highest-leverage 15-minute change available right now.
 
-## What the migration does for each table
-1. `DROP` the existing overlapping SELECT policies.
-2. `CREATE` one consolidated SELECT policy with all access conditions OR'd into a single expression so Postgres can short-circuit.
-3. Replace bare `auth.uid()` with `(SELECT auth.uid())` so the value is cached once per query, not re-evaluated per row.
-4. Keep INSERT/UPDATE/DELETE policies intact unless they have the same multi-policy pattern, in which case consolidate them too.
-5. Preserve every existing access rule — students, parents, teachers, admins keep exactly the same permissions they have today.
+## What changes
 
-Where helpful, reuse the existing `SECURITY DEFINER` helpers (`is_teacher_of_classroom`, `is_parent_of_student`, `has_role`) so subqueries become single indexed function calls instead of inline joins.
+Single migration, additive only. No table drops, no policy changes, no frontend edits, no feature impact.
 
-## Expected outcome
-- Cumulative DB execution time on these tables drops 3-5×.
-- Stacked on top of the last migration: estimated concurrent capacity goes from ~3K → ~6-10K active users.
-- Zero feature changes, zero risk to data, fully reversible (each `DROP POLICY` + `CREATE POLICY` pair can be inverted).
+### 1. Add a composite index on `user_roles(user_id, role)`
 
-## After the migration ships
-1. Wait 24 hours for live traffic to populate fresh `pg_stat_statements`.
-2. Re-pull the slow-query report and `db_health` snapshot.
-3. Compare before/after numbers on the actual top offenders.
-4. Decide whether to proceed to Phase C (`user_roles` indexing) or Phase D (rollback hunt) based on which is now the biggest remaining bottleneck.
+The existing `UNIQUE(user_id, role)` constraint creates a unique index, but the planner's stats may not be using it efficiently for the `has_role(_user_id, _role)` lookup pattern. Add an explicit btree index if one is missing, or confirm the unique constraint's index is sufficient. Also add a standalone index on `user_id` alone, since some policies call `has_role(auth.uid(), ANY)` style patterns that benefit from the narrower index.
 
-## What is NOT in this plan
-- No table drops, no role removals, no Clever changes.
-- No frontend edits.
-- No Cloud compute upgrade (that's a UI toggle, separate decision).
-- No partitioning, read replicas, or sharding — those come after we exhaust the cheap wins.
+### 2. Harden `has_role()` function attributes
 
-## Technical detail (for reference)
-The pattern, illustrated on one table:
+Ensure the function is declared:
+- `STABLE` (already is — confirm)
+- `PARALLEL SAFE` (likely missing — adding this lets Postgres run it in parallel workers)
+- `LEAKPROOF` where safe (lets the planner push the filter earlier in query plans)
+- `SET search_path = public` (already is — confirm)
 
-```sql
--- Before: 4 separate policies, each evaluated per row
-CREATE POLICY "students view own"     ON reading_sessions FOR SELECT USING (student_id = auth.uid());
-CREATE POLICY "parents view kids"     ON reading_sessions FOR SELECT USING (is_parent_of_student(student_id));
-CREATE POLICY "teachers view class"   ON reading_sessions FOR SELECT USING (is_teacher_of_classroom(classroom_id));
-CREATE POLICY "admins view all"       ON reading_sessions FOR SELECT USING (has_role(auth.uid(), 'admin'));
+### 3. Force a fresh `ANALYZE` on `user_roles`
 
--- After: 1 policy with cached auth.uid(), short-circuit OR
-CREATE POLICY "reading_sessions_select" ON reading_sessions FOR SELECT
-USING (
-  student_id = (SELECT auth.uid())
-  OR is_teacher_of_classroom(classroom_id)
-  OR is_parent_of_student(student_id)
-  OR has_role((SELECT auth.uid()), 'admin')
-);
-```
+After the index changes, run `ANALYZE public.user_roles` so the planner picks up the new index immediately rather than waiting for the next autovacuum cycle.
 
-Same access semantics. One expression Postgres can short-circuit. `auth.uid()` evaluated once per query instead of once per row.
+### 4. Same hardening for `is_teacher_of_student`, `is_teacher_of_classroom`, `is_parent_of_student`, `parent_has_aura_consent`
+
+These are the four other SECURITY DEFINER helpers used heavily in the RLS policies we consolidated in Phases A and B. Adding `PARALLEL SAFE` to all of them lets Postgres parallelize the per-row checks in large result sets (teacher loading 30 students' data, parent dashboard with 4 kids, etc).
+
+## Expected impact
+
+- `has_role()` calls: ~1.3-1.5× faster across the board
+- Compounds with Phase A + B because every consolidated policy still calls these helpers
+- Concurrent user ceiling: ~10-15K → ~13-22K
+
+## What this does NOT touch
+
+- Frontend code: zero changes
+- Table structures: zero changes
+- RLS access rules: zero changes (same users see the same data)
+- Existing data: zero changes
+- Other functions, edge functions, or storage buckets: zero changes
+
+## Validation plan after deploy
+
+1. Re-run `slow_queries` immediately to confirm no regression
+2. Check `db_health` to confirm connection saturation drops or stays flat
+3. Wait 24h with live traffic, re-run `slow_queries`, compare `user_roles` sequential scan count to the previous 4.77M baseline
+4. Based on which query is now slowest, decide between Phase D (rollback hunt) or Phase E (PostgREST embed replacement)
+
+## Reversibility
+
+Indexes can be dropped instantly with `DROP INDEX`. Function attribute changes are reversed by re-running `CREATE OR REPLACE FUNCTION` with the old attributes. Zero data risk.
