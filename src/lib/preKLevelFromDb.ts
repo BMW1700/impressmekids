@@ -296,11 +296,12 @@ export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
   const [level, setLevel] = useState<VideoLevel | null>(initial?.level ?? null);
   const [dbLevelId, setDbLevelId] = useState<string | null>(initial?.dbLevelId ?? null);
   const [loading, setLoading] = useState(initial === null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const cached = getCachedPreKVideoLevel(worldNumber, levelNumber);
-    if (cached) {
+    if (cached && refreshTick === 0) {
       setLevel(cached.level);
       setDbLevelId(cached.dbLevelId);
       setLoading(false);
@@ -321,7 +322,35 @@ export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [worldNumber, levelNumber]);
+  }, [worldNumber, levelNumber, refreshTick]);
+
+  // Subscribe to live edits so an open student session picks up CMS changes
+  // without a republish/reload. Bust the cache + bump refreshTick to rebuild.
+  useEffect(() => {
+    if (!dbLevelId) return;
+    const channel = supabase
+      .channel(`prek-level-${dbLevelId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prek_levels", filter: `id=eq.${dbLevelId}` },
+        () => {
+          invalidatePreKLevelCacheByDbId(dbLevelId);
+          setRefreshTick((t) => t + 1);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prek_level_words", filter: `level_id=eq.${dbLevelId}` },
+        () => {
+          invalidatePreKLevelCacheByDbId(dbLevelId);
+          setRefreshTick((t) => t + 1);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dbLevelId]);
 
   return { level, dbLevelId, loading };
 }
