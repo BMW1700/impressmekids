@@ -34,6 +34,11 @@ const PreKLevelsList = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Level | null>(null);
+  const [allWorlds, setAllWorlds] = useState<World[]>([]);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [moving, setMoving] = useState<Level | null>(null);
+  const [targetWorldId, setTargetWorldId] = useState<string>("");
+  const [targetLevelNumber, setTargetLevelNumber] = useState<number>(1);
 
   // form
   const [levelNumber, setLevelNumber] = useState<number>(1);
