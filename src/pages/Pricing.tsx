@@ -4,66 +4,62 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { CheckCircle, ArrowRight, Building2, GraduationCap, Landmark } from "lucide-react";
+import { CheckCircle, ArrowRight, Sparkles, Crown, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const tiers = [
   {
-    name: "Pilot Program",
-    icon: <GraduationCap className="h-6 w-6 text-primary" />,
-    price: "Free",
-    priceDetail: "Up to 30 students",
-    description: "Perfect for evaluating NabuLearn before a district-wide rollout",
+    name: "Free",
+    icon: <Sparkles className="h-6 w-6 text-primary" />,
+    price: "$0",
+    priceDetail: "forever",
+    description: "Start playing today — no credit card needed.",
     features: [
-      "Full AURA reading assessment",
-      "RPG reading campaign",
-      "5 educational games",
-      "Teacher & student dashboards",
-      "Basic analytics & reporting",
-      "Email support",
+      "Pre-K Benny adventures (Level 1)",
+      "K–12 LexiQuest RPG (first world)",
+      "Daily reading streaks & rewards",
+      "Basic progress tracking",
+      "Up to 1 reader profile",
     ],
-    cta: "Start Pilot",
+    cta: "Start playing",
     ctaLink: "/auth",
     highlighted: false,
   },
   {
-    name: "School",
-    icon: <Building2 className="h-6 w-6 text-primary-foreground" />,
-    price: "$5–7",
-    priceDetail: "per student / year",
-    description: "Complete platform for individual schools with full analytics and safety features",
+    name: "Pro Reader",
+    icon: <Crown className="h-6 w-6 text-primary-foreground" />,
+    price: "$9.99",
+    priceDetail: "per month",
+    description: "The full adventure — every world, every story, every hero.",
     features: [
-      "Everything in Pilot, plus:",
-      "Unlimited students",
-      "4 proprietary ML models",
-      "SSVRS safety system",
-      "Advanced AURA analytics",
-      "Benchmark assessments",
-      "Parent portal & notifications",
+      "Everything in Free, plus:",
+      "All Benny worlds & episodes",
+      "All LexiQuest campaigns & boss battles",
+      "All 13 heroes + character skins",
+      "Custom story generator (parent-authored)",
+      "Detailed reading analytics & phoneme heatmap",
+      "Castle Swarm Defense (full game)",
       "Priority support",
-      "FERPA & COPPA aligned",
     ],
-    cta: "Request a Quote",
+    cta: "Go Pro",
     ctaLink: "/auth",
     highlighted: true,
   },
   {
-    name: "District",
-    icon: <Landmark className="h-6 w-6 text-primary" />,
-    price: "Custom",
-    priceDetail: "volume pricing",
-    description: "Enterprise deployment with district-wide oversight, SSO, and dedicated support",
+    name: "Family",
+    icon: <Users className="h-6 w-6 text-primary" />,
+    price: "$14.99",
+    priceDetail: "per month",
+    description: "One plan for up to 4 readers in your household.",
     features: [
-      "Everything in School, plus:",
-      "District manager dashboard",
-      "Multi-school analytics",
-      "Custom integrations",
-      "Dedicated account manager",
-      "Staff onboarding & training",
-      "SLA & uptime guarantees",
-      "Data export & compliance tools",
+      "Everything in Pro Reader, plus:",
+      "Up to 4 reader profiles",
+      "Per-child progress dashboards",
+      "Parent portal with weekly summaries",
+      "Shared streaks & family leaderboard",
+      "Cross-device sync (iPad, Chromebook, phone)",
     ],
-    cta: "Contact Sales",
+    cta: "Start Family Plan",
     ctaLink: "/auth",
     highlighted: false,
   },
@@ -73,23 +69,23 @@ const Pricing = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Pricing — NabuLearn AI Literacy Platform</title>
-        <meta name="description" content="Simple per-student pricing for NabuLearn. Free pilot up to 30 students, school plans, and district-wide tiers from $5–7/student/year." />
+        <title>Pricing — NabuLearn</title>
+        <meta name="description" content="Simple plans for families. Free forever to start, with Pro and Family upgrades that unlock every world, hero, and story in NabuLearn." />
         <link rel="canonical" href="https://nabulearn.com/pricing" />
-        <meta property="og:title" content="NabuLearn Pricing — Pilot, School, District" />
-        <meta property="og:description" content="$5–7/student/year. Free pilot up to 30 students. FERPA & COPPA aligned." />
+        <meta property="og:title" content="NabuLearn Pricing — Free, Pro, Family" />
+        <meta property="og:description" content="Free forever to start. Pro Reader and Family plans unlock the full reading adventure." />
         <meta property="og:url" content="https://nabulearn.com/pricing" />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",
-          "name": "NabuLearn AI Literacy Platform",
-          "description": "AI-powered literacy platform for K-12 schools and districts. Reading fluency assessment, ML-based intervention, and an RPG reading adventure.",
+          "name": "NabuLearn",
+          "description": "AI-powered reading adventure for kids ages 2–18. Pre-K Benny stories and a K-12 literacy RPG.",
           "brand": { "@type": "Organization", "name": "NabuLearn" },
           "offers": [
-            { "@type": "Offer", "name": "Pilot Program", "price": "0", "priceCurrency": "USD", "description": "Free pilot for up to 30 students" },
-            { "@type": "Offer", "name": "School", "price": "5", "priceCurrency": "USD", "description": "Per student per year, billed annually for a single school" },
-            { "@type": "Offer", "name": "District", "price": "7", "priceCurrency": "USD", "description": "Per student per year, district-wide deployment with admin controls" }
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
+            { "@type": "Offer", "name": "Pro Reader", "price": "9.99", "priceCurrency": "USD" },
+            { "@type": "Offer", "name": "Family", "price": "14.99", "priceCurrency": "USD" }
           ]
         })}</script>
       </Helmet>
@@ -102,19 +98,11 @@ const Pricing = () => {
               Simple, Transparent Pricing
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Pricing That Works for Your Budget
+              Reading adventures for every family
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Up to 60% less than DIBELS & mCLASS — with an LMS, safety system, and RPG campaign included
+              Start free. Upgrade any time. Cancel any time.
             </p>
-            <div className="mt-6">
-              <Button asChild variant="outline" size="sm">
-                <Link to="/scope-and-sequence">
-                  View Phonics Scope &amp; Sequence
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-16">
@@ -178,23 +166,23 @@ const Pricing = () => {
             ))}
           </div>
 
-          {/* Comparison callout */}
+          {/* Family-friendly trust strip */}
           <div className="bg-muted/50 rounded-2xl p-8 md:p-12 max-w-4xl mx-auto text-center">
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Why Schools Choose NabuLearn
+              Built for kids. Loved by parents.
             </h2>
             <div className="grid sm:grid-cols-3 gap-6 mt-8">
               <div>
-                <div className="text-3xl font-bold text-primary mb-1">$5–7</div>
-                <div className="text-sm text-muted-foreground">NabuLearn per student/year</div>
+                <div className="text-3xl font-bold text-primary mb-1">Ages 2–18</div>
+                <div className="text-sm text-muted-foreground">Pre-K Benny stories through K-12 RPG</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-muted-foreground mb-1">$10–15</div>
-                <div className="text-sm text-muted-foreground">DIBELS / mCLASS per student/year</div>
+                <div className="text-3xl font-bold text-primary mb-1">No ads</div>
+                <div className="text-sm text-muted-foreground">Ever. On any plan.</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-primary mb-1">All-in-One</div>
-                <div className="text-sm text-muted-foreground">Assessment + LMS + Safety + Games</div>
+                <div className="text-3xl font-bold text-primary mb-1">COPPA</div>
+                <div className="text-sm text-muted-foreground">Privacy-first, parental consent built in</div>
               </div>
             </div>
           </div>
