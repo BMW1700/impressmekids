@@ -531,8 +531,16 @@ export const RPGWorldMap = ({
         </motion.div>
       </motion.div>
 
+      {/* Pre-K horizontal Reading Journey strip */}
+      {isPrek && studentId && (
+        <div className="max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[320px] xl:ml-[360px] lg:mr-auto px-1">
+          <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
+        </div>
+      )}
+
       {/* World 0: Phonics Foundations — prominent entry banner */}
-      <div className="max-w-4xl mx-auto relative z-[5] mb-6">
+      <div className={`max-w-4xl mx-auto relative z-[5] mb-6 ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
+
         <motion.button
           type="button"
           onClick={() => navigate('/game/phonics-foundations')}
