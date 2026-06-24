@@ -12,9 +12,10 @@ interface ReadingProgressPanelProps {
   studentId: string;
   studentName?: string;
   gradeMode?: string;
+  layout?: 'vertical' | 'horizontal';
 }
 
-export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeMode }: ReadingProgressPanelProps) => {
+export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeMode, layout = 'vertical' }: ReadingProgressPanelProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: stats, isLoading } = useQuery({
