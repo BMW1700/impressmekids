@@ -193,7 +193,7 @@ const PreKWorldsList = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
+                        <span className="text-xs text-muted-foreground font-mono">#{idx + 1}</span>
                         <CardTitle className="text-lg">{w.title}</CardTitle>
                         <Badge variant={w.is_published ? "default" : "secondary"}>
                           {w.is_published ? "Published" : "Draft"}
