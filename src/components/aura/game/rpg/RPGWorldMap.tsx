@@ -535,13 +535,13 @@ export const RPGWorldMap = ({
 
       {/* Pre-K horizontal Reading Journey strip */}
       {isPrek && studentId && (
-        <div className="hidden lg:block max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[320px] xl:ml-[360px] lg:mr-auto px-1">
+        <div className="hidden lg:block max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[480px] xl:ml-[540px] lg:mr-auto px-1">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
         </div>
       )}
 
       {/* World 0: Phonics Foundations — prominent entry banner */}
-      <div className={`max-w-4xl mx-auto relative z-[5] mb-6 ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
+      <div className={`max-w-4xl mx-auto relative z-[5] mb-6 ${isPrek ? 'lg:ml-[480px] xl:ml-[540px] lg:mr-auto' : ''}`}>
 
         <motion.button
           type="button"
@@ -590,7 +590,7 @@ export const RPGWorldMap = ({
       </div>
 
       {/* World Cards with Enhanced Connecting Paths */}
-      <div className={`max-w-4xl mx-auto relative z-[5] ${isPrek ? 'lg:ml-[320px] xl:ml-[360px] lg:mr-auto' : ''}`}>
+      <div className={`max-w-4xl mx-auto relative z-[5] ${isPrek ? 'lg:ml-[480px] xl:ml-[540px] lg:mr-auto' : ''}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = mapTheme;
