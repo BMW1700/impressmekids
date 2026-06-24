@@ -88,6 +88,86 @@ export const ReadingProgressPanel = ({ studentId, studentName = "Reader", gradeM
 
   if (!stats) return null;
 
+  if (layout === 'horizontal') {
+    return (
+      <>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gradient-to-r from-purple-900/85 to-indigo-900/85 rounded-2xl p-4 border border-purple-500/30 backdrop-blur-sm w-full"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <BookOpen className="h-5 w-5 text-purple-300" />
+            <h3 className="text-sm font-bold text-white">My Reading Journey</h3>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-stretch">
+            <div className="md:col-span-2 bg-purple-800/50 rounded-lg p-3 flex flex-col justify-center">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-purple-300">Reading Level</span>
+                <span className="text-base font-bold text-yellow-400">{stats.gradeLabel} Grade</span>
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: stats.totalSteps }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className={`h-2 flex-1 rounded-full ${i <= stats.readingLevel ? 'bg-gradient-to-r from-yellow-400 to-amber-500' : 'bg-purple-700/50'}`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="bg-blue-800/40 rounded-lg p-2 text-center">
+              <Zap className="h-4 w-4 mx-auto text-blue-400 mb-1" />
+              <div className="text-lg font-bold text-white">{stats.avgWpm}</div>
+              <div className="text-xs text-blue-300">WCPM</div>
+            </div>
+            <div className="bg-green-800/40 rounded-lg p-2 text-center">
+              <Target className="h-4 w-4 mx-auto text-green-400 mb-1" />
+              <div className="text-lg font-bold text-white">{stats.avgAccuracy}%</div>
+              <div className="text-xs text-green-300">Accuracy</div>
+            </div>
+            <div className="bg-amber-800/40 rounded-lg p-2 text-center">
+              <Star className="h-4 w-4 mx-auto text-amber-400 mb-1" />
+              <div className="text-lg font-bold text-white">{stats.wordsMastered >= 1000 ? '1k+' : stats.wordsMastered}</div>
+              <div className="text-xs text-amber-300">Words Mastered</div>
+            </div>
+            <div className="bg-pink-800/40 rounded-lg p-2 text-center">
+              <Award className="h-4 w-4 mx-auto text-pink-400 mb-1" />
+              <div className="text-lg font-bold text-white">{stats.totalSessions}</div>
+              <div className="text-xs text-pink-300">Stories Read</div>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="text-xs text-purple-300">
+              {stats.streak >= 3 ? "🔥 You're on fire! Keep reading!" : stats.wpmTrend > 0 ? "📈 Getting faster every day!" : "📚 Every story makes you stronger!"}
+            </div>
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              variant="ghost"
+              size="sm"
+              className="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/30"
+            >
+              View Full Stats <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </motion.div>
+
+        <FullReadingStatsModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          studentId={studentId}
+          studentName={studentName}
+          gradeMode={gradeMode}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <motion.div
