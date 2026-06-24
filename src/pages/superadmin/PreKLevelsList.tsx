@@ -126,6 +126,51 @@ const PreKLevelsList = () => {
     }
   };
 
+  const openMove = async (l: Level) => {
+    setMoving(l);
+    const others = allWorlds.filter((w) => w.id !== l.world_id);
+    setTargetWorldId(others[0]?.id ?? "");
+    if (others[0]?.id) {
+      const { data } = await supabase
+        .from("prek_levels")
+        .select("level_number")
+        .eq("world_id", others[0].id)
+        .order("level_number", { ascending: false })
+        .limit(1);
+      setTargetLevelNumber((data?.[0]?.level_number ?? 0) + 1);
+    } else {
+      setTargetLevelNumber(1);
+    }
+    setMoveDialogOpen(true);
+  };
+
+  const onTargetWorldChange = async (id: string) => {
+    setTargetWorldId(id);
+    const { data } = await supabase
+      .from("prek_levels")
+      .select("level_number")
+      .eq("world_id", id)
+      .order("level_number", { ascending: false })
+      .limit(1);
+    setTargetLevelNumber((data?.[0]?.level_number ?? 0) + 1);
+  };
+
+  const confirmMove = async () => {
+    if (!moving || !targetWorldId) return;
+    const { error } = await supabase
+      .from("prek_levels")
+      .update({ world_id: targetWorldId, level_number: Number(targetLevelNumber) })
+      .eq("id", moving.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Level moved");
+    setMoveDialogOpen(false);
+    setMoving(null);
+    load();
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
