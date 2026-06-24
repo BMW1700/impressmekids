@@ -370,8 +370,9 @@ export const RPGWorldMap = ({
 
       {/* Benny standing on the left (Pre-K only, desktop) */}
       {isPrek && (
-        <div className="hidden lg:block absolute left-6 xl:left-10 top-[360px] z-[6] pointer-events-none">
-          <BennyStanding size={280} />
+        <div className="hidden lg:block fixed left-0 xl:left-4 bottom-[-180px] xl:bottom-[-220px] z-[6] pointer-events-none">
+          <BennyStanding size={720} />
+
         </div>
       )}
 
