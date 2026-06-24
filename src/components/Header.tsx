@@ -16,7 +16,7 @@ interface HeaderProps {
 }
 
 export const Header = ({ showAuthButtons = true, onSignOut, children, studentId }: HeaderProps) => {
-  const { session, profile, signOut } = useAuth();
+  const { session, profile, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
@@ -45,7 +45,9 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
   };
 
   const isAuthenticated = !!session;
-  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated;
+  // While session is still being resolved, render neither auth buttons nor sign-out
+  // to avoid flashing "Sign in" for a user who is actually signed in.
+  const shouldShowAuthButtons = showAuthButtons && !isAuthenticated && !isLoading;
   const shouldShowSignOut = isAuthenticated;
 
   return (
