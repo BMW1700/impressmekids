@@ -263,6 +263,31 @@ export function getCachedPreKVideoLevel(
 }
 
 /**
+ * Drop the cached entry for a given world+level so the next build pulls fresh
+ * data (trim marks, new uploads, edited copy). Called by the CMS after every
+ * mutation so the player never serves stale builds.
+ */
+export function invalidatePreKLevelCache(worldNumber: number, levelNumber: number): void {
+  const key = cacheKey(worldNumber, levelNumber);
+  levelCache.delete(key);
+  inflight.delete(key);
+}
+
+/**
+ * DB-id variant: the editor only knows the level UUID, not the world/level
+ * numbers, so we scan the cache and clear the matching entry. Cheap because
+ * the cache is tiny (one entry per visited level).
+ */
+export function invalidatePreKLevelCacheByDbId(dbLevelId: string): void {
+  for (const [key, entry] of levelCache.entries()) {
+    if (entry.dbLevelId === dbLevelId) {
+      levelCache.delete(key);
+      inflight.delete(key);
+    }
+  }
+}
+
+/**
  * Hook: load DB-backed VideoLevel. If the cache already has it, returns
  * synchronously with `loading=false` on the very first render — no spinner.
  */
