@@ -1,55 +1,29 @@
-## Problem
+## Goal
 
-Google sign-in from `/auth` (Game Mode) returns a Google **403 "you do not have access"** page, while `/school/auth` works.
+On `/super-admin/prek` (Pre-K Worlds list), show worlds in their saved sort order and let the admin reorder them with up/down arrows that swap a world with its neighbor.
 
-## Root cause
+## Why the current screenshot looks "out of order"
 
-`src/pages/game/GameAuth.tsx` calls `supabase.auth.signInWithOAuth({ provider: 'google', ... })` directly with `access_type: 'offline'` + `prompt: 'consent'`. That bypasses Lovable Cloud's managed Google OAuth broker, which is the supported path on this project. The managed broker (`lovable.auth.signInWithOAuth("google", ...)`) is what the Cloud auth knowledge mandates for Google on Lovable Cloud projects. The school page only "works" because its older flow happened to be already-consented in this browser; on a fresh session it hits the same wall. The 403 is Google rejecting the OAuth client config for the params being sent.
+The list already queries `prek_worlds` ordered by `sort_order` ASC. The reason you see `#1, #4, #5, #2` is that the badge `#N` shows `world_number` (an identifier), not the position. The actual row position IS the sort order. So "show in order" = keep ordering by `sort_order` (already correct), and the new arrows mutate `sort_order` so the visible row order matches what you want.
 
-## Fix
+## Changes — single file: `src/pages/superadmin/PreKWorldsList.tsx`
 
-Replace the raw Supabase call in `GameAuth.tsx` with the managed Lovable helper, matching the pattern in the official docs:
-
-```ts
-import { lovable } from "@/integrations/lovable";
-
-const handleGoogleSignIn = async () => {
-  setIsLoading(true);
-  try {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast({ title: "Google sign-in failed", description: result.error.message, variant: "destructive" });
-      return;
-    }
-    if (result.redirected) return;
-    // tokens set; navigate handled by session effect
-  } catch (e: any) {
-    toast({ title: "Google sign-in failed", description: e?.message ?? "Please try again.", variant: "destructive" });
-  } finally {
-    setIsLoading(false);
-  }
-};
-```
-
-Key differences from the current code:
-- Uses `lovable.auth.signInWithOAuth("google", …)` (managed broker) instead of `supabase.auth.signInWithOAuth`.
-- `redirect_uri` is `window.location.origin` (public, not a protected route) per the Lovable Cloud OAuth rules.
-- Drops `access_type: 'offline'` and `prompt: 'consent'` — those forced-consent params are what the managed client rejects.
-
-While we're in there, do the same swap in `src/pages/Auth.tsx` `handleGoogleSignIn` so the school side stays consistent and doesn't break for new users hitting Google fresh.
-
-## Files touched
-
-- `src/pages/game/GameAuth.tsx` — rewrite `handleGoogleSignIn` to use `lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin })`.
-- `src/pages/Auth.tsx` — same rewrite for parity.
+1. **Normalize sort_order on load.** After fetching, reassign `sort_order` to `0..n-1` in memory based on the returned order so swaps are always well-defined even if values are duplicated or sparse.
+2. **Add `moveWorld(index, direction)`** — swaps the world at `index` with the one at `index ± 1`:
+   - Optimistically reorder the local `worlds` array (snappy UI).
+   - Persist both rows' new `sort_order` with two `update`s against `prek_worlds` (by `id`). On error, revert + toast.
+3. **UI: add a small vertical arrow stack on the left of each card** (next to the `#N` badge):
+   - `ChevronUp` button — disabled on the first row.
+   - `ChevronDown` button — disabled on the last row.
+   - `variant="ghost"`, `size="icon"`, `h-6 w-6`, tight stack so it doesn't crowd the title row.
+4. **New-world default sort_order** stays `worlds.length` (appends to end) — already correct.
 
 ## Not changing
 
-- Card layout, gradient, Clever flow, Student ID flow — untouched.
-- No backend / provider config changes. Managed Google OAuth in Lovable Cloud is already configured.
+- DB schema (the `sort_order` column already exists on `prek_worlds`).
+- Student-facing ordering — `usePublishedPrekLevels` already orders by `sort_order`, so admin reorders flow through automatically.
+- The `#world_number` badge stays as the stable world identifier; only row position changes.
 
-## Note on preview
+## Files touched
 
-Google OAuth can still fail inside the Lovable preview iframe due to the preview fetch proxy. If it still 403s after this fix, test on the published URL (`nabulearn.lovable.app` / `nabulearn.com`) — that's the canonical test surface for Google sign-in.
+- `src/pages/superadmin/PreKWorldsList.tsx` — add `moveWorld`, two chevron buttons per row, normalize sort_order on load.
