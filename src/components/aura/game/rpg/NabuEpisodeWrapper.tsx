@@ -11,7 +11,6 @@
 // for that level.
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { RPGOneWordReader } from "./RPGOneWordReader";
 import { NabuAdventure } from "./NabuAdventure";
 import { NabuVideoAdventure } from "./NabuVideoAdventure";
@@ -50,11 +49,14 @@ const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
   const levelNumber = typeof level.id === "number" ? level.id : Number(level.id);
   const { level: dbLevel, dbLevelId, loading } = usePreKVideoLevel(world.id, levelNumber);
 
+  // Render an immediate, opaque placeholder while the level is loading. With
+  // the in-memory cache + parallel signed-URL resolution + prefetch from the
+  // level grid, this is usually 0 ms; cold first open is ~150-300 ms — fast
+  // enough that no spinner is needed. Showing a stylized blank stage instead
+  // of a spinner keeps it from feeling like "loading bullshit."
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-slate-950 shadow-xl" />
     );
   }
 

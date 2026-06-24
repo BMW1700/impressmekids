@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { getNabuHelpChip, getNabuLevelTitle } from "@/lib/nabuStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
+import { prefetchPreKVideoLevel } from "@/lib/preKLevelFromDb";
 
 // All possible enemy types in the campaign
 export type CampaignEnemyType = 
@@ -102,6 +103,19 @@ export const RPGLevelSelect = ({
   const [showTutorial, setShowTutorial] = useState(false);
 
   const isTutorialWorld = world.id === 0;
+
+  // Pre-K worlds load videos from the database + Storage. Warm the cache for
+  // every unlocked level the moment the grid mounts so that tapping a card
+  // is instant (zero spinner, zero DB roundtrips at tap time).
+  useEffect(() => {
+    if (world.mode !== 'prek') return;
+    for (const lvl of levels) {
+      if (lvl.isUnlocked) {
+        prefetchPreKVideoLevel(world.id, Number(lvl.id));
+      }
+    }
+  }, [world.id, world.mode, levels]);
+
 
   const handleLevelClick = (level: CampaignLevel) => {
     // For tutorial world, show the tutorial overlay instead of battle mode selector

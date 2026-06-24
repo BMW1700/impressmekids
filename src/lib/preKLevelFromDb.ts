@@ -2,6 +2,19 @@
 // prek_level_words) into the same VideoLevel shape that the cinematic runner
 // already consumes. Returns null if no DB level exists OR if any required
 // video URL is missing — callers should fall back to the hardcoded data file.
+//
+// Performance design:
+//   - One world lookup, one level lookup, one words lookup (the words query
+//     can't be folded into the level query without a join helper because
+//     PostgREST embeds add latency). All signed-URL resolutions then fire in
+//     a single Promise.all batch so ~20 Storage roundtrips collapse to one
+//     wall-clock wait.
+//   - Built levels are memoized in a module-level cache keyed by
+//     `${worldNumber}:${levelNumber}` so re-opening a level in the same
+//     session is instant. Cache TTL matches the signed-URL TTL (7 days) with
+//     a safety margin.
+//   - `prefetchPreKVideoLevel` lets the level-select grid warm the cache
+//     before the player taps.
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,17 +22,30 @@ import type { VideoLevel, VideoStep } from "@/data/preKAdventuresVideo";
 
 export const PREK_VIDEO_BUCKET = "prek-level-videos";
 
+// Signed URLs live for 7 days; cache them for 6 to be safe.
+const CACHE_TTL_MS = 6 * 24 * 60 * 60 * 1000;
+
+interface CacheEntry {
+  level: VideoLevel | null;
+  dbLevelId: string | null;
+  expiresAt: number;
+}
+
+// Module-level in-memory cache. Survives navigation, dies on full reload.
+const levelCache = new Map<string, CacheEntry>();
+// De-duplicate concurrent in-flight builds for the same level.
+const inflight = new Map<string, Promise<CacheEntry>>();
+
+const cacheKey = (world: number, level: number) => `${world}:${level}`;
+
 /**
- * If `value` looks like a full URL (http(s) or /__l5e/ asset path) we return
- * it as-is. Otherwise we treat it as a storage path inside the prek bucket
- * and request a 1-hour signed URL.
+ * Resolve a storage path / URL to a playable URL. Pass-through for full URLs
+ * and asset paths; signed URL for storage paths. Caller is expected to batch
+ * these in a Promise.all.
  */
 async function resolveUrl(value: string | null | undefined): Promise<string | null> {
   if (!value) return null;
   if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
-  // 7-day signed URL so a CDN (Cloudflare) / browser cache in front of Storage
-  // can hold the bytes long-term. Pre-K video files are immutable — a new
-  // upload always gets a new path — so a long TTL is safe.
   const { data, error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
     .createSignedUrl(value, 60 * 60 * 24 * 7);
@@ -92,26 +118,41 @@ export async function fetchPreKDbLevel(
   return { level: level as PreKDbLevelRow, words: (words ?? []) as PreKDbWordRow[] };
 }
 
-function trimOrUndef(n: number | null): number | undefined {
+function trimOrUndef(n: number | null | undefined): number | undefined {
   return n === null || n === undefined ? undefined : Number(n);
 }
 
 /**
- * Build a runtime VideoLevel from DB rows. Returns null if any required
- * video URL is missing (e.g. the seeded Visit Grandma level has no DB videos
- * yet — we fall back to the hardcoded data file in that case).
+ * Build a runtime VideoLevel from DB rows. Parallelizes ALL signed-URL
+ * requests so a 6-word level takes the time of one Storage roundtrip rather
+ * than ~20 sequential ones. Returns both the built level and the DB level id
+ * in one pass — no second fetch needed.
  */
-export async function buildVideoLevelFromDb(
+async function buildLevelEntry(
   worldNumber: number,
   levelNumber: number,
-): Promise<VideoLevel | null> {
+): Promise<CacheEntry> {
   const fetched = await fetchPreKDbLevel(worldNumber, levelNumber);
-  if (!fetched) return null;
+  if (!fetched) return { level: null, dbLevelId: null, expiresAt: Date.now() + CACHE_TTL_MS };
   const { level, words } = fetched;
 
-  const opening = await resolveUrl(level.opening_video_url);
-  const closing = await resolveUrl(level.closing_video_url);
-  if (!opening || !closing || words.length === 0) return null;
+  // Collect every storage path / URL up front, resolve them in parallel.
+  const paths: (string | null)[] = [];
+  paths.push(level.opening_video_url);
+  paths.push(level.closing_video_url);
+  for (const w of words) {
+    paths.push(w.first_video_url);
+    paths.push(w.second_video_url);
+    paths.push(w.hold_poster_url);
+  }
+
+  const resolved = await Promise.all(paths.map((p) => resolveUrl(p)));
+
+  const opening = resolved[0];
+  const closing = resolved[1];
+  if (!opening || !closing || words.length === 0) {
+    return { level: null, dbLevelId: level.id, expiresAt: Date.now() + CACHE_TTL_MS };
+  }
 
   const steps: VideoStep[] = [{
     kind: "clip",
@@ -120,11 +161,15 @@ export async function buildVideoLevelFromDb(
     trimOut: trimOrUndef(level.opening_trim_out_seconds),
   }];
 
+  let offset = 2;
   for (const w of words) {
-    const first = await resolveUrl(w.first_video_url);
-    const second = await resolveUrl(w.second_video_url);
-    const poster = await resolveUrl(w.hold_poster_url);
-    if (!first || !second) return null;
+    const first = resolved[offset];
+    const second = resolved[offset + 1];
+    const poster = resolved[offset + 2];
+    offset += 3;
+    if (!first || !second) {
+      return { level: null, dbLevelId: level.id, expiresAt: Date.now() + CACHE_TTL_MS };
+    }
 
     steps.push({
       kind: "clip",
@@ -155,44 +200,102 @@ export async function buildVideoLevelFromDb(
     trimOut: trimOrUndef(level.closing_trim_out_seconds),
   });
 
-  return {
+  const videoLevel: VideoLevel = {
     id: `db-w${worldNumber}-l${levelNumber}`,
     goal: level.goal || level.title,
     endingLine: level.ending_line || "",
     steps,
   };
+
+  return {
+    level: videoLevel,
+    dbLevelId: level.id,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+}
+
+/** Public: build + cache + dedupe. Safe to call many times concurrently. */
+export async function buildVideoLevelFromDb(
+  worldNumber: number,
+  levelNumber: number,
+): Promise<{ level: VideoLevel | null; dbLevelId: string | null }> {
+  const key = cacheKey(worldNumber, levelNumber);
+  const cached = levelCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return { level: cached.level, dbLevelId: cached.dbLevelId };
+  }
+  let pending = inflight.get(key);
+  if (!pending) {
+    pending = buildLevelEntry(worldNumber, levelNumber).then((entry) => {
+      levelCache.set(key, entry);
+      inflight.delete(key);
+      return entry;
+    }).catch((err) => {
+      inflight.delete(key);
+      throw err;
+    });
+    inflight.set(key, pending);
+  }
+  const entry = await pending;
+  return { level: entry.level, dbLevelId: entry.dbLevelId };
 }
 
 /**
- * Hook: load DB-backed VideoLevel; null while loading or if none/incomplete.
- * Caller should fall back to the hardcoded data file when this returns null
- * after `loading` flips false.
+ * Fire-and-forget warmup. Call from the level-select grid to load the level
+ * data before the player taps. Failures are swallowed — this is best-effort.
+ */
+export function prefetchPreKVideoLevel(worldNumber: number, levelNumber: number): void {
+  const key = cacheKey(worldNumber, levelNumber);
+  const cached = levelCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return;
+  if (inflight.has(key)) return;
+  void buildVideoLevelFromDb(worldNumber, levelNumber).catch(() => {});
+}
+
+/** Synchronous cache peek — returns the cached level if it's already built. */
+export function getCachedPreKVideoLevel(
+  worldNumber: number,
+  levelNumber: number,
+): { level: VideoLevel | null; dbLevelId: string | null } | null {
+  const cached = levelCache.get(cacheKey(worldNumber, levelNumber));
+  if (!cached || cached.expiresAt <= Date.now()) return null;
+  return { level: cached.level, dbLevelId: cached.dbLevelId };
+}
+
+/**
+ * Hook: load DB-backed VideoLevel. If the cache already has it, returns
+ * synchronously with `loading=false` on the very first render — no spinner.
  */
 export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
-  const [level, setLevel] = useState<VideoLevel | null>(null);
-  const [dbLevelId, setDbLevelId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initial = getCachedPreKVideoLevel(worldNumber, levelNumber);
+  const [level, setLevel] = useState<VideoLevel | null>(initial?.level ?? null);
+  const [dbLevelId, setDbLevelId] = useState<string | null>(initial?.dbLevelId ?? null);
+  const [loading, setLoading] = useState(initial === null);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    (async () => {
-      const built = await buildVideoLevelFromDb(worldNumber, levelNumber);
-      const fetched = await fetchPreKDbLevel(worldNumber, levelNumber);
-      if (cancelled) return;
-      setLevel(built);
-      setDbLevelId(fetched?.level.id ?? null);
+    const cached = getCachedPreKVideoLevel(worldNumber, levelNumber);
+    if (cached) {
+      setLevel(cached.level);
+      setDbLevelId(cached.dbLevelId);
       setLoading(false);
-    })().catch(() => {
-      if (!cancelled) {
+      return () => { cancelled = true; };
+    }
+    setLoading(true);
+    buildVideoLevelFromDb(worldNumber, levelNumber)
+      .then(({ level, dbLevelId }) => {
+        if (cancelled) return;
+        setLevel(level);
+        setDbLevelId(dbLevelId);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
         setLevel(null);
         setDbLevelId(null);
         setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
+      });
+    return () => { cancelled = true; };
   }, [worldNumber, levelNumber]);
 
   return { level, dbLevelId, loading };
