@@ -11,7 +11,6 @@
 // for that level.
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { RPGOneWordReader } from "./RPGOneWordReader";
 import { NabuAdventure } from "./NabuAdventure";
 import { NabuVideoAdventure } from "./NabuVideoAdventure";
