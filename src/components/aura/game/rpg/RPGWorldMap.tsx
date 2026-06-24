@@ -36,6 +36,8 @@ import { AnimatedBookCounter } from "../effects/FlyingBookAnimation";
 import { MilestoneCelebration } from "../effects/MilestoneCelebration";
 import { RPGPlayerHUD } from "./RPGPlayerHUD";
 import { ReadingProgressPanel } from "./ReadingProgressPanel";
+import { BennyStanding } from "./BennyStanding";
+import prekBedroomBg from "@/assets/prek-bedroom-bg.png.asset.json";
 
 export interface WorldProgress {
   worldId: number;
