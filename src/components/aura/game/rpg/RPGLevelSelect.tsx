@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { getNabuHelpChip, getNabuLevelTitle } from "@/lib/nabuStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
+import { prefetchPreKVideoLevel } from "@/lib/preKLevelFromDb";
 
 // All possible enemy types in the campaign
 export type CampaignEnemyType = 
