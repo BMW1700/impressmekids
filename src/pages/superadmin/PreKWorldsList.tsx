@@ -124,6 +124,26 @@ const PreKWorldsList = () => {
     }
   };
 
+  const moveWorld = async (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= worlds.length) return;
+    const a = worlds[index];
+    const b = worlds[target];
+    const prev = worlds;
+    const next = [...worlds];
+    next[index] = { ...b, sort_order: index };
+    next[target] = { ...a, sort_order: target };
+    setWorlds(next);
+    const [r1, r2] = await Promise.all([
+      supabase.from("prek_worlds").update({ sort_order: target }).eq("id", a.id),
+      supabase.from("prek_worlds").update({ sort_order: index }).eq("id", b.id),
+    ]);
+    if (r1.error || r2.error) {
+      toast.error("Reorder failed");
+      setWorlds(prev);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
