@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play, Save } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play, Save, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
-import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
+import { PREK_VIDEO_BUCKET, invalidatePreKLevelCacheByDbId } from "@/lib/preKLevelFromDb";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
