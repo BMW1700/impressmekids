@@ -263,6 +263,31 @@ export function getCachedPreKVideoLevel(
 }
 
 /**
+ * Drop the cached entry for a given world+level so the next build pulls fresh
+ * data (trim marks, new uploads, edited copy). Called by the CMS after every
+ * mutation so the player never serves stale builds.
+ */
+export function invalidatePreKLevelCache(worldNumber: number, levelNumber: number): void {
+  const key = cacheKey(worldNumber, levelNumber);
+  levelCache.delete(key);
+  inflight.delete(key);
+}
+
+/**
+ * DB-id variant: the editor only knows the level UUID, not the world/level
+ * numbers, so we scan the cache and clear the matching entry. Cheap because
+ * the cache is tiny (one entry per visited level).
+ */
+export function invalidatePreKLevelCacheByDbId(dbLevelId: string): void {
+  for (const [key, entry] of levelCache.entries()) {
+    if (entry.dbLevelId === dbLevelId) {
+      levelCache.delete(key);
+      inflight.delete(key);
+    }
+  }
+}
+
+/**
  * Hook: load DB-backed VideoLevel. If the cache already has it, returns
  * synchronously with `loading=false` on the very first render — no spinner.
  */
@@ -271,11 +296,12 @@ export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
   const [level, setLevel] = useState<VideoLevel | null>(initial?.level ?? null);
   const [dbLevelId, setDbLevelId] = useState<string | null>(initial?.dbLevelId ?? null);
   const [loading, setLoading] = useState(initial === null);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const cached = getCachedPreKVideoLevel(worldNumber, levelNumber);
-    if (cached) {
+    if (cached && refreshTick === 0) {
       setLevel(cached.level);
       setDbLevelId(cached.dbLevelId);
       setLoading(false);
@@ -296,7 +322,35 @@ export function usePreKVideoLevel(worldNumber: number, levelNumber: number) {
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [worldNumber, levelNumber]);
+  }, [worldNumber, levelNumber, refreshTick]);
+
+  // Subscribe to live edits so an open student session picks up CMS changes
+  // without a republish/reload. Bust the cache + bump refreshTick to rebuild.
+  useEffect(() => {
+    if (!dbLevelId) return;
+    const channel = supabase
+      .channel(`prek-level-${dbLevelId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prek_levels", filter: `id=eq.${dbLevelId}` },
+        () => {
+          invalidatePreKLevelCacheByDbId(dbLevelId);
+          setRefreshTick((t) => t + 1);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prek_level_words", filter: `level_id=eq.${dbLevelId}` },
+        () => {
+          invalidatePreKLevelCacheByDbId(dbLevelId);
+          setRefreshTick((t) => t + 1);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dbLevelId]);
 
   return { level, dbLevelId, loading };
 }
