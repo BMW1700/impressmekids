@@ -165,22 +165,46 @@ const PreKWorldsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {worlds.map((w) => (
+            {worlds.map((w, idx) => (
               <Card key={w.id}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
-                      <CardTitle className="text-lg">{w.title}</CardTitle>
-                      <Badge variant={w.is_published ? "default" : "secondary"}>
-                        {w.is_published ? "Published" : "Draft"}
-                      </Badge>
-                      <Badge variant="outline">{w.difficulty}</Badge>
-                      <Badge variant="outline">{w.level_count} level{w.level_count === 1 ? "" : "s"}</Badge>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={idx === 0}
+                        onClick={() => moveWorld(idx, -1)}
+                        title="Move up"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        disabled={idx === worlds.length - 1}
+                        onClick={() => moveWorld(idx, 1)}
+                        title="Move down"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
                     </div>
-                    {w.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{w.description}</p>
-                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
+                        <CardTitle className="text-lg">{w.title}</CardTitle>
+                        <Badge variant={w.is_published ? "default" : "secondary"}>
+                          {w.is_published ? "Published" : "Draft"}
+                        </Badge>
+                        <Badge variant="outline">{w.difficulty}</Badge>
+                        <Badge variant="outline">{w.level_count} level{w.level_count === 1 ? "" : "s"}</Badge>
+                      </div>
+                      {w.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{w.description}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button asChild variant="outline" size="sm"><Link to={`/super-admin/prek/${w.id}`}>Open</Link></Button>
