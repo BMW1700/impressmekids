@@ -54,59 +54,6 @@ export const BennyStanding = ({ size = 260, className }: BennyStandingProps) => 
           }}
         />
 
-        {/* Tail wag overlay — clipped to tail region of the PNG, rotates around tail base */}
-        <motion.div
-          style={{
-            position: "absolute",
-            inset: 0,
-            transformOrigin: "30% 65%",
-            // Clip to the left side where Benny's tail sits in the source PNG
-            clipPath: "polygon(0% 38%, 32% 38%, 32% 88%, 0% 88%)",
-            WebkitClipPath: "polygon(0% 38%, 32% 38%, 32% 88%, 0% 88%)",
-          }}
-          animate={
-            reduceMotion
-              ? undefined
-              : { rotate: [0, 10, -6, 8, 0] }
-          }
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <img
-            src={bennyAsset.url}
-            alt=""
-            draggable={false}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              pointerEvents: "none",
-              userSelect: "none",
-            }}
-          />
-        </motion.div>
-
-        {/* Blink overlay — thin horizontal strip across the eyes */}
-        {!reduceMotion && (
-          <motion.div
-            style={{
-              position: "absolute",
-              left: "30%",
-              right: "22%",
-              top: "30%",
-              height: "4%",
-              background: "rgba(54, 30, 18, 0.95)",
-              borderRadius: "50%",
-              filter: "blur(1px)",
-            }}
-            animate={{ opacity: [0, 0, 0, 1, 0] }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "linear",
-              times: [0, 0.92, 0.95, 0.97, 1],
-            }}
-          />
-        )}
       </motion.div>
     </div>
   );
