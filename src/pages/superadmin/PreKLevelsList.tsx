@@ -50,12 +50,14 @@ const PreKLevelsList = () => {
   const load = async () => {
     if (!worldId) return;
     setLoading(true);
-    const [{ data: w }, { data: ls }] = await Promise.all([
+    const [{ data: w }, { data: ls }, { data: ws }] = await Promise.all([
       supabase.from("prek_worlds").select("id, title, world_number").eq("id", worldId).maybeSingle(),
       supabase.from("prek_levels").select("*, prek_level_words(count)").eq("world_id", worldId).order("level_number"),
+      supabase.from("prek_worlds").select("id, title, world_number").order("world_number"),
     ]);
     setWorld(w as World | null);
     setLevels((ls ?? []).map((l: any) => ({ ...l, word_count: l.prek_level_words?.[0]?.count ?? 0 })));
+    setAllWorlds((ws ?? []) as World[]);
     setLoading(false);
   };
 
