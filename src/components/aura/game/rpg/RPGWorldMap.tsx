@@ -320,33 +320,60 @@ export const RPGWorldMap = ({
     return prevWorld.levelsCompleted >= world.unlockRequirement;
   };
 
+  const isPrek = mapTheme === 'prek';
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden z-0">
+    <div
+      className={`min-h-screen p-4 relative overflow-hidden z-0 ${isPrek ? '' : 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900'}`}
+    >
       {/* Milestone celebrations */}
       <MilestoneCelebration currentCount={totalBooksRescued} />
 
-      {/* Animated background particles */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
-            }}
-            animate={{
-              y: [null, -100],
-              opacity: [0, 0.8, 0],
-            }}
-            transition={{
-              duration: 4 + Math.random() * 4,
-              delay: Math.random() * 5,
-              repeat: Infinity,
-            }}
+      {/* Pre-K bedroom background */}
+      {isPrek && (
+        <>
+          <img
+            src={prekBedroomBg.url}
+            alt=""
+            aria-hidden
+            draggable={false}
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
           />
-        ))}
-      </div>
+          <div className="absolute inset-0 bg-slate-950/45 pointer-events-none" aria-hidden />
+        </>
+      )}
+
+      {/* Animated background particles (non-Pre-K) */}
+      {!isPrek && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-purple-400/30 rounded-full"
+              initial={{
+                x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+                y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+              }}
+              animate={{
+                y: [null, -100],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: 4 + Math.random() * 4,
+                delay: Math.random() * 5,
+                repeat: Infinity,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Benny standing on the left (Pre-K only, desktop) */}
+      {isPrek && (
+        <div className="hidden lg:block absolute left-6 xl:left-10 top-[360px] z-[6] pointer-events-none">
+          <BennyStanding size={280} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="relative z-[5] flex items-center justify-between mb-6 flex-wrap gap-3">
