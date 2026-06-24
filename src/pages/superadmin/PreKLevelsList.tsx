@@ -265,6 +265,37 @@ const PreKLevelsList = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={moveDialogOpen} onOpenChange={setMoveDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Move "{moving?.title}" to another world</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Target World</Label>
+                <Select value={targetWorldId} onValueChange={onTargetWorldChange}>
+                  <SelectTrigger><SelectValue placeholder="Pick a world" /></SelectTrigger>
+                  <SelectContent>
+                    {allWorlds.filter((w) => w.id !== moving?.world_id).map((w) => (
+                      <SelectItem key={w.id} value={w.id}>#{w.world_number} — {w.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Level Number in target world</Label>
+                <Input type="number" value={targetLevelNumber} onChange={(e) => setTargetLevelNumber(Number(e.target.value))} />
+                <p className="text-xs text-muted-foreground mt-1">Must be unique within the target world.</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMoveDialogOpen(false)}>Cancel</Button>
+              <Button onClick={confirmMove} disabled={!targetWorldId}>Move</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
