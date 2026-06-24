@@ -82,8 +82,8 @@ const Index = () => {
                   asChild
                   className="group h-14 rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white"
                 >
-                  <Link to="/demos">
-                    Try the interactive demo
+                  <Link to="/auth">
+                    Start playing
                     <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </Button>
@@ -93,7 +93,7 @@ const Index = () => {
                   asChild
                   className="h-14 rounded-full border-white/20 bg-white/5 px-8 text-base font-medium text-white backdrop-blur hover:border-white/40 hover:bg-white/10 hover:text-white"
                 >
-                  <Link to="/auth">Request a pilot</Link>
+                  <Link to="/for-families">Meet Benny</Link>
                 </Button>
               </div>
               <p className="mt-8 text-xs uppercase tracking-[0.2em] text-white/40">

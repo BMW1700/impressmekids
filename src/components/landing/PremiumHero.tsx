@@ -111,8 +111,8 @@ export const PremiumHero = () => {
               asChild
               className="group h-14 rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] shadow-[0_8px_32px_-4px_hsl(48_100%_60%/0.4)] transition-all hover:scale-[1.02] hover:bg-white"
             >
-              <Link to="/demos">
-                Try the interactive demo
+              <Link to="/auth">
+                Start playing
                 <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </Button>
@@ -122,7 +122,7 @@ export const PremiumHero = () => {
               asChild
               className="h-14 rounded-full border-white/20 bg-white/5 px-8 text-base font-medium text-white backdrop-blur hover:border-white/40 hover:bg-white/10 hover:text-white"
             >
-              <Link to="/auth">Request a pilot</Link>
+              <Link to="/for-families">Meet Benny</Link>
             </Button>
           </motion.div>
 

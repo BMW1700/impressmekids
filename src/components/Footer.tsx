@@ -47,9 +47,6 @@ export const Footer = () => {
               <BookOpen className="h-3.5 w-3.5" />
               Scope &amp; Sequence
             </Link>
-            <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
-              Pricing
-            </Link>
             <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
               {t('footer.privacyPolicy')}
             </Link>

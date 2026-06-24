@@ -49,14 +49,14 @@ export const TestimonialSection = () => {
           <div className="text-center">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 py-6" asChild>
-                <Link to="/demos">
-                  Try Interactive Demos
+                <Link to="/auth">
+                  Start playing
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
-                <Link to="/auth">
-                  Request a Pilot
+                <Link to="/for-families">
+                  Meet Benny
                 </Link>
               </Button>
             </div>
