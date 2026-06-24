@@ -533,7 +533,7 @@ export const RPGWorldMap = ({
 
       {/* Pre-K horizontal Reading Journey strip */}
       {isPrek && studentId && (
-        <div className="max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[320px] xl:ml-[360px] lg:mr-auto px-1">
+        <div className="hidden lg:block max-w-4xl mx-auto relative z-[5] mb-6 lg:ml-[320px] xl:ml-[360px] lg:mr-auto px-1">
           <ReadingProgressPanel studentId={studentId} gradeMode={gradeMode} layout="horizontal" />
         </div>
       )}
