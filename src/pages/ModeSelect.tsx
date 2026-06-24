@@ -23,7 +23,7 @@ const ModeSelect = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const skipRedirect = (location.state as any)?.skipRedirect === true;
-  const { user, profile, isLoading, isProfileLoading } = useAuth();
+  const { user, session, profile, isLoading, isProfileLoading, signOut } = useAuth();
   const { isSuperAdmin } = useIsSuperAdmin();
   const { resolvedTheme } = useTheme();
   const isLight = resolvedTheme === "light";
