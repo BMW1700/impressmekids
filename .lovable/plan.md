@@ -1,63 +1,64 @@
+# Phase B — RLS pass on the next tier of hot tables
 
-# Brutally Honest Re-Audit
+## Goal
+Apply the same proven pattern (consolidate overlapping SELECT policies, wrap `auth.uid()` in `(SELECT auth.uid())`) to the next tier of frequently-read tables. Then stop, measure, and decide what's next based on real numbers.
 
-I went back and verified everything before answering. I was **partially wrong** in my last message. Here's the real picture.
+## Scope — tables touched
+One migration, policy changes only. No schema changes, no data changes, no frontend changes.
 
-## What I got right
-- Storage savings from cutting school tables = **basically zero** (~5 MB out of 4 GB). That part stands.
-- The slow queries ARE dominated by school-mode tables (`student_behavior_stats`, `classroom_students`, `assignments`). That part stands.
+- `reading_sessions` — 8 policies, hit on every game session save
+- `aura_records` — 13 policies (worst offender by policy count)
+- `aura_access_log` — 2 policies, written on every AURA view
+- `campaign_battle_sessions` — 7 policies, hit during LexiQuest battles
+- `parent_student_links` — 9 policies, referenced by many other policies as a subquery
+- `student_reading_stats` — 4 policies, hit on dashboard loads
+- `parent_accounts` — 6 policies, hit on every parent request
+- `classrooms` — 6 policies, hit on every classroom page
 
-## What I got wrong
-I told you the fix was "gate school-mode queries behind a role check in shared dashboards." That would help a little, but it is **not the root cause**. I jumped to a conclusion without checking indexes and RLS policies first. I just checked both. Here is what I found:
+## What the migration does for each table
+1. `DROP` the existing overlapping SELECT policies.
+2. `CREATE` one consolidated SELECT policy with all access conditions OR'd into a single expression so Postgres can short-circuit.
+3. Replace bare `auth.uid()` with `(SELECT auth.uid())` so the value is cached once per query, not re-evaluated per row.
+4. Keep INSERT/UPDATE/DELETE policies intact unless they have the same multi-policy pattern, in which case consolidate them too.
+5. Preserve every existing access rule — students, parents, teachers, admins keep exactly the same permissions they have today.
 
-### The actual root cause: RLS policy overhead
+Where helpful, reuse the existing `SECURITY DEFINER` helpers (`is_teacher_of_classroom`, `is_parent_of_student`, `has_role`) so subqueries become single indexed function calls instead of inline joins.
 
-`student_behavior_stats WHERE student_id = $1 LIMIT 1` is averaging **166 ms** per call. That is a single-row lookup on an indexed column. It should take **under 1 ms**.
+## Expected outcome
+- Cumulative DB execution time on these tables drops 3-5×.
+- Stacked on top of the last migration: estimated concurrent capacity goes from ~3K → ~6-10K active users.
+- Zero feature changes, zero risk to data, fully reversible (each `DROP POLICY` + `CREATE POLICY` pair can be inverted).
 
-Why is it 166x too slow? The table has **4 separate SELECT policies** that get OR'd together on every read:
-1. Students viewing own stats — `student_id = auth.uid()`
-2. Parents viewing kids — calls `is_parent_of_student(student_id)`
-3. Teachers viewing classroom — calls `is_teacher_of_classroom(classroom_id)`
-4. (plus role-check overhead)
+## After the migration ships
+1. Wait 24 hours for live traffic to populate fresh `pg_stat_statements`.
+2. Re-pull the slow-query report and `db_health` snapshot.
+3. Compare before/after numbers on the actual top offenders.
+4. Decide whether to proceed to Phase C (`user_roles` indexing) or Phase D (rollback hunt) based on which is now the biggest remaining bottleneck.
 
-Postgres evaluates **all of them per row** unless they're written to short-circuit, and the `is_parent_of_*` / `is_teacher_of_*` functions hit other tables. `auth.uid()` is called per row instead of once per query because the policies don't use the `(SELECT auth.uid())` wrapper pattern.
+## What is NOT in this plan
+- No table drops, no role removals, no Clever changes.
+- No frontend edits.
+- No Cloud compute upgrade (that's a UI toggle, separate decision).
+- No partitioning, read replicas, or sharding — those come after we exhaust the cheap wins.
 
-`classroom_students` has **5 OR'd policies** with the same problem — that's why a one-row indexed lookup averages 13 ms across 15,000 calls.
+## Technical detail (for reference)
+The pattern, illustrated on one table:
 
-**The indexes are already there.** I verified. The slowness is purely the policies running RLS function calls in a hot loop on every row evaluation.
+```sql
+-- Before: 4 separate policies, each evaluated per row
+CREATE POLICY "students view own"     ON reading_sessions FOR SELECT USING (student_id = auth.uid());
+CREATE POLICY "parents view kids"     ON reading_sessions FOR SELECT USING (is_parent_of_student(student_id));
+CREATE POLICY "teachers view class"   ON reading_sessions FOR SELECT USING (is_teacher_of_classroom(classroom_id));
+CREATE POLICY "admins view all"       ON reading_sessions FOR SELECT USING (has_role(auth.uid(), 'admin'));
 
-## What this means for your strategy
+-- After: 1 policy with cached auth.uid(), short-circuit OR
+CREATE POLICY "reading_sessions_select" ON reading_sessions FOR SELECT
+USING (
+  student_id = (SELECT auth.uid())
+  OR is_teacher_of_classroom(classroom_id)
+  OR is_parent_of_student(student_id)
+  OR has_role((SELECT auth.uid()), 'admin')
+);
+```
 
-You do not need to cut school mode to get massive concurrency wins. The same data, same tables, same features — just rewritten policies — will give you the **2-3x concurrency improvement** I was promising from a 70-table demolition. With less risk, no broken pages, no feature loss, no marketing-collateral changes.
-
-## The correct course of action
-
-### Phase A — RLS performance pass (the real win, 1 migration, ~30 min, reversible)
-
-For each hot table (`student_behavior_stats`, `classroom_students`, `attendance_records`, `assignment_submissions`, `assignments`):
-
-1. Replace `auth.uid()` with `(SELECT auth.uid())` inside policies — Postgres caches the inner SELECT once per query instead of running it per row. This alone gives 5-10x on hot paths.
-2. Consolidate the 4-5 OR'd SELECT policies into **one** policy with a single OR'd expression. Postgres can short-circuit a single expression but not separate policies.
-3. Confirm `is_parent_of_student`, `is_teacher_of_classroom`, `has_role` are `STABLE SECURITY DEFINER` with `SET search_path = public` (they probably are; I'll verify in build mode).
-
-Expected impact based on the slow-query data: cumulative DB execution time drops from ~1,500 sec to ~150-300 sec. **Concurrency capacity roughly 3-5x.** No feature changes. No frontend changes.
-
-### Phase B — Surgical query gating (small win, optional)
-
-Only after Phase A. The shared `StudentDashboard` / `ParentDashboard` / `ChildDetail` still query empty school tables for game-only users. Gate those queries with `enabled: profile.role === 'student' && hasClassroom` in React Query. Removes ~30% of redundant calls. Maybe another 1.3x on top of Phase A.
-
-### Phase C — Keep everything else
-
-No table drops. No page deletes. No role removals. No Clever removal. Pilot/contract paperwork (Phase 11 from before) is its own track and doesn't need any of this code work to start.
-
-## Risk and reversibility
-
-- Phase A is a single migration. Every policy change is a `DROP POLICY` + `CREATE POLICY` pair. Trivially reversible.
-- Zero risk to data. Zero risk to features. Zero risk to roles.
-- I run `EXPLAIN ANALYZE` on the top 3 slow queries before and after to confirm the win.
-
-## What I need from you
-
-Say "do Phase A" and I'll switch to build mode and ship the RLS migration. We measure, then decide if Phase B is worth it.
-
-If you want, I can also re-run the slow-queries report 24h after Phase A to show you the actual numbers. That's the honest way to validate I'm not blowing smoke.
+Same access semantics. One expression Postgres can short-circuit. `auth.uid()` evaluated once per query instead of once per row.
