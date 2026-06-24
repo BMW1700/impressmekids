@@ -174,13 +174,33 @@ const PreKLevelBuilder = () => {
       );
       const firstErr = results.find((r) => r.error)?.error;
       if (firstErr) throw firstErr;
-      toast.success("Progress saved");
+      invalidatePreKLevelCacheByDbId(level.id);
+      toast.success("Saved — live for the next play");
     } catch (e: any) {
       toast.error(e?.message ?? "Save failed");
     } finally {
       setSaving(false);
     }
   };
+
+  // Manual "Update Live" — flush pending edits, bust the cache, and bump the
+  // level row so any open student session picks up the changes immediately
+  // via the realtime subscription in usePreKVideoLevel.
+  const pushLive = async () => {
+    if (!level) return;
+    await saveProgress();
+    invalidatePreKLevelCacheByDbId(level.id);
+    const { error } = await supabase
+      .from("prek_levels")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", level.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Pushed live — next play will use these edits");
+  };
+
 
   const load = async () => {
     if (!levelId) return;
