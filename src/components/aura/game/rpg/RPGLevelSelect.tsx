@@ -104,6 +104,19 @@ export const RPGLevelSelect = ({
 
   const isTutorialWorld = world.id === 0;
 
+  // Pre-K worlds load videos from the database + Storage. Warm the cache for
+  // every unlocked level the moment the grid mounts so that tapping a card
+  // is instant (zero spinner, zero DB roundtrips at tap time).
+  useEffect(() => {
+    if (world.mode !== 'prek') return;
+    for (const lvl of levels) {
+      if (lvl.isUnlocked) {
+        prefetchPreKVideoLevel(world.id, Number(lvl.id));
+      }
+    }
+  }, [world.id, world.mode, levels]);
+
+
   const handleLevelClick = (level: CampaignLevel) => {
     // For tutorial world, show the tutorial overlay instead of battle mode selector
     if (isTutorialWorld) {
