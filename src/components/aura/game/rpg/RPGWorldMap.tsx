@@ -329,18 +329,18 @@ export const RPGWorldMap = ({
       {/* Milestone celebrations */}
       <MilestoneCelebration currentCount={totalBooksRescued} />
 
-      {/* Pre-K bedroom background */}
+      {/* Pre-K bedroom background — fixed to viewport so it doesn't scroll */}
       {isPrek && (
         <>
-          <div className="absolute inset-0 bg-slate-900 pointer-events-none z-0" aria-hidden />
+          <div className="fixed inset-0 bg-slate-900 pointer-events-none z-0" aria-hidden />
           <img
             src={prekBedroomBg.url}
             alt=""
             aria-hidden
             draggable={false}
-            className="absolute inset-0 w-full h-full object-cover object-top pointer-events-none select-none z-0"
+            className="fixed inset-0 w-screen h-screen object-cover object-center pointer-events-none select-none z-0"
           />
-          <div className="absolute inset-0 bg-slate-950/45 pointer-events-none z-0" aria-hidden />
+          <div className="fixed inset-0 bg-slate-950/45 pointer-events-none z-0" aria-hidden />
         </>
       )}
 
