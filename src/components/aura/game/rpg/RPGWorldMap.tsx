@@ -443,7 +443,19 @@ export const RPGWorldMap = ({
             className="hidden sm:flex"
           />
         )}
-        
+
+        {/* Pre-K → Benny's Village entry */}
+        {isPrek && (
+          <Button
+            onClick={() => navigate('/game/village')}
+            className="bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-bold shadow-lg"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Benny's Village
+          </Button>
+        )}
+
+
         <motion.div 
           className="flex items-center gap-4"
           initial={{ scale: 0.9, opacity: 0 }}
