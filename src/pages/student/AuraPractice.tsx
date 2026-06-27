@@ -57,6 +57,7 @@ import type { CuratedStory as Story } from "@/data/curatedStories";
 import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { awardVillageProgress } from "@/hooks/useVillage";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
@@ -372,6 +373,8 @@ const AuraPractice = () => {
           worldNumber: selectedWorld.id,
           goldEarned: preKStats.stars * 5,
         });
+        // Award 1 Village Token per completed Pre-K level + sync zone unlocks
+        await awardVillageProgress(user.id, 1);
         refetch();
       } catch (e) {
         console.error('[Pre-K] Failed to persist completion:', e);

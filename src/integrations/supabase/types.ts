@@ -4866,6 +4866,39 @@ export type Database = {
           },
         ]
       }
+      player_village_state: {
+        Row: {
+          created_at: string
+          last_village_visit_at: string | null
+          owned_item_ids: string[]
+          placed_items: Json
+          tokens: number
+          unlocked_zone_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_village_visit_at?: string | null
+          owned_item_ids?: string[]
+          placed_items?: Json
+          tokens?: number
+          unlocked_zone_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_village_visit_at?: string | null
+          owned_item_ids?: string[]
+          placed_items?: Json
+          tokens?: number
+          unlocked_zone_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       practice_exercises: {
         Row: {
           adaptive_metadata: Json | null
@@ -8297,6 +8330,134 @@ export type Database = {
         }
         Relationships: []
       }
+      village_items: {
+        Row: {
+          created_at: string
+          gold_cost: number
+          id: string
+          image_url: string | null
+          name: string
+          rarity: string
+          slug: string
+          sort_order: number
+          token_cost: number
+          unlock_requirement: Json
+          updated_at: string
+          zone_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          gold_cost?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          rarity?: string
+          slug: string
+          sort_order?: number
+          token_cost?: number
+          unlock_requirement?: Json
+          updated_at?: string
+          zone_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          gold_cost?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          rarity?: string
+          slug?: string
+          sort_order?: number
+          token_cost?: number
+          unlock_requirement?: Json
+          updated_at?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "village_items_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "village_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      village_unlock_log: {
+        Row: {
+          id: string
+          item_id: string | null
+          reason: string
+          unlocked_at: string
+          user_id: string
+          zone_id: string | null
+        }
+        Insert: {
+          id?: string
+          item_id?: string | null
+          reason: string
+          unlocked_at?: string
+          user_id: string
+          zone_id?: string | null
+        }
+        Update: {
+          id?: string
+          item_id?: string | null
+          reason?: string
+          unlocked_at?: string
+          user_id?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "village_unlock_log_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "village_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "village_unlock_log_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "village_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      village_zones: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          unlock_requirement: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+          unlock_requirement?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          unlock_requirement?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       visitors: {
         Row: {
           badge_number: string | null
@@ -8622,6 +8783,25 @@ export type Database = {
         }
         Returns: Json
       }
+      award_village_progress: {
+        Args: { _tokens?: number; _user_id: string }
+        Returns: {
+          created_at: string
+          last_village_visit_at: string | null
+          owned_item_ids: string[]
+          placed_items: Json
+          tokens: number
+          unlocked_zone_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_village_state"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_parent_view_classroom: {
         Args: { _classroom_id: string; _user_id: string }
         Returns: boolean
@@ -8645,6 +8825,14 @@ export type Database = {
       check_student_id_signin_rate: {
         Args: { p_ip_hash: string; p_student_id_attempt: string }
         Returns: Json
+      }
+      check_village_unlocks: {
+        Args: { _user_id: string }
+        Returns: {
+          reason: string
+          zone_id: string
+          zone_slug: string
+        }[]
       }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       cleanup_old_signin_attempts: { Args: never; Returns: undefined }

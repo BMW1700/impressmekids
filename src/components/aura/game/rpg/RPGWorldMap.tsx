@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap, BookOpen, ChevronRight } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap, BookOpen, ChevronRight, Home } from "lucide-react";
 import { campaignWorlds, CampaignWorld, CampaignLevel } from "@/lib/campaignData";
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
@@ -443,7 +443,19 @@ export const RPGWorldMap = ({
             className="hidden sm:flex"
           />
         )}
-        
+
+        {/* Pre-K → Benny's Village entry */}
+        {isPrek && (
+          <Button
+            onClick={() => navigate('/game/village')}
+            className="bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-bold shadow-lg"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Benny's Village
+          </Button>
+        )}
+
+
         <motion.div 
           className="flex items-center gap-4"
           initial={{ scale: 0.9, opacity: 0 }}
