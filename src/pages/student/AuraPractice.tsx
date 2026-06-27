@@ -57,6 +57,7 @@ import type { CuratedStory as Story } from "@/data/curatedStories";
 import { CustomStoryChooser } from "@/components/customStories/CustomStoryChooser";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { awardVillageProgress } from "@/hooks/useVillage";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
