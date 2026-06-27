@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap, BookOpen, ChevronRight } from "lucide-react";
+import { ArrowLeft, Lock, Star, Swords, Crown, TreePine, Mountain, Castle, Flame, Sparkles, Gem, Cloud, Waves, Eclipse, GraduationCap, ShoppingBag, Zap, BookOpen, ChevronRight, Home } from "lucide-react";
 import { campaignWorlds, CampaignWorld, CampaignLevel } from "@/lib/campaignData";
 import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
