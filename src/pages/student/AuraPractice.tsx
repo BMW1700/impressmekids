@@ -373,6 +373,8 @@ const AuraPractice = () => {
           worldNumber: selectedWorld.id,
           goldEarned: preKStats.stars * 5,
         });
+        // Award 1 Village Token per completed Pre-K level + sync zone unlocks
+        await awardVillageProgress(user.id, 1);
         refetch();
       } catch (e) {
         console.error('[Pre-K] Failed to persist completion:', e);
