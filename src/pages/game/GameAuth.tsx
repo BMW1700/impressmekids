@@ -621,8 +621,17 @@ const GameAuth = () => {
             </TabsContent>
           </Tabs>
         </Card>
+        <div className="mt-4 text-center">
+          <Link
+            to="/school/auth"
+            className="text-xs text-white/60 hover:text-white underline underline-offset-4"
+          >
+            Teacher / School login →
+          </Link>
+        </div>
       </div>
     </div>
+
   );
 };
 
