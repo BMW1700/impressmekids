@@ -57,10 +57,13 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
       // Build the list of storage paths we need to sign in a single batch.
       const pathsToSign = new Set<string>();
       const directs = new Map<string, string>(); // key -> already-resolvable URL
+      const cdnHits = new Map<string, string>(); // path -> R2 CDN URL
       for (const [key, v] of [...videoEntries, ...posterEntries]) {
         if (!v) continue;
-        if (isAbsolute(v)) directs.set(key, v);
-        else pathsToSign.add(v);
+        if (isAbsolute(v)) { directs.set(key, v); continue; }
+        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, v);
+        if (cdn) { cdnHits.set(v, cdn); continue; }
+        pathsToSign.add(v);
       }
 
       let signed: Record<string, string> = {};
