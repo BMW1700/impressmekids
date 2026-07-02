@@ -57,38 +57,32 @@ export const useCampaignAssets = () => {
 
       data?.forEach((row: { asset_key: string; asset_url: string | null }) => {
         if (row.asset_key === ASSET_KEYS.ELLA_AVATAR) {
-          result.ellaAvatarUrl = row.asset_url || undefined;
+          result.ellaAvatarUrl = cdn(row.asset_url);
         } else if (row.asset_key === ASSET_KEYS.GROG_AVATAR) {
-          result.grogAvatarUrl = row.asset_url || undefined;
+          result.grogAvatarUrl = cdn(row.asset_url);
         } else if (row.asset_key === ASSET_KEYS.CAMPAIGN_INTRO) {
-          result.campaignIntroVideoUrl = row.asset_url || undefined;
+          result.campaignIntroVideoUrl = cdn(row.asset_url);
         } else if (row.asset_key === ASSET_KEYS.CAMPAIGN_INTRO_ARRAY) {
-          try {
-            result.campaignIntroVideoUrls = row.asset_url ? JSON.parse(row.asset_url) : [];
-          } catch { result.campaignIntroVideoUrls = []; }
+          result.campaignIntroVideoUrls = cdnArr(row.asset_url);
         } else if (row.asset_key.startsWith(ASSET_KEYS.WORLD_INTRO_ARRAY_PREFIX)) {
           const worldNum = parseInt(row.asset_key.replace(ASSET_KEYS.WORLD_INTRO_ARRAY_PREFIX, ''), 10);
           if (!isNaN(worldNum) && row.asset_url) {
-            try {
-              result.worldIntroVideoArrays![worldNum] = JSON.parse(row.asset_url);
-            } catch { result.worldIntroVideoArrays![worldNum] = []; }
+            result.worldIntroVideoArrays![worldNum] = cdnArr(row.asset_url);
           }
         } else if (row.asset_key.startsWith(ASSET_KEYS.WORLD_INTRO_PREFIX)) {
           const worldNum = parseInt(row.asset_key.replace(ASSET_KEYS.WORLD_INTRO_PREFIX, ''), 10);
           if (!isNaN(worldNum) && row.asset_url) {
-            result.worldIntroVideos![worldNum] = row.asset_url;
+            result.worldIntroVideos![worldNum] = cdn(row.asset_url) ?? row.asset_url;
           }
         } else if (row.asset_key.startsWith(ASSET_KEYS.STORY_INTRO_ARRAY_PREFIX)) {
           const storyTitle = row.asset_key.replace(ASSET_KEYS.STORY_INTRO_ARRAY_PREFIX, '');
           if (row.asset_url) {
-            try {
-              result.storyIntroVideoArrays![storyTitle] = JSON.parse(row.asset_url);
-            } catch { result.storyIntroVideoArrays![storyTitle] = []; }
+            result.storyIntroVideoArrays![storyTitle] = cdnArr(row.asset_url);
           }
         } else if (row.asset_key.startsWith(ASSET_KEYS.STORY_INTRO_PREFIX)) {
           const storyTitle = row.asset_key.replace(ASSET_KEYS.STORY_INTRO_PREFIX, '');
           if (row.asset_url) {
-            result.storyIntroVideos![storyTitle] = row.asset_url;
+            result.storyIntroVideos![storyTitle] = cdn(row.asset_url) ?? row.asset_url;
           }
         }
       });
