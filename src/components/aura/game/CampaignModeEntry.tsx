@@ -13,6 +13,7 @@ import { CampaignVideoGate } from "./CampaignVideoGate";
 import { CampaignAssetUploader } from "./CampaignAssetUploader";
 import { campaignWorlds, princessElla, grogTheGoblinKing, categoryToWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
+import { getCdnUrl } from "@/lib/cdn";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EnemyType } from "@/lib/battleMechanics";
@@ -77,11 +78,12 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
       if (error) throw error;
       
       const { data: urlData } = supabase.storage.from('campaign-assets').getPublicUrl(data.path);
-      
+      const finalUrl = getCdnUrl('campaign-assets', data.path) ?? urlData.publicUrl;
+
       if (character === 'ella') {
-        updateEllaAvatar(urlData.publicUrl);
+        updateEllaAvatar(finalUrl);
       } else {
-        updateGrogAvatar(urlData.publicUrl);
+        updateGrogAvatar(finalUrl);
       }
       
       toast({ title: "Avatar updated!", description: `${character === 'ella' ? 'Princess Ella' : 'Grog'}'s avatar has been updated.` });
