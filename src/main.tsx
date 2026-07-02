@@ -8,6 +8,8 @@ import { setupGlobalErrorHandler } from "./lib/globalErrorHandler";
 import ErrorBoundary from "./components/error/ErrorBoundary";
 import { initCapacitor } from "./lib/native/capacitorBootstrap";
 
+const PRODUCTION_BUILD_MARKER = "r2-cdn-followup-2026-07-02-0945";
+
 // Initialize monitoring after first paint so it does not slow the landing screen.
 const startMonitoring = () => initSentry();
 globalThis.setTimeout(startMonitoring, 5000);
@@ -17,6 +19,9 @@ setupGlobalErrorHandler();
 
 // Initialize Capacitor native bridges (no-op on web)
 initCapacitor();
+
+// Harmless deploy marker: forces a fresh frontend bundle hash for CDN verification.
+document.documentElement.dataset.deployMarker = PRODUCTION_BUILD_MARKER;
 
 // Guard against runaway history.replaceState loops (prevents blank-screen crash)
 // Some browsers throw a SecurityError if replaceState is called >100 times / 10s.
