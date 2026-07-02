@@ -1,73 +1,52 @@
-## Current state (honest)
+# Post-Publish Audit — Brutally Honest
 
-- 1000 files copied to R2. 0 failed. ✅
-- App is **still** serving media from Supabase Storage. ❌
-- Egress cost reduction so far: **$0**.
+## Verdict
+**Cutover is real but not 100%.** The high-volume path (student pre-K video/audio playback) is fully on R2. Four call sites still hit Supabase Storage on migrated buckets. Cost-at-scale claim is TRUE for ~95% of egress, FALSE as an absolute.
 
-The migration copied the files. It did not cut over. Those are two different things.
+## Facts
 
-## Plan: actually cut over so costs drop
+**Confirmed working (production, live audit):**
+- `VITE_USE_R2_CDN="true"` set in `.env`.
+- `cdn.nabulearn.com` returns 200 on real objects (verified prior turn).
+- Six buckets flagged R2-enabled in `src/lib/cdn.ts`: `prek-level-videos`, `prek-level-audio`, `world-backgrounds`, `campaign-assets`, `avatars`, `email-assets`.
+- Student player: 0 Supabase signed-URL calls (verified last turn).
+- Super-admin PreKLevelBuilder: 0 Supabase signed-URL calls after last fix (verified last turn).
+- R2 bucket: 1000/1000 files copied, 0 failures.
 
-### Step 1 — Verify R2 objects are publicly reachable
+**Residual Supabase-egress leaks (unrewritten `getPublicUrl` on migrated buckets):**
 
-Pick 3 known files (e.g. a Benny intro video, a hero image, an audio clip). Open each in the browser at:
+| File | Bucket | Impact |
+|---|---|---|
+| `src/components/student/sections/AccountSection.tsx:374` | `avatars` | Every student avatar upload/render → Supabase URL |
+| `src/components/aura/game/CampaignModeEntry.tsx:79` | `campaign-assets` | Every campaign entry screen (high traffic) |
+| `src/components/aura/game/CampaignVideoGate.tsx:175` | `campaign-assets` | Every campaign video gate render |
+| `src/components/aura/game/CampaignAssetUploader.tsx:108` | `campaign-assets` | Admin uploads only (low volume) |
 
-```
-https://cdn.nabulearn.com/<bucket>/<path>
-```
+These return `sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/...` URLs. Browsers hit Supabase directly, not R2. Supabase egress accrues.
 
-If they load: green light.
-If they 403/404: fix `cdn.nabulearn.com` custom-domain binding before proceeding. Do NOT flip the flag on a broken CDN — the app will break for every user.
+**Not leaks (correct behavior):**
+- `useClassroomSyllabus.ts`, `QuestionAnswerForm.tsx`, `StudentQuestionView.tsx`, `useAudioRecorder.ts`, `WordByWordReader.tsx`, `AudioPlaybackButton.tsx`, `TeacherWordVerification.tsx`, `preKAuraSubmit.ts` → private buckets (`aura-audio`, `assignment-*`, `classroom-syllabus`) intentionally excluded from R2 (FERPA/private).
+- Upload code paths (`.from(X).upload(...)`) don't cause egress.
 
-### Step 2 — Identify which buckets are safe to flip
+## Cost at Scale — Straight Answer
 
-Query `r2_migration_log` grouped by bucket to see exactly which buckets have copies in R2. Then classify:
+**Cannot give you a hard number without leak closure + 48h of production metrics.** What I can commit to:
 
-- **Public buckets** (Benny videos, world backgrounds, hero images, story audio, avatars) → safe to flip.
-- **Private/signed-URL buckets** (assignment question images, private uploads, anything path-scoped to `<classroom_id>/...`) → stay on Supabase for now. These are ~5% of egress and need a separate signer function.
+- **Pre-K video/audio (the whale, ~90% of prior egress):** now $0 Supabase egress. Served from R2 → Cloudflare CDN. Egress from R2 to end user = **$0/GB** (Cloudflare bandwidth alliance). R2 storage ≈ $0.015/GB/mo. Class A operations $4.50/M, Class B $0.36/M.
+- **Campaign assets + avatars (residual leaks above):** still on Supabase Storage at **$0.09/GB egress**. Volume depends on active campaign users × asset size. Non-zero. Will show up in your bill.
+- **Private buckets (aura-audio recordings, assignment media):** never migrated by design. Supabase egress applies. Same as before cutover.
 
-I will list the buckets and mark each one before we touch code.
+Bottom line: **big cost reduction is real. "Zero Supabase egress" is not, until the four leaks are patched.** Anyone telling you 100% cutover right now is lying.
 
-### Step 3 — Enable R2 for public buckets only
+## Plan to Close the Gap
 
-Edit `src/lib/cdn.ts`:
+1. **Patch 4 leak sites** — wrap each `getPublicUrl` call with `getCdnUrl(bucket, path)` short-circuit (same pattern already applied to `PreKLevelBuilder.tsx`). Files:
+   - `src/components/student/sections/AccountSection.tsx`
+   - `src/components/aura/game/CampaignModeEntry.tsx`
+   - `src/components/aura/game/CampaignVideoGate.tsx`
+   - `src/components/aura/game/CampaignAssetUploader.tsx`
+2. **Add lint guard** — grep-based pre-commit check that flags `supabase.storage.from('<migrated-bucket>').getPublicUrl` without a `getCdnUrl` companion. Prevents regression.
+3. **Republish** and re-run authed Playwright sweep on `/student/dashboard` (avatar), `/games/aura/campaign` (campaign entry + video gate). Confirm Network tab shows 0 requests to `*.supabase.co/storage` for those buckets.
+4. **48h metrics pull** — after leak closure, compare Supabase egress dashboard vs pre-cutover baseline and R2 request count. Only then can I quote you a real $/month at your current traffic.
 
-```ts
-const R2_ENABLED_BUCKETS = new Set<string>([
-  "pre-k-videos",
-  "world-backgrounds",
-  "story-audio",
-  "avatars",
-  // ...only the ones confirmed public + copied
-]);
-```
-
-And add `VITE_USE_R2_CDN=true` to `.env`.
-
-### Step 4 — Publish and verify with the Network tab
-
-Publish the frontend. Then open the app, load a Pre-K level, and check the browser Network tab:
-
-- Media requests should go to `cdn.nabulearn.com` ✅
-- Media requests should NOT go to `*.supabase.co/storage/...` ❌
-
-If any request still hits Supabase, that specific code path is bypassing `getCdnUrl()` and needs to be patched.
-
-### Step 5 — Monitor for 24 hours
-
-- Watch for broken images/videos in Sentry.
-- Watch backend egress metrics drop.
-- Keep the flag reversible: flipping `VITE_USE_R2_CDN=false` and republishing instantly restores Supabase serving.
-
-### Step 6 — Later (not today): private buckets
-
-Build a small signer edge function that returns time-limited R2 signed URLs for the private buckets (assignment images, etc.). Migrate those, then flip. This closes the last ~5% of egress.
-
-## What I can promise after this plan runs
-
-- **After Step 4**: I can confirm from the Network tab whether media is served from R2. That's the only actual proof.
-- **After ~48h of monitoring**: I can confirm the backend egress line item dropped in the usage metrics.
-
-Anyone (including me) claiming "costs are down 100% guaranteed" before Step 4 is bullshitting you.
-
-## Approve this and I'll execute Steps 1–4 back to back.
+Approve and I'll execute all four patches + verification in one pass.
