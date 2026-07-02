@@ -5596,6 +5596,51 @@ export type Database = {
           },
         ]
       }
+      r2_migration_log: {
+        Row: {
+          attempts: number
+          bucket: string
+          content_type: string | null
+          copied_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          path: string
+          r2_key: string | null
+          size: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          bucket: string
+          content_type?: string | null
+          copied_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          path: string
+          r2_key?: string | null
+          size?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          bucket?: string
+          content_type?: string | null
+          copied_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          path?: string
+          r2_key?: string | null
+          size?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reading_achievements: {
         Row: {
           achievement_type: string
