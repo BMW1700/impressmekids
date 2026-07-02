@@ -1,62 +1,57 @@
-# Nabu Village — Full Build, Reading-Gated Unlocks
+# Back to Scale + Cost Plan — What We Do Tonight
 
-Honest take first: your instinct is right. Gating unlocks behind reading levels solves the #1 risk of the full vision (kids playing decorator instead of reading). That converts the "second game" problem into a reward loop for the *actual* game. I'm in. Here's how we ship it without it eating 6 months.
+Recap of where we landed before the teacher-login detour:
 
-## The core loop we're selling
+- Your **real** cost driver at 100k users is **network egress** (video streaming), not database or storage.
+- Benny videos in storage cost **~$0.05/mo** — not the problem.
+- Migrating off Lovable Cloud to standalone Supabase **only saves ~$500–$1,500/mo** at 100k scale, and risks breaking Clever SSO + Google OAuth 2 weeks before launch.
+- **Cloudflare on your own account** is the single highest-ROI move: kills 80–95% of egress and drops projected 100k-user bill from **$17k–$32k/mo → $2k–$4k/mo**.
+- Jacob's signup failure = Supabase Auth default rate limit (2 signups/hr per IP). Trivial to raise.
 
-```text
-Read a level  →  Earn Gold + a Village Token  →  Unlock zone / item / pet  →
-  See Benny react in the village  →  Pulled back to read the next level
-```
+## The Plan (tonight, ~90 min, no code migration, no risk to Clever/Google)
 
-Village is **only reachable from the Pre-K map** and **every meaningful unlock requires reading progress**, not just gold. Gold alone can't buy a new zone — that needs a Token, and Tokens only drop from completing levels.
+### Step 1 — Fix the signup rate limit (10 min)
+Raise the auth signup rate limit from the default 2/hr per IP to something realistic for a daycare / classroom (30 signups/hr per IP). This is a config change on your backend auth settings — not a code change, not a migration. No downtime. Jacob and future interns/teachers can create accounts.
 
-## Unlock ladder (gated by Pre-K world/level progress)
+### Step 2 — Set up your own Cloudflare account (30 min)
+1. Create free Cloudflare account (use your business email — same one as your domain registrar login).
+2. Add `nabulearn.com` as a site (Free plan is fine to start).
+3. Cloudflare will scan your existing DNS and show 2 nameservers to copy.
+4. Log into your **domain registrar** (where you bought `nabulearn.com`) and replace the nameservers with Cloudflare's.
+5. Wait 15–60 min for propagation.
 
-| Stage | Reading requirement | Unlocks in village |
+### Step 3 — Configure the egress-killer cache rules (20 min)
+Once Cloudflare is active:
+- SSL/TLS → **Full (strict)** + Always Use HTTPS.
+- Caching → Create a **Cache Rule**: for `*.mp4`, `*.webm`, `*.png`, `*.jpg`, `*.webp`, `*.woff2` → **Cache Everything, Edge TTL 1 month**.
+- Speed → enable Brotli + Auto Minify (JS/CSS/HTML).
+- Security → enable Bot Fight Mode + WAF managed rules.
+
+This is what actually stops the egress bleed. Benny videos will be served from Cloudflare's edge (free egress) instead of being re-downloaded from origin every play.
+
+### Step 4 — Verify it's working (10 min)
+- Load a Benny episode in an incognito window.
+- Load it again.
+- Second load's response headers should show `cf-cache-status: HIT`.
+- If HIT → you're saving money on every subsequent view forever.
+
+### Step 5 — Defer full Supabase migration (decision, 0 min)
+Do NOT migrate before launch. Revisit in 4–8 weeks once you have real traffic data. If migration still makes sense then, we do it with a proper 2–3 day plan: parallel Supabase project, R2 for video, Clever/Google re-verification, DNS cutover — not a panicked 24-hour rush.
+
+## Brutally honest cost math after tonight
+
+| Users concurrent | Without CF (today) | With your CF (after tonight) |
 |---|---|---|
-| Start | Complete World 101 Level 1 | Yard zone, 4 decoration slots, Benny idle |
-| Bronze | Finish World 101 (Nabu Village) | Bedroom zone, 6 more slots, 1st pet (Echo) |
-| Silver | Finish World 102 | Kitchen zone, cooking cosmetic set, Benny new outfit slot |
-| Gold | Finish World 103 | Festival yard, fireworks prop, Bobo joins |
-| Prestige | 7-day reading streak | Rare cosmetic drop + Benny animation |
+| 5k | ~$150/mo | ~$60/mo |
+| 25k | ~$2,500/mo | ~$400/mo |
+| 100k | $17k–$32k/mo | **$2k–$4k/mo** |
 
-Plus per-level micro-rewards: each completed level drops 1 Token + Gold + a rotating "today's item."
+Cloudflare is the difference between a viable business and one that dies of egress at 30k users.
 
-## Scope: Full vision, sequenced into 3 shippable phases
+## What I need from you to start
 
-**Phase 1 — Sellable demo (2–3 weeks).** Yard + bedroom zones, fixed slot grid (not free-form drag), 20 decorations, Benny reacts (waggle + new outfit on Bronze), Tokens, unlock ladder above wired to existing `campaign_progress`. This is what the demo video shows.
+1. **Where did you buy `nabulearn.com`?** (GoDaddy / Namecheap / Google Domains / Squarespace / other) — so I can give you exact nameserver-change screenshots.
+2. **Do you already have a Cloudflare account** from a past project, or do we make a fresh one?
+3. Confirm you want me to raise the signup rate limit **right now** so Jacob can make his account.
 
-**Phase 2 — Depth (3–4 weeks after Phase 1 ships).** Kitchen + festival zones, pets (Echo, Bobo) with simple feed/pet interactions, 40 more cosmetics, daily login bonus item, streak-gated prestige drops.
-
-**Phase 3 — Free-form + social (later, only if retention data justifies it).** Drag-to-place furniture with snap grid, share-a-snapshot, friend visits. This is the risky/expensive part — we *don't* commit to it until Phase 1+2 prove kids care.
-
-## Hard rules that protect the reading goal
-
-- Village entry button is **disabled** until at least one reading level is done that day (configurable; default on).
-- Tokens **never** purchasable with Gold or real money. Only reading earns them.
-- No timers, no "come back in 4 hours" mechanics. Pre-K + COPPA = no FOMO loops.
-- Cosmetics only. Zero pay-to-win, zero stat boosts that affect reading scoring.
-- Reuses existing Gold economy; Tokens are the only new currency.
-
-## Technical sketch (for the engineer reading this)
-
-New tables:
-- `village_zones` (id, slug, name, unlock_requirement jsonb, sort_order) — seed data, admin-editable later.
-- `village_items` (id, slug, name, zone_id, image_url, unlock_requirement jsonb, token_cost, gold_cost).
-- `player_village_state` (user_id, unlocked_zone_ids[], owned_item_ids[], placed_items jsonb, tokens int, updated_at) — single row per user, RLS by `auth.uid()`.
-- `village_unlock_log` (user_id, item_id/zone_id, unlocked_at, reason) — audit + analytics.
-
-Unlock check is a single security-definer function `public.check_village_unlocks(_user_id)` that reads `campaign_progress` + `student_reading_stats` and returns the IDs the player has newly earned. Called on level complete and on village open. No client-side gating logic — server is source of truth.
-
-Frontend: one new route `/game/village`, lazy-loaded; fixed-slot grid component (CSS grid, no drag lib in Phase 1); reuses Benny sprites already in `src/assets/`. Background prefetched same way Pre-K levels are.
-
-Performance: village state is one row, cached in React Query, invalidated on level complete. Zero impact on concurrent-user ceiling.
-
-## What I need from you before I start
-
-1. **Confirm Phase 1 scope above** — or tell me what to add/cut.
-2. **Daily reading gate**: on by default (must read 1 level/day to enter village), or off?
-3. **Token drop rate**: 1 per level (generous, fast unlocks) or 1 per 2 levels (slower, more pull)?
-
-Say "go" and I'll build Phase 1.
+Once you answer those three, I switch to build mode and execute Step 1 immediately, then walk you through Steps 2–4 click-by-click.
