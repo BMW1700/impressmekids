@@ -6,9 +6,15 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Play, Search } from "lucide-react";
 
+interface ScanStatus {
+  state: string;
+  last_error?: string | null;
+  discovered?: number;
+}
 interface Stats {
   total: number;
   counts: Record<string, number>;
+  scan?: ScanStatus;
 }
 
 export default function R2Migration() {
@@ -34,15 +40,17 @@ export default function R2Migration() {
     setLoading(true);
     try {
       const s = await call("stats");
-      setStats({ total: s.total, counts: s.counts });
+      setStats({ total: s.total, counts: s.counts, scan: s.scan });
       const { data: fails } = await supabase
         .from("r2_migration_log")
         .select("bucket, path, error")
         .eq("status", "failed")
         .limit(50);
       setFailed((fails ?? []) as any);
+      return s as Stats;
     } catch (e: any) {
       toast.error(e.message);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -55,15 +63,28 @@ export default function R2Migration() {
   const scan = async () => {
     setScanning(true);
     try {
-      const r = await call("scan");
-      toast.success(`Discovered ${r.discovered} files`);
-      await loadStats();
+      await call("scan");
+      toast.info("Scan started — this runs in the background");
+      // Poll every 2s until state !== 'scanning'
+      while (true) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const s = await loadStats();
+        if (!s || s.scan?.state !== "scanning") {
+          if (s?.scan?.state === "failed") {
+            toast.error(s.scan.last_error || "Scan failed");
+          } else if (s) {
+            toast.success(`Scan finished — ${s.scan?.discovered ?? 0} files discovered`);
+          }
+          break;
+        }
+      }
     } catch (e: any) {
       toast.error(e.message);
     } finally {
       setScanning(false);
     }
   };
+
 
   const runOnce = async () => {
     const r = await call("batch", { size: 25 });
