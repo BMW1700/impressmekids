@@ -5641,6 +5641,36 @@ export type Database = {
         }
         Relationships: []
       }
+      r2_migration_status: {
+        Row: {
+          discovered: number
+          finished_at: string | null
+          id: number
+          last_error: string | null
+          started_at: string | null
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          discovered?: number
+          finished_at?: string | null
+          id?: number
+          last_error?: string | null
+          started_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          discovered?: number
+          finished_at?: string | null
+          id?: number
+          last_error?: string | null
+          started_at?: string | null
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reading_achievements: {
         Row: {
           achievement_type: string
