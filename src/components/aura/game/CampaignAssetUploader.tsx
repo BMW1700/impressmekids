@@ -13,6 +13,7 @@ import {
 import { Settings, Upload, Image, Video, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { getCdnUrl } from "@/lib/cdn";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 
 interface CampaignAssetUploaderProps {
@@ -107,7 +108,7 @@ export const CampaignAssetUploader = ({
         .from('campaign-assets')
         .getPublicUrl(data.path);
 
-      const publicUrl = urlData.publicUrl;
+      const publicUrl = getCdnUrl('campaign-assets', data.path) ?? urlData.publicUrl;
 
       if (assetType === 'ella') {
         updateEllaAvatar(publicUrl);

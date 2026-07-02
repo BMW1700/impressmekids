@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCdnUrl } from "@/lib/cdn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -372,13 +373,14 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
       const {
         data: { publicUrl },
       } = supabase.storage.from("avatars").getPublicUrl(fileName);
+      const finalUrl = getCdnUrl("avatars", fileName) ?? publicUrl;
 
       const { error: updateError } = await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl },
+        data: { avatar_url: finalUrl },
       });
       if (updateError) throw updateError;
 
-      setAvatarUrl(publicUrl);
+      setAvatarUrl(finalUrl);
       toast({
         title: t("common.success"),
         description:
