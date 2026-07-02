@@ -104,6 +104,7 @@ const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const GameLegal = lazy(() => import("./pages/game/legal/GameLegal"));
 const SuperAdminDashboard = lazy(() => import("./pages/superadmin/SuperAdminDashboard"));
 const PreKWorldsList = lazy(() => import("./pages/superadmin/PreKWorldsList"));
+const R2Migration = lazy(() => import("./pages/superadmin/R2Migration"));
 const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
 const PreKLevelBuilder = lazy(() => import("./pages/superadmin/PreKLevelBuilder"));
 
@@ -280,6 +281,7 @@ const App = () => (
                     <Route path="/super-admin/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/r2-migration" element={<RequireSuperAdmin><R2Migration /></RequireSuperAdmin>} />
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
