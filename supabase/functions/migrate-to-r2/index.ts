@@ -148,17 +148,12 @@ async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: n
       ok++;
     } catch (e: any) {
       failed++;
-      await admin.rpc("noop_ignore").catch(() => {});
       await admin
         .from("r2_migration_log")
         .update({
           status: "failed",
           error: String(e?.message || e).slice(0, 500),
         })
-        .eq("id", (row as any).id);
-      await admin
-        .from("r2_migration_log")
-        .update({ attempts: ((row as any).attempts ?? 0) + 1 })
         .eq("id", (row as any).id);
     }
   }
