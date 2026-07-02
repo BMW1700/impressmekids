@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET, invalidatePreKLevelCacheByDbId } from "@/lib/preKLevelFromDb";
+import { getCdnUrl } from "@/lib/cdn";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
@@ -72,6 +73,12 @@ function useSignedSrc(pathOrUrl: string | null): string | null {
     }
     if (/^https?:\/\//.test(pathOrUrl) || pathOrUrl.startsWith("/")) {
       setSrc(pathOrUrl);
+      return;
+    }
+    // R2 CDN short-circuit: zero Supabase egress + no signing round-trip.
+    const cdn = getCdnUrl(PREK_VIDEO_BUCKET, pathOrUrl);
+    if (cdn) {
+      setSrc(cdn);
       return;
     }
     supabase.storage
