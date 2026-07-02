@@ -48,6 +48,8 @@ project_id = "sjigkjwkgovculkovcjy"
     verify_jwt = false
   [functions.list-cold-storage-backups]
     verify_jwt = false
+  [functions.migrate-to-r2]
+    verify_jwt = false
   [functions.process-data-deletion]
     verify_jwt = false
   [functions.process-email-queue]
