@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
+import { getCdnUrl } from "@/lib/cdn";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 // 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
