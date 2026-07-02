@@ -1,43 +1,73 @@
-## R2 Migration Pipeline
+## Current state (honest)
 
-R2 credentials are now stored. Building the migration in 4 phases.
+- 1000 files copied to R2. 0 failed. ✅
+- App is **still** serving media from Supabase Storage. ❌
+- Egress cost reduction so far: **$0**.
 
-### Phase 1 — Migration tracking table
-New `r2_migration_log` table records every file's status: `bucket`, `path`, `size`, `status` (pending/copied/failed/verified), `r2_key`, `error`, timestamps. Lets us resume if interrupted and audit progress.
+The migration copied the files. It did not cut over. Those are two different things.
 
-### Phase 2 — Edge function: `migrate-to-r2`
-Deno function that:
-- Lists all files in every Supabase Storage bucket
-- Streams each file from Supabase → uploads to R2 (`nabulearn-media`) via S3 PUT with SigV4
-- Preserves paths: `pre-k-videos/benny/intro.mp4` → same path in R2
-- Batches 25 files per invocation to avoid CPU timeout
-- Logs every result to `r2_migration_log`
-- Idempotent: skips files already marked `verified`
+## Plan: actually cut over so costs drop
 
-Only super_admin can invoke (JWT role check).
+### Step 1 — Verify R2 objects are publicly reachable
 
-### Phase 3 — CDN URL resolver
-New helper `src/lib/cdn.ts`:
-```ts
-getCdnUrl(bucket, path) => `https://cdn.nabulearn.com/${bucket}/${path}`
+Pick 3 known files (e.g. a Benny intro video, a hero image, an audio clip). Open each in the browser at:
+
 ```
-Flip **public** buckets over first (Benny videos, story audio, avatars, level thumbnails). Private/signed-URL buckets (assignment images) stay on Supabase for now — they're 5% of egress and need a separate signing setup.
+https://cdn.nabulearn.com/<bucket>/<path>
+```
 
-Feature-flagged with `VITE_USE_R2_CDN` so we can toggle instantly if something breaks.
+If they load: green light.
+If they 403/404: fix `cdn.nabulearn.com` custom-domain binding before proceeding. Do NOT flip the flag on a broken CDN — the app will break for every user.
 
-### Phase 4 — Admin migration console
-Simple page at `/super-admin/r2-migration` with:
-- "Start migration" button (calls edge function in a loop until done)
-- Live progress bar reading from `r2_migration_log`
-- Failed-files list with retry
-- Toggle to flip `VITE_USE_R2_CDN` on/off
+### Step 2 — Identify which buckets are safe to flip
 
-### After migration
-1. Spot-check 5 CDN URLs load from `cdn.nabulearn.com`
-2. Flip flag on → monitor for 24h
-3. Egress bill drops from ~$17k → ~$15/mo (R2 storage only, zero egress)
-4. Later: repeat for signed-URL buckets with a signer edge function
+Query `r2_migration_log` grouped by bucket to see exactly which buckets have copies in R2. Then classify:
 
-**Order of execution:** migration table → edge function → resolver + flag → admin console → run migration.
+- **Public buckets** (Benny videos, world backgrounds, hero images, story audio, avatars) → safe to flip.
+- **Private/signed-URL buckets** (assignment question images, private uploads, anything path-scoped to `<classroom_id>/...`) → stay on Supabase for now. These are ~5% of egress and need a separate signer function.
 
-Approve and I'll start with the migration.
+I will list the buckets and mark each one before we touch code.
+
+### Step 3 — Enable R2 for public buckets only
+
+Edit `src/lib/cdn.ts`:
+
+```ts
+const R2_ENABLED_BUCKETS = new Set<string>([
+  "pre-k-videos",
+  "world-backgrounds",
+  "story-audio",
+  "avatars",
+  // ...only the ones confirmed public + copied
+]);
+```
+
+And add `VITE_USE_R2_CDN=true` to `.env`.
+
+### Step 4 — Publish and verify with the Network tab
+
+Publish the frontend. Then open the app, load a Pre-K level, and check the browser Network tab:
+
+- Media requests should go to `cdn.nabulearn.com` ✅
+- Media requests should NOT go to `*.supabase.co/storage/...` ❌
+
+If any request still hits Supabase, that specific code path is bypassing `getCdnUrl()` and needs to be patched.
+
+### Step 5 — Monitor for 24 hours
+
+- Watch for broken images/videos in Sentry.
+- Watch backend egress metrics drop.
+- Keep the flag reversible: flipping `VITE_USE_R2_CDN=false` and republishing instantly restores Supabase serving.
+
+### Step 6 — Later (not today): private buckets
+
+Build a small signer edge function that returns time-limited R2 signed URLs for the private buckets (assignment images, etc.). Migrate those, then flip. This closes the last ~5% of egress.
+
+## What I can promise after this plan runs
+
+- **After Step 4**: I can confirm from the Network tab whether media is served from R2. That's the only actual proof.
+- **After ~48h of monitoring**: I can confirm the backend egress line item dropped in the usage metrics.
+
+Anyone (including me) claiming "costs are down 100% guaranteed" before Step 4 is bullshitting you.
+
+## Approve this and I'll execute Steps 1–4 back to back.
