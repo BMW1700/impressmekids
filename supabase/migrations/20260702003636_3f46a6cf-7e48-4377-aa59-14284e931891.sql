@@ -1,0 +1,1 @@
+INSERT INTO public.user_roles (user_id, role) VALUES ('0629491f-cbd9-4594-82af-6b3677a562f2', 'admin') ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
