@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCdnUrl } from "@/lib/cdn";
+import { getCdnUrl, rewriteToCdn } from "@/lib/cdn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -450,6 +450,8 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
     setIsEditingPreferredName(false);
   };
 
+  const displayAvatarUrl = rewriteToCdn(avatarUrl || studentProfile?.avatar_url) || undefined;
+
   return (
     <div className="space-y-6 max-w-3xl">
       <h1 className="text-3xl font-bold text-foreground">{t("student.account.title")}</h1>
@@ -462,7 +464,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={avatarUrl || studentProfile?.avatar_url} />
+                <AvatarImage src={displayAvatarUrl} />
                 <AvatarFallback className="text-2xl">
                   {getInitials(userProfile?.full_name || "")}
                 </AvatarFallback>
