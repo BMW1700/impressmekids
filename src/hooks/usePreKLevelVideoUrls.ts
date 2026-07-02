@@ -77,7 +77,7 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
       const resolve = (v: string | null | undefined): string | null => {
         if (!v) return null;
         if (isAbsolute(v)) return v;
-        return signed[v] ?? null;
+        return cdnHits.get(v) ?? signed[v] ?? null;
       };
 
       const videoUrls: Record<string, string> = {};
