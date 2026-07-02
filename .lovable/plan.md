@@ -1,52 +1,70 @@
-# Post-Publish Audit — Brutally Honest
+## Situation
 
-## Verdict
-**Cutover is real but not 100%.** The high-volume path (student pre-K video/audio playback) is fully on R2. Four call sites still hit Supabase Storage on migrated buckets. Cost-at-scale claim is TRUE for ~95% of egress, FALSE as an absolute.
+The publish dialog says **Published / Up to date**, but the live HTML still references the same main bundle hash as before:
 
-## Facts
+```text
+/assets/index-B9czO7nj.js
+/assets/index-DPDZk2Du.css
+```
 
-**Confirmed working (production, live audit):**
-- `VITE_USE_R2_CDN="true"` set in `.env`.
-- `cdn.nabulearn.com` returns 200 on real objects (verified prior turn).
-- Six buckets flagged R2-enabled in `src/lib/cdn.ts`: `prek-level-videos`, `prek-level-audio`, `world-backgrounds`, `campaign-assets`, `avatars`, `email-assets`.
-- Student player: 0 Supabase signed-URL calls (verified last turn).
-- Super-admin PreKLevelBuilder: 0 Supabase signed-URL calls after last fix (verified last turn).
-- R2 bucket: 1000/1000 files copied, 0 failures.
+That means one of two hard facts is true:
 
-**Residual Supabase-egress leaks (unrewritten `getPublicUrl` on migrated buckets):**
+1. The production deploy did not rebuild from the patched source, or
+2. The custom domain/CDN is still serving an older cached artifact.
 
-| File | Bucket | Impact |
-|---|---|---|
-| `src/components/student/sections/AccountSection.tsx:374` | `avatars` | Every student avatar upload/render → Supabase URL |
-| `src/components/aura/game/CampaignModeEntry.tsx:79` | `campaign-assets` | Every campaign entry screen (high traffic) |
-| `src/components/aura/game/CampaignVideoGate.tsx:175` | `campaign-assets` | Every campaign video gate render |
-| `src/components/aura/game/CampaignAssetUploader.tsx:108` | `campaign-assets` | Admin uploads only (low volume) |
+My first direct chunk download attempt hit a 403 on the JS asset, so the next audit needs to use browser-grade requests and/or the Lovable published URL as a second source of truth.
 
-These return `sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/...` URLs. Browsers hit Supabase directly, not R2. Supabase egress accrues.
+## Plan
 
-**Not leaks (correct behavior):**
-- `useClassroomSyllabus.ts`, `QuestionAnswerForm.tsx`, `StudentQuestionView.tsx`, `useAudioRecorder.ts`, `WordByWordReader.tsx`, `AudioPlaybackButton.tsx`, `TeacherWordVerification.tsx`, `preKAuraSubmit.ts` → private buckets (`aura-audio`, `assignment-*`, `classroom-syllabus`) intentionally excluded from R2 (FERPA/private).
-- Upload code paths (`.from(X).upload(...)`) don't cause egress.
+1. **Verify both production origins**
+   - Check `https://nabulearn.com`
+   - Check `https://nabulearn.lovable.app`
+   - Compare their HTML, main JS hash, CSS hash, and asset accessibility.
 
-## Cost at Scale — Straight Answer
+2. **Download production JS with browser headers**
+   - Fetch all JS chunks using realistic request headers.
+   - If direct `curl` still gets 403, use Playwright/Chromium network capture because the browser can load what users load.
 
-**Cannot give you a hard number without leak closure + 48h of production metrics.** What I can commit to:
+3. **Prove whether the patched code is live**
+   - Search production chunks for:
+     - `cdn.nabulearn.com`
+     - `getCdnUrl`
+     - `campaign-assets`
+     - `avatars`
+     - `prek-level-videos`
+   - Specifically inspect the production chunks for:
+     - `PreKLevelBuilder`
+     - `StudentDashboard` / `AccountSection`
+     - `CampaignModeEntry`
+     - `CampaignVideoGate`
+     - `CampaignAssetUploader`
 
-- **Pre-K video/audio (the whale, ~90% of prior egress):** now $0 Supabase egress. Served from R2 → Cloudflare CDN. Egress from R2 to end user = **$0/GB** (Cloudflare bandwidth alliance). R2 storage ≈ $0.015/GB/mo. Class A operations $4.50/M, Class B $0.36/M.
-- **Campaign assets + avatars (residual leaks above):** still on Supabase Storage at **$0.09/GB egress**. Volume depends on active campaign users × asset size. Non-zero. Will show up in your bill.
-- **Private buckets (aura-audio recordings, assignment media):** never migrated by design. Supabase egress applies. Same as before cutover.
+4. **If production is still stale, force a frontend rebuild**
+   - Make the smallest safe source change whose only purpose is to change the build output hash.
+   - Do not change product behavior.
+   - Then publish again.
 
-Bottom line: **big cost reduction is real. "Zero Supabase egress" is not, until the four leaks are patched.** Anyone telling you 100% cutover right now is lying.
+5. **Post-publish verification**
+   - Confirm the main bundle hash changed from `index-B9czO7nj.js`.
+   - Confirm CDN references appear in the expected production chunks.
+   - Confirm no public storage requests remain for migrated public buckets:
+     - `avatars`
+     - `campaign-assets`
+     - `prek-level-videos`
 
-## Plan to Close the Gap
+6. **Cost conclusion**
+   - Report only what production proves.
+   - Separate confirmed R2/CDN traffic from remaining backend-storage egress.
+   - Give scale costs only for traffic paths that are actually live, not assumed from source code.
 
-1. **Patch 4 leak sites** — wrap each `getPublicUrl` call with `getCdnUrl(bucket, path)` short-circuit (same pattern already applied to `PreKLevelBuilder.tsx`). Files:
-   - `src/components/student/sections/AccountSection.tsx`
-   - `src/components/aura/game/CampaignModeEntry.tsx`
-   - `src/components/aura/game/CampaignVideoGate.tsx`
-   - `src/components/aura/game/CampaignAssetUploader.tsx`
-2. **Add lint guard** — grep-based pre-commit check that flags `supabase.storage.from('<migrated-bucket>').getPublicUrl` without a `getCdnUrl` companion. Prevents regression.
-3. **Republish** and re-run authed Playwright sweep on `/student/dashboard` (avatar), `/games/aura/campaign` (campaign entry + video gate). Confirm Network tab shows 0 requests to `*.supabase.co/storage` for those buckets.
-4. **48h metrics pull** — after leak closure, compare Supabase egress dashboard vs pre-cutover baseline and R2 request count. Only then can I quote you a real $/month at your current traffic.
+## Success criteria
 
-Approve and I'll execute all four patches + verification in one pass.
+Production is only considered fixed when:
+
+```text
+main JS hash != index-B9czO7nj.js
+cdn.nabulearn.com appears in the patched feature chunks
+0 production browser requests hit public backend storage for avatars/campaign-assets/prek-level-videos
+```
+
+Until those are true, the honest status is: **not proven fixed**.
