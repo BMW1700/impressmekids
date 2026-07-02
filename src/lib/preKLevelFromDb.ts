@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/cdn";
 import type { VideoLevel, VideoStep } from "@/data/preKAdventuresVideo";
 
 export const PREK_VIDEO_BUCKET = "prek-level-videos";
