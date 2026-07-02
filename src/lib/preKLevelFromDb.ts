@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getCdnUrl } from "@/lib/cdn";
 import type { VideoLevel, VideoStep } from "@/data/preKAdventuresVideo";
 
 export const PREK_VIDEO_BUCKET = "prek-level-videos";
@@ -46,6 +47,9 @@ const cacheKey = (world: number, level: number) => `${world}:${level}`;
 async function resolveUrl(value: string | null | undefined): Promise<string | null> {
   if (!value) return null;
   if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  // R2 CDN short-circuit — zero egress + no signing round-trip.
+  const cdn = getCdnUrl(PREK_VIDEO_BUCKET, value);
+  if (cdn) return cdn;
   const { data, error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
     .createSignedUrl(value, 60 * 60 * 24 * 7);

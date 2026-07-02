@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
+import { getCdnUrl } from "@/lib/cdn";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 // 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
@@ -56,10 +57,13 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
       // Build the list of storage paths we need to sign in a single batch.
       const pathsToSign = new Set<string>();
       const directs = new Map<string, string>(); // key -> already-resolvable URL
+      const cdnHits = new Map<string, string>(); // path -> R2 CDN URL
       for (const [key, v] of [...videoEntries, ...posterEntries]) {
         if (!v) continue;
-        if (isAbsolute(v)) directs.set(key, v);
-        else pathsToSign.add(v);
+        if (isAbsolute(v)) { directs.set(key, v); continue; }
+        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, v);
+        if (cdn) { cdnHits.set(v, cdn); continue; }
+        pathsToSign.add(v);
       }
 
       let signed: Record<string, string> = {};
@@ -73,7 +77,7 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
       const resolve = (v: string | null | undefined): string | null => {
         if (!v) return null;
         if (isAbsolute(v)) return v;
-        return signed[v] ?? null;
+        return cdnHits.get(v) ?? signed[v] ?? null;
       };
 
       const videoUrls: Record<string, string> = {};
