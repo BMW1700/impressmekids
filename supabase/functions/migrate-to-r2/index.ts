@@ -1,27 +1,33 @@
 // Migrate Supabase Storage files to Cloudflare R2 (S3-compatible)
-// Super-admin only. Batches 25 files per invocation. Idempotent.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
+// Super-admin only. Async scan via EdgeRuntime.waitUntil. Idempotent.
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { AwsClient } from "npm:aws4fetch@1.0.20";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const R2_ACCESS_KEY_ID = Deno.env.get("R2_ACCESS_KEY_ID")!;
-const R2_SECRET_ACCESS_KEY = Deno.env.get("R2_SECRET_ACCESS_KEY")!;
-const R2_ENDPOINT = Deno.env.get("R2_ENDPOINT")!; // https://<acct>.r2.cloudflarestorage.com
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const R2_ACCESS_KEY_ID = Deno.env.get("R2_ACCESS_KEY_ID") ?? "";
+const R2_SECRET_ACCESS_KEY = Deno.env.get("R2_SECRET_ACCESS_KEY") ?? "";
+const R2_ENDPOINT = Deno.env.get("R2_ENDPOINT") ?? "";
 const R2_BUCKET = "nabulearn-media";
 
-const r2 = new AwsClient({
-  accessKeyId: R2_ACCESS_KEY_ID,
-  secretAccessKey: R2_SECRET_ACCESS_KEY,
-  service: "s3",
-  region: "auto",
-});
+function getR2() {
+  if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
+    throw new Error("R2 credentials not configured");
+  }
+  return new AwsClient({
+    accessKeyId: R2_ACCESS_KEY_ID,
+    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    service: "s3",
+    region: "auto",
+  });
+}
 
 interface WalkedFile {
   bucket: string;
@@ -64,43 +70,72 @@ async function walkBucket(
   return out;
 }
 
-async function scan(admin: ReturnType<typeof createClient>) {
-  const { data: buckets, error } = await admin.storage.listBuckets();
-  if (error) throw error;
-  let discovered = 0;
-  for (const b of buckets ?? []) {
-    const files = await walkBucket(admin, b.name);
-    if (files.length === 0) continue;
-    const rows = files.map((f) => ({
-      bucket: f.bucket,
-      path: f.path,
-      size: f.size,
-      content_type: f.contentType,
-      status: "pending",
-    }));
-    // Upsert in chunks of 500
-    for (let i = 0; i < rows.length; i += 500) {
-      const chunk = rows.slice(i, i + 500);
-      const { error: upErr } = await admin
-        .from("r2_migration_log")
-        .upsert(chunk, { onConflict: "bucket,path", ignoreDuplicates: true });
-      if (upErr) throw upErr;
+async function scanInBackground(admin: ReturnType<typeof createClient>) {
+  try {
+    await admin.from("r2_migration_status").upsert({
+      id: 1,
+      state: "scanning",
+      last_error: null,
+      discovered: 0,
+      started_at: new Date().toISOString(),
+      finished_at: null,
+      updated_at: new Date().toISOString(),
+    });
+
+    const { data: buckets, error } = await admin.storage.listBuckets();
+    if (error) throw error;
+    let discovered = 0;
+    for (const b of buckets ?? []) {
+      const files = await walkBucket(admin, (b as any).name);
+      if (files.length === 0) continue;
+      const rows = files.map((f) => ({
+        bucket: f.bucket,
+        path: f.path,
+        size: f.size,
+        content_type: f.contentType,
+        status: "pending",
+      }));
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const { error: upErr } = await admin
+          .from("r2_migration_log")
+          .upsert(chunk, { onConflict: "bucket,path", ignoreDuplicates: true });
+        if (upErr) throw upErr;
+      }
+      discovered += files.length;
+      // Progress update
+      await admin.from("r2_migration_status").update({
+        discovered,
+        updated_at: new Date().toISOString(),
+      }).eq("id", 1);
     }
-    discovered += files.length;
+
+    await admin.from("r2_migration_status").update({
+      state: "idle",
+      discovered,
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", 1);
+  } catch (e: any) {
+    await admin.from("r2_migration_status").update({
+      state: "failed",
+      last_error: String(e?.message || e).slice(0, 1000),
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", 1);
   }
-  return discovered;
 }
 
 async function copyOne(
   admin: ReturnType<typeof createClient>,
   row: { id: string; bucket: string; path: string; content_type: string | null },
 ) {
-  // Download from Supabase Storage (service role bypasses RLS)
   const { data: blob, error: dlErr } = await admin.storage
     .from(row.bucket)
     .download(row.path);
   if (dlErr || !blob) throw new Error(`download failed: ${dlErr?.message}`);
 
+  const r2 = getR2();
   const r2Key = `${row.bucket}/${row.path}`;
   const url = `${R2_ENDPOINT}/${R2_BUCKET}/${r2Key}`;
   const body = new Uint8Array(await blob.arrayBuffer());
@@ -142,7 +177,6 @@ async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: n
           size,
           copied_at: new Date().toISOString(),
           error: null,
-          attempts: 1, // reset on success not important; just mark
         })
         .eq("id", (row as any).id);
       ok++;
@@ -170,10 +204,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (!SUPABASE_URL || !SERVICE_ROLE) {
+      return new Response(JSON.stringify({ error: "server misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false },
     });
-    // Verify caller is super_admin
     const jwt = authHeader.replace("Bearer ", "");
     const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
     if (userErr || !userData?.user) {
@@ -194,13 +233,18 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json().catch(() => ({}));
-    const action = body.action || "batch";
+    const action = body.action || "stats";
 
     if (action === "scan") {
-      const discovered = await scan(admin);
-      return new Response(JSON.stringify({ ok: true, discovered }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      // @ts-ignore - EdgeRuntime is available in Supabase Edge runtime
+      EdgeRuntime.waitUntil(scanInBackground(admin));
+      return new Response(
+        JSON.stringify({ ok: true, status: "scanning" }),
+        {
+          status: 202,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
     if (action === "batch") {
       const size = Math.min(Number(body.size) || 25, 50);
@@ -210,14 +254,27 @@ Deno.serve(async (req) => {
       });
     }
     if (action === "stats") {
-      const { data } = await admin
+      const { data: rows } = await admin
         .from("r2_migration_log")
         .select("status");
       const counts: Record<string, number> = {};
-      for (const r of data ?? []) counts[(r as any).status] = (counts[(r as any).status] ?? 0) + 1;
-      return new Response(JSON.stringify({ ok: true, counts, total: data?.length ?? 0 }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      for (const r of rows ?? []) counts[(r as any).status] = (counts[(r as any).status] ?? 0) + 1;
+      const { data: status } = await admin
+        .from("r2_migration_status")
+        .select("state, last_error, discovered, started_at, finished_at")
+        .eq("id", 1)
+        .maybeSingle();
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          counts,
+          total: rows?.length ?? 0,
+          scan: status ?? { state: "idle" },
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
     return new Response(JSON.stringify({ error: "unknown action" }), {
       status: 400,
