@@ -1,5 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { rewriteToCdn } from "@/lib/cdn";
+
+const cdn = (v: string | null | undefined) => (v ? rewriteToCdn(v) ?? undefined : undefined);
+const cdnArr = (raw: string | null | undefined): string[] => {
+  if (!raw) return [];
+  try { return (JSON.parse(raw) as string[]).map((u) => rewriteToCdn(u) ?? u); } catch { return []; }
+};
 
 export interface CampaignAssets {
   ellaAvatarUrl?: string;
