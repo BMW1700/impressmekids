@@ -75,6 +75,12 @@ function useSignedSrc(pathOrUrl: string | null): string | null {
       setSrc(pathOrUrl);
       return;
     }
+    // R2 CDN short-circuit: zero Supabase egress + no signing round-trip.
+    const cdn = getCdnUrl(PREK_VIDEO_BUCKET, pathOrUrl);
+    if (cdn) {
+      setSrc(cdn);
+      return;
+    }
     supabase.storage
       .from(PREK_VIDEO_BUCKET)
       .createSignedUrl(pathOrUrl, 60 * 60)
