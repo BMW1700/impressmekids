@@ -1,41 +1,39 @@
-## Straight answer on the money
+## What is actually broken
 
-**You keep 95%+ of the R2 savings.** Here's the honest math:
+The editor page still has an old R2 shortcut in `PreKLevelBuilder.tsx`.
 
-The R2 savings come from **read traffic** (kids watching videos over and over — that's 99% of your egress at scale). The buckets I'm turning R2 off for are only the ones where **you upload new content in the editor**. Uploads are a tiny sliver of egress compared to playback.
+Even though the runtime/editor resolver was patched to sign storage URLs first and only use R2 when the CDN object exists, the actual trim editor uses its own `useSignedSrc()` hook. That hook still does this:
 
-But here's the key detail that saves your savings: the app only skips R2 when the file **doesn't exist on R2 yet**. Every video already migrated to R2 (the ones your kids/pilot users are watching) — those still serve from R2. Free egress. Untouched.
+```text
+storage path -> cdn.nabulearn.com URL immediately -> video tries to load R2 -> new upload 404s -> black video / 0.000 duration
+```
 
-The only files that fall back to backend storage are **new uploads made after the migration cutover** — files that were 404'ing anyway and breaking the editor.
+So the previous fix did not reach the visible editor shown in your screenshot.
 
-## Refined fix (smarter than my last plan)
+## Fix plan
 
-Instead of blanket-disabling R2 for the whole bucket, I'll do a **HEAD-check with fallback**:
+1. **Patch the actual editor video source resolver**
+   - Update `useSignedSrc()` in `src/pages/superadmin/PreKLevelBuilder.tsx`.
+   - Remove the CDN-only short circuit.
+   - Always create a signed backend storage URL for relative upload paths.
+   - Then call `resolveCdnOrFallback()` so:
+     - existing mirrored files still use R2/CDN,
+     - brand-new uploads fall back to backend storage immediately.
 
-1. `rewriteToCdn()` tries R2 first (same as today).
-2. On first use of a URL, it does a tiny HEAD request to `cdn.nabulearn.com`.
-3. If R2 returns 200 → serve from R2. Free egress. Kept.
-4. If R2 returns 404 → fall back to backend storage signed URL. New uploads work. Editor unbroken.
-5. Cache the result in memory so it only checks once per URL per session.
+2. **Keep the money-saving behavior**
+   - Do not disable R2 globally.
+   - Do not remove CDN support.
+   - Only fallback for files that are missing from R2.
+   - Old migrated files keep using `cdn.nabulearn.com`.
 
-**Net effect on cost:**
-- Old migrated files (huge majority of traffic): still R2. Savings preserved.
-- New uploads until next migration: backend storage. Tiny cost.
-- Zero user-facing breakage.
+3. **Make failures visible instead of silent black boxes**
+   - Add a minimal error state in `VideoTrimEditor` when video metadata fails to load.
+   - This avoids another silent black rectangle with `0.000s` if a future file/path/content-type issue happens.
 
-## What I will change
+4. **Verify the specific failure path**
+   - Confirm no editor code still imports `getCdnUrl` directly for Pre-K video playback.
+   - Confirm all Pre-K editor/runtime paths now use signed URL + CDN probe fallback.
 
-1. `src/lib/cdn.ts` — add HEAD-check + fallback logic to `rewriteToCdn()`. Small in-memory cache. R2 stays enabled for all buckets.
-2. Nothing else. No R2 config changes, no migration undone, no bucket policy changes.
+## Expected result
 
-## Follow-up (next turn, not this one)
-
-Add an edge function that copies new uploads to R2 automatically after upload. Once that ships, the HEAD-check fallback almost never fires and you're back to 100% R2 hit rate on everything.
-
-## Bottom line on cost
-
-- **10k users**: same savings as before. Difference is pennies.
-- **100k users**: same savings as before. Difference is still pennies.
-- **Breakage risk**: zero.
-
-Approve and I'll ship it.
+After this patch, a newly uploaded Benny level video should load in the backend editor, show a real duration, play, scrub, trim, and save. Existing R2-hosted videos should continue using R2, so the cost savings stay intact.
