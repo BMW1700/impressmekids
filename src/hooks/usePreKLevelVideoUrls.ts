@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
-import { getCdnUrl, resolveCdnOrFallback } from "@/lib/cdn";
+import { getCdnUrl } from "@/lib/cdn";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 // 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
@@ -27,6 +27,8 @@ export interface PreKLevelVideoUrls {
   loading: boolean;
   videoUrls: Record<string, string>;  // sceneKey -> resolved URL
   posterUrls: Record<string, string>; // sceneKey -> resolved URL
+  fallbackVideoUrls: Record<string, string>;  // sceneKey -> signed backend URL when primary is CDN
+  fallbackPosterUrls: Record<string, string>; // sceneKey -> signed backend URL when primary is CDN
 }
 
 function isAbsolute(v: string): boolean {
@@ -34,12 +36,12 @@ function isAbsolute(v: string): boolean {
 }
 
 export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, words: WordInput[]): PreKLevelVideoUrls {
-  const [state, setState] = useState<PreKLevelVideoUrls>({ loading: true, videoUrls: {}, posterUrls: {} });
+  const [state, setState] = useState<PreKLevelVideoUrls>({ loading: true, videoUrls: {}, posterUrls: {}, fallbackVideoUrls: {}, fallbackPosterUrls: {} });
 
   useEffect(() => {
     let cancelled = false;
     async function run() {
-      if (!level) { setState({ loading: false, videoUrls: {}, posterUrls: {} }); return; }
+      if (!level) { setState({ loading: false, videoUrls: {}, posterUrls: {}, fallbackVideoUrls: {}, fallbackPosterUrls: {} }); return; }
       const videoEntries: Array<[string, string | null | undefined]> = [];
       const posterEntries: Array<[string, string | null | undefined]> = [];
 
@@ -73,23 +75,19 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
         (data ?? []).forEach((d) => { if (d.path && d.signedUrl) signed[d.path] = d.signedUrl; });
       }
 
-      // For each storage path, prefer the R2 CDN when a HEAD probe confirms
-      // it exists there; otherwise use the signed Storage URL. Probes run in
-      // parallel and are cached module-wide, so a level costs at most one
-      // HEAD per unique path per session.
+      // For each storage path, use the R2 CDN as the primary URL when enabled,
+      // and keep the signed Storage URL as a media-element fallback. Browser
+      // HEAD probes to Cloudflare are CORS-blocked, so fallback must happen on
+      // the actual <video>/<img> load error instead of via fetch().
       const resolvedByPath = new Map<string, string>();
-      await Promise.all(
-        Array.from(pathsToSign).map(async (p) => {
-          const sig = signed[p];
-          if (!sig) return;
-          if (!getCdnUrl(PREK_VIDEO_BUCKET, p)) {
-            resolvedByPath.set(p, sig);
-            return;
-          }
-          const url = await resolveCdnOrFallback(PREK_VIDEO_BUCKET, p, sig);
-          resolvedByPath.set(p, url);
-        }),
-      );
+      const fallbackByPath = new Map<string, string>();
+      for (const p of pathsToSign) {
+        const sig = signed[p];
+        if (!sig) continue;
+        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, p);
+        resolvedByPath.set(p, cdn ?? sig);
+        if (cdn) fallbackByPath.set(p, sig);
+      }
 
       const resolve = (v: string | null | undefined): string | null => {
         if (!v) return null;
@@ -101,8 +99,12 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
       for (const [key, v] of videoEntries) { const u = resolve(v); if (u) videoUrls[key] = u; }
       const posterUrls: Record<string, string> = {};
       for (const [key, v] of posterEntries) { const u = resolve(v); if (u) posterUrls[key] = u; }
+      const fallbackVideoUrls: Record<string, string> = {};
+      for (const [key, v] of videoEntries) { if (v && !isAbsolute(v)) { const u = fallbackByPath.get(v); if (u) fallbackVideoUrls[key] = u; } }
+      const fallbackPosterUrls: Record<string, string> = {};
+      for (const [key, v] of posterEntries) { if (v && !isAbsolute(v)) { const u = fallbackByPath.get(v); if (u) fallbackPosterUrls[key] = u; } }
 
-      if (!cancelled) setState({ loading: false, videoUrls, posterUrls });
+      if (!cancelled) setState({ loading: false, videoUrls, posterUrls, fallbackVideoUrls, fallbackPosterUrls });
     }
     setState((s) => ({ ...s, loading: true }));
     void run();
