@@ -39,6 +39,14 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
   const [duration, setDuration] = useState<number>(0);
   const [playhead, setPlayhead] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setDuration(0);
+    setPlayhead(0);
+    setIsPlaying(false);
+    setLoadError(false);
+  }, [src]);
 
   // Local draft values during a drag so we don't spam onChange.
   const [draftIn, setDraftIn] = useState<number | null>(trimIn);
@@ -52,6 +60,7 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
   const onLoadedMeta = () => {
     const v = videoRef.current;
     if (!v) return;
+    setLoadError(false);
     if (isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
     // Snap preview to the trim-in point so admins see what runtime will see.
     try {
@@ -200,12 +209,18 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
         playsInline
         className="w-full max-w-sm rounded border bg-black aspect-video"
         onLoadedMetadata={onLoadedMeta}
+        onError={() => setLoadError(true)}
         onTimeUpdate={onTimeUpdate}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
         onClick={togglePlay}
       />
+      {loadError ? (
+        <div className="max-w-sm rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          This video could not be loaded. Replace it or try saving again.
+        </div>
+      ) : null}
 
       {/* Trim bar — the SINGLE source of truth for playback position. */}
       <div className="max-w-sm space-y-2">

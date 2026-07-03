@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET, invalidatePreKLevelCacheByDbId } from "@/lib/preKLevelFromDb";
-import { getCdnUrl } from "@/lib/cdn";
+import { resolveCdnOrFallback } from "@/lib/cdn";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
@@ -75,17 +75,21 @@ function useSignedSrc(pathOrUrl: string | null): string | null {
       setSrc(pathOrUrl);
       return;
     }
-    // R2 CDN short-circuit: zero Supabase egress + no signing round-trip.
-    const cdn = getCdnUrl(PREK_VIDEO_BUCKET, pathOrUrl);
-    if (cdn) {
-      setSrc(cdn);
-      return;
-    }
+    setSrc(null);
     supabase.storage
       .from(PREK_VIDEO_BUCKET)
       .createSignedUrl(pathOrUrl, 60 * 60)
-      .then(({ data }) => {
-        if (!cancelled) setSrc(data?.signedUrl ?? null);
+      .then(async ({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data?.signedUrl) {
+          setSrc(null);
+          return;
+        }
+        const playable = await resolveCdnOrFallback(PREK_VIDEO_BUCKET, pathOrUrl, data.signedUrl);
+        if (!cancelled) setSrc(playable);
+      })
+      .catch(() => {
+        if (!cancelled) setSrc(null);
       });
     return () => { cancelled = true; };
   }, [pathOrUrl]);
