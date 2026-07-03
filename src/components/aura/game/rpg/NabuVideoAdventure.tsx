@@ -590,6 +590,9 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     const fallback = fallbackBySrc.get(currentSrc);
     if (fallback && fallback !== currentSrc) {
       setSlotSrc((s) => ({ ...s, [slot]: fallback }));
+      window.setTimeout(() => {
+        try { videoRefs.current[slot]?.load(); } catch { /* ignore */ }
+      }, 0);
       return;
     }
     if (incomingSlotRef.current === slot) {

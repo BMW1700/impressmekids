@@ -41,6 +41,7 @@ export function TimelinePreviewPlayer({
     if (lookup.src && lookup.src !== lastSrcRef.current) {
       v.src = lookup.src;
       lastSrcRef.current = lookup.src;
+      v.load();
     } else if (!lookup.src) {
       lastSrcRef.current = null;
     }
@@ -51,6 +52,7 @@ export function TimelinePreviewPlayer({
     if (!v || !fallbackVideoSrc || lastSrcRef.current === fallbackVideoSrc) return;
     v.src = fallbackVideoSrc;
     lastSrcRef.current = fallbackVideoSrc;
+    v.load();
     if (playing && !lookup.isCard) {
       v.play().catch(() => { /* autoplay-blocked, fine for preview */ });
     }
