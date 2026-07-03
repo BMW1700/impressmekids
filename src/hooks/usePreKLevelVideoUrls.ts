@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
-import { getCdnUrl } from "@/lib/cdn";
+import { getCdnUrl, resolveCdnOrFallback } from "@/lib/cdn";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 // 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
@@ -25,8 +25,8 @@ interface WordInput {
 
 export interface PreKLevelVideoUrls {
   loading: boolean;
-  videoUrls: Record<string, string>;  // sceneKey -> signed URL
-  posterUrls: Record<string, string>; // sceneKey -> poster URL
+  videoUrls: Record<string, string>;  // sceneKey -> resolved URL
+  posterUrls: Record<string, string>; // sceneKey -> resolved URL
 }
 
 function isAbsolute(v: string): boolean {
@@ -54,19 +54,18 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
         posterEntries.push([SCENE_KEYS.wordFirst(i), w.hold_poster_url]);
       });
 
-      // Build the list of storage paths we need to sign in a single batch.
-      const pathsToSign = new Set<string>();
+      // Always sign every relative storage path. The signed URL is the
+      // guaranteed-working fallback; the R2 CDN is a free-egress optimization
+      // layered on top when the file has actually been mirrored.
       const directs = new Map<string, string>(); // key -> already-resolvable URL
-      const cdnHits = new Map<string, string>(); // path -> R2 CDN URL
+      const pathsToSign = new Set<string>();
       for (const [key, v] of [...videoEntries, ...posterEntries]) {
         if (!v) continue;
         if (isAbsolute(v)) { directs.set(key, v); continue; }
-        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, v);
-        if (cdn) { cdnHits.set(v, cdn); continue; }
         pathsToSign.add(v);
       }
 
-      let signed: Record<string, string> = {};
+      const signed: Record<string, string> = {};
       if (pathsToSign.size > 0) {
         const { data } = await supabase.storage
           .from(PREK_VIDEO_BUCKET)
@@ -74,10 +73,28 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
         (data ?? []).forEach((d) => { if (d.path && d.signedUrl) signed[d.path] = d.signedUrl; });
       }
 
+      // For each storage path, prefer the R2 CDN when a HEAD probe confirms
+      // it exists there; otherwise use the signed Storage URL. Probes run in
+      // parallel and are cached module-wide, so a level costs at most one
+      // HEAD per unique path per session.
+      const resolvedByPath = new Map<string, string>();
+      await Promise.all(
+        Array.from(pathsToSign).map(async (p) => {
+          const sig = signed[p];
+          if (!sig) return;
+          if (!getCdnUrl(PREK_VIDEO_BUCKET, p)) {
+            resolvedByPath.set(p, sig);
+            return;
+          }
+          const url = await resolveCdnOrFallback(PREK_VIDEO_BUCKET, p, sig);
+          resolvedByPath.set(p, url);
+        }),
+      );
+
       const resolve = (v: string | null | undefined): string | null => {
         if (!v) return null;
         if (isAbsolute(v)) return v;
-        return cdnHits.get(v) ?? signed[v] ?? null;
+        return resolvedByPath.get(v) ?? null;
       };
 
       const videoUrls: Record<string, string> = {};
@@ -94,3 +111,4 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
 
   return state;
 }
+
