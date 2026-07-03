@@ -85,6 +85,7 @@ function useSignedSrc(pathOrUrl: string | null): string | null {
           setSrc(null);
           return;
         }
+        setSrc(data.signedUrl);
         const playable = await resolveCdnOrFallback(PREK_VIDEO_BUCKET, pathOrUrl, data.signedUrl);
         if (!cancelled) setSrc(playable);
       })

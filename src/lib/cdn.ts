@@ -79,8 +79,10 @@ async function probeCdn(cdnUrl: string): Promise<ProbeResult> {
   const existing = inflightProbes.get(cdnUrl);
   if (existing) return existing;
   const p = (async (): Promise<ProbeResult> => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 2500);
     try {
-      const res = await fetch(cdnUrl, { method: "HEAD", mode: "cors" });
+      const res = await fetch(cdnUrl, { method: "HEAD", mode: "cors", signal: controller.signal });
       const result: ProbeResult = res.ok ? "hit" : "miss";
       probeCache.set(cdnUrl, result);
       return result;
@@ -88,6 +90,7 @@ async function probeCdn(cdnUrl: string): Promise<ProbeResult> {
       probeCache.set(cdnUrl, "miss");
       return "miss";
     } finally {
+      window.clearTimeout(timeout);
       inflightProbes.delete(cdnUrl);
     }
   })();
