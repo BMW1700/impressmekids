@@ -225,6 +225,15 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       const tIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
       const tOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
       if (tIn > 0 || tOut !== null) m.set(s.src, { trimIn: tIn, trimOut: tOut });
+      if ((tIn > 0 || tOut !== null) && s.fallbackSrc) m.set(s.fallbackSrc, { trimIn: tIn, trimOut: tOut });
+    }
+    return m;
+  }, [steps]);
+
+  const fallbackBySrc = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of steps) {
+      if (s.kind === "clip" && s.fallbackSrc) m.set(s.src, s.fallbackSrc);
     }
     return m;
   }, [steps]);
@@ -577,6 +586,12 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   };
 
   const handleVideoError = (slot: Slot) => {
+    const currentSrc = slotSrc[slot] || videoRefs.current[slot]?.currentSrc || videoRefs.current[slot]?.src || "";
+    const fallback = fallbackBySrc.get(currentSrc);
+    if (fallback && fallback !== currentSrc) {
+      setSlotSrc((s) => ({ ...s, [slot]: fallback }));
+      return;
+    }
     if (incomingSlotRef.current === slot) {
       incomingSlotRef.current = null;
     }

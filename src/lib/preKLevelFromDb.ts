@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { getCdnUrl, resolveCdnOrFallback } from "@/lib/cdn";
+import { getCdnUrl } from "@/lib/cdn";
 import type { VideoLevel, VideoStep } from "@/data/preKAdventuresVideo";
 
 export const PREK_VIDEO_BUCKET = "prek-level-videos";
@@ -45,18 +45,21 @@ const cacheKey = (world: number, level: number) => `${world}:${level}`;
  * try the CDN first and fall back to a signed Storage URL if the CDN 404s
  * (new uploads that haven't been mirrored to R2 yet).
  */
-async function resolveUrl(value: string | null | undefined): Promise<string | null> {
+interface ResolvedUrl {
+  src: string;
+  fallbackSrc?: string;
+}
+
+async function resolveUrl(value: string | null | undefined): Promise<ResolvedUrl | null> {
   if (!value) return null;
-  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
+  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return { src: value };
   const { data, error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
     .createSignedUrl(value, 60 * 60 * 24 * 7);
   const signed = error || !data?.signedUrl ? null : data.signedUrl;
-  // If R2 isn't enabled for this bucket, getCdnUrl returns null and the
-  // helper below immediately returns the signed URL — no HEAD roundtrip.
-  if (!getCdnUrl(PREK_VIDEO_BUCKET, value)) return signed;
   if (!signed) return null;
-  return resolveCdnOrFallback(PREK_VIDEO_BUCKET, value, signed);
+  const cdn = getCdnUrl(PREK_VIDEO_BUCKET, value);
+  return cdn ? { src: cdn, fallbackSrc: signed } : { src: signed };
 }
 
 
@@ -163,7 +166,8 @@ async function buildLevelEntry(
 
   const steps: VideoStep[] = [{
     kind: "clip",
-    src: opening,
+    src: opening.src,
+    fallbackSrc: opening.fallbackSrc,
     trimIn: trimOrUndef(level.opening_trim_in_seconds),
     trimOut: trimOrUndef(level.opening_trim_out_seconds),
   }];
@@ -180,8 +184,9 @@ async function buildLevelEntry(
 
     steps.push({
       kind: "clip",
-      src: first,
-      poster: poster ?? undefined,
+      src: first.src,
+      fallbackSrc: first.fallbackSrc,
+      poster: poster?.src ?? undefined,
       trimIn: trimOrUndef(w.first_trim_in_seconds),
       trimOut: trimOrUndef(w.first_trim_out_seconds),
     });
@@ -190,11 +195,12 @@ async function buildLevelEntry(
       word: w.word,
       askLine: w.ask_line,
       successLine: w.success_line || undefined,
-      holdPoster: poster ?? undefined,
+      holdPoster: poster?.src ?? undefined,
     });
     steps.push({
       kind: "clip",
-      src: second,
+      src: second.src,
+      fallbackSrc: second.fallbackSrc,
       trimIn: trimOrUndef(w.second_trim_in_seconds),
       trimOut: trimOrUndef(w.second_trim_out_seconds),
     });
@@ -202,7 +208,8 @@ async function buildLevelEntry(
 
   steps.push({
     kind: "clip",
-    src: closing,
+    src: closing.src,
+    fallbackSrc: closing.fallbackSrc,
     trimIn: trimOrUndef(level.closing_trim_in_seconds),
     trimOut: trimOrUndef(level.closing_trim_out_seconds),
   });
