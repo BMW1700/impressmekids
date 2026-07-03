@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET, invalidatePreKLevelCacheByDbId } from "@/lib/preKLevelFromDb";
-import { resolveCdnOrFallback } from "@/lib/cdn";
+import { getCdnUrl } from "@/lib/cdn";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
@@ -63,19 +63,23 @@ interface WordRow {
 }
 
 // Resolves a storage path or full URL into something a <video> can play.
-function useSignedSrc(pathOrUrl: string | null): string | null {
+function useSignedSrc(pathOrUrl: string | null): { src: string | null; fallbackSrc: string | null } {
   const [src, setSrc] = useState<string | null>(null);
+  const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     if (!pathOrUrl) {
       setSrc(null);
+      setFallbackSrc(null);
       return;
     }
     if (/^https?:\/\//.test(pathOrUrl) || pathOrUrl.startsWith("/")) {
       setSrc(pathOrUrl);
+      setFallbackSrc(null);
       return;
     }
     setSrc(null);
+    setFallbackSrc(null);
     supabase.storage
       .from(PREK_VIDEO_BUCKET)
       .createSignedUrl(pathOrUrl, 60 * 60)
@@ -85,16 +89,19 @@ function useSignedSrc(pathOrUrl: string | null): string | null {
           setSrc(null);
           return;
         }
-        setSrc(data.signedUrl);
-        const playable = await resolveCdnOrFallback(PREK_VIDEO_BUCKET, pathOrUrl, data.signedUrl);
-        if (!cancelled) setSrc(playable);
+        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, pathOrUrl);
+        setSrc(cdn ?? data.signedUrl);
+        setFallbackSrc(cdn ? data.signedUrl : null);
       })
       .catch(() => {
-        if (!cancelled) setSrc(null);
+        if (!cancelled) {
+          setSrc(null);
+          setFallbackSrc(null);
+        }
       });
     return () => { cancelled = true; };
   }, [pathOrUrl]);
-  return src;
+  return { src, fallbackSrc };
 }
 
 const VideoSlot = ({
@@ -117,7 +124,7 @@ const VideoSlot = ({
   onTrimChange: (next: { trimIn: number | null; trimOut: number | null }) => void;
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const src = useSignedSrc(pathOrUrl);
+  const { src, fallbackSrc } = useSignedSrc(pathOrUrl);
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
@@ -125,6 +132,7 @@ const VideoSlot = ({
         <div className="space-y-2">
           <VideoTrimEditor
             src={src}
+            fallbackSrc={fallbackSrc}
             trimIn={trimIn}
             trimOut={trimOut}
             onChange={onTrimChange}
