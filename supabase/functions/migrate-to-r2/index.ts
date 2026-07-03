@@ -16,6 +16,14 @@ const R2_ACCESS_KEY_ID = Deno.env.get("R2_ACCESS_KEY_ID") ?? "";
 const R2_SECRET_ACCESS_KEY = Deno.env.get("R2_SECRET_ACCESS_KEY") ?? "";
 const R2_ENDPOINT = Deno.env.get("R2_ENDPOINT") ?? "";
 const R2_BUCKET = "nabulearn-media";
+const MIGRATABLE_BUCKETS = new Set([
+  "prek-level-videos",
+  "prek-level-audio",
+  "world-backgrounds",
+  "campaign-assets",
+  "avatars",
+  "email-assets",
+]);
 
 function getR2() {
   if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
@@ -154,10 +162,66 @@ async function copyOne(
   return { r2Key, size: body.byteLength };
 }
 
+function validateCopyPathBody(body: any) {
+  const bucket = String(body.bucket || "").trim();
+  const path = String(body.path || "").trim().replace(/^\/+/, "");
+  const contentType = typeof body.contentType === "string" ? body.contentType.slice(0, 255) : null;
+  const size = Number.isFinite(Number(body.size)) ? Number(body.size) : null;
+  if (!MIGRATABLE_BUCKETS.has(bucket)) throw new Error("bucket is not R2-enabled");
+  if (!path || path.includes("..") || path.startsWith("/")) throw new Error("invalid path");
+  return { bucket, path, contentType, size };
+}
+
+async function copySinglePath(admin: ReturnType<typeof createClient>, body: any) {
+  const { bucket, path, contentType, size } = validateCopyPathBody(body);
+  const now = new Date().toISOString();
+  const { data: row, error: upsertErr } = await admin
+    .from("r2_migration_log")
+    .upsert({
+      bucket,
+      path,
+      size,
+      content_type: contentType,
+      status: "pending",
+      error: null,
+      updated_at: now,
+    }, { onConflict: "bucket,path" })
+    .select("id, bucket, path, content_type, attempts")
+    .maybeSingle();
+  if (upsertErr || !row) throw new Error(`migration log upsert failed: ${upsertErr?.message}`);
+
+  try {
+    const copied = await copyOne(admin, row as any);
+    await admin
+      .from("r2_migration_log")
+      .update({
+        status: "copied",
+        r2_key: copied.r2Key,
+        size: copied.size,
+        copied_at: now,
+        error: null,
+        updated_at: now,
+      })
+      .eq("id", (row as any).id);
+    return { copied: true, ...copied };
+  } catch (e: any) {
+    await admin
+      .from("r2_migration_log")
+      .update({
+        status: "failed",
+        attempts: Number((row as any).attempts || 0) + 1,
+        error: String(e?.message || e).slice(0, 500),
+        updated_at: now,
+      })
+      .eq("id", (row as any).id);
+    throw e;
+  }
+}
+
 async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: number) {
   const { data: pending, error } = await admin
     .from("r2_migration_log")
-    .select("id, bucket, path, content_type")
+    .select("id, bucket, path, content_type, attempts")
     .in("status", ["pending", "failed"])
     .lt("attempts", 5)
     .order("created_at", { ascending: true })
@@ -186,6 +250,7 @@ async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: n
         .from("r2_migration_log")
         .update({
           status: "failed",
+          attempts: Number((row as any).attempts || 0) + 1,
           error: String(e?.message || e).slice(0, 500),
         })
         .eq("id", (row as any).id);
@@ -249,6 +314,12 @@ Deno.serve(async (req) => {
     if (action === "batch") {
       const size = Math.min(Number(body.size) || 25, 50);
       const result = await migrateBatch(admin, size);
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action === "copy-path") {
+      const result = await copySinglePath(admin, body);
       return new Response(JSON.stringify({ ok: true, ...result }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

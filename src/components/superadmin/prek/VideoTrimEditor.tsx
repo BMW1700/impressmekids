@@ -42,6 +42,7 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
   const [playhead, setPlayhead] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<boolean>(false);
+  const [isReady, setIsReady] = useState<boolean>(false);
   const [activeSrc, setActiveSrc] = useState<string | null>(src);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
     setPlayhead(0);
     setIsPlaying(false);
     setLoadError(false);
+    setIsReady(false);
   }, [src]);
 
   // Local draft values during a drag so we don't spam onChange.
@@ -65,6 +67,7 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
     const v = videoRef.current;
     if (!v) return;
     setLoadError(false);
+    setIsReady(true);
     if (isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
     // Snap preview to the trim-in point so admins see what runtime will see.
     try {
@@ -77,8 +80,13 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
     if (fallbackSrc && activeSrc !== fallbackSrc) {
       setActiveSrc(fallbackSrc);
       setLoadError(false);
+      setIsReady(false);
+      window.setTimeout(() => {
+        try { videoRef.current?.load(); } catch { /* noop */ }
+      }, 0);
       return;
     }
+    setIsReady(false);
     setLoadError(true);
   };
 
@@ -215,20 +223,28 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
 
   return (
     <div className="space-y-2">
-      <video
-        ref={videoRef}
-        src={activeSrc}
-        preload="metadata"
-        playsInline
-        className="w-full max-w-sm rounded border bg-black aspect-video"
-        onLoadedMetadata={onLoadedMeta}
-        onError={handleLoadError}
-        onTimeUpdate={onTimeUpdate}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
-        onClick={togglePlay}
-      />
+      <div className="relative w-full max-w-sm overflow-hidden rounded border bg-black aspect-video">
+        <video
+          ref={videoRef}
+          src={activeSrc}
+          preload="metadata"
+          playsInline
+          className={`h-full w-full object-contain ${isReady ? "opacity-100" : "opacity-0"}`}
+          onLoadedMetadata={onLoadedMeta}
+          onCanPlay={() => setIsReady(true)}
+          onError={handleLoadError}
+          onTimeUpdate={onTimeUpdate}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => setIsPlaying(false)}
+          onClick={togglePlay}
+        />
+        {!isReady && !loadError ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted text-xs text-muted-foreground">
+            Loading video…
+          </div>
+        ) : null}
+      </div>
       {loadError ? (
         <div className="max-w-sm rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
           This video could not be loaded. Replace it or try saving again.
@@ -290,14 +306,14 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="default" type="button" onClick={togglePlay}>
+          <Button size="sm" variant="default" type="button" onClick={togglePlay} disabled={!isReady || loadError}>
             {isPlaying ? <Pause className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
             {isPlaying ? "Pause" : "Play"}
           </Button>
-          <Button size="sm" variant="outline" type="button" onClick={setInAtPlayhead}>
+          <Button size="sm" variant="outline" type="button" onClick={setInAtPlayhead} disabled={!isReady || loadError}>
             <Scissors className="h-3 w-3 mr-1" /> Set In
           </Button>
-          <Button size="sm" variant="outline" type="button" onClick={setOutAtPlayhead}>
+          <Button size="sm" variant="outline" type="button" onClick={setOutAtPlayhead} disabled={!isReady || loadError}>
             <Scissors className="h-3 w-3 mr-1" /> Set Out
           </Button>
           <Button size="sm" variant="ghost" type="button" onClick={reset}>
