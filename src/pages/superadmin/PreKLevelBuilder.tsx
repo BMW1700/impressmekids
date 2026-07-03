@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadPreKVideo, deletePreKVideo } from "@/lib/preKVideoUpload";
 import { PREK_VIDEO_BUCKET, invalidatePreKLevelCacheByDbId } from "@/lib/preKLevelFromDb";
-import { getCdnUrl } from "@/lib/cdn";
 import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
@@ -62,7 +61,10 @@ interface WordRow {
   second_trim_out_seconds: number | null;
 }
 
-// Resolves a storage path or full URL into something a <video> can play.
+// Resolves a storage path or full URL into something the admin editor can play.
+// Admin previews intentionally use signed backend storage directly instead of
+// CDN-first, because recently uploaded files may not have reached R2 yet and
+// Windows browsers can get stuck on the failed media load.
 function useSignedSrc(pathOrUrl: string | null): { src: string | null; fallbackSrc: string | null } {
   const [src, setSrc] = useState<string | null>(null);
   const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
@@ -89,9 +91,8 @@ function useSignedSrc(pathOrUrl: string | null): { src: string | null; fallbackS
           setSrc(null);
           return;
         }
-        const cdn = getCdnUrl(PREK_VIDEO_BUCKET, pathOrUrl);
-        setSrc(cdn ?? data.signedUrl);
-        setFallbackSrc(cdn ? data.signedUrl : null);
+        setSrc(data.signedUrl);
+        setFallbackSrc(null);
       })
       .catch(() => {
         if (!cancelled) {
@@ -277,7 +278,7 @@ const PreKLevelBuilder = () => {
       const prior = slot === "opening" ? level.opening_video_url : level.closing_video_url;
       if (prior) await deletePreKVideo(prior);
 
-      const { path } = await uploadPreKVideo(file, level.world_id, level.id, slot);
+      const { path, r2Copied } = await uploadPreKVideo(file, level.world_id, level.id, slot);
       const column = slot === "opening" ? "opening_video_url" : "closing_video_url";
       // Reset trim + cached duration so the new file isn't cut by the old clip's marks.
       const { error } = await supabase
@@ -291,7 +292,11 @@ const PreKLevelBuilder = () => {
         .eq("id", level.id);
       if (error) throw error;
       invalidatePreKLevelCacheByDbId(level.id);
-      toast.success(`${slot === "opening" ? "Opening" : "Closing"} video saved — live for the next play`);
+      toast.success(
+        r2Copied
+          ? `${slot === "opening" ? "Opening" : "Closing"} video saved and copied to R2`
+          : `${slot === "opening" ? "Opening" : "Closing"} video saved — backend preview is ready`,
+      );
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
@@ -372,7 +377,7 @@ const PreKLevelBuilder = () => {
     try {
       const prior = slot === "first" ? word.first_video_url : word.second_video_url;
       if (prior) await deletePreKVideo(prior);
-      const { path } = await uploadPreKVideo(
+      const { path, r2Copied } = await uploadPreKVideo(
         file,
         level.world_id,
         level.id,
@@ -391,7 +396,7 @@ const PreKLevelBuilder = () => {
         .eq("id", word.id);
       if (error) throw error;
       invalidatePreKLevelCacheByDbId(level.id);
-      toast.success("Word video saved — live for the next play");
+      toast.success(r2Copied ? "Word video saved and copied to R2" : "Word video saved — backend preview is ready");
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
