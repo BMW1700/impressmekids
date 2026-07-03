@@ -31,6 +31,8 @@ export type VideoStep =
   | {
       kind: "clip";
       src: string;
+      /** Signed backend URL used if a CDN URL is missing or blocked. */
+      fallbackSrc?: string;
       poster?: string;
       /** Non-destructive trim. Playback starts at trimIn (default 0) and treats
        *  the moment currentTime >= trimOut as the natural "ended" point. */

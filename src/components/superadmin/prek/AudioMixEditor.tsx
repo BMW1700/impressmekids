@@ -639,6 +639,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             graph={sceneGraph}
             videoUrls={videoUrlsState.videoUrls}
             posterUrls={videoUrlsState.posterUrls}
+            fallbackVideoUrls={videoUrlsState.fallbackVideoUrls}
+            fallbackPosterUrls={videoUrlsState.fallbackPosterUrls}
             playheadSec={effectivePlayhead}
             playing={previewPlaying && dragPreviewSec === null}
             muteSourceVideo={mix.settings.mute_source_video_audio}

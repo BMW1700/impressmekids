@@ -11,6 +11,8 @@ interface Props {
   graph: SceneGraph;
   videoUrls: Record<string, string>;
   posterUrls: Record<string, string>;
+  fallbackVideoUrls?: Record<string, string>;
+  fallbackPosterUrls?: Record<string, string>;
   playheadSec: number;
   playing: boolean;
   muteSourceVideo: boolean;
@@ -19,7 +21,7 @@ interface Props {
 }
 
 export function TimelinePreviewPlayer({
-  graph, videoUrls, posterUrls, playheadSec, playing, muteSourceVideo, wordsByIndex,
+  graph, videoUrls, posterUrls, fallbackVideoUrls, fallbackPosterUrls, playheadSec, playing, muteSourceVideo, wordsByIndex,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastSrcRef = useRef<string | null>(null);
@@ -29,6 +31,8 @@ export function TimelinePreviewPlayer({
     () => resolveTimelineFrame(playheadSec, graph, videoUrls, posterUrls),
     [playheadSec, graph, videoUrls, posterUrls],
   );
+  const fallbackVideoSrc = lookup.src ? fallbackVideoUrls?.[lookup.sceneKey] ?? null : null;
+  const fallbackPosterSrc = lookup.posterUrl ? fallbackPosterUrls?.[lookup.sceneKey] ?? null : null;
 
   // Swap src only when the active video actually changes (avoids reload spam
   // when the user just scrubs inside one clip).
@@ -41,6 +45,16 @@ export function TimelinePreviewPlayer({
       lastSrcRef.current = null;
     }
   }, [lookup.src]);
+
+  const handleVideoError = () => {
+    const v = videoRef.current;
+    if (!v || !fallbackVideoSrc || lastSrcRef.current === fallbackVideoSrc) return;
+    v.src = fallbackVideoSrc;
+    lastSrcRef.current = fallbackVideoSrc;
+    if (playing && !lookup.isCard) {
+      v.play().catch(() => { /* autoplay-blocked, fine for preview */ });
+    }
+  };
 
   // Reactive seek to the requested local time (debounced ~30ms so dragging
   // doesn't fire seeks faster than the browser can keep up).
@@ -84,12 +98,20 @@ export function TimelinePreviewPlayer({
           className={`absolute inset-0 w-full h-full object-contain ${lookup.isCard ? "opacity-0" : "opacity-100"}`}
           playsInline
           preload="auto"
+          onError={handleVideoError}
         />
         {/* Card overlay: freeze-frame poster + amber badge */}
         {lookup.isCard && (
           <>
             {lookup.posterUrl ? (
-              <img src={lookup.posterUrl} alt="" className="absolute inset-0 w-full h-full object-contain" />
+              <img
+                src={lookup.posterUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-contain"
+                onError={(e) => {
+                  if (fallbackPosterSrc && e.currentTarget.src !== fallbackPosterSrc) e.currentTarget.src = fallbackPosterSrc;
+                }}
+              />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-white/40">
                 <Film className="h-10 w-10" />

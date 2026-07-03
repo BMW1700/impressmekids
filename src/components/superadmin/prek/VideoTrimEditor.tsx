@@ -19,6 +19,8 @@ import { Scissors, RotateCcw, Play, Pause } from "lucide-react";
 interface Props {
   /** Resolved playable URL (signed URL or asset URL). */
   src: string | null;
+  /** Signed backend URL used if the CDN URL is missing or blocked. */
+  fallbackSrc?: string | null;
   /** Persisted trim_in seconds (null = clip start). */
   trimIn: number | null;
   /** Persisted trim_out seconds (null = clip end). */
@@ -32,13 +34,23 @@ function fmt(t: number): string {
   return t.toFixed(3);
 }
 
-export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
+export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
 
   const [duration, setDuration] = useState<number>(0);
   const [playhead, setPlayhead] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<boolean>(false);
+  const [activeSrc, setActiveSrc] = useState<string | null>(src);
+
+  useEffect(() => {
+    setActiveSrc(src);
+    setDuration(0);
+    setPlayhead(0);
+    setIsPlaying(false);
+    setLoadError(false);
+  }, [src]);
 
   // Local draft values during a drag so we don't spam onChange.
   const [draftIn, setDraftIn] = useState<number | null>(trimIn);
@@ -52,12 +64,22 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
   const onLoadedMeta = () => {
     const v = videoRef.current;
     if (!v) return;
+    setLoadError(false);
     if (isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
     // Snap preview to the trim-in point so admins see what runtime will see.
     try {
       const startAt = Math.max(0, Number(trimIn ?? 0));
       if (startAt > 0) v.currentTime = startAt;
     } catch { /* noop */ }
+  };
+
+  const handleLoadError = () => {
+    if (fallbackSrc && activeSrc !== fallbackSrc) {
+      setActiveSrc(fallbackSrc);
+      setLoadError(false);
+      return;
+    }
+    setLoadError(true);
   };
 
   const onTimeUpdate = () => {
@@ -177,7 +199,7 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
   const inputIn = useMemo(() => fmt(effIn), [effIn]);
   const inputOut = useMemo(() => fmt(effOut), [effOut]);
 
-  if (!src) return null;
+  if (!activeSrc) return null;
 
   // Click-to-seek anywhere inside the kept region of the trim bar.
   const onBarClick = (e: React.MouseEvent) => {
@@ -195,17 +217,23 @@ export function VideoTrimEditor({ src, trimIn, trimOut, onChange }: Props) {
     <div className="space-y-2">
       <video
         ref={videoRef}
-        src={src}
+        src={activeSrc}
         preload="metadata"
         playsInline
         className="w-full max-w-sm rounded border bg-black aspect-video"
         onLoadedMetadata={onLoadedMeta}
+        onError={handleLoadError}
         onTimeUpdate={onTimeUpdate}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onEnded={() => setIsPlaying(false)}
         onClick={togglePlay}
       />
+      {loadError ? (
+        <div className="max-w-sm rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          This video could not be loaded. Replace it or try saving again.
+        </div>
+      ) : null}
 
       {/* Trim bar — the SINGLE source of truth for playback position. */}
       <div className="max-w-sm space-y-2">
