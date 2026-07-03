@@ -53,3 +53,61 @@ export function rewriteToCdn(supabaseUrl: string | null | undefined): string | n
   const cdn = getCdnUrl(bucket, path);
   return cdn ?? supabaseUrl;
 }
+
+// ---------------------------------------------------------------------------
+// HEAD-check fallback
+//
+// The R2 migration was a one-shot copy. Files uploaded AFTER cutover live only
+// in Supabase Storage — a naive CDN rewrite 404s on them and breaks previews
+// (black video, 0 duration, broken editor). To keep 100% of the R2 savings on
+// migrated files while unbreaking new uploads, we HEAD-check the CDN once per
+// URL per session and cache the result. Hit = keep CDN (free egress). Miss =
+// fall back to the original Storage URL.
+//
+// The cache is module-scoped, so a single page-load pays at most one HEAD per
+// unique CDN URL and never repeats it. A negative result also caches so we
+// don't hammer R2 with repeated 404s.
+// ---------------------------------------------------------------------------
+
+type ProbeResult = "hit" | "miss";
+const probeCache = new Map<string, ProbeResult>();
+const inflightProbes = new Map<string, Promise<ProbeResult>>();
+
+async function probeCdn(cdnUrl: string): Promise<ProbeResult> {
+  const cached = probeCache.get(cdnUrl);
+  if (cached) return cached;
+  const existing = inflightProbes.get(cdnUrl);
+  if (existing) return existing;
+  const p = (async (): Promise<ProbeResult> => {
+    try {
+      const res = await fetch(cdnUrl, { method: "HEAD", mode: "cors" });
+      const result: ProbeResult = res.ok ? "hit" : "miss";
+      probeCache.set(cdnUrl, result);
+      return result;
+    } catch {
+      probeCache.set(cdnUrl, "miss");
+      return "miss";
+    } finally {
+      inflightProbes.delete(cdnUrl);
+    }
+  })();
+  inflightProbes.set(cdnUrl, p);
+  return p;
+}
+
+/**
+ * Try the R2 CDN first; fall back to `fallbackUrl` if the CDN 404s. Result is
+ * cached per session so repeated resolutions cost nothing. If the bucket is
+ * not R2-enabled, returns `fallbackUrl` immediately without a network call.
+ */
+export async function resolveCdnOrFallback(
+  bucket: string,
+  path: string,
+  fallbackUrl: string,
+): Promise<string> {
+  const cdn = getCdnUrl(bucket, path);
+  if (!cdn) return fallbackUrl;
+  const result = await probeCdn(cdn);
+  return result === "hit" ? cdn : fallbackUrl;
+}
+
