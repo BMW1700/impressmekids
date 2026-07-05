@@ -113,6 +113,33 @@ export default function R2Migration() {
     }
   };
 
+  const repatchHeaders = async () => {
+    setRepatching(true);
+    setRepatchStatus("");
+    try {
+      let cursor: string | null = null;
+      let totalOk = 0;
+      let totalFailed = 0;
+      let totalAttempted = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const r: any = await call("repatch-headers", { size: 150, cursor });
+        totalOk += r.ok || 0;
+        totalFailed += r.failed || 0;
+        totalAttempted += r.attempted || 0;
+        setRepatchStatus(`Re-patched ${totalOk} / attempted ${totalAttempted} (failed ${totalFailed})`);
+        if (!r.attempted || !r.nextCursor) break;
+        cursor = r.nextCursor;
+      }
+      toast.success(`Cache headers re-patched on ${totalOk} files`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRepatching(false);
+    }
+  };
+
+
   const pending = stats?.counts.pending ?? 0;
   const copied = stats?.counts.copied ?? 0;
   const failedCount = stats?.counts.failed ?? 0;
