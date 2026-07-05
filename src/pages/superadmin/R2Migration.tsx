@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Play, Search } from "lucide-react";
+import { Loader2, RefreshCw, Play, Search, Zap } from "lucide-react";
 
 interface ScanStatus {
   state: string;
@@ -23,9 +23,12 @@ export default function R2Migration() {
   const [scanning, setScanning] = useState(false);
   const [running, setRunning] = useState(false);
   const [lastBatch, setLastBatch] = useState<string>("");
+  const [repatching, setRepatching] = useState(false);
+  const [repatchStatus, setRepatchStatus] = useState<string>("");
   const [failed, setFailed] = useState<
     Array<{ bucket: string; path: string; error: string | null }>
   >([]);
+
 
   const call = async (action: string, body: Record<string, unknown> = {}) => {
     const { data, error } = await supabase.functions.invoke("migrate-to-r2", {
@@ -110,6 +113,33 @@ export default function R2Migration() {
     }
   };
 
+  const repatchHeaders = async () => {
+    setRepatching(true);
+    setRepatchStatus("");
+    try {
+      let cursor: string | null = null;
+      let totalOk = 0;
+      let totalFailed = 0;
+      let totalAttempted = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const r: any = await call("repatch-headers", { size: 150, cursor });
+        totalOk += r.ok || 0;
+        totalFailed += r.failed || 0;
+        totalAttempted += r.attempted || 0;
+        setRepatchStatus(`Re-patched ${totalOk} / attempted ${totalAttempted} (failed ${totalFailed})`);
+        if (!r.attempted || !r.nextCursor) break;
+        cursor = r.nextCursor;
+      }
+      toast.success(`Cache headers re-patched on ${totalOk} files`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRepatching(false);
+    }
+  };
+
+
   const pending = stats?.counts.pending ?? 0;
   const copied = stats?.counts.copied ?? 0;
   const failedCount = stats?.counts.failed ?? 0;
@@ -155,8 +185,13 @@ export default function R2Migration() {
             {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
             2. Run migration
           </Button>
+          <Button variant="secondary" onClick={repatchHeaders} disabled={repatching || running || scanning || copied === 0}>
+            {repatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+            3. Re-patch cache headers
+          </Button>
         </div>
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
+        {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
       </Card>
 
       {failed.length > 0 && (
