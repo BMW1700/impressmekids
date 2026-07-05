@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Play, Search, Zap } from "lucide-react";
+import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
   state: string;
@@ -154,6 +155,9 @@ export default function R2Migration() {
           Copy Supabase Storage → Cloudflare R2 (cdn.yubilearn.com). Zero egress after cutover.
         </p>
       </div>
+
+      <CdnHealthWidget />
+      <R2FolderListingNote />
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">

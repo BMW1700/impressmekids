@@ -14,6 +14,7 @@ import { Settings, Upload, Image, Video, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getCdnUrl } from "@/lib/cdn";
+import { mirrorToR2Async } from "@/lib/r2Mirror";
 import { useCampaignAssets } from "@/hooks/useCampaignAssets";
 
 interface CampaignAssetUploaderProps {
@@ -103,6 +104,7 @@ export const CampaignAssetUploader = ({
         });
 
       if (error) throw error;
+      mirrorToR2Async('campaign-assets', data.path, file.type, file.size);
 
       const { data: urlData } = supabase.storage
         .from('campaign-assets')
