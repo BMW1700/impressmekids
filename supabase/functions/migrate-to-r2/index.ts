@@ -375,6 +375,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (action === "repatch-headers") {
+      const size = Math.min(Number(body.size) || 100, 250);
+      const cursor = typeof body.cursor === "string" ? body.cursor : null;
+      const result = await repatchHeadersBatch(admin, size, cursor);
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "copy-path") {
       const result = await copySinglePath(admin, body);
       return new Response(JSON.stringify({ ok: true, ...result }), {
