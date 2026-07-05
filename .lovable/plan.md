@@ -1,52 +1,99 @@
-## What is actually happening
+# Rebrand: Nabu → Yubi Learn — Grand Plan (1 hour)
 
-The new Benny Level 6 opening video exists in backend storage, but it is **not recorded as copied to R2**.
+Product name: **Yubi Learn**. Domain target: **yubilearn.com**. Character "Nabu the Owl" stays as-is (in-world character name, not a brand liability — kids are attached, and it de-risks IP if "Nabu" ever gets pushed on).
 
-So the app currently does this on load:
+## Timeline
 
 ```text
-new upload path -> assume R2 CDN URL exists -> video tag tries cdn.nabulearn.com -> black/glitch -> fallback to signed backend URL
+T+0min    You: buy yubilearn.com (Lovable Domains or registrar)
+T+5min    You: in Lovable, connect yubilearn.com, set as Primary
+T+10min   You: in Cloudflare, add cdn.yubilearn.com as 2nd Custom Domain on R2 bucket
+T+15min   Me:  execute all code changes below (single push)
+T+45min   Verify: video plays via cdn.yubilearn.com, site renders "Yubi Learn"
+T+55min   Publish
+T+60min   Done. nabulearn.com stays as alias for ~30 days.
 ```
 
-On your Mac, the browser fails over after ~2 seconds and then plays. On the Dell, the failed CDN attempt / media decode path is not recovering cleanly, so the black/glitch state can persist.
+## Code changes (I execute in one pass)
 
-There is also a separate codec risk: the current uploaded MP4 is H.264 High Profile. That plays on most Macs, but Windows/Dell browser setups can be more fragile depending on Chrome/Edge codec support, graphics drivers, or OS media extensions. We should not rely on “it works on my Mac.”
+### 1. Brand string replacement across the codebase
+Global find/replace (case-sensitive, word-boundary aware):
+- `NabuLearn` → `YubiLearn`
+- `Nabu Learn` → `Yubi Learn`
+- `nabulearn` → `yubilearn`
+- `Powered by NabuLearn` → `Powered by Yubi Learn`
+- `@nabulearn` (twitter handle) → `@yubilearn`
 
-## Fix plan
+**Preserved (not replaced):**
+- `Nabu the Owl` character name and all references (`NabuOwl.tsx`, `nabuStoryCopy.ts`, `nabu-hero.mp4`, in-game copy, Bobo/Echo/Nabu Buddies memory)
+- Internal R2 bucket name `nabulearn-media` (cosmetic-only; renaming = pointless re-copy of 1,072 files)
+- Supabase project internals (URL, project ref)
+- Filenames of existing assets (`nabu-hero-poster.jpg`, etc.) — renaming would break asset imports for no user-visible gain
+- Historical docs (PHASE_*_COMPLETE.md, IMPLEMENTATION_COMPLETE.md) — leave as archived history
 
-1. **Stop showing the broken CDN attempt in the admin editor**
-   - In the Pre-K level editor, use the signed backend storage URL as the primary preview source.
-   - Keep R2 savings for student/public playback, not for admin editing previews.
-   - This removes the 1–2 second black/glitch window in the backend editor.
+### 2. Files touched
+- `index.html` — title, description, og:title, og:url, og:description, JSON-LD Organization+WebSite, apple-mobile-web-app-title, canonical
+- `public/site.webmanifest` — name, short_name, description
+- `public/llms.txt` — heading + description
+- `public/sitemap.xml` — all `<loc>` domains (18 URLs)
+- `public/robots.txt` — sitemap URL if referenced
+- `src/components/Footer.tsx` — © line and "Powered by NabuLearn ✨"
+- `src/lib/cdn.ts` — `CDN_BASE` → `https://cdn.yubilearn.com`
+- Landing/marketing pages, meta tags in `src/pages/Index.tsx`, `Pricing.tsx`, `Demos.tsx`, etc.
+- Email templates in `supabase/functions/*email*` — sender name, footer signature
+- `CONTRACT_READINESS.md`, `SECURITY_OVERVIEW.md`, `SECURITY_POSTURE.md`, `SCALE_READINESS_AUDIT.md`, `README.md`, `docs/soc2/*` — brand name in user-facing sections only
+- Language files / i18n copy referencing "NabuLearn"
+- `capacitor.config.ts` app name (for iOS/Android builds later)
 
-2. **Add copy-through to R2 for every new Pre-K upload**
-   - Extend the existing `migrate-to-r2` backend function with a `copy-path` action.
-   - After the browser uploads a Pre-K video to backend storage, immediately call `copy-path` for that exact file.
-   - This makes new uploads available at `cdn.nabulearn.com` right away instead of waiting for a manual migration scan/batch.
+### 3. Meta tag updates (`index.html`)
+- Title: `Yubi Learn — AI-Powered Literacy Platform`
+- Description: unchanged wording, "NabuLearn" → "Yubi Learn"
+- `og:url` and canonical → `https://yubilearn.com/`
+- JSON-LD name/url → Yubi Learn / yubilearn.com
+- twitter:site → `@yubilearn` (register the handle separately)
 
-3. **Only publish/store CDN-first paths after the file has a real R2 copy path**
-   - Keep the database storing the normal bucket-relative path.
-   - The runtime can still derive the R2 URL for cost savings.
-   - But newly uploaded videos will actually exist in R2 by the time students load them.
+### 4. CDN cutover (single line)
+`src/lib/cdn.ts`:
+```ts
+const CDN_BASE = "https://cdn.yubilearn.com"; // was cdn.nabulearn.com
+```
+Existing R2 fallback logic (signed Supabase URL on 404) remains intact — protects us if `cdn.yubilearn.com` hasn't fully propagated when a student loads a video.
 
-4. **Backfill the currently broken Level 6 file**
-   - Run the new `copy-path` action for the current Benny Level 6 opening video.
-   - Confirm it appears in `r2_migration_log` as copied.
-   - That removes the CDN 404 for the existing file.
+## What you handle (outside code)
 
-5. **Improve video readiness behavior**
-   - Hide the video surface behind a neutral loading layer until `loadedmetadata`/`canplay` fires.
-   - Only show controls/duration after metadata is real.
-   - If fallback is ever needed, call `load()` after swapping source so Windows browsers reliably restart media loading.
+| # | Task | Where | Time |
+|---|------|-------|------|
+| 1 | Buy `yubilearn.com` | Project Settings → Domains → Buy new domain | 5 min |
+| 2 | Connect + set Primary | Same page | 5 min |
+| 3 | Add `cdn.yubilearn.com` on R2 bucket `nabulearn-media` | Cloudflare dashboard → R2 → Custom Domains → Connect Domain | 5 min |
+| 4 | Update email sender DNS records (SPF/DKIM) for `yubilearn.com` | Project Settings → Email domain setup | 10 min |
+| 5 | Register `@yubilearn` on X/Twitter | twitter.com | 2 min |
 
-6. **Add codec guardrails for Dell/Windows compatibility**
-   - Add an upload-time browser check using `video.canPlayType()` and metadata load.
-   - If the uploaded video cannot load metadata in the current browser, block it with a clear error instead of saving a file that some devices cannot play.
-   - Add a visible warning for `.mov` files and unusual MP4 encodes; MP4 H.264/AAC should be the required production format.
+## What stays 100% untouched
+- Google OAuth (Lovable-managed, auto-covers new custom domain)
+- Clever SSO (redirect URI is Supabase edge function, not marketing domain — verified in `src/pages/Auth.tsx:316`)
+- Supabase project, database schema, edge functions, RLS policies
+- R2 bucket contents (all 1,072 files stay in `nabulearn-media`)
+- All game data, saves, student progress, classrooms
 
-## Expected result
+## Cost impact
+- One-time: ~$12 for domain
+- Recurring: $0 change. Cloudflare custom hostnames are free. R2 pricing unchanged.
 
-- No more initial black/glitch box in the editor.
-- New uploaded videos are copied to R2 immediately, preserving the money savings.
-- Student/runtime playback continues to use R2 for copied files.
-- If a Dell/Windows browser cannot decode a video, the editor tells us immediately instead of silently saving broken media.
+## Trademark note (you accepted the risk, logging for the record)
+Not doing a TESS check before launch. Yubi is used by yubi.com (Indian fintech) — different class, edtech should be clear. Recommend running a proper TM search this week and filing in Class 41 (education services) + Class 9 (educational software) once revenue justifies the ~$750 filing fee.
+
+## Post-flip verification checklist (I run this)
+1. Load `yubilearn.com` → renders "Yubi Learn" branding
+2. Load a Pre-K video → served from `cdn.yubilearn.com`, no black flash
+3. Google sign-in works on `yubilearn.com`
+4. Clever sign-in works on `yubilearn.com`
+5. Old `nabulearn.com` still loads (alias fallback)
+6. Footer, meta tags, page titles all say "Yubi Learn"
+
+## Rollback plan (if something breaks)
+- Revert `CDN_BASE` in `cdn.ts` → back to `cdn.nabulearn.com` (1-line change)
+- `nabulearn.com` stays connected as alias, so worst case we set it as Primary again
+- Zero data risk — no schema/database changes in this plan
+
+Approve and I'll execute the moment you flip me to build mode. You start on your 5 tasks in parallel.
