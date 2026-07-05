@@ -192,9 +192,6 @@ export default function R2Migration() {
         </div>
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
         {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
-
-        </div>
-        {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
       </Card>
 
       {failed.length > 0 && (
