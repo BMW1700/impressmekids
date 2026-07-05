@@ -14,6 +14,7 @@ import { CampaignAssetUploader } from "./CampaignAssetUploader";
 import { campaignWorlds, princessElla, grogTheGoblinKing, categoryToWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
 import { getCdnUrl } from "@/lib/cdn";
+import { mirrorToR2Async } from "@/lib/r2Mirror";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EnemyType } from "@/lib/battleMechanics";
