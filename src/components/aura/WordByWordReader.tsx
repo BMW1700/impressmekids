@@ -51,6 +51,7 @@ import { compareWordPhonemes, analyzePhonemePatterns, getPhonemeDisplayName } fr
 import { preloadPhonemeModel, analyzeRealPhonemes, getModelState, type RealPhonemeAnalysisResult } from '@/lib/realPhonemeAnalysis';
 // MIC DIAGNOSTICS: Detailed error handling for microphone access
 import { ensureMicrophoneAccess, getMicDiagnostics, type MicAccessResult } from '@/lib/micDiagnostics';
+import { mirrorToR2Async } from '@/lib/r2Mirror';
 
 // Browser compatibility check
 const checkBrowserSupport = () => {
