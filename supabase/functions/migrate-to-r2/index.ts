@@ -23,6 +23,9 @@ const MIGRATABLE_BUCKETS = new Set([
   "campaign-assets",
   "avatars",
   "email-assets",
+  // Private student audio (FERPA). Reads always go through sign-r2-audio-url,
+  // never a public CDN URL — see supabase/functions/sign-r2-audio-url.
+  "aura-audio",
 ]);
 
 function getR2() {
