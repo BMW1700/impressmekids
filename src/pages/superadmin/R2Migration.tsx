@@ -23,9 +23,12 @@ export default function R2Migration() {
   const [scanning, setScanning] = useState(false);
   const [running, setRunning] = useState(false);
   const [lastBatch, setLastBatch] = useState<string>("");
+  const [repatching, setRepatching] = useState(false);
+  const [repatchStatus, setRepatchStatus] = useState<string>("");
   const [failed, setFailed] = useState<
     Array<{ bucket: string; path: string; error: string | null }>
   >([]);
+
 
   const call = async (action: string, body: Record<string, unknown> = {}) => {
     const { data, error } = await supabase.functions.invoke("migrate-to-r2", {
