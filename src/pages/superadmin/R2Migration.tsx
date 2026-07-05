@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Play, Search, Zap } from "lucide-react";
+import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
   state: string;
