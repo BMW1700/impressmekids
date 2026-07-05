@@ -370,6 +370,7 @@ export const AccountSection = ({ userProfile, studentProfile }: AccountSectionPr
         .from("avatars")
         .upload(fileName, file, { upsert: true });
       if (uploadError) throw uploadError;
+      mirrorToR2Async("avatars", fileName, file.type, file.size);
 
       const {
         data: { publicUrl },
