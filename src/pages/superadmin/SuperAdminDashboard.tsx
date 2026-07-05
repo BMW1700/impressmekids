@@ -2,8 +2,15 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Baby, GraduationCap, Swords } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { SiteSettingsSection } from "@/components/student/sections/SiteSettingsSection";
+
+const OWNER_EMAIL = "benmaxweiner@gmail.com";
 
 const SuperAdminDashboard = () => {
+  const { user } = useAuth();
+  const isOwner = user?.email?.toLowerCase() === OWNER_EMAIL;
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-8">
@@ -16,6 +23,21 @@ const SuperAdminDashboard = () => {
         <p className="text-muted-foreground">
           Manage worlds, levels, and content across the platform.
         </p>
+
+        {isOwner && (
+          <Card className="border-primary/40">
+            <CardHeader>
+              <CardTitle>Site Access — Private Preview Gate</CardTitle>
+              <CardDescription>
+                Flip the site blocker on or off instantly. Only visible to you.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SiteSettingsSection />
+            </CardContent>
+          </Card>
+        )}
+
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link to="/super-admin/prek">
