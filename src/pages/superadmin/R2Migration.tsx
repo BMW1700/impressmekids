@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Play, Search } from "lucide-react";
+import { Loader2, RefreshCw, Play, Search, Zap } from "lucide-react";
 
 interface ScanStatus {
   state: string;
