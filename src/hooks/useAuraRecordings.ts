@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useCallback } from "react";
+import { USE_R2_AURA } from "@/lib/cdn";
 
 // Helper function to extract storage path from URL
 const extractStoragePath = (audioUrl: string): string | null => {
