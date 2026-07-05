@@ -156,6 +156,9 @@ export default function R2Migration() {
         </p>
       </div>
 
+      <CdnHealthWidget />
+      <R2FolderListingNote />
+
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
