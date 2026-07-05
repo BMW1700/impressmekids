@@ -153,8 +153,12 @@ async function copyOne(
     headers: {
       "Content-Type": row.content_type || blob.type || "application/octet-stream",
       "Content-Length": String(body.byteLength),
+      // 1 year immutable — files never mutate in place; new versions get new keys.
+      // This is THE header that lets Cloudflare hold cache indefinitely at the edge.
+      "Cache-Control": "public, max-age=31536000, immutable",
     },
   });
+
   if (!resp.ok) {
     const t = await resp.text();
     throw new Error(`R2 PUT ${resp.status}: ${t.slice(0, 200)}`);
