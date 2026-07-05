@@ -192,11 +192,61 @@ const GameAuth = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Redirect if already logged in
+  // Redirect if already logged in.
+  // If a session exists but the user has no profile row yet (typical on the
+  // first OAuth sign-in — Supabase creates auth.users but the app has no
+  // handle_new_user trigger, so the profile row must be created here), create
+  // a minimal profile + game_player role, then continue to the dashboard.
+  // Without this, brand-new Google users land back on /auth with no error.
   useEffect(() => {
-    if (session && profile) {
+    if (!session?.user) return;
+    if (profile) {
       navigate('/game/dashboard', { replace: true });
+      return;
     }
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = session.user;
+        // Check whether a profile row already exists (avoid duplicate insert races).
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', u.id)
+          .maybeSingle();
+        if (!existing) {
+          const fullName =
+            (u.user_metadata?.full_name as string | undefined) ||
+            (u.user_metadata?.name as string | undefined) ||
+            (u.email ? u.email.split('@')[0] : 'Player');
+          await supabase.from('profiles').insert({
+            id: u.id,
+            email: u.email ?? null,
+            full_name: fullName,
+            role: 'game_player',
+          } as any);
+        }
+        // Only assign game_player if no role exists — never downgrade an
+        // existing role (e.g. super_admin, teacher).
+        const { data: existingRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', u.id)
+          .maybeSingle();
+        if (!existingRole) {
+          await supabase
+            .from('user_roles')
+            .insert({ user_id: u.id, role: 'game_player' } as any);
+        }
+      } catch (err) {
+        console.error('[GameAuth] auto-provision profile failed:', err);
+      } finally {
+        if (!cancelled) navigate('/game/dashboard', { replace: true });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [session, profile, navigate]);
 
   const handleGoogleSignIn = async () => {
