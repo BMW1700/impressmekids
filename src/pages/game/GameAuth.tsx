@@ -226,10 +226,18 @@ const GameAuth = () => {
             role: 'game_player',
           } as any);
         }
-        // Ensure a user_roles row exists (single-role enforced via UNIQUE user_id).
-        await supabase
+        // Only assign game_player if no role exists — never downgrade an
+        // existing role (e.g. super_admin, teacher).
+        const { data: existingRole } = await supabase
           .from('user_roles')
-          .upsert({ user_id: u.id, role: 'game_player' } as any, { onConflict: 'user_id' });
+          .select('role')
+          .eq('user_id', u.id)
+          .maybeSingle();
+        if (!existingRole) {
+          await supabase
+            .from('user_roles')
+            .insert({ user_id: u.id, role: 'game_player' } as any);
+        }
       } catch (err) {
         console.error('[GameAuth] auto-provision profile failed:', err);
       } finally {
