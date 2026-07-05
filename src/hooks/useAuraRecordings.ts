@@ -44,6 +44,21 @@ export const useSignedAudioUrl = (studentId: string | undefined) => {
     setLoading(prev => ({ ...prev, [recordId]: true }));
 
     try {
+      // R2 path: presigned URL via edge function. Zero backend egress.
+      if (USE_R2_AURA) {
+        const { data, error } = await supabase.functions.invoke("sign-r2-audio-url", {
+          body: { studentId, path, ttl: 900 },
+        });
+        if (error || !(data as any)?.url) {
+          console.warn('[SECURITY] R2 audio access denied:', error?.message);
+          return '';
+        }
+        const url = (data as any).url as string;
+        setSignedUrls(prev => ({ ...prev, [recordId]: url }));
+        return url;
+      }
+
+      // Legacy path: Supabase Storage signed URL (still works during rollout).
       const { data, error } = await supabase.rpc('get_signed_audio_url', {
         p_student_id: studentId,
         p_audio_path: path,
