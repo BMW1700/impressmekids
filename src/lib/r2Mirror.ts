@@ -15,6 +15,9 @@ const R2_MIRRORED_BUCKETS = new Set<string>([
   "campaign-assets",
   "avatars",
   "email-assets",
+  // Private student audio. Mirrored to R2 for zero-egress reads via
+  // sign-r2-audio-url; the bucket itself remains private (never CDN'd).
+  "aura-audio",
 ]);
 
 export interface MirrorResult {

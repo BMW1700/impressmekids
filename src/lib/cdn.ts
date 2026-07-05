@@ -24,6 +24,12 @@ const USE_R2 =
   (import.meta as any).env?.VITE_USE_R2_CDN === "true" ||
   (import.meta as any).env?.VITE_USE_R2_CDN === true;
 
+// Independent flag for private student audio (aura-audio). Uses the
+// sign-r2-audio-url edge function, NOT the public CDN.
+export const USE_R2_AURA =
+  (import.meta as any).env?.VITE_USE_R2_AURA === "true" ||
+  (import.meta as any).env?.VITE_USE_R2_AURA === true;
+
 export function isR2Enabled(bucket: string): boolean {
   return USE_R2 && R2_ENABLED_BUCKETS.has(bucket);
 }

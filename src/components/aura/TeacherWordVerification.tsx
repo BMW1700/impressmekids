@@ -21,6 +21,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { signAuraAudioUrl } from '@/lib/auraAudioUrl';
 import { toast } from 'sonner';
 
 interface FlaggedWord {
@@ -67,16 +68,10 @@ export const TeacherWordVerification = ({
   useEffect(() => {
     const loadAudioUrl = async () => {
       if (!audioPath) return;
-      
-      const { data } = await supabase.storage
-        .from('aura-audio')
-        .createSignedUrl(audioPath, 3600);
-      
-      if (data?.signedUrl) {
-        setAudioUrl(data.signedUrl);
-      }
+      const signed = await signAuraAudioUrl(audioPath);
+      if (signed) setAudioUrl(signed);
     };
-    
+
     loadAudioUrl();
   }, [audioPath]);
 
