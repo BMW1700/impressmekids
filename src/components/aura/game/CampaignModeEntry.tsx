@@ -77,6 +77,8 @@ export const CampaignModeEntry = ({ studentId, onBack, stories, isAdmin = false 
         .upload(fileName, file, { cacheControl: '3600', upsert: true });
       
       if (error) throw error;
+      mirrorToR2Async('campaign-assets', data.path, file.type, file.size);
+      
       
       const { data: urlData } = supabase.storage.from('campaign-assets').getPublicUrl(data.path);
       const finalUrl = getCdnUrl('campaign-assets', data.path) ?? urlData.publicUrl;
