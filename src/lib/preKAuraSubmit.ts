@@ -10,6 +10,7 @@
 // Failures are swallowed — the game never waits or fails because of this.
 
 import { supabase } from "@/integrations/supabase/client";
+import { mirrorToR2Async } from "./r2Mirror";
 
 export interface PreKAuraContext {
   level_id: string;
