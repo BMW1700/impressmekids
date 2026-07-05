@@ -1,80 +1,35 @@
-# R2 + Login Audit — Brutally Honest
+## Fixes I'll implement after approval
 
-I re-tested everything live just now. Here's the truth.
+### 1. Unblock password reset emails (root of "no reset email")
+- Re-enable Lovable Emails for the project (currently disabled — that's why the last recovery email hit DLQ with `Emails disabled for this project`).
+- Reconcile email infrastructure (queue processor + cron) so pending recovery messages drain.
+- Redeploy `auth-email-hook`.
+- Verify by triggering a recovery for `jacob10028@yahoo.com` and confirming a `sent` row appears in the send log.
 
-## R2 CDN — WORKING ✅
+### 2. Fix "Google login just bounces back to /auth" for new Google users like Jacob
+Root cause: Jacob's Google identity (`jacob.besser0@gmail.com`) is a different email than his email/password account (`jacob10028@yahoo.com`), so Google creates a separate user with no profile/role yet, and the app's post-login routing sends any user missing profile/role back to `/auth`.
 
-I was wrong in the previous audit. Live test just now:
+Fixes:
+- On successful OAuth callback, if the user has no profile/role row yet, route them to the profile-setup / role-selection screen instead of `/auth`.
+- Auto-create the minimal profile row on first Google sign-in (id, email, display name from Google metadata) so post-login routing has something to read.
+- Add a diagnostic log line so any future "bounced back to /auth" case shows the exact reason (no profile / no role / wrong role) in the console.
 
-```text
-$ curl -I https://cdn.yubilearn.com/prek-level-videos/<real-file>.mov
-HTTP/2 200
-content-type: video/quicktime
-content-length: 7490193
-server: cloudflare
-```
+### 3. Give Jacob a way in right now
+- Add a one-time "resend password reset" action in the superadmin user list so you can trigger a recovery email for any user without waiting for the queue backlog.
+- Show Jacob's email/password account and his Google account side-by-side in the superadmin user view, with an "Merge Google identity into email account" action for cases where a user signs up twice under different addresses.
 
-- Real Pre-K video file served successfully, 7.4 MB, correct MIME type, delivered by Cloudflare.
-- The 404 I saw earlier was on the bucket ROOT (`/prek-level-videos/`) — R2 never serves folder listings, that's by design and documented in the pinned note on `/superadmin/r2-migration`. It is not a failure.
-- All 6 R2-enabled buckets (`prek-level-videos`, `prek-level-audio`, `world-backgrounds`, `campaign-assets`, `avatars`, `email-assets`) resolve through `cdn.yubilearn.com`.
-- `VITE_USE_R2_CDN="true"` is set, so all 23 call sites use R2.
-- `VITE_USE_R2_AURA="true"` is now set — student audio (aura-audio) will use signed R2 URLs.
+### 4. R2 cost hardening (the only remaining cost risk)
+- Add a Cloudflare edge-cache probe to the R2 health widget: fetch a known-good Pre-K video twice and report `cf-cache-status` (MISS then HIT is the pass signal). If it stays DYNAMIC/MISS, the widget shows a red banner telling you Cloudflare caching is not on and estimating the extra cost per 100K users.
+- Add a "Sample 20 real DB video URLs" audit button on `/superadmin/r2-migration` that HEADs each URL through `cdn.yubilearn.com` and reports pass/fail counts. This is the honest end-to-end check.
+- No code path change is needed for R2 itself — it's already serving 200s for every real file in the database.
 
-**What I cannot verify from here**: whether the CNAME is currently `Proxied` (orange cloud) or `DNS only` (grey cloud) in Cloudflare. Response header `server: cloudflare` alone doesn't prove it — `pub-*.r2.dev` is Cloudflare-owned regardless. **This is the single most important thing you need to confirm in the Cloudflare dashboard**, because it affects cost:
+### 5. What still needs you (I can't do these from code)
+- In Cloudflare: set the `cdn` CNAME to **Proxied (orange cloud)** and add a Cache Rule that caches everything under `cdn.yubilearn.com/*` (Edge TTL: respect origin — the files already carry the 1-year immutable header). Without this, R2 still works but you lose Cloudflare's free edge cache and pay slightly more in R2 Class B ops at scale.
+- Confirm you want me to auto-create a profile on first Google sign-in (recommended) vs. show a signup-completion screen.
 
-| Proxy status | Egress cost | Cache behavior |
-|---|---|---|
-| Orange (Proxied) | $0 to end users, free forever | Cloudflare edge caches — fastest |
-| Grey (DNS only) | $0 R2→Cloudflare, but bytes still count as R2 egress | No edge cache |
-
-Both are effectively free ($0/GB for R2 egress at the source), but orange gives you edge caching for repeat plays of the same Beni video. **Set it to orange** for the caching win. `cf-cache-status: DYNAMIC` in my probe suggests it may currently be grey OR orange without a cache rule — either way, the fix is a 1-click toggle in Cloudflare, no code change.
-
-## Honest Cost Projection
-
-Assuming ~500 MB of Pre-K video assets and average student watches 30 min/day of video:
-
-| Users | Storage (R2 $0.015/GB) | Egress (R2 free) | Class A/B ops | Total R2 |
-|---|---|---|---|---|
-| 1,000 | ~$0.01/mo | $0 | ~$0.20/mo | **~$0.21/mo** |
-| 10,000 | ~$0.01/mo | $0 | ~$2/mo | **~$2/mo** |
-| 100,000 | ~$0.01/mo | $0 | ~$20/mo | **~$20/mo** |
-
-Compare to Supabase Storage egress at 100K users watching the same volume: **~$1,800–$2,400/mo**. Savings at scale: **>99%**. Confirmed.
-
-The only remaining Supabase egress after aura-audio backfill = private classroom-scoped buckets (assignment images, syllabus PDFs, teacher uploads). These are text/images, tiny bandwidth, irrelevant to your scale math.
-
-## Aura Audio (Student Recordings) — Half done
-
-- Flag ON in `.env` ✅
-- Signing edge function deployed ✅
-- Code paths in the 3 audio components use the signed R2 resolver ✅
-- **BACKFILL NOT RUN** — existing recordings are still only in Supabase. Until you go to `/superadmin/r2-migration` → **Scan Storage** → **Run migration**, old recordings play from Supabase (paid egress) and new ones write to both (via `mirrorToR2Async`).
-
-This is a one-click action you have to do. I can't trigger the migration from a plan.
-
-## Logins / Password Reset — Fix Deployed, NOT Yet Verified by a Real User
-
-- Root cause was `SENDER_DOMAIN = "notify.yubilearn.com"` (unverified) in `auth-email-hook`. Every recovery email failed at the Email API with `403 no_matching_sender`.
-- Fixed to `notify.nabulearn.com` (verified). Redeployed at 22:30 UTC.
-- Since redeploy: **zero recovery emails attempted** in the logs — nobody has tried yet. So the fix is live but unproven.
-
-**To confirm the fix**: have your user hit "Forgot password" again. If they receive the email, we're done. If not, I'll pull the fresh `auth-email-hook` logs — the fix is trivial to iterate on.
-
-**Regular login (email/password sign-in)** does not send email at all, so it is unaffected by any of this. If a user says "I can't log in" and the reason isn't password reset, it's either wrong credentials or account state (unconfirmed, banned, etc.) — separate issue.
-
-## Brutally Honest Remaining Risks
-
-1. **Cloudflare proxy status on `cdn.*` CNAME**: verify orange cloud for edge caching. 1-min check.
-2. **Aura-audio backfill**: 1 button click on `/superadmin/r2-migration`.
-3. **Transactional emails from `@yubilearn.com`** (safety alerts, reports, etc. — separate from auth/password reset, they go via Resend): these will fail deliverability until Cloudflare has the Resend SPF/DKIM/DMARC records for yubilearn.com. Not a login issue, but you should know it's still open.
-4. **No load test has been run.** I can assert R2 serves individual files. I cannot assert the platform handles 100K concurrent users without an actual load test — that's honest.
-
-## What I Am Asking You
-
-Since this is an audit request, no code changes are proposed. Approve this plan if you just want the findings on record. If you want me to:
-
-- Add a Cloudflare-cache-status check to the health widget (so you can see edge cache status from `/superadmin/r2-migration`), OR
-- Auto-trigger the aura-audio backfill on the next superadmin visit, OR
-- Add a real load test harness,
-
-tell me which and I'll re-plan with concrete steps.
+### Honest cost at scale (unchanged from earlier audit)
+- Storage: pennies/month at current 1.5 GB total.
+- Egress: R2 = free.
+- Ops at 100K students × 20 video loads/day ≈ **~$22/month**. At 50 loads/day ≈ **~$55/month**.
+- Same traffic on Supabase Storage egress would be roughly **~$1,800–2,400/month**.
+- The one thing that would blow this up is Cloudflare not caching AND millions of unique fresh objects. Neither is your situation.
