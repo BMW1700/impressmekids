@@ -1375,6 +1375,7 @@ export const WordByWordReader = ({
         
         if (!uploadError && uploadData) {
           audioUrl = audioPath; // Store path, not signed URL (signed URL generated on demand)
+          mirrorToR2Async('aura-audio', audioPath, 'audio/webm', uploadAudioBlob.size);
           console.log('✅ AUDIO SUCCESS: Uploaded to', audioPath);
         } else {
           console.error('❌ AUDIO UPLOAD ERROR:', uploadError?.message, uploadError);
