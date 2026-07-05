@@ -1,7 +1,7 @@
-# Security Overview - NabuLearn
+# Security Overview - YubiLearn
 
 ## Executive Summary
-NabuLearn implements enterprise-grade security measures to protect student data, comply with educational regulations, and provide safe, secure learning environments for schools.
+YubiLearn implements enterprise-grade security measures to protect student data, comply with educational regulations, and provide safe, secure learning environments for schools.
 
 ---
 
@@ -176,7 +176,7 @@ NabuLearn implements enterprise-grade security measures to protect student data,
 ## 📞 Security Questions?
 
 For security inquiries, compliance documentation, or penetration testing reports, please contact:
-- **Email**: security@nabulearn.com
+- **Email**: security@yubilearn.com
 - **Documentation**: Available in project Privacy Policy and Terms of Service
 
 ---

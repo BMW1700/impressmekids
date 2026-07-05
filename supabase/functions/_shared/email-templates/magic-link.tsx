@@ -21,7 +21,7 @@ interface MagicLinkEmailProps {
 }
 
 const LOGO_URL =
-  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/nabulearn-logo.png'
+  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/yubilearn-logo.png'
 
 export const MagicLinkEmail = ({
   siteName,
@@ -29,15 +29,15 @@ export const MagicLinkEmail = ({
 }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your NabuLearn sign-in link</Preview>
+    <Preview>Your YubiLearn sign-in link</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Img src={LOGO_URL} width="56" height="56" alt="NabuLearn" style={logo} />
-          <Text style={brand}>NabuLearn</Text>
+          <Img src={LOGO_URL} width="56" height="56" alt="YubiLearn" style={logo} />
+          <Text style={brand}>YubiLearn</Text>
         </Section>
         <Section style={accentBar} />
-        <Heading style={h1}>Sign in to NabuLearn</Heading>
+        <Heading style={h1}>Sign in to YubiLearn</Heading>
         <Text style={text}>
           Click the button below to sign in to {siteName}. This link expires
           shortly for your security.

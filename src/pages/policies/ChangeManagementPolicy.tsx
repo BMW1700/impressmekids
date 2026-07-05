@@ -12,7 +12,7 @@ export const ChangeManagementPolicy = () => {
 
       <section className="policy-section">
         <h2>1. Policy Statement</h2>
-        <p>This policy ensures all system changes to the NabuLearn (IMK) platform are authorized, tested, documented, and implemented in a controlled manner that minimizes risk to students, teachers, and data integrity. All changes must maintain compliance with SOC 2, FERPA, and COPPA requirements.</p>
+        <p>This policy ensures all system changes to the YubiLearn (IMK) platform are authorized, tested, documented, and implemented in a controlled manner that minimizes risk to students, teachers, and data integrity. All changes must maintain compliance with SOC 2, FERPA, and COPPA requirements.</p>
         <p><strong>Objectives:</strong></p>
         <ul>
           <li>Minimize disruption to educational activities</li>
@@ -454,7 +454,7 @@ Follow-up Actions: [what needs to be done next]
         <pre className="policy-code">
 Subject: Scheduled Maintenance - [Date/Time]
 
-Dear NabuLearn Users,
+Dear YubiLearn Users,
 
 We will be performing scheduled maintenance on [date] from [start time] to [end time].
 
@@ -466,12 +466,12 @@ WHAT TO EXPECT:
 WHAT YOU SHOULD DO:
 • Save any in-progress work before [start time]
 • Plan assignments around maintenance window
-• Contact support@nabulearn.com with questions
+• Contact support@yubilearn.com with questions
 
 Thank you for your patience as we improve the platform.
 
 Sincerely,
-NabuLearn Team
+YubiLearn Team
         </pre>
       </section>
 

@@ -122,12 +122,12 @@ const GameDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>LexiQuest Game — NabuLearn</title>
+        <title>LexiQuest Game — YubiLearn</title>
         <meta name="description" content="LexiQuest: an adaptive RPG that builds reading fluency, vocabulary, and phonemic awareness through story-driven battles and minigames." />
-        <link rel="canonical" href="https://nabulearn.com/game" />
-        <meta property="og:title" content="LexiQuest Game — NabuLearn" />
+        <link rel="canonical" href="https://yubilearn.com/game" />
+        <meta property="og:title" content="LexiQuest Game — YubiLearn" />
         <meta property="og:description" content="Adaptive literacy RPG with story-driven battles and phonics minigames." />
-        <meta property="og:url" content="https://nabulearn.com/game" />
+        <meta property="og:url" content="https://yubilearn.com/game" />
         <meta property="og:type" content="website" />
       </Helmet>
       <GameHeader studentId={user?.id}>
@@ -291,7 +291,7 @@ const GameDashboard = () => {
                   {isSignedIn ? (
                     <>Welcome back, <span className="text-yellow-400">{displayName.split(' ')[0]}</span>! 🎮</>
                   ) : (
-                    <>Welcome to <span className="text-yellow-400">NabuLearn</span>! 🎮</>
+                    <>Welcome to <span className="text-yellow-400">YubiLearn</span>! 🎮</>
                   )}
                 </h1>
                 <p className="text-muted-foreground mt-1">

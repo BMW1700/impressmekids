@@ -8,13 +8,13 @@ Apple review — missing usage strings are an automatic rejection.
 
 ```xml
 <key>NSMicrophoneUsageDescription</key>
-<string>NabuLearn uses the microphone so your child can read aloud during AURA literacy practice. Audio is processed on-device and only sent to your teacher when you enable recording in Parent Settings.</string>
+<string>YubiLearn uses the microphone so your child can read aloud during AURA literacy practice. Audio is processed on-device and only sent to your teacher when you enable recording in Parent Settings.</string>
 
 <key>NSSpeechRecognitionUsageDescription</key>
-<string>NabuLearn uses speech recognition to check whether words are read correctly during reading practice. Speech is transcribed on-device whenever possible.</string>
+<string>YubiLearn uses speech recognition to check whether words are read correctly during reading practice. Speech is transcribed on-device whenever possible.</string>
 
 <key>NSCameraUsageDescription</key>
-<string>NabuLearn uses the camera only when you choose to scan a worksheet or attach a photo to an assignment.</string>
+<string>YubiLearn uses the camera only when you choose to scan a worksheet or attach a photo to an assignment.</string>
 ```
 
 ## App category + encryption
@@ -29,7 +29,7 @@ Apple review — missing usage strings are an automatic rejection.
 
 ## App Transport Security
 
-Default ATS is fine — do **not** add `NSAllowsArbitraryLoads`. All NabuLearn
+Default ATS is fine — do **not** add `NSAllowsArbitraryLoads`. All YubiLearn
 endpoints are HTTPS.
 
 ## Sign in with Apple capability

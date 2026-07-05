@@ -13,8 +13,8 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import type { TemplateEntry } from './registry.ts'
 
-const SITE_NAME = 'NabuLearn'
-const APP_URL = 'https://nabulearn.com'
+const SITE_NAME = 'YubiLearn'
+const APP_URL = 'https://yubilearn.com'
 
 interface StudentOnboardingProps {
   fullName?: string
@@ -64,11 +64,11 @@ const StudentOnboardingEmail = ({
 
 export const template = {
   component: StudentOnboardingEmail,
-  subject: 'Your NabuLearn account is ready',
+  subject: 'Your YubiLearn account is ready',
   displayName: 'Student onboarding',
   previewData: {
     fullName: 'Alex',
-    setupUrl: 'https://nabulearn.com/auth',
+    setupUrl: 'https://yubilearn.com/auth',
     classroomName: 'Room 12',
     schoolName: 'Lincoln Elementary',
   },

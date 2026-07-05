@@ -1,10 +1,10 @@
 // CDN URL resolver for R2-backed media.
 // Feature-flagged so we can flip back to Supabase Storage instantly.
 
-const CDN_BASE = "https://cdn.nabulearn.com";
+const CDN_BASE = "https://cdn.yubilearn.com";
 
 // Buckets fully migrated to R2 AND safe to serve publicly (no PII/student audio).
-// Verified 2026-07-02: cdn.nabulearn.com returns HTTP 200 with correct content-type.
+// Verified 2026-07-02: cdn.yubilearn.com returns HTTP 200 with correct content-type.
 const R2_ENABLED_BUCKETS = new Set<string>([
   "prek-level-videos",
   "prek-level-audio",

@@ -40,7 +40,7 @@ export const WaveSurvivedCard = ({ summary, stars = 0, showStars = false, onPlay
   };
 
   const share = async () => {
-    const text = `I survived Wave ${summary.waveReached} in Castle Swarm Defense on NabuLearn — ${summary.wordsRead} words read at ${summary.accuracy}% accuracy! 🏰⚔️`;
+    const text = `I survived Wave ${summary.waveReached} in Castle Swarm Defense on YubiLearn — ${summary.wordsRead} words read at ${summary.accuracy}% accuracy! 🏰⚔️`;
     try {
       if (!cardRef.current) throw new Error("no card");
       const blob = await htmlToImage.toBlob(cardRef.current, { pixelRatio: 2, backgroundColor: "#0f172a" });
@@ -48,14 +48,14 @@ export const WaveSurvivedCard = ({ summary, stars = 0, showStars = false, onPlay
         await navigator.share({
           title: "Castle Swarm Defense",
           text,
-          url: "https://nabulearn.com/game/castle-swarm",
+          url: "https://yubilearn.com/game/castle-swarm",
           files: [new File([blob], `castle-swarm-wave-${summary.waveReached}.png`, { type: "image/png" })],
         });
         return;
       }
     } catch { /* fall through */ }
     if (navigator.share) {
-      try { await navigator.share({ title: "Castle Swarm Defense", text, url: "https://nabulearn.com/game/castle-swarm" }); return; }
+      try { await navigator.share({ title: "Castle Swarm Defense", text, url: "https://yubilearn.com/game/castle-swarm" }); return; }
       catch { /* dismissed */ }
     }
     try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
@@ -102,7 +102,7 @@ export const WaveSurvivedCard = ({ summary, stars = 0, showStars = false, onPlay
             <span className="font-bold text-amber-300">+{summary.coinsEarned} 🪙</span>
           </div>
 
-          <p className="mt-3 text-center text-[10px] text-slate-500">nabulearn.com · AI-Powered Literacy</p>
+          <p className="mt-3 text-center text-[10px] text-slate-500">yubilearn.com · AI-Powered Literacy</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">

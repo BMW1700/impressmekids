@@ -1,4 +1,4 @@
-# NabuLearn - School Administrator Security Guide
+# YubiLearn - School Administrator Security Guide
 
 **For**: School Administrators, IT Directors, District Technology Coordinators  
 **Purpose**: Non-technical security overview for school decision-makers  
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-NabuLearn is an **enterprise-grade educational platform** designed with student privacy and data security as the foundation. This platform meets or exceeds all federal regulations (FERPA, COPPA) and implements security controls comparable to major enterprise education platforms like Google Classroom and Canvas LMS.
+YubiLearn is an **enterprise-grade educational platform** designed with student privacy and data security as the foundation. This platform meets or exceeds all federal regulations (FERPA, COPPA) and implements security controls comparable to major enterprise education platforms like Google Classroom and Canvas LMS.
 
 **Key Security Highlights**:
 - ✅ FERPA compliant student data protection
@@ -23,7 +23,7 @@ NabuLearn is an **enterprise-grade educational platform** designed with student 
 
 ### "Is this platform safe for our students?"
 
-**Yes.** NabuLearn implements the same security standards used by Fortune 500 companies and major education platforms. Here's what that means:
+**Yes.** YubiLearn implements the same security standards used by Fortune 500 companies and major education platforms. Here's what that means:
 
 1. **Student data is locked down**: Only teachers assigned to a student's classroom can access their data
 2. **Parents have control**: Parents must explicitly approve voice recording features
@@ -33,7 +33,7 @@ NabuLearn is an **enterprise-grade educational platform** designed with student 
 
 ### Comparison to Platforms You Know
 
-| Feature | Google Classroom | Canvas LMS | **NabuLearn** |
+| Feature | Google Classroom | Canvas LMS | **YubiLearn** |
 |---------|------------------|------------|---------------------|
 | FERPA Compliance | ✅ Yes | ✅ Yes | ✅ Yes |
 | COPPA Compliance | ✅ Yes | ✅ Yes | ✅ Yes |
@@ -212,7 +212,7 @@ District admins can export aggregate analytics (no PII). Individual student data
 
 ### If You Suspect a Security Breach
 
-1. **Immediately contact support**: [support@nabulearn.com]
+1. **Immediately contact support**: [support@yubilearn.com]
 2. **Document the incident**: Date, time, what data may be affected
 3. **Review audit logs**: Check `security_audit_log` for suspicious access
 4. **Notify affected parties**: We'll help determine FERPA notification requirements
@@ -301,7 +301,7 @@ District admins can export aggregate analytics (no PII). Individual student data
 - **Phase 2 Technical Fixes**: `PHASE_2_SECURITY_COMPLETE.md`
 
 ### Contact
-- **Email**: support@nabulearn.com
+- **Email**: support@yubilearn.com
 - **Phone**: [Your phone number]
 - **Website**: [Your website]
 
@@ -328,7 +328,7 @@ We can provide detailed security documentation, audit logs, and compliance certi
 
 ## Final Word
 
-**NabuLearn takes student privacy seriously.** We built this platform with security-first principles, implementing the same controls used by Fortune 500 companies and major education platforms.
+**YubiLearn takes student privacy seriously.** We built this platform with security-first principles, implementing the same controls used by Fortune 500 companies and major education platforms.
 
 Your students' data is protected by:
 - Enterprise-grade authentication and authorization

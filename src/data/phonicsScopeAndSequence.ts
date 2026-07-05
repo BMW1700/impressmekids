@@ -1,5 +1,5 @@
 /**
- * NabuLearn Phonics Scope & Sequence
+ * YubiLearn Phonics Scope & Sequence
  *
  * Aligned with Common Core Foundational Reading Standards (RF.K.2, RF.K.3,
  * RF.1.3, RF.2.3) and the Wilson / UFLI / Heggerty / Orton-Gillingham

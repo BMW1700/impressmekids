@@ -79,7 +79,7 @@ export const RequestRestorationDialog = ({
             Request Data Restoration
           </DialogTitle>
           <DialogDescription>
-            Submit a restoration request to NabuLearn support team
+            Submit a restoration request to YubiLearn support team
           </DialogDescription>
         </DialogHeader>
 
@@ -88,7 +88,7 @@ export const RequestRestorationDialog = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              For security reasons, data restoration requires approval from NabuLearn. 
+              For security reasons, data restoration requires approval from YubiLearn. 
               Your request will be reviewed within 24-48 hours.
             </AlertDescription>
           </Alert>
@@ -229,7 +229,7 @@ export const RequestRestorationDialog = ({
               htmlFor="understand"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              I understand this request will be reviewed by NabuLearn support team
+              I understand this request will be reviewed by YubiLearn support team
             </label>
           </div>
         </div>

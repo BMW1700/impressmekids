@@ -175,7 +175,7 @@ export default function RiskRegister() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              This Risk Register identifies, assesses, and documents risks to the NabuLearn platform's security, 
+              This Risk Register identifies, assesses, and documents risks to the YubiLearn platform's security, 
               privacy, and operational objectives. Each risk is evaluated for likelihood and impact, with corresponding 
               controls documented to demonstrate risk mitigation.
             </p>
@@ -324,7 +324,7 @@ export default function RiskRegister() {
         <div className="border-t pt-4 text-sm text-muted-foreground space-y-1">
           <p><strong>Classification:</strong> Confidential - Internal Use Only</p>
           <p><strong>Document Control:</strong> This is a living document reviewed quarterly or when significant changes occur.</p>
-          <p><strong>Contact:</strong> security@nabulearn.com</p>
+          <p><strong>Contact:</strong> security@yubilearn.com</p>
         </div>
       </div>
     </div>

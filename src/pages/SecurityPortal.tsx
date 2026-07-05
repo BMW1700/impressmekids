@@ -99,12 +99,12 @@ export default function SecurityPortal() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Security & Compliance — NabuLearn</title>
-        <meta name="description" content="NabuLearn security overview: encryption, access controls, FERPA & COPPA compliance, incident response, and vendor governance." />
-        <link rel="canonical" href="https://nabulearn.com/security" />
-        <meta property="og:title" content="Security & Compliance — NabuLearn" />
+        <title>Security & Compliance — YubiLearn</title>
+        <meta name="description" content="YubiLearn security overview: encryption, access controls, FERPA & COPPA compliance, incident response, and vendor governance." />
+        <link rel="canonical" href="https://yubilearn.com/security" />
+        <meta property="og:title" content="Security & Compliance — YubiLearn" />
         <meta property="og:description" content="Encryption, access controls, FERPA & COPPA compliance, and incident response." />
-        <meta property="og:url" content="https://nabulearn.com/security" />
+        <meta property="og:url" content="https://yubilearn.com/security" />
         <meta property="og:type" content="website" />
       </Helmet>
       <Header />
@@ -119,7 +119,7 @@ export default function SecurityPortal() {
             Security & Compliance
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            NabuLearn is built with security-first architecture to protect student data, 
+            YubiLearn is built with security-first architecture to protect student data, 
             ensure regulatory compliance, and maintain a safe learning environment.
           </p>
         </div>
@@ -318,7 +318,7 @@ export default function SecurityPortal() {
                 For security inquiries, compliance documentation, or to report a security concern, 
                 please contact our security team.
               </p>
-              <p className="text-primary font-medium">security@nabulearn.com</p>
+              <p className="text-primary font-medium">security@yubilearn.com</p>
             </CardContent>
           </Card>
         </section>

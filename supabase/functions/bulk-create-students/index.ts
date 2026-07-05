@@ -19,7 +19,7 @@ interface StudentResult {
   emailQueued?: boolean;
 }
 
-const STUDENT_INTERNAL_DOMAIN = 'student.nabulearn.internal';
+const STUDENT_INTERNAL_DOMAIN = 'student.yubilearn.internal';
 const MAX_BATCH = 500;
 
 function isStudentId(v: string): boolean {
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
                   idempotencyKey: `onboarding-${newUserId}`,
                   templateData: {
                     fullName: student.full_name.trim(),
-                    setupUrl: 'https://nabulearn.com/auth',
+                    setupUrl: 'https://yubilearn.com/auth',
                   },
                 },
               },

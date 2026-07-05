@@ -38,18 +38,18 @@ const ForFamilies = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
       <Helmet>
-        <title>Benny's Reading Adventures — NabuLearn for Families</title>
+        <title>Benny's Reading Adventures — YubiLearn for Families</title>
         <meta
           name="description"
           content="Meet Benny. Read-along cinematic adventures for ages 2–5. Built for parents and daycare centers. No ads, COPPA-safe."
         />
-        <link rel="canonical" href="https://nabulearn.com/for-families" />
-        <meta property="og:title" content="Benny's Reading Adventures — NabuLearn for Families" />
+        <link rel="canonical" href="https://yubilearn.com/for-families" />
+        <meta property="og:title" content="Benny's Reading Adventures — YubiLearn for Families" />
         <meta
           property="og:description"
           content="Cinematic read-along adventures for ages 2–5. The first reading app your child asks for by name."
         />
-        <meta property="og:url" content="https://nabulearn.com/for-families" />
+        <meta property="og:url" content="https://yubilearn.com/for-families" />
         <meta property="og:type" content="website" />
       </Helmet>
 

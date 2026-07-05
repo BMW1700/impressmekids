@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       error: 'Direct backup restoration has been disabled for security',
       message: 'For the security of your student data, direct backup viewing and restoration is no longer available. Please submit a restoration request through the admin dashboard.',
       action_required: 'Use the "Request Restoration" button in the Backup Management section',
-      support_email: 'support@nabulearn.com',
+      support_email: 'support@yubilearn.com',
       next_steps: [
         '1. Click "Request Restoration" button next to the backup',
         '2. Fill out the restoration request form with reason and contact info',

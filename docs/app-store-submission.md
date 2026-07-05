@@ -1,10 +1,10 @@
-# NabuLearn — App Store Submission Pack
+# YubiLearn — App Store Submission Pack
 
 Use this document as the source of truth for the App Store Connect submission.
 
 ## 1. App metadata
 
-- **Name:** NabuLearn
+- **Name:** YubiLearn
 - **Subtitle:** AI-Powered Literacy for K-12
 - **Primary category:** Education
 - **Secondary category:** Productivity
@@ -29,7 +29,7 @@ Declare the following collected data types. All are linked to the user.
 | Crash data | App functionality | No | No |
 | Performance data | App functionality | No | No |
 
-**Tracking across apps:** No. NabuLearn does not include third-party ad SDKs
+**Tracking across apps:** No. YubiLearn does not include third-party ad SDKs
 or cross-app tracking.
 
 ## 3. Required iOS permission strings
@@ -70,13 +70,13 @@ commented snippet in `capacitor.config.ts`. Always remove before archiving.
 ## 7. Reviewer notes (paste into App Store Connect)
 
 ```
-NabuLearn is a literacy practice app for K-12 students, with separate
+YubiLearn is a literacy practice app for K-12 students, with separate
 experiences for students, parents, teachers, and school admins.
 
 DEMO ACCOUNTS:
-- Student: demo-student@nabulearn.com / DemoStudent2026!
-- Teacher: demo-teacher@nabulearn.com / DemoTeacher2026!
-- Parent:  demo-parent@nabulearn.com  / DemoParent2026!
+- Student: demo-student@yubilearn.com / DemoStudent2026!
+- Teacher: demo-teacher@yubilearn.com / DemoTeacher2026!
+- Parent:  demo-parent@yubilearn.com  / DemoParent2026!
 
 To test the core literacy experience:
 1. Sign in as the student account.

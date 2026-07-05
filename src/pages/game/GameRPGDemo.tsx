@@ -103,12 +103,12 @@ const GameRPGDemo = () => {
   return (
     <DemoTourProvider steps={tourSteps} onStepChange={handleStepChange}>
       <Helmet>
-        <title>LexiQuest Demo — NabuLearn</title>
+        <title>LexiQuest Demo — YubiLearn</title>
         <meta name="description" content="Interactive LexiQuest RPG demo: explore the world map, battle bosses, and see how reading powers gameplay." />
-        <link rel="canonical" href="https://nabulearn.com/game/demo" />
-        <meta property="og:title" content="LexiQuest Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive LexiQuest RPG demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/game/demo" />
+        <link rel="canonical" href="https://yubilearn.com/game/demo" />
+        <meta property="og:title" content="LexiQuest Demo — YubiLearn" />
+        <meta property="og:description" content="Interactive LexiQuest RPG demo for YubiLearn." />
+        <meta property="og:url" content="https://yubilearn.com/game/demo" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900">

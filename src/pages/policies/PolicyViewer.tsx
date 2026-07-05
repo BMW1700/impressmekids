@@ -144,12 +144,12 @@ export default function PolicyViewer() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Security & Compliance Policies — NabuLearn</title>
-        <meta name="description" content="NabuLearn security, privacy, and compliance documentation: access control, incident response, vendor management, and data classification policies." />
-        <link rel="canonical" href="https://nabulearn.com/policies" />
-        <meta property="og:title" content="Security & Compliance Policies — NabuLearn" />
-        <meta property="og:description" content="NabuLearn security, privacy, and compliance documentation." />
-        <meta property="og:url" content="https://nabulearn.com/policies" />
+        <title>Security & Compliance Policies — YubiLearn</title>
+        <meta name="description" content="YubiLearn security, privacy, and compliance documentation: access control, incident response, vendor management, and data classification policies." />
+        <link rel="canonical" href="https://yubilearn.com/policies" />
+        <meta property="og:title" content="Security & Compliance Policies — YubiLearn" />
+        <meta property="og:description" content="YubiLearn security, privacy, and compliance documentation." />
+        <meta property="og:url" content="https://yubilearn.com/policies" />
         <meta property="og:type" content="website" />
       </Helmet>
       <style>{`
@@ -401,7 +401,7 @@ export default function PolicyViewer() {
       {/* Footer for print */}
       <div className="hidden print:block policy-footer">
         <div>
-          <strong>NabuLearn</strong> | Confidential & Proprietary
+          <strong>YubiLearn</strong> | Confidential & Proprietary
         </div>
         <div>
           Document ID: IMK-POL-{selectedPolicy.toUpperCase()}-v1.0

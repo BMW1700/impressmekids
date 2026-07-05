@@ -1,5 +1,5 @@
 /**
- * Bulletproof Resend client wrapper for NabuLearn transactional emails.
+ * Bulletproof Resend client wrapper for YubiLearn transactional emails.
  *
  * Features:
  *  - Token-bucket throttle capping outbound at Resend's hard limit (2 req/sec).

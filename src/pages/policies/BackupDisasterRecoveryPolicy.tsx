@@ -5,7 +5,7 @@ export const BackupDisasterRecoveryPolicy = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Backup & Disaster Recovery Policy</h1>
-        <p className="text-muted-foreground">NabuLearn</p>
+        <p className="text-muted-foreground">YubiLearn</p>
         <p className="text-sm text-muted-foreground">Effective Date: January 2025 | Version 1.0</p>
       </div>
 
@@ -15,7 +15,7 @@ export const BackupDisasterRecoveryPolicy = () => {
         <h3 className="text-xl font-semibold mt-6 mb-3">1.1 Purpose</h3>
         <p className="mb-4">
           This Backup & Disaster Recovery Policy establishes comprehensive procedures to ensure the availability, 
-          integrity, and recoverability of all critical data and systems for NabuLearn. The policy defines 
+          integrity, and recoverability of all critical data and systems for YubiLearn. The policy defines 
           backup procedures, disaster recovery processes, business continuity planning, and testing requirements 
           to protect student educational data and maintain service availability.
         </p>
@@ -32,7 +32,7 @@ export const BackupDisasterRecoveryPolicy = () => {
 
         <h3 className="text-xl font-semibold mt-6 mb-3">1.3 Scope</h3>
         <p className="mb-4">
-          This policy applies to all NabuLearn systems, applications, and data, including:
+          This policy applies to all YubiLearn systems, applications, and data, including:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
           <li><strong>Production Database</strong>: All student profiles, assignments, classrooms, authentication data</li>
@@ -768,9 +768,9 @@ export const BackupDisasterRecoveryPolicy = () => {
           For questions or concerns regarding this policy, contact:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
-          <li><strong>Security Officer</strong>: security@nabulearn.com</li>
-          <li><strong>System Administrator</strong>: admin@nabulearn.com</li>
-          <li><strong>General Support</strong>: support@nabulearn.com</li>
+          <li><strong>Security Officer</strong>: security@yubilearn.com</li>
+          <li><strong>System Administrator</strong>: admin@yubilearn.com</li>
+          <li><strong>General Support</strong>: support@yubilearn.com</li>
         </ul>
       </Card>
 

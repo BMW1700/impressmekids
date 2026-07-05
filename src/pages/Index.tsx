@@ -73,7 +73,7 @@ const Index = () => {
                 </span>
               </h2>
               <p className="mx-auto mt-8 max-w-2xl text-lg text-white/65 md:text-xl">
-                Pilot Nabu Learn in your school this semester. Setup in minutes.
+                Pilot Yubi Learn in your school this semester. Setup in minutes.
                 FERPA &amp; COPPA aligned. No credit card.
               </p>
               <div className="mt-12 flex flex-col items-center justify-center gap-3 sm:flex-row">

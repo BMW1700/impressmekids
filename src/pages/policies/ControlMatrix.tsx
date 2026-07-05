@@ -8,7 +8,7 @@ const ControlMatrix = () => {
             SOC 2 Type I Control Matrix
           </h1>
           <p className="text-lg text-muted-foreground">
-            NabuLearn - Educational Platform
+            YubiLearn - Educational Platform
           </p>
           <div className="mt-4 flex gap-6 text-sm text-muted-foreground">
             <div>

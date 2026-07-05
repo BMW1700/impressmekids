@@ -28,7 +28,7 @@ const SystemDescription = () => {
           <h1 className="text-4xl font-bold">System Description Document</h1>
         </div>
         <p className="text-lg text-muted-foreground">
-          NabuLearn - Educational Platform Architecture and Control Environment
+          YubiLearn - Educational Platform Architecture and Control Environment
         </p>
         <div className="flex gap-2 mt-4">
           <Badge variant="outline">SOC 2 Type 1</Badge>
@@ -44,7 +44,7 @@ const SystemDescription = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p>
-            NabuLearn is a cloud-based educational platform designed to help K-12 students improve 
+            YubiLearn is a cloud-based educational platform designed to help K-12 students improve 
             their literacy and learning outcomes through AI-powered voice analysis, adaptive assignments, 
             and gamified learning experiences. The system serves students, teachers, parents, and school 
             administrators, processing sensitive student educational records subject to FERPA and COPPA regulations.
@@ -995,7 +995,7 @@ const SystemDescription = () => {
             <div className="border rounded-lg p-4">
               <h4 className="font-semibold mb-3">FERPA (Family Educational Rights and Privacy Act)</h4>
               <p className="text-sm text-muted-foreground mb-3">
-                NabuLearn handles student educational records subject to FERPA. The system implements 
+                YubiLearn handles student educational records subject to FERPA. The system implements 
                 technical and administrative controls to ensure compliance.
               </p>
               <ul className="space-y-2 text-sm">
@@ -1173,7 +1173,7 @@ const SystemDescription = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <p className="font-medium">Document Owner</p>
-                <p className="text-muted-foreground">NabuLearn Security Team</p>
+                <p className="text-muted-foreground">YubiLearn Security Team</p>
               </div>
               <div>
                 <p className="font-medium">Review Frequency</p>
@@ -1190,7 +1190,7 @@ const SystemDescription = () => {
             </div>
             <Separator className="my-4" />
             <p className="text-muted-foreground">
-              This document accurately describes the NabuLearn system as of the date above. 
+              This document accurately describes the YubiLearn system as of the date above. 
               Changes to system architecture, data flows, or security controls trigger an update to this document.
             </p>
           </div>
@@ -1201,7 +1201,7 @@ const SystemDescription = () => {
       <div className="mt-8 p-4 border rounded-lg bg-muted/30">
         <p className="text-sm text-muted-foreground text-center">
           This System Description Document is prepared for SOC 2 Type 1 audit purposes. 
-          For questions or clarifications, contact the NabuLearn Security Team.
+          For questions or clarifications, contact the YubiLearn Security Team.
         </p>
       </div>
     </div>

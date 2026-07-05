@@ -12,7 +12,7 @@ export const PasswordMFAPolicy = () => {
 
       <section className="policy-section">
         <h2>1. Policy Statement & Scope</h2>
-        <p>This policy establishes password complexity requirements and multi-factor authentication (MFA) standards for all NabuLearn (IMK) system users. This policy applies to:</p>
+        <p>This policy establishes password complexity requirements and multi-factor authentication (MFA) standards for all YubiLearn (IMK) system users. This policy applies to:</p>
         <ul>
           <li>Students</li>
           <li>Teachers</li>

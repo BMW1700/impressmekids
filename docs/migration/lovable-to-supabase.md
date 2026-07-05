@@ -2,7 +2,7 @@
 
 _Last updated: 2026-06-10. Status: **Documented, not yet executed.**_
 
-This is the pre-flighted runbook for moving NabuLearn off Lovable Cloud onto a directly-owned Supabase project (typical motivation: enterprise contracts requiring direct vendor relationship, BAA, or specific region/residency).
+This is the pre-flighted runbook for moving YubiLearn off Lovable Cloud onto a directly-owned Supabase project (typical motivation: enterprise contracts requiring direct vendor relationship, BAA, or specific region/residency).
 
 ## 0. Decide if we actually need to migrate
 
@@ -22,7 +22,7 @@ Run before any cutover. Capture each artifact into `/migration-snapshot/<date>/`
 - [ ] Secrets: `fetch_secrets` → redacted manifest (names only).
 - [ ] Edge function list: `ls supabase/functions/`.
 - [ ] Auth provider config: Google / Apple / Clever OAuth client IDs, redirect URIs, JWT secrets.
-- [ ] Custom domain: `nabulearn.com` → DNS records.
+- [ ] Custom domain: `yubilearn.com` → DNS records.
 - [ ] Cron jobs: pg_cron entries (run `select * from cron.job`).
 - [ ] Realtime channel config (Lovable Cloud project settings).
 - [ ] Vault entries (names only).
@@ -70,7 +70,7 @@ Run before any cutover. Capture each artifact into `/migration-snapshot/<date>/`
 
 ## 8. DNS
 
-1. Lower TTL on `nabulearn.com` to 60s, **24 hours before cutover**.
+1. Lower TTL on `yubilearn.com` to 60s, **24 hours before cutover**.
 2. At cutover: point CNAME / A records to new project's host.
 3. Update custom-domain config in Supabase to claim the hostname (DV cert auto-issues).
 

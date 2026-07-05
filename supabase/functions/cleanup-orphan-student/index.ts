@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const STUDENT_INTERNAL_DOMAIN = "student.nabulearn.internal";
+const STUDENT_INTERNAL_DOMAIN = "student.yubilearn.internal";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {

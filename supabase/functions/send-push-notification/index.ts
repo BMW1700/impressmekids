@@ -118,7 +118,7 @@ serve(async (req) => {
 
     // Configure web-push with VAPID details
     webpush.setVapidDetails(
-      'mailto:support@nabulearn.com',
+      'mailto:support@yubilearn.com',
       VAPID_PUBLIC_KEY,
       VAPID_PRIVATE_KEY
     );

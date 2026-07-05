@@ -1,4 +1,4 @@
-# Google SSO Setup Guide for NabuLearn
+# Google SSO Setup Guide for YubiLearn
 
 ## Overview
 Google Single Sign-On (SSO) allows students and teachers to sign in using their existing Google accounts (e.g., @gmail.com or school Google Workspace accounts). This is **critical for enterprise adoption** as most schools use Google Workspace for Education.
@@ -16,7 +16,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click **"Select a project"** → **"New Project"**
-3. Project name: `NabuLearn Auth`
+3. Project name: `YubiLearn Auth`
 4. Click **"Create"**
 
 ---
@@ -27,7 +27,7 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
    - **APIs & Services** → **OAuth consent screen**
 2. Choose **"External"** (for all users)
 3. Fill in required fields:
-   - **App name:** NabuLearn
+   - **App name:** YubiLearn
    - **User support email:** your-email@domain.com
    - **Developer contact email:** your-email@domain.com
 4. Under **"Authorized domains"**, add:
@@ -48,17 +48,17 @@ Google Single Sign-On (SSO) allows students and teachers to sign in using their 
 1. Navigate to **APIs & Services** → **Credentials**
 2. Click **"+ Create Credentials"** → **"OAuth Client ID"**
 3. Application type: **"Web application"**
-4. Name: `NabuLearn Web Client`
+4. Name: `YubiLearn Web Client`
 
 5. **Authorized JavaScript origins:**
    ```
-   https://nabulearn.com
+   https://yubilearn.com
    ```
 
 6. **Authorized redirect URIs:**
    ```
    https://sjigkjwkgovculkovcjy.supabase.co/auth/v1/callback
-    https://nabulearn.com/auth
+    https://yubilearn.com/auth
    ```
 
 7. Click **"Create"**
@@ -91,18 +91,18 @@ If you have a custom domain:
 
 1. In Lovable Cloud dashboard:
    - Go to **Users** → **Auth Settings**
-    - Under **Site URL**, set: `https://nabulearn.com`
-    - Under **Redirect URLs**, add: `https://nabulearn.com/auth`
+    - Under **Site URL**, set: `https://yubilearn.com`
+    - Under **Redirect URLs**, add: `https://yubilearn.com/auth`
 
 2. Go back to Google Cloud Console:
-    - Add `https://nabulearn.com` to **Authorized JavaScript origins**
-    - Add `https://nabulearn.com/auth` to **Authorized redirect URIs**
+    - Add `https://yubilearn.com` to **Authorized JavaScript origins**
+    - Add `https://yubilearn.com/auth` to **Authorized redirect URIs**
 
 ---
 
 ## Testing
 
-1. Go to your app's login page: [https://nabulearn.com/auth](https://nabulearn.com/auth)
+1. Go to your app's login page: [https://yubilearn.com/auth](https://yubilearn.com/auth)
 2. Click **"Sign in with Google"**
 3. Choose a Google account
 4. You should be redirected back and logged in automatically
@@ -148,7 +148,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 3. Click the **edit icon** (pencil)
 4. **Verify Authorized JavaScript origins:**
    ```
-    https://nabulearn.com
+    https://yubilearn.com
    ```
    - Must be exactly this URL (no trailing slash, no `http://`)
 
@@ -177,7 +177,7 @@ This error means Google is blocking sign-in attempts. Follow these steps **in or
 
 1. **Close all browser windows** (this clears session cookies)
 2. Open a **new incognito/private window**
-3. Go to: `https://nabulearn.com/auth`
+3. Go to: `https://yubilearn.com/auth`
 4. Click **"Sign in with Google"**
 5. **Test with both:**
    - A personal **Gmail** account (e.g., `yourname@gmail.com`)
@@ -206,7 +206,7 @@ If sign-in still fails, check the URL bar for error parameters:
 
 **Error: "requested path is invalid"**
 - Your Site URL or Redirect URL is not configured in the backend
-- Solution: Set **Site URL** to `https://nabulearn.com` in backend auth settings
+- Solution: Set **Site URL** to `https://yubilearn.com` in backend auth settings
 
 **Users stuck on "Choose role" after Google sign-in**
 - This is expected for district staff (e.g., @district.edu emails)

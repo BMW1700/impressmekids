@@ -10,7 +10,7 @@ SET search_path = public
 AS $$
 BEGIN
   IF NEW.email IS NOT NULL
-     AND NEW.email LIKE '%@student.nabulearn.internal'
+     AND NEW.email LIKE '%@student.yubilearn.internal'
      AND NEW.email_confirmed_at IS NULL
   THEN
     NEW.email_confirmed_at := now();

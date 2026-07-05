@@ -127,7 +127,7 @@ export const campaignWorlds: CampaignWorld[] = [
     requiredGradeLevel: 0,
     storyCount: 1,
     unlockRequirement: 0,
-    lore: 'Welcome to NabuLearn! This interactive tutorial will teach you everything you need to know. Learn how reading is your weapon, discover mini-games, and see how your progress helps you become an incredible reader!',
+    lore: 'Welcome to YubiLearn! This interactive tutorial will teach you everything you need to know. Learn how reading is your weapon, discover mini-games, and see how your progress helps you become an incredible reader!',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['minion'], isBossLevel: false, starThresholds: [30, 50, 70] },
     ],

@@ -84,11 +84,11 @@ export function RequireConsent() {
             <p>
               To follow the federal Children's Online Privacy Protection
               Act (COPPA), we need a parent or guardian to confirm your
-              account before you can use this part of NabuLearn.
+              account before you can use this part of YubiLearn.
             </p>
             <p>
               Ask your parent to check their email for a message from
-              NabuLearn — or visit our parent permission page below.
+              YubiLearn — or visit our parent permission page below.
             </p>
             <div className="flex gap-2 pt-2">
               <Button asChild>

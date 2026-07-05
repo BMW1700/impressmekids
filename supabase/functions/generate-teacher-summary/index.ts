@@ -304,7 +304,7 @@ serve(async (req) => {
     }
 
     // Call Vertex AI for analysis
-    const systemPrompt = `You are an AI Teacher Assistant for the NabuLearn program. You must return ONLY valid JSON in this exact structure:
+    const systemPrompt = `You are an AI Teacher Assistant for the YubiLearn program. You must return ONLY valid JSON in this exact structure:
 {
   "class_summary": {
     "top_performers": ["Student Name 1", "Student Name 2"],

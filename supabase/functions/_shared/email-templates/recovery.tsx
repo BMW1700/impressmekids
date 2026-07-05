@@ -21,7 +21,7 @@ interface RecoveryEmailProps {
 }
 
 const LOGO_URL =
-  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/nabulearn-logo.png'
+  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/yubilearn-logo.png'
 
 export const RecoveryEmail = ({
   siteName,
@@ -29,12 +29,12 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Reset your NabuLearn password</Preview>
+    <Preview>Reset your YubiLearn password</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Img src={LOGO_URL} width="56" height="56" alt="NabuLearn" style={logo} />
-          <Text style={brand}>NabuLearn</Text>
+          <Img src={LOGO_URL} width="56" height="56" alt="YubiLearn" style={logo} />
+          <Text style={brand}>YubiLearn</Text>
         </Section>
         <Section style={accentBar} />
         <Heading style={h1}>Reset your password</Heading>

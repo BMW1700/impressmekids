@@ -12,7 +12,7 @@ export default function PWAInstallGuide() {
     {
       step: 1,
       title: "Open Safari",
-      description: "Open NabuLearn in Safari browser (not Chrome or other browsers)",
+      description: "Open YubiLearn in Safari browser (not Chrome or other browsers)",
       icon: "🧭",
     },
     {
@@ -30,7 +30,7 @@ export default function PWAInstallGuide() {
     {
       step: 4,
       title: "Name Your App & Tap 'Add'",
-      description: "Keep the default name 'NabuLearn' and tap 'Add' in the top right",
+      description: "Keep the default name 'YubiLearn' and tap 'Add' in the top right",
       icon: "✅",
     },
     {
@@ -45,7 +45,7 @@ export default function PWAInstallGuide() {
     {
       step: 1,
       title: "Open Chrome",
-      description: "Open NabuLearn in Chrome browser",
+      description: "Open YubiLearn in Chrome browser",
       icon: "🌐",
     },
     {
@@ -92,7 +92,7 @@ export default function PWAInstallGuide() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
             <Smartphone className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Install NabuLearn</h1>
+          <h1 className="text-3xl font-bold mb-2">Install YubiLearn</h1>
           <p className="text-muted-foreground max-w-lg mx-auto">
             Get instant push notifications for safety alerts, drill updates, and your child's check-in status by installing our app on your phone.
           </p>
@@ -205,7 +205,7 @@ export default function PWAInstallGuide() {
             </div>
             <div>
               <p className="font-medium">Not receiving notifications on iPhone?</p>
-              <p className="text-muted-foreground">iOS 16.4 or later is required. Go to Settings → Notifications → NabuLearn and make sure notifications are enabled.</p>
+              <p className="text-muted-foreground">iOS 16.4 or later is required. Go to Settings → Notifications → YubiLearn and make sure notifications are enabled.</p>
             </div>
             <div>
               <p className="font-medium">Still having issues?</p>

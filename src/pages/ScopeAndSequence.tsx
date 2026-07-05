@@ -18,23 +18,23 @@ const ScopeAndSequence = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Phonics Scope &amp; Sequence — NabuLearn</title>
-        <meta name="description" content="Complete K-5 phonics scope and sequence used by NabuLearn AURA. Decoding skills, sight words, and practice word counts by grade." />
-        <link rel="canonical" href="https://nabulearn.com/scope-and-sequence" />
-        <meta property="og:title" content="Phonics Scope &amp; Sequence — NabuLearn" />
+        <title>Phonics Scope &amp; Sequence — YubiLearn</title>
+        <meta name="description" content="Complete K-5 phonics scope and sequence used by YubiLearn AURA. Decoding skills, sight words, and practice word counts by grade." />
+        <link rel="canonical" href="https://yubilearn.com/scope-and-sequence" />
+        <meta property="og:title" content="Phonics Scope &amp; Sequence — YubiLearn" />
         <meta property="og:description" content="K-5 decoding skills, sight words, and practice word counts." />
-        <meta property="og:url" content="https://nabulearn.com/scope-and-sequence" />
+        <meta property="og:url" content="https://yubilearn.com/scope-and-sequence" />
         <meta property="og:type" content="article" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Course",
           "name": "K-5 Phonics Scope & Sequence",
-          "description": "Complete K-5 phonics scope and sequence used by NabuLearn AURA, covering decoding skills, sight words, and practice word counts by grade.",
+          "description": "Complete K-5 phonics scope and sequence used by YubiLearn AURA, covering decoding skills, sight words, and practice word counts by grade.",
           "educationalLevel": "K-5",
           "provider": {
             "@type": "Organization",
-            "name": "NabuLearn",
-            "url": "https://nabulearn.com"
+            "name": "YubiLearn",
+            "url": "https://yubilearn.com"
           }
         })}</script>
       </Helmet>
@@ -45,7 +45,7 @@ const ScopeAndSequence = () => {
           <Button asChild variant="ghost" size="sm">
             <Link to="/school">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to NabuLearn
+              Back to YubiLearn
             </Link>
           </Button>
           <div className="flex items-center gap-2">
@@ -67,7 +67,7 @@ const ScopeAndSequence = () => {
           <div className="mb-4 flex items-center justify-center gap-2">
             <GraduationCap className="h-8 w-8 text-primary" />
             <span className="text-sm font-semibold uppercase tracking-wider text-primary">
-              NabuLearn
+              YubiLearn
             </span>
           </div>
           <h1 className="mb-3 text-4xl font-bold tracking-tight md:text-5xl print:text-3xl">
@@ -200,8 +200,8 @@ const ScopeAndSequence = () => {
         {/* Footer */}
         <footer className="mt-12 border-t border-border pt-6 text-center text-sm text-muted-foreground print:mt-6">
           <p>
-            <strong className="text-foreground">NabuLearn</strong> · AI-Powered
-            Literacy Platform · nabulearn.com
+            <strong className="text-foreground">YubiLearn</strong> · AI-Powered
+            Literacy Platform · yubilearn.com
           </p>
           <p className="mt-1">
             Phonics scope and sequence aligned to Common Core Foundational

@@ -31,7 +31,7 @@ export const generatePhonicsCertificatePdf = (studentName?: string): void => {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
-  doc.text('NabuLearn', pageWidth / 2, 68, { align: 'center' });
+  doc.text('YubiLearn', pageWidth / 2, 68, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.text('AI-Powered Literacy Platform', pageWidth / 2, 80, { align: 'center' });
@@ -121,12 +121,12 @@ export const generatePhonicsCertificatePdf = (studentName?: string): void => {
   doc.setTextColor(DARK[0], DARK[1], DARK[2]);
   doc.text(dateStr, 175, pageHeight - 118, { align: 'center' });
 
-  // Right: NabuLearn signature
+  // Right: YubiLearn signature
   doc.line(pageWidth - 250, pageHeight - 110, pageWidth - 100, pageHeight - 110);
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(13);
   doc.setTextColor(PRIMARY[0], PRIMARY[1], PRIMARY[2]);
-  doc.text('NabuLearn Literacy Team', pageWidth - 175, pageHeight - 118, {
+  doc.text('YubiLearn Literacy Team', pageWidth - 175, pageHeight - 118, {
     align: 'center',
   });
   doc.setFont('helvetica', 'normal');
@@ -136,8 +136,8 @@ export const generatePhonicsCertificatePdf = (studentName?: string): void => {
 
   // Footer
   doc.setFontSize(8);
-  doc.text('nabulearn.com', pageWidth / 2, pageHeight - 50, { align: 'center' });
+  doc.text('yubilearn.com', pageWidth / 2, pageHeight - 50, { align: 'center' });
 
   const safeName = (studentName || 'Student').replace(/[^a-z0-9]+/gi, '-');
-  doc.save(`NabuLearn-Phonics-Foundations-Certificate-${safeName}.pdf`);
+  doc.save(`YubiLearn-Phonics-Foundations-Certificate-${safeName}.pdf`);
 };

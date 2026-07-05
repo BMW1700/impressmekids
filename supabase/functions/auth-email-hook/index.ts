@@ -36,10 +36,10 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "nabulearn"
-const SENDER_DOMAIN = "notify.nabulearn.com"
-const ROOT_DOMAIN = "nabulearn.com"
-const FROM_DOMAIN = "notify.nabulearn.com" // Domain shown in From address (may be root or sender subdomain)
+const SITE_NAME = "yubilearn"
+const SENDER_DOMAIN = "notify.yubilearn.com"
+const ROOT_DOMAIN = "yubilearn.com"
+const FROM_DOMAIN = "notify.yubilearn.com" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.

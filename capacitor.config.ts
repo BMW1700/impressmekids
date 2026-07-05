@@ -16,7 +16,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
  */
 const config: CapacitorConfig = {
   appId: 'app.lovable.8b261911409a4a0485943e15f3d59496',
-  appName: 'nabulearn',
+  appName: 'yubilearn',
   webDir: 'dist',
   ios: {
     contentInset: 'always',

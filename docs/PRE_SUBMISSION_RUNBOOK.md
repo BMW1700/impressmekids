@@ -1,6 +1,6 @@
-# NabuLearn — Pre-Submission Runbook (iOS App Store)
+# YubiLearn — Pre-Submission Runbook (iOS App Store)
 
-This is the **exact ordered checklist** to take NabuLearn from the current
+This is the **exact ordered checklist** to take YubiLearn from the current
 repo state to a submitted App Store build. Every step has a clear owner.
 Anything labeled **YOU** requires a Mac with Xcode 15+ and an active
 Apple Developer Program membership ($99/yr).
@@ -14,7 +14,7 @@ Estimated total time: **6–10 hours of focused work**, spread over 2–5 days
 
 **Owner: anyone with platform-admin login.**
 
-1. Sign in to the production NabuLearn web app as a platform admin.
+1. Sign in to the production YubiLearn web app as a platform admin.
 2. From the browser devtools console (or use `curl` with your JWT), call:
 
    ```js
@@ -23,9 +23,9 @@ Estimated total time: **6–10 hours of focused work**, spread over 2–5 days
    ```
 
 3. Verify the response shows `status: "created"` or `status: "updated"` for all three:
-   - `demo-student@nabulearn.com` / `DemoStudent2026!`
-   - `demo-teacher@nabulearn.com` / `DemoTeacher2026!`
-   - `demo-parent@nabulearn.com`  / `DemoParent2026!`
+   - `demo-student@yubilearn.com` / `DemoStudent2026!`
+   - `demo-teacher@yubilearn.com` / `DemoTeacher2026!`
+   - `demo-parent@yubilearn.com`  / `DemoParent2026!`
 
 4. **Smoke test:** open an incognito window, log in as each demo account, confirm dashboard loads.
 
@@ -48,15 +48,15 @@ Estimated total time: **6–10 hours of focused work**, spread over 2–5 days
 
 ### 2.2 Sign in with Apple — Services ID
 - Identifiers → `+` → **Services IDs**
-- Description: `NabuLearn Sign in with Apple`
-- Identifier: `app.lovable.nabulearn.signin` (any reverse-DNS string)
+- Description: `YubiLearn Sign in with Apple`
+- Identifier: `app.lovable.yubilearn.signin` (any reverse-DNS string)
 - Enable **Sign in with Apple** → Configure:
   - Primary App ID: select the App ID from 2.1
-  - Domains: `nabulearn.com`, `sjigkjwkgovculkovcjy.supabase.co`
+  - Domains: `yubilearn.com`, `sjigkjwkgovculkovcjy.supabase.co`
   - Return URLs: `https://sjigkjwkgovculkovcjy.supabase.co/auth/v1/callback`
 
 ### 2.3 APNs key (for push notifications)
-- Keys → `+` → name "NabuLearn APNs"
+- Keys → `+` → name "YubiLearn APNs"
 - Enable **Apple Push Notifications service (APNs)**
 - Download the `.p8` file (only available once — store securely)
 - Note the Key ID + Team ID
@@ -74,16 +74,16 @@ Estimated total time: **6–10 hours of focused work**, spread over 2–5 days
 ### 3.1 Create the app record
 - https://appstoreconnect.apple.com → Apps → `+`
 - Platform: iOS
-- Name: `NabuLearn`
+- Name: `YubiLearn`
 - Primary language: English (U.S.)
 - Bundle ID: pick the App ID from 2.1
-- SKU: `nabulearn-ios-1`
+- SKU: `yubilearn-ios-1`
 
 ### 3.2 Fill App Information
 - Subtitle: `AI-Powered Literacy for K-12`
 - Category — Primary: **Education** | Secondary: **Productivity**
 - Age rating: complete the questionnaire (answer "None" to everything → 4+)
-- Privacy Policy URL: `https://nabulearn.com/privacy-policy`
+- Privacy Policy URL: `https://yubilearn.com/privacy-policy`
 
 ### 3.3 Fill App Privacy (CRITICAL)
 Use the table in `docs/app-store-submission.md` § 2. Declare:
