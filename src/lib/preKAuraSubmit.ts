@@ -43,6 +43,7 @@ export async function submitPreKAuraReading(opts: {
         });
       if (!error && data) {
         audioUrl = audioPath;
+        mirrorToR2Async("aura-audio", audioPath, audioBlob.type || "audio/webm", audioBlob.size);
       } else if (error) {
         console.warn("[PreKAura] audio upload failed:", error.message);
       }
