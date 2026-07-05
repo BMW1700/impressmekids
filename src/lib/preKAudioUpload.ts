@@ -2,6 +2,7 @@
 // Returns the bucket-relative path (NOT a URL). The hook resolves signed URLs.
 
 import { supabase } from "@/integrations/supabase/client";
+import { mirrorToR2Async } from "./r2Mirror";
 
 export const PREK_AUDIO_BUCKET = "prek-level-audio";
 
