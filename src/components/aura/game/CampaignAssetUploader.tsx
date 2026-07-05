@@ -104,6 +104,7 @@ export const CampaignAssetUploader = ({
         });
 
       if (error) throw error;
+      mirrorToR2Async('campaign-assets', data.path, file.type, file.size);
 
       const { data: urlData } = supabase.storage
         .from('campaign-assets')
