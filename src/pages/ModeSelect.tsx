@@ -138,7 +138,7 @@ const ModeSelect = () => {
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="text-lg font-bold tracking-tight">
-              Nabu
+              Yubi
               <span className={isLight ? "text-[hsl(35_95%_45%)]" : "text-[hsl(48_100%_70%)]"}>
                 Learn
               </span>
