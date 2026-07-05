@@ -185,6 +185,14 @@ export default function R2Migration() {
             {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
             2. Run migration
           </Button>
+          <Button variant="secondary" onClick={repatchHeaders} disabled={repatching || running || scanning || copied === 0}>
+            {repatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+            3. Re-patch cache headers
+          </Button>
+        </div>
+        {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
+        {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
+
         </div>
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
       </Card>
