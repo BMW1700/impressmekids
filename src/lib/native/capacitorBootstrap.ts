@@ -2,14 +2,14 @@
  * Capacitor bootstrap — runs once on app startup.
  *
  * Safe on web: every plugin call is guarded by `Capacitor.isNativePlatform()`
- * so the web app at nabulearn.com is unaffected.
+ * so the web app at yubilearn.com is unaffected.
  *
  * Wires up:
- *  - Status bar styling (matches NabuLearn purple)
+ *  - Status bar styling (matches YubiLearn purple)
  *  - Splash screen auto-hide
  *  - Keyboard behavior for K-5 iPad typing
  *  - Deep link handling for Clever SSO + magic-link auth
- *    (nabulearn://oauth, nabulearn://auth, https://nabulearn.com/* universal links)
+ *    (yubilearn://oauth, yubilearn://auth, https://yubilearn.com/* universal links)
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -30,7 +30,7 @@ export async function initCapacitor(): Promise<void> {
       import('@capacitor/app'),
     ]);
 
-    // Status bar — light icons over NabuLearn purple
+    // Status bar — light icons over YubiLearn purple
     await StatusBar.setStyle({ style: Style.Light }).catch(() => {});
     if (Capacitor.getPlatform() === 'android') {
       await StatusBar.setBackgroundColor({ color: '#667eea' }).catch(() => {});
@@ -49,7 +49,7 @@ export async function initCapacitor(): Promise<void> {
     App.addListener('appUrlOpen', (event) => {
       try {
         const url = new URL(event.url);
-        // nabulearn://oauth?... or https://nabulearn.com/...
+        // yubilearn://oauth?... or https://yubilearn.com/...
         const path = url.pathname + url.search + url.hash;
         if (path && path !== '/') {
           window.history.pushState({}, '', path);

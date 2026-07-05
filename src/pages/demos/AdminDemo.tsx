@@ -64,12 +64,12 @@ const AdminDemo = () => {
   return (
     <DemoTourProvider steps={stepsWithActions}>
       <Helmet>
-        <title>Admin Demo — NabuLearn</title>
+        <title>Admin Demo — YubiLearn</title>
         <meta name="description" content="Interactive district admin demo: roster management, Clever sync, bulk import, safety protocols, and account verification." />
-        <link rel="canonical" href="https://nabulearn.com/demos/admin" />
-        <meta property="og:title" content="Admin Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive district admin demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/admin" />
+        <link rel="canonical" href="https://yubilearn.com/demos/admin" />
+        <meta property="og:title" content="Admin Demo — YubiLearn" />
+        <meta property="og:description" content="Interactive district admin demo for YubiLearn." />
+        <meta property="og:url" content="https://yubilearn.com/demos/admin" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen flex flex-col bg-background">

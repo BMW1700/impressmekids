@@ -1,6 +1,6 @@
-# NabuLearn
+# YubiLearn
 
-> AI-Powered Literacy Platform. NabuLearn uses 4 proprietary ML models to assess reading fluency, predict at-risk students, and deliver targeted interventions through an RPG reading adventure for K-12.
+> AI-Powered Literacy Platform. YubiLearn uses 4 proprietary ML models to assess reading fluency, predict at-risk students, and deliver targeted interventions through an RPG reading adventure for K-12.
 
 ## Pages
 

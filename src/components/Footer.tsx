@@ -40,7 +40,7 @@ export const Footer = () => {
         {/* Footer Links */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} NabuLearn. {t('footer.copyright').replace('© {year} NabuLearn. ', '')}
+            © {new Date().getFullYear()} YubiLearn. {t('footer.copyright').replace('© {year} YubiLearn. ', '')}
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/scope-and-sequence" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
@@ -54,7 +54,7 @@ export const Footer = () => {
               {t('footer.termsOfService')}
             </Link>
             <span className="text-primary font-medium">
-              Powered by NabuLearn ✨
+              Powered by YubiLearn ✨
             </span>
           </div>
         </div>

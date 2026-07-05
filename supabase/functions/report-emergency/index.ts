@@ -163,7 +163,7 @@ serve(async (req) => {
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
               <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                This is an automated emergency notification from NabuLearn.
+                This is an automated emergency notification from YubiLearn.
               </p>
             </div>
           </div>
@@ -171,7 +171,7 @@ serve(async (req) => {
       `;
 
       await sendBulkEmails({
-        from: "NabuLearn Emergencies <emergencies@nabulearn.com>",
+        from: "YubiLearn Emergencies <emergencies@yubilearn.com>",
         subject: `🚨 EMERGENCY REPORT: ${emergencyTypeDisplay}`,
         html,
         recipients: adminEmails.map((email) => ({ to: email })),

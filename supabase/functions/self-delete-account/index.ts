@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
       console.error('auth.admin.deleteUser failed:', deleteErr)
       return new Response(
         JSON.stringify({
-          error: 'Account data cleared but final auth deletion failed. Contact support@nabulearn.com.',
+          error: 'Account data cleared but final auth deletion failed. Contact support@yubilearn.com.',
           deleted, failed,
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

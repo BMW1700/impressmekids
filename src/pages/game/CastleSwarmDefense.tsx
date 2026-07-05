@@ -31,7 +31,7 @@ const CastleSwarmDefense = () => {
   return (
     <>
       <Helmet>
-        <title>Castle Swarm Defense — NabuLearn</title>
+        <title>Castle Swarm Defense — YubiLearn</title>
         <meta name="description" content="Defend the castle by reading words and stories aloud. Campaign, Endless, and Daily Challenge for K-12 readers." />
       </Helmet>
       {run ? (

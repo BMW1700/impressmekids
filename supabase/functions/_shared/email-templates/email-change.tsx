@@ -24,7 +24,7 @@ interface EmailChangeEmailProps {
 }
 
 const LOGO_URL =
-  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/nabulearn-logo.png'
+  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/yubilearn-logo.png'
 
 export const EmailChangeEmail = ({
   siteName,
@@ -34,12 +34,12 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your NabuLearn email change</Preview>
+    <Preview>Confirm your YubiLearn email change</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Img src={LOGO_URL} width="56" height="56" alt="NabuLearn" style={logo} />
-          <Text style={brand}>NabuLearn</Text>
+          <Img src={LOGO_URL} width="56" height="56" alt="YubiLearn" style={logo} />
+          <Text style={brand}>YubiLearn</Text>
         </Section>
         <Section style={accentBar} />
         <Heading style={h1}>Confirm your email change</Heading>

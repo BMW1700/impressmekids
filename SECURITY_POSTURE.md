@@ -1,4 +1,4 @@
-# Nabu Learn — Security Posture Snapshot
+# Yubi Learn — Security Posture Snapshot
 
 _Last reviewed: 2026-06-10. Scope: backend (Supabase / Lovable Cloud)._
 

@@ -61,7 +61,7 @@ export default function AccountDeletion() {
       toast.error(
         err instanceof Error
           ? err.message
-          : "Deletion failed. Please email support@nabulearn.com."
+          : "Deletion failed. Please email support@yubilearn.com."
       );
     } finally {
       setDeleting(false);
@@ -107,7 +107,7 @@ export default function AccountDeletion() {
               <div>
                 <CardTitle>Delete my account</CardTitle>
                 <CardDescription>
-                  This permanently erases your NabuLearn account and personal data.
+                  This permanently erases your YubiLearn account and personal data.
                 </CardDescription>
               </div>
             </div>
@@ -174,7 +174,7 @@ export default function AccountDeletion() {
 
             <p className="text-xs text-muted-foreground">
               Need help instead?{" "}
-              <a href="mailto:support@nabulearn.com" className="underline">
+              <a href="mailto:support@yubilearn.com" className="underline">
                 Contact support
               </a>
               .
@@ -189,7 +189,7 @@ export default function AccountDeletion() {
             <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove your account and all associated personal data
-              from NabuLearn. You will be signed out immediately. This cannot
+              from YubiLearn. You will be signed out immediately. This cannot
               be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -51,12 +51,12 @@ const ParentDemo = () => {
   return (
     <DemoTourProvider steps={stepsWithActions}>
       <Helmet>
-        <title>Parent Demo — NabuLearn</title>
+        <title>Parent Demo — YubiLearn</title>
         <meta name="description" content="Interactive parent demo: child grades, reading progress, assignments, calendar, safety alerts, and teacher messaging." />
-        <link rel="canonical" href="https://nabulearn.com/demos/parent" />
-        <meta property="og:title" content="Parent Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive parent demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/parent" />
+        <link rel="canonical" href="https://yubilearn.com/demos/parent" />
+        <meta property="og:title" content="Parent Demo — YubiLearn" />
+        <meta property="og:description" content="Interactive parent demo for YubiLearn." />
+        <meta property="og:url" content="https://yubilearn.com/demos/parent" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-secondary/[0.06] via-secondary/[0.02] to-primary/[0.03]">

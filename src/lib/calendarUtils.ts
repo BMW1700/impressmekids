@@ -95,7 +95,7 @@ export const exportToICal = (items: CalendarItem[], userRole: string) => {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//NabuLearn//Calendar//EN",
+    "PRODID:-//YubiLearn//Calendar//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
   ];
@@ -114,7 +114,7 @@ export const exportToICal = (items: CalendarItem[], userRole: string) => {
       `SUMMARY:${item.title}`,
       item.description ? `DESCRIPTION:${item.description.replace(/\n/g, "\\n")}` : "",
       item.location ? `LOCATION:${item.location}` : "",
-      `UID:${item.id}@nabulearn.com`,
+      `UID:${item.id}@yubilearn.com`,
       `DTSTAMP:${format(new Date(), "yyyyMMdd")}T${format(new Date(), "HHmmss")}`,
       "END:VEVENT"
     );

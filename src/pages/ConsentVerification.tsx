@@ -363,7 +363,7 @@ export default function ConsentVerification() {
       </Button>
 
       <p className="text-xs text-muted-foreground text-center">
-        By clicking "I Confirm My Consent", you are providing verifiable parental consent as required by COPPA for your child to use NabuLearn.
+        By clicking "I Confirm My Consent", you are providing verifiable parental consent as required by COPPA for your child to use YubiLearn.
       </p>
     </div>
   );

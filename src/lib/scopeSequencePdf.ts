@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 import { phonicsScopeAndSequence, totalPracticeWords } from '@/data/phonicsScopeAndSequence';
 
 /**
- * Generate a branded, printable one-pager PDF of NabuLearn's K-2 Phonics
+ * Generate a branded, printable one-pager PDF of YubiLearn's K-2 Phonics
  * Scope & Sequence — designed for handing to curriculum directors and
  * superintendents in pilot meetings.
  */
@@ -26,14 +26,14 @@ export const generateScopeSequencePdf = (): void => {
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text('NabuLearn', margin, 32);
+  doc.text('YubiLearn', margin, 32);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text('AI-Powered Literacy Platform', margin, 48);
 
   doc.setFontSize(9);
-  doc.text('nabulearn.com', pageWidth - margin, 32, { align: 'right' });
+  doc.text('yubilearn.com', pageWidth - margin, 32, { align: 'right' });
   doc.text('K–2 Phonics Scope & Sequence', pageWidth - margin, 48, { align: 'right' });
 
   // ── Title ──────────────────────────────────────────────
@@ -125,7 +125,7 @@ export const generateScopeSequencePdf = (): void => {
     doc.setFontSize(8);
     doc.setTextColor(MUTED[0], MUTED[1], MUTED[2]);
     doc.text(
-      'NabuLearn · AI-Powered Literacy · Used in all K-2 instruction across the platform',
+      'YubiLearn · AI-Powered Literacy · Used in all K-2 instruction across the platform',
       margin,
       pageHeight - 24,
     );
@@ -137,5 +137,5 @@ export const generateScopeSequencePdf = (): void => {
     );
   }
 
-  doc.save('NabuLearn-Phonics-Scope-and-Sequence.pdf');
+  doc.save('YubiLearn-Phonics-Scope-and-Sequence.pdf');
 };

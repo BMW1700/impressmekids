@@ -197,7 +197,7 @@ A: We have stronger audit logging and explicit parental consent management.
 
 ## Platform Status
 
-🎉 **NabuLearn is now 95% school-ready!**
+🎉 **YubiLearn is now 95% school-ready!**
 
 **Ready for**:
 - School district demos

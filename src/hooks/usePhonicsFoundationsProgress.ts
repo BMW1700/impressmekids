@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const STORAGE_KEY = 'nabulearn:phonics-foundations:mastered';
+const STORAGE_KEY = 'yubilearn:phonics-foundations:mastered';
 
 interface MasteryRecord {
   stage_id: string;

@@ -486,7 +486,7 @@ export default function EvidenceLog() {
         <div className="border-t pt-4 text-sm text-muted-foreground space-y-1">
           <p><strong>Classification:</strong> Confidential - Internal Use Only</p>
           <p><strong>Document Control:</strong> This evidence log is maintained continuously and reviewed monthly.</p>
-          <p><strong>Contact:</strong> security@nabulearn.com</p>
+          <p><strong>Contact:</strong> security@yubilearn.com</p>
         </div>
       </div>
     </div>

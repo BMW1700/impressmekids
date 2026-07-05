@@ -147,8 +147,8 @@ Deno.serve(async (req) => {
     // Send email notification via bulletproof shared client
     try {
       const emailResult = await sendEmail({
-        from: 'NabuLearn Backups <backups@nabulearn.com>',
-        to: 'admin@nabulearn.com',
+        from: 'YubiLearn Backups <backups@yubilearn.com>',
+        to: 'admin@yubilearn.com',
         subject: `🚨 Data Restoration Request - ${requestData.urgency.toUpperCase()} Priority`,
         functionName: 'request-data-restoration',
         payloadSummary: { request_id: request.id, urgency: requestData.urgency },
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
             <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 24px 0;">
             
             <p style="color: #6B7280; font-size: 12px;">
-              This is an automated notification from the NabuLearn backup system.<br>
+              This is an automated notification from the YubiLearn backup system.<br>
               Request ID: ${request.id}<br>
               Timestamp: ${new Date().toISOString()}
             </p>
@@ -217,7 +217,7 @@ Deno.serve(async (req) => {
       if (!emailResult.success) {
         console.error('❌ Failed to send email notification:', emailResult.error);
       } else {
-        console.log('✅ Email notification sent to admin@nabulearn.com (id:', emailResult.id, ')');
+        console.log('✅ Email notification sent to admin@yubilearn.com (id:', emailResult.id, ')');
       }
     } catch (emailSendError) {
       console.error('❌ Exception sending email:', emailSendError);
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         status: 'pending',
         next_steps: 'Our team has been notified and will review your request based on urgency level. You will be contacted at the provided email.',
         contact_info: {
-          email: 'admin@nabulearn.com',
+          email: 'admin@yubilearn.com',
           expected_response: '24-48 hours',
         },
       }),

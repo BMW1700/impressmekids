@@ -46,7 +46,7 @@ export default function Unsubscribe() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <Card className="max-w-md w-full">
         <CardHeader>
-          <CardTitle>Unsubscribe from NabuLearn emails</CardTitle>
+          <CardTitle>Unsubscribe from YubiLearn emails</CardTitle>
           <CardDescription>
             Confirm to stop receiving non-essential emails at your address.
           </CardDescription>

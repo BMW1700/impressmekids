@@ -111,12 +111,12 @@ const PhonicsFoundations = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Phonics Foundations — NabuLearn</title>
+        <title>Phonics Foundations — YubiLearn</title>
         <meta name="description" content="World 0 Phonics Foundations: master all 44 English phonemes with mastery checks and a printable certificate of completion." />
-        <link rel="canonical" href="https://nabulearn.com/game/phonics-foundations" />
-        <meta property="og:title" content="Phonics Foundations — NabuLearn" />
+        <link rel="canonical" href="https://yubilearn.com/game/phonics-foundations" />
+        <meta property="og:title" content="Phonics Foundations — YubiLearn" />
         <meta property="og:description" content="Master all 44 English phonemes with mastery checks and certificate." />
-        <meta property="og:url" content="https://nabulearn.com/game/phonics-foundations" />
+        <meta property="og:url" content="https://yubilearn.com/game/phonics-foundations" />
         <meta property="og:type" content="website" />
       </Helmet>
       <header className="border-b border-border bg-card">

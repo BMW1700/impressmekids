@@ -973,12 +973,12 @@ const TeacherDemo = () => {
   return (
     <DemoTourProvider steps={stepsWithActions}>
       <Helmet>
-        <title>Teacher Demo — NabuLearn</title>
+        <title>Teacher Demo — YubiLearn</title>
         <meta name="description" content="Interactive teacher demo: classroom rosters, AI lesson tools, gradebook, calendar, and student analytics." />
-        <link rel="canonical" href="https://nabulearn.com/demos/teacher" />
-        <meta property="og:title" content="Teacher Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive teacher demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/teacher" />
+        <link rel="canonical" href="https://yubilearn.com/demos/teacher" />
+        <meta property="og:title" content="Teacher Demo — YubiLearn" />
+        <meta property="og:description" content="Interactive teacher demo for YubiLearn." />
+        <meta property="og:url" content="https://yubilearn.com/demos/teacher" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen flex flex-col bg-background">

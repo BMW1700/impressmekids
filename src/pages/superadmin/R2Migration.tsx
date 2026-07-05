@@ -121,7 +121,7 @@ export default function R2Migration() {
       <div>
         <h1 className="text-3xl font-bold">R2 Migration</h1>
         <p className="text-muted-foreground">
-          Copy Supabase Storage → Cloudflare R2 (cdn.nabulearn.com). Zero egress after cutover.
+          Copy Supabase Storage → Cloudflare R2 (cdn.yubilearn.com). Zero egress after cutover.
         </p>
       </div>
 

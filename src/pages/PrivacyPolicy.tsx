@@ -7,12 +7,12 @@ const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Helmet>
-        <title>Privacy Policy — NabuLearn</title>
-        <meta name="description" content="How NabuLearn collects, uses, and protects student, parent, and educator data. COPPA and FERPA-aligned privacy practices." />
-        <link rel="canonical" href="https://nabulearn.com/privacy-policy" />
-        <meta property="og:title" content="Privacy Policy — NabuLearn" />
-        <meta property="og:description" content="How NabuLearn collects, uses, and protects student, parent, and educator data." />
-        <meta property="og:url" content="https://nabulearn.com/privacy-policy" />
+        <title>Privacy Policy — YubiLearn</title>
+        <meta name="description" content="How YubiLearn collects, uses, and protects student, parent, and educator data. COPPA and FERPA-aligned privacy practices." />
+        <link rel="canonical" href="https://yubilearn.com/privacy-policy" />
+        <meta property="og:title" content="Privacy Policy — YubiLearn" />
+        <meta property="og:description" content="How YubiLearn collects, uses, and protects student, parent, and educator data." />
+        <meta property="og:url" content="https://yubilearn.com/privacy-policy" />
         <meta property="og:type" content="website" />
       </Helmet>
       <Header />
@@ -26,7 +26,7 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-xl font-semibold mb-3">FERPA Compliance</h2>
               <p className="text-muted-foreground">
-                NabuLearn complies with the Family Educational Rights and Privacy Act (FERPA) and protects student education records. 
+                YubiLearn complies with the Family Educational Rights and Privacy Act (FERPA) and protects student education records. 
                 We never sell or share student data with third parties for marketing purposes.
               </p>
             </section>
@@ -178,7 +178,7 @@ const PrivacyPolicy = () => {
               <h2 className="text-xl font-semibold mb-3">Contact Information</h2>
               <p className="text-muted-foreground">
                 For privacy-related questions or to exercise your rights under FERPA/COPPA, contact us at: <br />
-                <strong>privacy@nabulearn.com</strong>
+                <strong>privacy@yubilearn.com</strong>
               </p>
             </section>
           </CardContent>

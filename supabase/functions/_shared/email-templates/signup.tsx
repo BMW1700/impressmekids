@@ -24,7 +24,7 @@ interface SignupEmailProps {
 }
 
 const LOGO_URL =
-  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/nabulearn-logo.png'
+  'https://sjigkjwkgovculkovcjy.supabase.co/storage/v1/object/public/email-assets/yubilearn-logo.png'
 
 export const SignupEmail = ({
   siteName,
@@ -34,15 +34,15 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Welcome to NabuLearn — confirm your email to get started</Preview>
+    <Preview>Welcome to YubiLearn — confirm your email to get started</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Img src={LOGO_URL} width="56" height="56" alt="NabuLearn" style={logo} />
-          <Text style={brand}>NabuLearn</Text>
+          <Img src={LOGO_URL} width="56" height="56" alt="YubiLearn" style={logo} />
+          <Text style={brand}>YubiLearn</Text>
         </Section>
         <Section style={accentBar} />
-        <Heading style={h1}>Welcome to NabuLearn</Heading>
+        <Heading style={h1}>Welcome to YubiLearn</Heading>
         <Text style={text}>
           Thanks for joining{' '}
           <Link href={siteUrl} style={link}>
@@ -63,7 +63,7 @@ export const SignupEmail = ({
           </Button>
         </Section>
         <Text style={footer}>
-          If you didn't create a NabuLearn account, you can safely ignore this email.
+          If you didn't create a YubiLearn account, you can safely ignore this email.
         </Text>
       </Container>
     </Body>

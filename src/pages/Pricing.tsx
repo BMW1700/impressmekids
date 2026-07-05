@@ -69,19 +69,19 @@ const Pricing = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Pricing — NabuLearn</title>
-        <meta name="description" content="Simple plans for families. Free forever to start, with Pro and Family upgrades that unlock every world, hero, and story in NabuLearn." />
-        <link rel="canonical" href="https://nabulearn.com/pricing" />
-        <meta property="og:title" content="NabuLearn Pricing — Free, Pro, Family" />
+        <title>Pricing — YubiLearn</title>
+        <meta name="description" content="Simple plans for families. Free forever to start, with Pro and Family upgrades that unlock every world, hero, and story in YubiLearn." />
+        <link rel="canonical" href="https://yubilearn.com/pricing" />
+        <meta property="og:title" content="YubiLearn Pricing — Free, Pro, Family" />
         <meta property="og:description" content="Free forever to start. Pro Reader and Family plans unlock the full reading adventure." />
-        <meta property="og:url" content="https://nabulearn.com/pricing" />
+        <meta property="og:url" content="https://yubilearn.com/pricing" />
         <meta property="og:type" content="website" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Product",
-          "name": "NabuLearn",
+          "name": "YubiLearn",
           "description": "AI-powered reading adventure for kids ages 2–18. Pre-K Benny stories and a K-12 literacy RPG.",
-          "brand": { "@type": "Organization", "name": "NabuLearn" },
+          "brand": { "@type": "Organization", "name": "YubiLearn" },
           "offers": [
             { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
             { "@type": "Offer", "name": "Pro Reader", "price": "9.99", "priceCurrency": "USD" },

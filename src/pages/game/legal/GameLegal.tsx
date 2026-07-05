@@ -25,12 +25,12 @@ const docs: Doc[] = [
   {
     slug: "privacy",
     title: "Privacy Policy",
-    desc: "How NabuLearn collects, uses, and protects student and family data under FERPA and COPPA.",
+    desc: "How YubiLearn collects, uses, and protects student and family data under FERPA and COPPA.",
     body: (
       <>
         <p><strong>Effective:</strong> {TODAY}</p>
         <h2>1. Who we are</h2>
-        <p>NabuLearn ("we", "us") provides an AI-powered literacy platform for students, families, teachers, and school administrators.</p>
+        <p>YubiLearn ("we", "us") provides an AI-powered literacy platform for students, families, teachers, and school administrators.</p>
         <h2>2. Data we collect</h2>
         <ul>
           <li><strong>Account data:</strong> name, email, role, grade level, classroom membership.</li>
@@ -41,39 +41,39 @@ const docs: Doc[] = [
         <h2>3. How we use it</h2>
         <p>To deliver instruction, generate progress reports, route safety alerts, and improve the product. We never sell student data and never use it for advertising.</p>
         <h2>4. FERPA</h2>
-        <p>For students enrolled through a school, NabuLearn operates as a "school official" with a legitimate educational interest under 34 CFR § 99.31(a)(1)(i)(B). Schools retain direct control of personally identifiable information from education records.</p>
+        <p>For students enrolled through a school, YubiLearn operates as a "school official" with a legitimate educational interest under 34 CFR § 99.31(a)(1)(i)(B). Schools retain direct control of personally identifiable information from education records.</p>
         <h2>5. COPPA</h2>
-        <p>For children under 13, NabuLearn collects personal information only with verifiable parental consent (or school-acting-as-agent consent under the FTC's school authorization). Parents can review, delete, or refuse further collection of their child's data via the Parent Data Portal at <Link to="/parent/data-privacy">/parent/data-privacy</Link>.</p>
+        <p>For children under 13, YubiLearn collects personal information only with verifiable parental consent (or school-acting-as-agent consent under the FTC's school authorization). Parents can review, delete, or refuse further collection of their child's data via the Parent Data Portal at <Link to="/parent/data-privacy">/parent/data-privacy</Link>.</p>
         <h2>6. AI processing</h2>
         <p>Free-text AI prompts (Vertex AI / Gemini through Lovable AI Gateway) are pseudonymized server-side. Student names are replaced with opaque aliases (e.g. "Student 1"), and emails, phone numbers, UUIDs, and SSN-shaped strings are stripped before any request leaves our backend.</p>
         <h2>7. Retention</h2>
         <p>See <Link to="/game/legal/retention">Retention Schedule</Link>. AURA audio defaults to 90 days; learning records default to 24 months; immutable audit logs are retained 7 years.</p>
         <h2>8. Parent rights</h2>
-        <p>Parents may request access, correction, export, or deletion of their child's data at any time through the Parent Data Portal or by emailing privacy@nabulearn.com.</p>
+        <p>Parents may request access, correction, export, or deletion of their child's data at any time through the Parent Data Portal or by emailing privacy@yubilearn.com.</p>
         <h2>9. Subprocessors</h2>
         <p>See <Link to="/game/legal/subprocessors">Subprocessor List</Link>.</p>
         <h2>10. Contact</h2>
-        <p>privacy@nabulearn.com</p>
+        <p>privacy@yubilearn.com</p>
       </>
     ),
   },
   {
     slug: "terms",
     title: "Terms of Service",
-    desc: "The agreement governing your use of NabuLearn.",
+    desc: "The agreement governing your use of YubiLearn.",
     body: (
       <>
         <p><strong>Effective:</strong> {TODAY}</p>
         <h2>1. Acceptance</h2>
-        <p>By using NabuLearn you agree to these Terms. Schools and districts are bound by a separate executed agreement that supersedes these consumer terms where applicable.</p>
+        <p>By using YubiLearn you agree to these Terms. Schools and districts are bound by a separate executed agreement that supersedes these consumer terms where applicable.</p>
         <h2>2. Accounts</h2>
         <p>Student accounts under 13 require verifiable parental or school consent. Teacher, parent, and administrator accounts must be invited or verified by a school administrator.</p>
         <h2>3. Acceptable use</h2>
         <p>No reverse engineering, no bulk scraping, no attempts to circumvent access controls. Do not upload content that is unlawful, harassing, or that infringes intellectual property.</p>
         <h2>4. Intellectual property</h2>
-        <p>All NabuLearn software, curriculum content, and ML models are owned by us. Student work product remains owned by the student or, where applicable, the school.</p>
+        <p>All YubiLearn software, curriculum content, and ML models are owned by us. Student work product remains owned by the student or, where applicable, the school.</p>
         <h2>5. Disclaimers</h2>
-        <p>NabuLearn is provided "as is". We make no warranty that the service will be uninterrupted or error-free.</p>
+        <p>YubiLearn is provided "as is". We make no warranty that the service will be uninterrupted or error-free.</p>
         <h2>6. Limitation of liability</h2>
         <p>To the maximum extent permitted by law, our aggregate liability is limited to fees paid in the 12 months preceding the claim.</p>
         <h2>7. Governing law</h2>
@@ -87,13 +87,13 @@ const docs: Doc[] = [
     desc: "Standard DPA template for schools and districts.",
     body: (
       <>
-        <p><strong>Template version:</strong> {TODAY}. Districts should send a marked-up copy to legal@nabulearn.com for execution.</p>
+        <p><strong>Template version:</strong> {TODAY}. Districts should send a marked-up copy to legal@yubilearn.com for execution.</p>
         <h2>1. Roles</h2>
-        <p>The School is the Data Controller. NabuLearn is the Data Processor / School Official under FERPA.</p>
+        <p>The School is the Data Controller. YubiLearn is the Data Processor / School Official under FERPA.</p>
         <h2>2. Scope</h2>
         <p>Processing is limited to providing the platform, generating progress and safety reports, and supporting the School's educational program.</p>
         <h2>3. Confidentiality</h2>
-        <p>All NabuLearn personnel with access to student data are bound by written confidentiality obligations and complete annual privacy/security training.</p>
+        <p>All YubiLearn personnel with access to student data are bound by written confidentiality obligations and complete annual privacy/security training.</p>
         <h2>4. Security measures</h2>
         <ul>
           <li>Encryption in transit (TLS 1.2+) and at rest (AES-256 via Supabase managed Postgres).</li>
@@ -104,13 +104,13 @@ const docs: Doc[] = [
         <h2>5. Subprocessors</h2>
         <p>Listed at <Link to="/game/legal/subprocessors">/game/legal/subprocessors</Link>. We will give the School 30 days notice before adding a new subprocessor that processes student PII.</p>
         <h2>6. Breach notification</h2>
-        <p>NabuLearn will notify the School of a confirmed security incident affecting student data within 72 hours of discovery, with details and remediation steps. See <Link to="/game/legal/incident-response">Incident Response</Link>.</p>
+        <p>YubiLearn will notify the School of a confirmed security incident affecting student data within 72 hours of discovery, with details and remediation steps. See <Link to="/game/legal/incident-response">Incident Response</Link>.</p>
         <h2>7. Audit rights</h2>
-        <p>The School may, no more than once per year and on 30 days notice, request a summary of NabuLearn's most recent SOC 2 report and security posture (see <Link to="/game/legal/security">/game/legal/security</Link>).</p>
+        <p>The School may, no more than once per year and on 30 days notice, request a summary of YubiLearn's most recent SOC 2 report and security posture (see <Link to="/game/legal/security">/game/legal/security</Link>).</p>
         <h2>8. Data return / deletion</h2>
-        <p>On termination, NabuLearn will, at the School's election, export all student records to the School and delete them from production systems within 30 days, and from backups in line with the <Link to="/game/legal/retention">Retention Schedule</Link>.</p>
+        <p>On termination, YubiLearn will, at the School's election, export all student records to the School and delete them from production systems within 30 days, and from backups in line with the <Link to="/game/legal/retention">Retention Schedule</Link>.</p>
         <h2>9. Parental rights</h2>
-        <p>NabuLearn will support School responses to parent access, correction, and deletion requests at no charge.</p>
+        <p>YubiLearn will support School responses to parent access, correction, and deletion requests at no charge.</p>
       </>
     ),
   },
@@ -175,7 +175,7 @@ const docs: Doc[] = [
           <li><strong>Post-mortem:</strong> blameless written review shared with affected schools on request.</li>
         </ol>
         <h2>Contact</h2>
-        <p>security@nabulearn.com — monitored 24/7.</p>
+        <p>security@yubilearn.com — monitored 24/7.</p>
       </>
     ),
   },
@@ -207,7 +207,7 @@ const docs: Doc[] = [
     body: (
       <>
         <h2>Parental consent</h2>
-        <p>For users under 13, NabuLearn collects personal information only after verifiable consent from a parent or legal guardian — either directly via our double-opt-in email flow, or through the school acting as the parent's agent under the FTC's school authorization guidance.</p>
+        <p>For users under 13, YubiLearn collects personal information only after verifiable consent from a parent or legal guardian — either directly via our double-opt-in email flow, or through the school acting as the parent's agent under the FTC's school authorization guidance.</p>
         <h2>What we collect from children</h2>
         <ul>
           <li>First name, grade, classroom membership.</li>
@@ -222,9 +222,9 @@ const docs: Doc[] = [
           <li><strong>Delete</strong> — request full deletion at any time.</li>
           <li><strong>Withdraw consent</strong> — revoke audio recording or AI processing consent independently.</li>
         </ul>
-        <p>Use the <Link to="/parent/data-privacy">Parent Data Portal</Link> or email privacy@nabulearn.com. We respond within 7 business days.</p>
+        <p>Use the <Link to="/parent/data-privacy">Parent Data Portal</Link> or email privacy@yubilearn.com. We respond within 7 business days.</p>
         <h2>No targeted advertising</h2>
-        <p>NabuLearn does not show ads. We do not build advertising profiles on children.</p>
+        <p>YubiLearn does not show ads. We do not build advertising profiles on children.</p>
       </>
     ),
   },
@@ -239,16 +239,16 @@ export default function GameLegal() {
     return (
       <div className="min-h-screen bg-background text-foreground px-6 py-12">
         <Helmet>
-          <title>Legal & Compliance — NabuLearn</title>
-          <meta name="description" content="Privacy Policy, Terms, DPA, security, and parent rights for NabuLearn." />
-          <link rel="canonical" href="https://nabulearn.com/game/legal" />
+          <title>Legal & Compliance — YubiLearn</title>
+          <meta name="description" content="Privacy Policy, Terms, DPA, security, and parent rights for YubiLearn." />
+          <link rel="canonical" href="https://yubilearn.com/game/legal" />
         </Helmet>
         <div className="max-w-3xl mx-auto">
           <Link to="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
             <ArrowLeft className="w-4 h-4 mr-1" /> Back
           </Link>
           <h1 className="text-3xl font-bold mb-2">Legal & Compliance</h1>
-          <p className="text-muted-foreground mb-8">Everything schools, districts, and parents need to evaluate NabuLearn.</p>
+          <p className="text-muted-foreground mb-8">Everything schools, districts, and parents need to evaluate YubiLearn.</p>
           <ul className="space-y-3">
             {docs.map((d) => (
               <li key={d.slug}>
@@ -270,9 +270,9 @@ export default function GameLegal() {
   return (
     <div className="min-h-screen bg-background text-foreground px-6 py-12">
       <Helmet>
-        <title>{doc.title} — NabuLearn</title>
+        <title>{doc.title} — YubiLearn</title>
         <meta name="description" content={doc.desc} />
-        <link rel="canonical" href={`https://nabulearn.com/game/legal/${doc.slug}`} />
+        <link rel="canonical" href={`https://yubilearn.com/game/legal/${doc.slug}`} />
       </Helmet>
       <div className="max-w-3xl mx-auto">
         <Link to="/game/legal" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
@@ -285,7 +285,7 @@ export default function GameLegal() {
         </article>
         <div className="mt-12 pt-6 border-t border-border">
           <Button variant="outline" asChild>
-            <a href="mailto:privacy@nabulearn.com">Contact privacy@nabulearn.com</a>
+            <a href="mailto:privacy@yubilearn.com">Contact privacy@yubilearn.com</a>
           </Button>
         </div>
       </div>

@@ -1189,12 +1189,12 @@ const StudentDemo = () => {
       // Tab switching is handled by DemoClassroomDetail internally via user clicks
     }}>
       <Helmet>
-        <title>Student Demo — NabuLearn</title>
+        <title>Student Demo — YubiLearn</title>
         <meta name="description" content="Interactive student demo: courses, AURA reading, study games, gradebook, calendar, and safety tools." />
-        <link rel="canonical" href="https://nabulearn.com/demos/student" />
-        <meta property="og:title" content="Student Demo — NabuLearn" />
-        <meta property="og:description" content="Interactive student demo for NabuLearn." />
-        <meta property="og:url" content="https://nabulearn.com/demos/student" />
+        <link rel="canonical" href="https://yubilearn.com/demos/student" />
+        <meta property="og:title" content="Student Demo — YubiLearn" />
+        <meta property="og:description" content="Interactive student demo for YubiLearn." />
+        <meta property="og:url" content="https://yubilearn.com/demos/student" />
         <meta property="og:type" content="website" />
       </Helmet>
       <div className="min-h-screen flex flex-col bg-background">

@@ -30,12 +30,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Construct verification URL using APP_URL for the frontend domain
-    const verificationUrl = `${Deno.env.get("APP_URL") || "https://nabulearn.com"}/consent/${consentToken}`;
+    const verificationUrl = `${Deno.env.get("APP_URL") || "https://yubilearn.com"}/consent/${consentToken}`;
 
     const emailResult = await sendEmail({
-      from: "NabuLearn <noreply@nabulearn.com>",
+      from: "YubiLearn <noreply@yubilearn.com>",
       to: parentEmail,
-      subject: "Parental Consent Required - NabuLearn",
+      subject: "Parental Consent Required - YubiLearn",
       functionName: 'send-parent-consent-email',
       payloadSummary: { studentEmail, parentEmail },
       html: `
@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="font-size: 16px;">Dear ${parentName},</p>
               
               <p style="font-size: 14px; line-height: 1.8;">
-                A student account is being created on <strong>NabuLearn</strong> using the email address 
+                A student account is being created on <strong>YubiLearn</strong> using the email address 
                 <strong>${studentEmail}</strong>.
               </p>
               
@@ -109,11 +109,11 @@ const handler = async (req: Request): Promise<Response> => {
               
               <p style="font-size: 13px; color: #666; text-align: center;">
                 If you did not request this, please ignore this email or contact 
-                <a href="mailto:support@nabulearn.com" style="color: #667eea;">support@nabulearn.com</a>
+                <a href="mailto:support@yubilearn.com" style="color: #667eea;">support@yubilearn.com</a>
               </p>
               
               <p style="font-size: 13px; color: #666; text-align: center; margin-top: 20px;">
-                <strong>NabuLearn</strong><br>
+                <strong>YubiLearn</strong><br>
                 Empowering Students Through AI-Powered Learning
               </p>
             </div>

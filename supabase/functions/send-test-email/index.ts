@@ -13,14 +13,14 @@ Deno.serve(async (req) => {
   try {
     const to = "Matthew.ross433@gmail.com";
     const result = await sendEmail({
-      from: "NabuLearn Test <noreply@nabulearn.com>",
+      from: "YubiLearn Test <noreply@yubilearn.com>",
       to,
-      subject: "NabuLearn Resend Test ✅",
+      subject: "YubiLearn Resend Test ✅",
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px;">
           <h1 style="color: #1a1a1a; font-size: 24px;">Resend Test Successful 🎉</h1>
           <p style="color: #444; font-size: 16px; line-height: 1.6;">
-            This is a test email sent from the NabuLearn platform via the Resend integration.
+            This is a test email sent from the YubiLearn platform via the Resend integration.
           </p>
           <p style="color: #666; font-size: 14px;">
             If you're reading this, your Resend API key is working correctly and emails
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
           </p>
         </div>
       `,
-      text: "Resend Test Successful. Your NabuLearn Resend integration is working.",
+      text: "Resend Test Successful. Your YubiLearn Resend integration is working.",
       functionName: "send-test-email",
       payloadSummary: { test: true, triggered_by: "manual" },
     });

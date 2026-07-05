@@ -788,7 +788,7 @@ const Auth = () => {
         } else {
           toast({
             title: "Account Created!",
-            description: "Welcome to NabuLearn! Let's start learning.",
+            description: "Welcome to YubiLearn! Let's start learning.",
           });
         }
         redirectToDashboard('student');
@@ -1031,12 +1031,12 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center relative z-0 overflow-hidden p-4">
       <Helmet>
-        <title>Sign In — NabuLearn</title>
-        <meta name="description" content="Sign in or create your NabuLearn account. Secure access for students, teachers, parents, and district admins." />
-        <link rel="canonical" href="https://nabulearn.com/auth" />
-        <meta property="og:title" content="Sign In — NabuLearn" />
+        <title>Sign In — YubiLearn</title>
+        <meta name="description" content="Sign in or create your YubiLearn account. Secure access for students, teachers, parents, and district admins." />
+        <link rel="canonical" href="https://yubilearn.com/auth" />
+        <meta property="og:title" content="Sign In — YubiLearn" />
         <meta property="og:description" content="Secure sign-in for students, teachers, parents, and admins." />
-        <meta property="og:url" content="https://nabulearn.com/auth" />
+        <meta property="og:url" content="https://yubilearn.com/auth" />
         <meta property="og:type" content="website" />
       </Helmet>
       {/* Fixed background so gradient is identical regardless of tab/content height */}
@@ -1052,7 +1052,7 @@ const Auth = () => {
             <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 shadow-2xl">
               <img 
                 src={logo} 
-                alt="NabuLearn" 
+                alt="YubiLearn" 
                 className="h-16 w-16 rounded-lg"
               />
             </div>
@@ -1064,7 +1064,7 @@ const Auth = () => {
           <h1 className="text-3xl md:text-4xl font-semibold text-white mb-3 tracking-tight">
             Welcome to{" "}
             <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-400 bg-clip-text text-transparent">
-              NabuLearn
+              YubiLearn
             </span>
           </h1>
           <p className="text-white/50 text-base">

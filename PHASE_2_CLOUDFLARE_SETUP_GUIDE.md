@@ -60,13 +60,13 @@ If you're using `yourapp.lovable.app`, **you cannot add this to Cloudflare** bec
 
 1. In Lovable, go to **Project > Settings > Domains**
 2. Click **Connect Custom Domain**
-3. Enter your domain (e.g., `nabulearn.com`)
+3. Enter your domain (e.g., `yubilearn.com`)
 4. Follow Lovable's instructions to verify ownership
 5. **Then proceed to Step 2B below**
 
 #### Option B: Using Your Custom Domain
 1. In Cloudflare dashboard, click **Add a Site**
-2. Enter your domain (e.g., `nabulearn.com`)
+2. Enter your domain (e.g., `yubilearn.com`)
 3. Click **Continue**
 4. Select **Free** plan (or Pro if you want advanced features)
 5. Click **Continue**

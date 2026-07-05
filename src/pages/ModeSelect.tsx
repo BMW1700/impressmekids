@@ -114,18 +114,18 @@ const ModeSelect = () => {
       }`}
     >
       <Helmet>
-        <title>NabuLearn — Reading adventures with Benny. K–12 literacy that feels like a game.</title>
+        <title>YubiLearn — Reading adventures with Benny. K–12 literacy that feels like a game.</title>
         <meta
           name="description"
           content="Meet Benny — read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG. FERPA, COPPA & SOC 2 aligned."
         />
-        <link rel="canonical" href="https://nabulearn.com/" />
-        <meta property="og:title" content="NabuLearn — Reading adventures with Benny" />
+        <link rel="canonical" href="https://yubilearn.com/" />
+        <meta property="og:title" content="YubiLearn — Reading adventures with Benny" />
         <meta
           property="og:description"
           content="Meet Benny. Read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG."
         />
-        <meta property="og:url" content="https://nabulearn.com/" />
+        <meta property="og:url" content="https://yubilearn.com/" />
         <meta property="og:type" content="website" />
       </Helmet>
 

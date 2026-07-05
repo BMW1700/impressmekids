@@ -482,7 +482,7 @@ serve(async (req) => {
           </div>
           <div style="padding: 20px; background: #f3f4f6; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="color: #6b7280; font-size: 12px; margin: 0;">
-              This is an automated safety notification from NabuLearn.<br>
+              This is an automated safety notification from YubiLearn.<br>
               For immediate questions, contact your school directly.
             </p>
           </div>
@@ -490,7 +490,7 @@ serve(async (req) => {
       `;
 
       const bulkResult = await sendBulkEmails({
-        from: "NabuLearn Safety <safety@nabulearn.com>",
+        from: "YubiLearn Safety <safety@yubilearn.com>",
         subject: cleanTitle,
         recipients: parentEmails.map((p) => ({
           to: p.email,

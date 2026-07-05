@@ -217,7 +217,7 @@ export default function VendorRiskAssessment() {
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
               This Vendor Risk Assessment evaluates all third-party vendors that process, store, or transmit 
-              data for NabuLearn. All critical vendors are SOC 2 Type 2 certified, significantly reducing 
+              data for YubiLearn. All critical vendors are SOC 2 Type 2 certified, significantly reducing 
               our vendor risk exposure.
             </p>
             <div className="grid grid-cols-4 gap-4 mt-6">
@@ -411,7 +411,7 @@ export default function VendorRiskAssessment() {
         <div className="border-t pt-4 text-sm text-muted-foreground space-y-1">
           <p><strong>Classification:</strong> Confidential - Internal Use Only</p>
           <p><strong>Document Control:</strong> This vendor assessment is reviewed quarterly or when vendor changes occur.</p>
-          <p><strong>Contact:</strong> security@nabulearn.com</p>
+          <p><strong>Contact:</strong> security@yubilearn.com</p>
         </div>
       </div>
     </div>

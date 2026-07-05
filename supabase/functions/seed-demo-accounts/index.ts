@@ -65,19 +65,19 @@ Deno.serve(async (req) => {
       fullName: string
     }> = [
       {
-        email: 'demo-student@nabulearn.com',
+        email: 'demo-student@yubilearn.com',
         password: 'DemoStudent2026!',
         role: 'student',
         fullName: 'Demo Student (Apple Reviewer)',
       },
       {
-        email: 'demo-teacher@nabulearn.com',
+        email: 'demo-teacher@yubilearn.com',
         password: 'DemoTeacher2026!',
         role: 'teacher',
         fullName: 'Demo Teacher (Apple Reviewer)',
       },
       {
-        email: 'demo-parent@nabulearn.com',
+        email: 'demo-parent@yubilearn.com',
         password: 'DemoParent2026!',
         role: 'parent',
         fullName: 'Demo Parent (Apple Reviewer)',

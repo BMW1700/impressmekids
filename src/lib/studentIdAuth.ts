@@ -6,7 +6,7 @@
  * This ensures FERPA/COPPA compliance by not collecting student PII (email).
  */
 
-export const STUDENT_INTERNAL_DOMAIN = 'student.nabulearn.internal';
+export const STUDENT_INTERNAL_DOMAIN = 'student.yubilearn.internal';
 
 /** Check if input looks like a Student ID (8 digits) */
 export const isStudentId = (input: string): boolean => /^\d{8}$/.test(input.trim());

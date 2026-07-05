@@ -214,7 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           
           <p style="color: #6b7280; font-size: 14px; margin-top: 24px; text-align: center;">
-            This report was sent from NabuLearn. Log in to your parent dashboard for more details.
+            This report was sent from YubiLearn. Log in to your parent dashboard for more details.
           </p>
         </div>
       </body>
@@ -224,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending email to:", parent.email);
 
     const sendResult = await sendEmail({
-      from: "NabuLearn Reports <reports@nabulearn.com>",
+      from: "YubiLearn Reports <reports@yubilearn.com>",
       to: parent.email,
       subject: `📊 Sound Accuracy Report for ${student.full_name} - ${classroom.name}`,
       html: emailHtml,
