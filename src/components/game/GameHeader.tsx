@@ -26,7 +26,7 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
           <Link to="/game/dashboard" className="flex items-center gap-2">
             <Gamepad2 className="w-6 h-6 text-yellow-400" />
             <span className="font-bold text-lg">
-              <span className="text-foreground">Nabu</span>
+              <span className="text-foreground">Yubi</span>
               <span className="text-yellow-400">Learn</span>
             </span>
           </Link>
