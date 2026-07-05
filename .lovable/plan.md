@@ -1,69 +1,88 @@
+# Brutally honest audit — email + R2
 
-# Make Yubi Learn "perfect" on Cloudflare + R2
+## TL;DR
 
-Three phases. Phase A is you clicking one button. Phase B and C are on me.
+- **R2 is currently BROKEN in production.** `cdn.yubilearn.com` returns HTTP 404 from Cloudflare on every asset. When you moved yubilearn.com's nameservers to Cloudflare, the old CNAME that pointed `cdn.yubilearn.com` at the R2 public bucket **did not come with it**. Right now the platform is paying full Supabase egress on everything.
+- **Resend does NOT need to be "re-set up."** Your Resend account, API key, and code are fine. What's missing is the **SPF / DKIM / MX / DMARC DNS records for yubilearn.com** in the new Cloudflare zone. Those records lived at your old DNS provider and were not copied over. That is why your user's password-reset / transactional emails aren't arriving.
+- **Auth password-reset emails** go through Lovable Emails on `notify.nabulearn.com` (a different root domain — unaffected by the yubilearn.com nameserver change). If your user still isn't getting Supabase password-reset mail, it's spam / suppression / stale redirect URL, not a domain issue.
+- **aura-audio R2** (Phase C code) is deployed but **dormant** — `VITE_USE_R2_AURA` isn't in `.env`, and the backfill hasn't been run.
 
----
+## Evidence
 
-## Phase A — Reconnect the domain (you, ~2 min)
+```text
+$ curl -sI https://cdn.yubilearn.com/prek-level-videos/1/video.mp4
+HTTP/2 404
+server: cloudflare
+cf-cache-status: DYNAMIC
+```
 
-**In the Cloudflare Entri dialog you're looking at right now:**
+- `.env` has `VITE_USE_R2_CDN="true"` → all rewrite paths try the CDN first.
+- 23 call sites use `getCdnUrl` / `rewriteToCdn` / `resolveCdnOrFallback`. Roughly half go through `resolveCdnOrFallback` (HEAD-probe, falls back to Supabase — user sees content, you pay egress). The other half return the R2 URL directly (Pre-K videos, campaign assets, avatar upload path) — those are currently **404-ing the user**.
+- `notify.nabulearn.com` email domain: verified, auth-email hook active. Unrelated to yubilearn.com DNS change.
+- `send-*` edge functions send from `noreply@yubilearn.com`, `alerts@yubilearn.com`, `safety@yubilearn.com`, etc. — all on the yubilearn.com root, which now has a fresh empty Cloudflare zone with no Resend records.
 
-1. Type `yubilearn.com` in the confirm box.
-2. Click **Authorize and Delete conflicts**.
-3. **Leave the proxy status as "DNS only" (grey cloud)** — do NOT flip to orange yet. Lovable's SSL cert needs this until Phase B step 3.
+## Cost picture, honestly
 
-The record Entri is adding is identical to the one already there (`A yubilearn.com → 185.158.133.1`), so any "downtime" is seconds at most.
+- **Now (broken):** paying Supabase egress on 100% of assets that fall back, and serving 404s on the rest. Worst of both worlds.
+- **After the fix below, at scale:** Pre-K video + backgrounds + campaign assets + avatars + email assets served from Cloudflare R2 with $0 egress. At 100K users the projected media egress bill collapses from ~$1.5-2K/mo (Supabase) to ~$0 (R2 egress free) + storage (~$15/mo for ~1TB) + Class A/B ops (pennies).
+- **aura-audio** still on Supabase until Phase C is switched on = ~$650/mo audio egress at 100K users. The switch is a one-liner + backfill (below).
 
-Then in Lovable → Project Settings → Domains, wait for `yubilearn.com` to flip back to **Active** (usually < 15 min).
+## Fix plan
 
----
+### Phase 1 — Restore R2 CDN (fixes the actual broken thing)
 
-## Phase B — R2 hardening (me, one build turn)
+Add these DNS records at Cloudflare for `yubilearn.com`:
 
-Three code changes that close the last gaps from the audit:
+```text
+Type   Name  Target                                              Proxy
+CNAME  cdn   pub-<your-r2-bucket-hash>.r2.dev                    Proxied (orange)
+```
 
-1. **Auto-copy new uploads to R2 for every public bucket, not just Pre-K.**
-   Today only `uploadPreKVideo` mirrors to R2 on write. `world-backgrounds`, `campaign-assets`, `avatars`, `email-assets`, `prek-level-audio` rely on the HEAD-check fallback, which means new files silently serve from the backend at full egress cost. Fix: extend the existing Pre-K uploader pattern into a shared `mirrorToR2(bucket, path)` helper and call it from every public-bucket upload site. Failures are non-fatal (the fallback still works).
+Exact target = the `pub-*.r2.dev` hostname of your R2 public bucket (visible in Cloudflare → R2 → your bucket → Settings → Public Access). Proxy status **must be orange** so Cloudflare's free egress applies.
 
-2. **CDN Health widget on `/superadmin/r2-migration`.**
-   HEAD-pings the known-good Pre-K video via the actual `<video>` load path (browser HEAD to Cloudflare is CORS-blocked, so uses an `<img onerror>` probe on the poster instead). Green/red dot + last-checked timestamp. Also shows total bytes mirrored so far.
+Verify with:
+```text
+curl -I https://cdn.yubilearn.com/prek-level-videos/<known-path>.mp4  → HTTP 200
+```
 
-3. **Pinned note + "Resync now" button on the same page.**
-   - Note explaining R2 never serves folder listings — a `/bucket-name/` 404 is expected, not a bug.
-   - Button that re-runs the migration scan to catch any drift.
+No code changes required — as soon as the CNAME resolves, all 23 call sites work again.
 
-## Phase C — Move `aura-audio` to R2 with signed URLs (me, second build turn)
+### Phase 2 — Restore email deliverability on yubilearn.com
 
-This is the big one and the reason your 100K-user number isn't already near zero. Student reading recordings are private (FERPA), so we can't just point them at a public CDN — they need short-lived signed URLs. R2 supports this natively.
+Add these DNS records at Cloudflare for `yubilearn.com` (values come from Resend dashboard → Domains → yubilearn.com; do **not** guess — copy them verbatim):
 
-Plan:
+```text
+Type   Name              Value                                Proxy
+TXT    send              "v=spf1 include:amazonses.com ~all"  DNS only
+TXT    resend._domainkey <DKIM public key from Resend>        DNS only
+MX     send              feedback-smtp.us-east-1.amazonses.com  (priority 10)  DNS only
+TXT    _dmarc            "v=DMARC1; p=none;"                  DNS only
+```
 
-- Add `aura-audio` to `R2_ENABLED_BUCKETS` behind a second flag (`VITE_USE_R2_AURA=true`) so we can flip it independently.
-- New edge function `sign-r2-audio-url` that mints a 15-min presigned R2 URL for a given `<uid>/<recording>` path, gated by the same RLS check as the existing signed-URL flow (student themselves, their teacher, their parent with consent).
-- Update `useAuraRecordings` to call the new signer instead of `supabase.storage.createSignedUrl` when the flag is on.
-- Mirror-on-upload: extend the Phase B helper to also copy `aura-audio` writes to R2.
-- One-shot backfill: the existing R2 migration job already supports this; just add `aura-audio` to the bucket list and rerun.
+Then in Resend → Domains → yubilearn.com click **Verify**. All 12 `send-*` edge functions start delivering again.
 
-Result: the `~$650/mo egress at 100K users` line goes to `$0`. Signed URLs cost fractions of a cent per million.
+**Password reset for your specific user:** once DNS is verified, ask them to (a) check spam, (b) confirm the email is not on Resend's suppression list, (c) if it still fails, use Supabase Auth reset (goes via `notify.nabulearn.com`, unaffected). No code change needed.
 
-## Technical details
+### Phase 3 — Turn on aura-audio R2 (kill the last egress line)
 
-- No DB schema changes required. R2 credentials already live in edge function secrets from the original migration.
-- The mirror helper writes to R2 via the existing `migrate-to-r2` edge function's `copy` action so we don't duplicate S3 client code in the browser.
-- Signed URL TTL: 15 min matches the current `aura-audio` signed URL default; nothing else in the app assumes a longer link.
-- No `index.html`, no `.env`, no `supabase/client.ts` edits. No new environment variables you have to set — I'll use the existing `VITE_USE_R2_CDN` flag pattern.
+1. Add to `.env`: `VITE_USE_R2_AURA="true"`
+2. Go to `/superadmin/r2-migration` → **Scan Storage** → confirm `aura-audio` appears → **Run migration**.
+3. Republish so the flag ships.
 
-## What you'll need to do at the very end (optional, ~5 min)
+After this, the only Supabase egress left is private classroom-scoped buckets, which are tiny and irrelevant to your scale math.
 
-Once Phase B + C are live and stable for 24h, if you want Cloudflare's WAF/DDoS/Bot Fight in front of the whole site (per your `PHASE_2_CLOUDFLARE_SETUP_GUIDE.md`):
+### Phase 4 — Add a self-check so this can't silently break again
 
-1. Lovable → Project Settings → Domains → `yubilearn.com` → Advanced → check **"Domain uses Cloudflare or a similar proxy"**.
-2. Then in Cloudflare, flip the grey cloud on the `A` record to orange.
-3. In Cloudflare SSL/TLS: set to **Full (strict)**, enable **Always Use HTTPS**.
+Extend the existing `CdnHealthWidget` on `/superadmin/r2-migration` to also HEAD-probe `cdn.yubilearn.com/prek-level-videos/<known-key>` on load and show a red banner site-wide (superadmin only) if it 404s. Prevents another silent regression the next time DNS moves.
 
-I can't do those three steps for you — they're outside Lovable — but I'll add a checklist to `/superadmin/r2-migration` so it's obvious what's left.
+## What I am NOT doing
 
----
+- Not touching Resend code / API key / client wrapper — they're fine.
+- Not disabling Lovable Emails on `notify.nabulearn.com` — that's the auth-email path and it still works.
+- No schema, RLS, or auth changes.
+- No changes to `src/integrations/supabase/client.ts` or `.env` auto-managed keys.
 
-**Approve this and I'll execute Phase B, then Phase C in the next turn.**
+## Your action items vs mine
+
+- **You (Cloudflare dashboard):** add the `cdn` CNAME (Phase 1) and the four Resend records (Phase 2). I cannot touch external DNS.
+- **Me (next build turn):** Phase 3 flag + Phase 4 health widget expansion. ~10 min of build work, no risk.
