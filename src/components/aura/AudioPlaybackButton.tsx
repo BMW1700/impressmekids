@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Play, Pause, Volume2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { signAuraAudioUrl } from '@/lib/auraAudioUrl';
 import { useToast } from '@/hooks/use-toast';
 
 interface AudioPlaybackButtonProps {
