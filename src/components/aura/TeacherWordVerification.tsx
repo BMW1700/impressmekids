@@ -21,6 +21,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { signAuraAudioUrl } from '@/lib/auraAudioUrl';
 import { toast } from 'sonner';
 
 interface FlaggedWord {
