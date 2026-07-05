@@ -263,6 +263,59 @@ async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: n
   return { attempted: pending?.length ?? 0, ok, failed };
 }
 
+// Re-PUT metadata (Cache-Control) on already-migrated files via R2 CopyObject.
+// Uses x-amz-copy-source with x-amz-metadata-directive: REPLACE so we do NOT
+// re-download from Supabase — a pure R2-internal copy, near-zero cost.
+async function repatchHeadersBatch(
+  admin: ReturnType<typeof createClient>,
+  batchSize: number,
+  cursor: string | null,
+) {
+  let q = admin
+    .from("r2_migration_log")
+    .select("id, bucket, path, content_type, r2_key")
+    .eq("status", "copied")
+    .order("id", { ascending: true })
+    .limit(batchSize);
+  if (cursor) q = q.gt("id", cursor);
+  const { data: rows, error } = await q;
+  if (error) throw error;
+
+  const r2 = getR2();
+  let ok = 0;
+  let failed = 0;
+  let lastId: string | null = null;
+  for (const row of rows ?? []) {
+    lastId = (row as any).id;
+    const r2Key = (row as any).r2_key || `${(row as any).bucket}/${(row as any).path}`;
+    const url = `${R2_ENDPOINT}/${R2_BUCKET}/${r2Key}`;
+    try {
+      const resp = await r2.fetch(url, {
+        method: "PUT",
+        headers: {
+          "x-amz-copy-source": `/${R2_BUCKET}/${r2Key}`,
+          "x-amz-metadata-directive": "REPLACE",
+          "Content-Type": (row as any).content_type || "application/octet-stream",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(`R2 COPY ${resp.status}: ${t.slice(0, 200)}`);
+      }
+      ok++;
+    } catch (e: any) {
+      failed++;
+      await admin
+        .from("r2_migration_log")
+        .update({ error: `repatch: ${String(e?.message || e).slice(0, 400)}` })
+        .eq("id", (row as any).id);
+    }
+  }
+  return { attempted: rows?.length ?? 0, ok, failed, nextCursor: lastId };
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
