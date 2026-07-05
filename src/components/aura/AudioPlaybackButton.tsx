@@ -33,12 +33,9 @@ export function AudioPlaybackButton({
       if (audioPath && !audioUrl) {
         setIsLoading(true);
         try {
-          const { data, error } = await supabase.storage
-            .from('aura-audio')
-            .createSignedUrl(audioPath, 3600); // 1 hour expiry
-
-          if (error) throw error;
-          setResolvedUrl(data.signedUrl);
+          const signed = await signAuraAudioUrl(audioPath);
+          if (!signed) throw new Error("could not sign audio url");
+          setResolvedUrl(signed);
         } catch (err) {
           console.error('Error getting signed URL:', err);
           toast({
