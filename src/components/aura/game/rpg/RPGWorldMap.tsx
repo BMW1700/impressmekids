@@ -302,11 +302,19 @@ export const RPGWorldMap = ({
     return world8Progress && world8Progress.levelsCompleted >= 5;
   }, [worldProgress]);
 
-  const getWorldProgress = (worldId: number): WorldProgress => {
-    return worldProgress.find(p => p.worldId === worldId) || {
+  const getWorldProgress = (worldId: number, fallbackTotal = 5): WorldProgress => {
+    const existing = worldProgress.find(p => p.worldId === worldId);
+    if (existing) {
+      // Honor the actual authored level count if we know it; DB progress rows
+      // can lag behind newly added/removed levels.
+      return fallbackTotal > 0
+        ? { ...existing, totalLevels: fallbackTotal }
+        : existing;
+    }
+    return {
       worldId,
       levelsCompleted: 0,
-      totalLevels: 5,
+      totalLevels: fallbackTotal,
       starsEarned: 0,
       isUnlocked: worldId === 1,
     };
@@ -615,12 +623,13 @@ export const RPGWorldMap = ({
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
             }
             return displayedWorlds.map((world, index) => {
-            const progress = getWorldProgress(world.id);
+            const authoredLevelCount = world.levels?.length ?? world.storyCount ?? 5;
+            const progress = getWorldProgress(world.id, authoredLevelCount);
             const unlocked = isWorldUnlocked(world);
             const completionPercent = progress.totalLevels > 0 
               ? (progress.levelsCompleted / progress.totalLevels) * 100 
               : 0;
-            const isComplete = progress.levelsCompleted >= progress.totalLevels;
+            const isComplete = progress.totalLevels > 0 && progress.levelsCompleted >= progress.totalLevels;
             const avgStarsPerLevel = progress.levelsCompleted > 0 
               ? Math.floor(progress.starsEarned / progress.levelsCompleted)
               : 0;
@@ -691,7 +700,8 @@ export const RPGWorldMap = ({
                   )}
 
                   {/* Boss Silhouette with proper SVG character */}
-                  {world.id >= 1 && (
+                  {/* Boss Silhouette — Classic/Agent K-12 worlds only */}
+                  {world.id >= 1 && world.mode !== 'prek' && (
                     <BossSilhouette worldId={world.id} isUnlocked={unlocked} />
                   )}
 
@@ -763,8 +773,8 @@ export const RPGWorldMap = ({
                       />
                     </div>
 
-                    {/* Boss Indicator for World 4 */}
-                    {world.id === 4 && (
+                    {/* Boss Indicator — Classic K-12 World 4 only */}
+                    {world.id === 4 && world.mode !== 'prek' && mapTheme === 'classic' && (
                       <motion.div 
                         className="mt-4 flex items-center gap-2 bg-red-900/50 px-3 py-2 rounded-lg border border-red-500/50"
                         animate={{
