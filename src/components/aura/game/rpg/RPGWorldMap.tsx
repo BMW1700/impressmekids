@@ -700,7 +700,8 @@ export const RPGWorldMap = ({
                   )}
 
                   {/* Boss Silhouette with proper SVG character */}
-                  {world.id >= 1 && (
+                  {/* Boss Silhouette — Classic/Agent K-12 worlds only */}
+                  {world.id >= 1 && world.mode !== 'prek' && (
                     <BossSilhouette worldId={world.id} isUnlocked={unlocked} />
                   )}
 
