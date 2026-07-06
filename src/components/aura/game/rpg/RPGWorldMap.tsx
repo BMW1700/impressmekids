@@ -772,8 +772,8 @@ export const RPGWorldMap = ({
                       />
                     </div>
 
-                    {/* Boss Indicator for World 4 */}
-                    {world.id === 4 && (
+                    {/* Boss Indicator — Classic K-12 World 4 only */}
+                    {world.id === 4 && world.mode !== 'prek' && mapTheme === 'classic' && (
                       <motion.div 
                         className="mt-4 flex items-center gap-2 bg-red-900/50 px-3 py-2 rounded-lg border border-red-500/50"
                         animate={{
