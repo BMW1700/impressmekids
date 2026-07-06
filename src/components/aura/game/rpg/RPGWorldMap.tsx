@@ -623,12 +623,13 @@ export const RPGWorldMap = ({
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
             }
             return displayedWorlds.map((world, index) => {
-            const progress = getWorldProgress(world.id);
+            const authoredLevelCount = world.levels?.length ?? world.storyCount ?? 5;
+            const progress = getWorldProgress(world.id, authoredLevelCount);
             const unlocked = isWorldUnlocked(world);
             const completionPercent = progress.totalLevels > 0 
               ? (progress.levelsCompleted / progress.totalLevels) * 100 
               : 0;
-            const isComplete = progress.levelsCompleted >= progress.totalLevels;
+            const isComplete = progress.totalLevels > 0 && progress.levelsCompleted >= progress.totalLevels;
             const avgStarsPerLevel = progress.levelsCompleted > 0 
               ? Math.floor(progress.starsEarned / progress.levelsCompleted)
               : 0;
