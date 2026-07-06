@@ -302,11 +302,19 @@ export const RPGWorldMap = ({
     return world8Progress && world8Progress.levelsCompleted >= 5;
   }, [worldProgress]);
 
-  const getWorldProgress = (worldId: number): WorldProgress => {
-    return worldProgress.find(p => p.worldId === worldId) || {
+  const getWorldProgress = (worldId: number, fallbackTotal = 5): WorldProgress => {
+    const existing = worldProgress.find(p => p.worldId === worldId);
+    if (existing) {
+      // Honor the actual authored level count if we know it; DB progress rows
+      // can lag behind newly added/removed levels.
+      return fallbackTotal > 0
+        ? { ...existing, totalLevels: fallbackTotal }
+        : existing;
+    }
+    return {
       worldId,
       levelsCompleted: 0,
-      totalLevels: 5,
+      totalLevels: fallbackTotal,
       starsEarned: 0,
       isUnlocked: worldId === 1,
     };
