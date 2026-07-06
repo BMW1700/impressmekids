@@ -1,35 +1,71 @@
-## Fixes I'll implement after approval
 
-### 1. Unblock password reset emails (root of "no reset email")
-- Re-enable Lovable Emails for the project (currently disabled — that's why the last recovery email hit DLQ with `Emails disabled for this project`).
-- Reconcile email infrastructure (queue processor + cron) so pending recovery messages drain.
-- Redeploy `auth-email-hook`.
-- Verify by triggering a recovery for `jacob10028@yahoo.com` and confirming a `sent` row appears in the send log.
+# YubiLearn Trademark Filing Recommendations PDF
 
-### 2. Fix "Google login just bounces back to /auth" for new Google users like Jacob
-Root cause: Jacob's Google identity (`jacob.besser0@gmail.com`) is a different email than his email/password account (`jacob10028@yahoo.com`), so Google creates a separate user with no profile/role yet, and the app's post-login routing sends any user missing profile/role back to `/auth`.
+Generate a branded, professional PDF artifact (saved to `/mnt/documents/`) containing the final USPTO trademark filing recommendations for YubiLearn — **Class 9 and Class 41 only**, both filed as **1(b) Intent-to-Use**. Class 42 explicitly deferred.
 
-Fixes:
-- On successful OAuth callback, if the user has no profile/role row yet, route them to the profile-setup / role-selection screen instead of `/auth`.
-- Auto-create the minimal profile row on first Google sign-in (id, email, display name from Google metadata) so post-login routing has something to read.
-- Add a diagnostic log line so any future "bounced back to /auth" case shows the exact reason (no profile / no role / wrong role) in the console.
+## Deliverable
 
-### 3. Give Jacob a way in right now
-- Add a one-time "resend password reset" action in the superadmin user list so you can trigger a recovery email for any user without waiting for the queue backlog.
-- Show Jacob's email/password account and his Google account side-by-side in the superadmin user view, with an "Merge Google identity into email account" action for cases where a user signs up twice under different addresses.
+A single one-to-two page PDF: `YubiLearn-Trademark-Filing-Recommendations.pdf`
 
-### 4. R2 cost hardening (the only remaining cost risk)
-- Add a Cloudflare edge-cache probe to the R2 health widget: fetch a known-good Pre-K video twice and report `cf-cache-status` (MISS then HIT is the pass signal). If it stays DYNAMIC/MISS, the widget shows a red banner telling you Cloudflare caching is not on and estimating the extra cost per 100K users.
-- Add a "Sample 20 real DB video URLs" audit button on `/superadmin/r2-migration` that HEADs each URL through `cdn.yubilearn.com` and reports pass/fail counts. This is the honest end-to-end check.
-- No code path change is needed for R2 itself — it's already serving 200s for every real file in the database.
+## Contents
 
-### 5. What still needs you (I can't do these from code)
-- In Cloudflare: set the `cdn` CNAME to **Proxied (orange cloud)** and add a Cache Rule that caches everything under `cdn.yubilearn.com/*` (Edge TTL: respect origin — the files already carry the 1-year immutable header). Without this, R2 still works but you lose Cloudflare's free edge cache and pay slightly more in R2 Class B ops at scale.
-- Confirm you want me to auto-create a profile on first Google sign-in (recommended) vs. show a signup-completion screen.
+**Header**
+- YubiLearn brand block (matches the indigo/gold palette used in existing PDFs — `phonicsCertificatePdf.ts`, `scopeSequencePdf.ts`)
+- Title: "USPTO Trademark Filing Recommendations"
+- Subtitle: "Word Mark: YUBILEARN · Filing Basis: 1(b) Intent-to-Use · Classes 9 and 41"
+- Date generated
 
-### Honest cost at scale (unchanged from earlier audit)
-- Storage: pennies/month at current 1.5 GB total.
-- Egress: R2 = free.
-- Ops at 100K students × 20 video loads/day ≈ **~$22/month**. At 50 loads/day ≈ **~$55/month**.
-- Same traffic on Supabase Storage egress would be roughly **~$1,800–2,400/month**.
-- The one thing that would blow this up is Cloudflare not caching AND millions of unique fresh objects. Neither is your situation.
+**Filing Summary Table**
+| Class | # of Term IDs | Filing Basis | USPTO Fee |
+|---|---|---|---|
+| 9 | 2 | 1(b) ITU | $350 |
+| 41 | 2 | 1(b) ITU | $350 |
+| **Total** | **4 entries** | | **$700** |
+
+Note: All pre-approved USPTO ID Manual entries — **no $100/class free-form surcharge**.
+
+**Class 9 — Downloadable Software** ($350, 1(b) ITU)
+- **009-5120**: *Downloadable computer programs for use in teaching children to read*
+  - Covers: iPad student app (LexiQuest, Castle Swarm, Pre-K reading levels, phonics foundations)
+- **009-5474**: *Downloadable educational software featuring instruction in phonics, reading fluency, and early literacy*
+  - Covers: React Native parent companion app
+- Why 1(b): apps are not yet live in App Store / Play Store
+
+**Class 41 — Education & Entertainment Services** ($350, 1(b) ITU)
+- **041-1439**: *Providing on-line non-downloadable educational software for use in teaching phonics, reading fluency, and early literacy to children in kindergarten through grade 12*
+  - Covers: browser-based YubiLearn student platform (yubilearn.com), phonics scope & sequence, adaptive reading assessment
+- **041-1209**: *Entertainment services, namely, providing temporary use of non-downloadable computer learning games*
+  - Covers: LexiQuest RPG, Castle Swarm Defense, Word Ninja, Tug-of-War, Pre-K adventures
+- Why 1(b) (not 1(a)): filing everything under one basis simplifies prosecution and locks in filing date; converts to Statement of Use once a specimen (screenshot of the live platform) is submitted
+
+**Class 42 — Deferred**
+Short paragraph explaining why it is being held back (teacher/admin/gradebook surfaces hidden from live view; refile when SaaS-for-educators platform launches publicly). Prevents fraudulent-specimen risk (Medinol v. Neuro Vasx).
+
+**Terms explicitly rejected and why** (compact table)
+- 009-5419 (Downloadable children's software) — too broad, invites §2(e)(1) descriptiveness refusal
+- 041-1136 / 041-1131 / 041-1134 — generic overclaiming
+- 042-2681 / 042-3539 — cannot produce specimen with teacher/admin surfaces hidden
+
+**Next steps checklist**
+1. File TEAS Plus application (requires all pre-approved IDs — we've complied)
+2. Select 1(b) Intent-to-Use for both classes
+3. Pay $700 in USPTO fees
+4. On Notice of Allowance, submit Statement of Use with:
+   - Class 9 specimen: App Store listing screenshot showing YUBILEARN mark
+   - Class 41 specimen: yubilearn.com screenshot showing mark used in connection with the online reading platform
+5. Revisit Class 42 filing once teacher analytics/gradebook platform is publicly launched
+
+**Footer**
+- "This document is a filing recommendation, not legal advice. Confirm with a trademark attorney before submitting."
+- yubilearn.com
+
+## Technical Implementation
+
+- Use `jsPDF` (already a project dependency — see `src/lib/phonicsCertificatePdf.ts`)
+- Write a small standalone Node script at `/tmp/generate-tm-pdf.mjs` that imports jsPDF and writes to `/mnt/documents/YubiLearn-Trademark-Filing-Recommendations.pdf`
+- Match brand palette from existing PDFs: primary indigo `[99,102,241]`, gold `[202,138,4]`, dark `[17,24,39]`, muted `[107,114,128]`
+- Letter size, portrait
+- QA pass: convert PDF pages to images with `pdftoppm`, view each, fix any layout issues before delivering
+- Emit `<presentation-artifact>` tag so the user can download
+
+**No changes to the app codebase.** This is a one-off artifact.
