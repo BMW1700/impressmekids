@@ -227,6 +227,36 @@ const AuraPractice = () => {
     completeBattle,
     initializeProgress 
   } = useCampaignProgress(user?.id, currentGradeMode);
+
+  // Per-level Pre-K stars (source of truth for world tile + level select stars/checkmarks).
+  const preKLevelStars = usePreKLevelStars(user?.id, currentGradeMode);
+
+  // All published Pre-K worlds (world_number + level count) so the world map's
+  // progress bars/stars match what RPGWorldMap actually renders from the DB.
+  const { data: publishedPrekWorldsMeta } = useQuery({
+    queryKey: ["published-prek-worlds-meta"],
+    queryFn: async (): Promise<Array<{ world_number: number; level_count: number }>> => {
+      const { data: worlds, error } = await supabase
+        .from("prek_worlds")
+        .select("id, world_number, is_published")
+        .eq("is_published", true);
+      if (error || !worlds) return [];
+      const ids = worlds.map((w) => w.id);
+      if (!ids.length) return [];
+      const { data: levels } = await supabase
+        .from("prek_levels")
+        .select("world_id, is_published")
+        .in("world_id", ids)
+        .eq("is_published", true);
+      const counts: Record<string, number> = {};
+      for (const l of levels ?? []) counts[l.world_id] = (counts[l.world_id] ?? 0) + 1;
+      return worlds.map((w) => ({
+        world_number: w.world_number,
+        level_count: counts[w.id] ?? 0,
+      }));
+    },
+    staleTime: 5 * 60_000,
+  });
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
