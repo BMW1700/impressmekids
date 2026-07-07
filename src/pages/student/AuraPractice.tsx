@@ -58,6 +58,7 @@ import { CustomStoryChooser } from "@/components/customStories/CustomStoryChoose
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { awardVillageProgress } from "@/hooks/useVillage";
+import { usePreKLevelStars, recordPreKLevelCompletion } from "@/hooks/usePreKLevelStars";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
