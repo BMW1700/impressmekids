@@ -814,7 +814,7 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, onBatchComplete, onRetrySuccess, onResult, abortActiveRecognitionForBatchTransition]);
 
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
