@@ -5091,6 +5091,48 @@ export type Database = {
           },
         ]
       }
+      prek_level_completions: {
+        Row: {
+          best_score: number
+          best_stars: number
+          completed_at: string
+          correct_words: number
+          grade_mode: string
+          id: string
+          level_number: number
+          updated_at: string
+          user_id: string
+          words_read: number
+          world_number: number
+        }
+        Insert: {
+          best_score?: number
+          best_stars?: number
+          completed_at?: string
+          correct_words?: number
+          grade_mode?: string
+          id?: string
+          level_number: number
+          updated_at?: string
+          user_id: string
+          words_read?: number
+          world_number: number
+        }
+        Update: {
+          best_score?: number
+          best_stars?: number
+          completed_at?: string
+          correct_words?: number
+          grade_mode?: string
+          id?: string
+          level_number?: number
+          updated_at?: string
+          user_id?: string
+          words_read?: number
+          world_number?: number
+        }
+        Relationships: []
+      }
       prek_level_words: {
         Row: {
           ask_line: string

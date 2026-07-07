@@ -637,20 +637,37 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   };
 
   // ── ending → onComplete ────────────────────────────────────────────────────
+  const onCompleteFiredRef = useRef(false);
+
+  const fireOnComplete = useCallback(() => {
+    if (onCompleteFiredRef.current) return;
+    onCompleteFiredRef.current = true;
+    const stars = wordsAsked === 0
+      ? 1
+      : scoreCredit >= wordsAsked
+      ? 3
+      : scoreCredit >= wordsAsked * 0.7
+      ? 2
+      : 1;
+    console.debug('[YubiVideoAdventure] onComplete', { wordsAsked, scoreCredit, stars });
+    onComplete({ wordsRead: wordsAsked, correctWords: Math.round(scoreCredit), stars });
+  }, [onComplete, wordsAsked, scoreCredit]);
+
   useEffect(() => {
     if (phase !== "ending") return;
     if (adventure) speak(adventure.endingLine, BENNY_VOICE);
-    queue(() => {
-      const stars = wordsAsked === 0
-        ? 1
-        : scoreCredit >= wordsAsked
-        ? 3
-        : scoreCredit >= wordsAsked * 0.7
-        ? 2
-        : 1;
-      onComplete({ wordsRead: wordsAsked, correctWords: Math.round(scoreCredit), stars });
-    }, 2400);
+    queue(() => { fireOnComplete(); }, 2400);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Failsafe: if the child taps "Back" AFTER having answered every word
+  // (scoreCredit > 0 and asked at least one word), still credit the run so
+  // partial completions persist to the DB and the village unlocks correctly.
+  const handleBack = useCallback(() => {
+    if (!onCompleteFiredRef.current && wordsAsked > 0 && scoreCredit > 0) {
+      fireOnComplete();
+    }
+    onBack();
+  }, [fireOnComplete, onBack, wordsAsked, scoreCredit]);
 
   if (!adventure) {
     return (
@@ -774,7 +791,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
             <Button
               variant="ghost"
               size="sm"
-              onClick={onBack}
+              onClick={handleBack}
               className="bg-white/80 text-slate-800 hover:bg-white"
             >
               <ArrowLeft className="h-4 w-4 mr-1" /> Map

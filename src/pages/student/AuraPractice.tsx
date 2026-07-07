@@ -58,6 +58,7 @@ import { CustomStoryChooser } from "@/components/customStories/CustomStoryChoose
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { awardVillageProgress } from "@/hooks/useVillage";
+import { usePreKLevelStars, recordPreKLevelCompletion } from "@/hooks/usePreKLevelStars";
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
@@ -226,6 +227,36 @@ const AuraPractice = () => {
     completeBattle,
     initializeProgress 
   } = useCampaignProgress(user?.id, currentGradeMode);
+
+  // Per-level Pre-K stars (source of truth for world tile + level select stars/checkmarks).
+  const preKLevelStars = usePreKLevelStars(user?.id, currentGradeMode);
+
+  // All published Pre-K worlds (world_number + level count) so the world map's
+  // progress bars/stars match what RPGWorldMap actually renders from the DB.
+  const { data: publishedPrekWorldsMeta } = useQuery({
+    queryKey: ["published-prek-worlds-meta"],
+    queryFn: async (): Promise<Array<{ world_number: number; level_count: number }>> => {
+      const { data: worlds, error } = await supabase
+        .from("prek_worlds")
+        .select("id, world_number, is_published")
+        .eq("is_published", true);
+      if (error || !worlds) return [];
+      const ids = worlds.map((w) => w.id);
+      if (!ids.length) return [];
+      const { data: levels } = await supabase
+        .from("prek_levels")
+        .select("world_id, is_published")
+        .in("world_id", ids)
+        .eq("is_published", true);
+      const counts: Record<string, number> = {};
+      for (const l of levels ?? []) counts[l.world_id] = (counts[l.world_id] ?? 0) + 1;
+      return worlds.map((w) => ({
+        world_number: w.world_number,
+        level_count: counts[w.id] ?? 0,
+      }));
+    },
+    staleTime: 5 * 60_000,
+  });
   const { data: records, refetch } = useQuery({
     queryKey: ['aura-records', user?.id],
     queryFn: async () => {
@@ -355,7 +386,23 @@ const AuraPractice = () => {
   // RPG Pre-K One-Word Reader (no story, no minigames, no fail state)
   if (isRpgMode && rpgView === 'prek_reader' && selectedWorld && selectedLevel && user?.id) {
     const handlePreKComplete = async (preKStats: { wordsRead: number; correctWords: number; stars: number }) => {
+      console.debug('[PreK/complete] fired', {
+        world: selectedWorld.id, level: selectedLevel.id, stats: preKStats,
+      });
       try {
+        // 1) Per-level completion — the new source of truth for stars/checkmarks.
+        await recordPreKLevelCompletion({
+          userId: user.id,
+          gradeMode: currentGradeMode,
+          worldNumber: selectedWorld.id,
+          levelNumber: Number(selectedLevel.id),
+          stars: Math.max(1, preKStats.stars || 1),
+          wordsRead: preKStats.wordsRead,
+          correctWords: preKStats.correctWords,
+        });
+
+        // 2) Legacy campaign_progress row — kept in sync so books_rescued /
+        //    world_progress totals continue to power older UI + rewards.
         const session = await startBattle({
           storyTitle: selectedLevel.story.title,
           storyCategory: selectedLevel.story.category,
@@ -373,11 +420,12 @@ const AuraPractice = () => {
           worldNumber: selectedWorld.id,
           goldEarned: preKStats.stars * 5,
         });
-        // Award 1 Village Token per completed Pre-K level + sync zone unlocks
+
+        // 3) Village tokens.
         await awardVillageProgress(user.id, 1);
         refetch();
       } catch (e) {
-        console.error('[Pre-K] Failed to persist completion:', e);
+        console.error('[PreK/complete] persist failed', e);
       }
       setRpgView('level_select');
     };
@@ -534,14 +582,17 @@ const AuraPractice = () => {
           cover_gradient: selectedWorld.gradient || 'from-pink-300 to-rose-400',
           target_phonemes: [] as string[],
         };
-        const isCompleted = completedStories.includes(title);
-        const isUnlocked = idx === 0 || completedStories.length >= idx;
+        const dbStars = preKLevelStars.starsFor(selectedWorld.id, levelData.id);
+        const dbCompleted = preKLevelStars.isCompleted(selectedWorld.id, levelData.id);
+        const isCompleted = dbCompleted || completedStories.includes(title);
+        const isUnlocked = idx === 0 || completedStories.length >= idx || dbCompleted
+          || preKLevelStars.isCompleted(selectedWorld.id, levelData.id - 1);
         return {
           id: levelData.id,
           story,
           enemies: levelData.enemies as CampaignLevel['enemies'],
           isBossLevel: levelData.isBossLevel,
-          starsEarned: isCompleted ? 2 : 0,
+          starsEarned: dbStars > 0 ? dbStars : (isCompleted ? 2 : 0),
           isCompleted,
           isUnlocked,
           isTutorial: false,
@@ -687,7 +738,7 @@ const AuraPractice = () => {
       const worldLevelTitles = w.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean);
       const levelsCompleted = worldLevelTitles.filter(t => allCompletedTitles.has(t)).length || worldStoriesInDB.length;
       const totalLevels = w.levels.length;
-      
+
       // World unlock logic based on previous world completion (check reshuffled stories too)
       let isUnlocked = w.id === 1;
       if (w.id > 1) {
@@ -697,7 +748,7 @@ const AuraPractice = () => {
         const prevCompleted = prevWorldLevelTitles.filter(t => allCompletedTitles.has(t)).length || prevWorldStoriesInDB.length;
         isUnlocked = prevCompleted >= w.unlockRequirement;
       }
-      
+
       return {
         worldId: w.id,
         levelsCompleted,
@@ -706,6 +757,45 @@ const AuraPractice = () => {
         isUnlocked,
       };
     });
+
+    // Union in DB-published Pre-K worlds so worlds like #4/#5/#6/#7/#8/#11 that
+    // exist only in the CMS (and NOT in the hardcoded campaignWorlds prek set
+    // of 101/102/103) actually have their progress + stars surfaced on the
+    // world map. Without this, `RPGWorldMap.getWorldProgress(worldId)` falls
+    // through to the "0/N Complete, 0 Stars" default for every DB world.
+    if (gameTheme === 'prek' && publishedPrekWorldsMeta) {
+      const existingIds = new Set(worldProgress.map((p) => p.worldId));
+      for (const meta of publishedPrekWorldsMeta) {
+        const totals = preKLevelStars.worldTotals(meta.world_number);
+        const storiesFromLegacy = worldProgressData[meta.world_number.toString()] || [];
+        // Prefer the higher of (per-level completions) vs (legacy world_progress
+        // titles) so kids who completed levels before the migration still see
+        // their progress.
+        const levelsCompleted = Math.max(totals.levelsCompleted, storiesFromLegacy.length);
+        const starsEarned = Math.max(totals.starsEarned, storiesFromLegacy.length * 2);
+        const totalLevels = meta.level_count || Math.max(1, levelsCompleted);
+
+        if (existingIds.has(meta.world_number)) {
+          // Overwrite the (usually empty) hardcoded entry with the DB numbers.
+          const idx = worldProgress.findIndex((p) => p.worldId === meta.world_number);
+          worldProgress[idx] = {
+            worldId: meta.world_number,
+            levelsCompleted,
+            totalLevels,
+            starsEarned,
+            isUnlocked: true,
+          };
+        } else {
+          worldProgress.push({
+            worldId: meta.world_number,
+            levelsCompleted,
+            totalLevels,
+            starsEarned,
+            isUnlocked: true,
+          });
+        }
+      }
+    }
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>

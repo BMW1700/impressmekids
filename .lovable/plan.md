@@ -1,51 +1,114 @@
-## Brutally honest audit
+## Deep-audit findings
 
-The retry flow is still fragile for two separate reasons:
+### What actually happens today
 
-1. **The reader can restart the mic before the browser has fully ended the old speech session.** The current `Retry` handler flips state and calls `startRecognitionRef.current?.()` immediately after `stopRecognitionSession()` was called on the miss. In Web Speech, `stop()` finishes asynchronously. Because `isRecognitionRunningRef` can still be true for a moment, the retry start call can be ignored, leaving the UI saying it is listening while no useful recognition result is processed.
+I traced the Pre-K completion path end-to-end (`YubiVideoAdventure` → `handlePreKComplete` in `AuraPractice` → `completeBattle` in `useCampaignProgress` → `campaign_progress.world_progress` in the DB → back to `RPGWorldMap`) and pulled the DB rows.
 
-2. **Pre-K/Benny video mode never receives retry-success continuation.** `RPGWordReader` has an `onRetrySuccess` callback, but `YubiVideoAdventure` only passes `onResult` and `onMiss`. So when a child misses, taps Retry, then says the word correctly, the reader marks it retried internally but the story parent does not advance or save that retry success as a resolved second attempt.
+DB state for a Benny player is fine:
+```
+grade_mode='k5'
+world_progress = {
+  "4":  ["This and That"],
+  "5":  ["Benny Meets his Family", "Benny goes to school", "Benny Goes Home"],
+  "6":  [5 stories completed],
+  "7":  [4], "8": [3], "101": [1], "102": [1], ...
+}
+books_rescued = 60
+```
+So completions ARE being saved. The bug is on the display / consumption side.
 
-3. **Scoring/data currently treats retry success inconsistently.** Battle mode counts the first miss immediately, then retry success heals a little but does not count as a correct first-try reward. That is directionally right, but the data model does not explicitly distinguish `missed_then_retried_correct` from a final skip in parent-level telemetry, especially in Pre-K video mode.
+### The three real bugs
 
-## Plan
+**Bug 1 — Pre-K world grid reads the wrong world list, so progress lookup misses every DB world.**
 
-1. **Harden `RPGWordReader` retry restart**
-   - Replace the immediate retry start with a deterministic restart sequence:
-     - fully abort/clear the stale recognition instance,
-     - re-arm the same target word,
-     - reset processing/final-result guards,
-     - set `shouldBeListeningRef.current = true`,
-     - start recognition after the stale session has had a short tick to end.
-   - Make failed retry show the same overlay with **Skip only**, not another retry.
-   - Keep successful retry advancing to the next word/batch.
+- `RPGWorldMap` (prek theme) renders `publishedPrekWorlds` fetched from `prek_worlds` — world_numbers 4, 5, 6, 7, 8, 11, 101, 102.
+- `AuraPractice.tsx` (lines 110–115) computes `activeWorlds` for prek theme as `campaignWorlds.filter(w => w.mode === 'prek')`, which is only the three hardcoded worlds **101, 102, 103**.
+- `worldProgress[]` (lines 684–708) is built by mapping over `activeWorlds`, so it only ever contains entries for 101/102/103.
+- In `RPGWorldMap.getWorldProgress(worldId)`, worlds 4/5/6/7/8/11 fall through to the default `{levelsCompleted: 0, starsEarned: 0}` — which is exactly what the screenshots show.
 
-2. **Add explicit retry outcome callbacks**
-   - Extend the reader callback path so parent components can know:
-     - first attempt miss happened,
-     - retry succeeded,
-     - skip/final miss happened.
-   - Keep existing `onResult`, `onMiss`, and `onRetrySuccess` compatible so other modes don’t break.
+**Bug 2 — Per-level "completed" and stars on the level-select grid are computed from the same broken list.**
 
-3. **Fix Benny/Pre-K video continuation**
-   - Pass `onRetrySuccess` into `YubiVideoAdventure`.
-   - On retry success, advance the story exactly like a resolved correct word, but submit telemetry with:
-     - `matched: true`,
-     - `attempts: 2`,
-     - `retried: true`,
-     - `first_attempt_missed: true`,
-     - reduced score credit compared with first-try correct.
-   - On skip, submit as a final miss/auto-pass with worse score impact.
+The `CampaignLevel[]` for DB Pre-K worlds is synthesized inside `RPGWorldMap` with `storyIndex: -1`, `isCompleted: false`, `starsEarned: 0`. Even where `world_progress["4"] = ["This and That"]` exists, the level cards can't cross-reference it because the level's `story.title` is never wired to the DB level's title. So Level 1 of "Benny Teaches Personal Pronouns" shows unstarred even though the child finished it.
 
-4. **Make scoring honest**
-   - First-try correct: full credit.
-   - Retry correct: partial credit / reduced score impact, no first-try combat rewards.
-   - Skip/final miss: lowest credit and remains a missed word.
-   - Preserve memory-bank/backend context that the word was missed first and later retried correctly.
+**Bug 3 — Village / UB Village never unlocks for many Pre-K completions.**
 
-5. **Validate with a local mocked speech-recognition harness**
-   - Add a focused test/simulation path or use a temporary Playwright script to simulate:
-     - wrong final transcript → Retry → correct final transcript → advances,
-     - wrong final transcript → Retry → wrong final transcript → overlay returns with Skip only,
-     - Skip advances and records lower-credit miss.
-   - Verify both `RPGWordReader` and `YubiVideoAdventure` callback behavior.
+`awardVillageProgress(user.id, 1)` runs inside `handlePreKComplete`. But `handlePreKComplete` only runs when `YubiVideoAdventure` fires `onComplete`. Any completion path that doesn't reach `phase === "ending"` (retry-then-advance branch, `onRetrySuccess` skipping the video ending, or the fallback `onResult(false)` we added last turn) never fires `onComplete`, so no token is granted and the DB `world_progress` entry is never written either. This is why some Pre-K levels the child clearly played show zero progress AND the village never opens.
+
+Secondary: `isBossRushUnlocked` and `isWorldUnlocked` compare `worldId` numerically. In prek theme the DB world_number 8 ("Benny's Wardrobe") collides with classic world 8, so the unlock check is meaningless in prek theme.
+
+---
+
+## The fix
+
+### 1. Make `AuraPractice` build `worldProgress` from the DB-published Pre-K worlds, not `activeWorlds`
+
+- Load `prek_worlds` + `prek_levels` published rows once (reuse `usePublishedPrekLevels` or hoist the query already in `RPGWorldMap`) and expose the list to `AuraPractice`.
+- In prek theme, build `worldProgress[]` by iterating over the union of `activeWorlds` **and** the DB Pre-K worlds. For each DB world `w`:
+  - `worldStoriesInDB = campaignProgress.world_progress[w.world_number]`
+  - `levelsCompleted = min(worldStoriesInDB.length, publishedLevelCount)`
+  - `totalLevels = publishedLevelCount`
+  - `starsEarned = worldStoriesInDB.reduce(...)` — see (2).
+
+### 2. Persist per-level stars, not just story titles
+
+`world_progress` today is `Record<world_number, string[] of story titles>`. That can't hold star counts. Extend the completion payload so per-level results survive:
+
+- Add a lightweight sibling table `prek_level_completions` (or reuse `campaign_battle_sessions` — it already stores `story_title`, `world_number`, `xp_earned`; add `stars smallint`, `level_number int`, `grade_mode text`).
+- On Pre-K completion, insert one row per attempt with `stars` derived from `preKStats.stars`, and upsert best-stars per `(user, grade_mode, world_number, level_number)`.
+- `RPGLevelSelect` and `RPGWorldMap` read best-stars per level from this table via a new `usePreKLevelStars(userId, gradeMode)` hook and merge into the synthesized `CampaignLevel[]` so cards show real stars/checkmarks.
+
+Migration outline (single migration, with grants + RLS as per the project rules):
+```
+create table public.prek_level_completions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  grade_mode text not null default 'k5',
+  world_number int not null,
+  level_number int not null,
+  best_stars smallint not null default 0,
+  best_score int not null default 0,
+  words_read int not null default 0,
+  correct_words int not null default 0,
+  completed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, grade_mode, world_number, level_number)
+);
+grant select, insert, update on public.prek_level_completions to authenticated;
+grant all on public.prek_level_completions to service_role;
+alter table public.prek_level_completions enable row level security;
+create policy "own rows" on public.prek_level_completions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+### 3. Make sure every Pre-K completion path actually persists
+
+- `handlePreKComplete` in `AuraPractice` must be the single source of truth. Move `awardVillageProgress`, `completeBattle`, and the new `prek_level_completions` upsert into one `try/finally` so a village token is granted iff the DB write succeeded.
+- In `YubiVideoAdventure`, ensure the retry-then-correct branch (from last turn's fix) still funnels into `phase === "ending"` (or fire `onComplete` explicitly with `wordsAsked/scoreCredit`) so the final callback always runs. Add a hard-failsafe: on `onBack` after the last word was correct, fire `onComplete` if it hasn't fired yet.
+- Add `console.debug` telemetry keyed `[PreK/complete]` around the three writes so the next regression is visible in the console.
+
+### 4. Fix world-unlock collisions in prek theme
+
+- In `RPGWorldMap.isWorldUnlocked`, when `mapTheme === 'prek'` keep the existing "Pre-K always unlocked" behavior but stop the `isBossRushUnlocked` check from firing (Boss Rush is classic-only).
+- Namespace `worldProgress` lookups by `(mode, worldId)` internally to prevent future collisions.
+
+### 5. Backfill existing players
+
+One-shot SQL from existing `campaign_progress.world_progress` on prek players: for every `(user_id, world_number, story_title)` present, insert a `prek_level_completions` row with `best_stars = 2` (safe midpoint) and `words_read/correct_words = 0`. This restores star counts for kids who already played (like the Benny account with 60 books rescued) so their village state and world tiles look correct immediately.
+
+### 6. Verification
+
+After the change, verify against the current Benny row:
+- World 4 should read `1/3 Complete`, ~2 stars.
+- World 6 should read `5/6 Complete`, ~10 stars.
+- Village should show tokens = `sum(best_stars > 0)` and unlock zones per the existing thresholds.
+Run one Pre-K level end-to-end, confirm a `prek_level_completions` row appears and the world tile updates without reload.
+
+## Files touched
+
+- `src/pages/student/AuraPractice.tsx` — union world list, single-source completion handler.
+- `src/components/aura/game/rpg/RPGWorldMap.tsx` — consume per-level stars, remove theme collisions.
+- `src/components/aura/game/rpg/RPGLevelSelect.tsx` — show real stars/completion per level.
+- `src/components/aura/game/rpg/YubiVideoAdventure.tsx` — guarantee `onComplete` fires on every successful finish path.
+- New: `src/hooks/usePreKLevelStars.ts`.
+- Migration: `prek_level_completions` table + grants + RLS + backfill.
+- `src/hooks/useVillage.ts` — no logic change, but called from the new unified handler.
