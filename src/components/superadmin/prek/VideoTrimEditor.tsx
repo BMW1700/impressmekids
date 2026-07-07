@@ -182,7 +182,6 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
       setDraftOutValue(Math.min(d, next));
       seek(Math.min(d, next));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seek, setDraftInValue, setDraftOutValue]);
 
   const onPointerUp = useCallback(() => {
