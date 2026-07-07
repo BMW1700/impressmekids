@@ -738,7 +738,7 @@ const AuraPractice = () => {
       const worldLevelTitles = w.levels.map(l => activeStories[l.storyIndex]?.title).filter(Boolean);
       const levelsCompleted = worldLevelTitles.filter(t => allCompletedTitles.has(t)).length || worldStoriesInDB.length;
       const totalLevels = w.levels.length;
-      
+
       // World unlock logic based on previous world completion (check reshuffled stories too)
       let isUnlocked = w.id === 1;
       if (w.id > 1) {
@@ -748,7 +748,7 @@ const AuraPractice = () => {
         const prevCompleted = prevWorldLevelTitles.filter(t => allCompletedTitles.has(t)).length || prevWorldStoriesInDB.length;
         isUnlocked = prevCompleted >= w.unlockRequirement;
       }
-      
+
       return {
         worldId: w.id,
         levelsCompleted,
@@ -757,6 +757,45 @@ const AuraPractice = () => {
         isUnlocked,
       };
     });
+
+    // Union in DB-published Pre-K worlds so worlds like #4/#5/#6/#7/#8/#11 that
+    // exist only in the CMS (and NOT in the hardcoded campaignWorlds prek set
+    // of 101/102/103) actually have their progress + stars surfaced on the
+    // world map. Without this, `RPGWorldMap.getWorldProgress(worldId)` falls
+    // through to the "0/N Complete, 0 Stars" default for every DB world.
+    if (gameTheme === 'prek' && publishedPrekWorldsMeta) {
+      const existingIds = new Set(worldProgress.map((p) => p.worldId));
+      for (const meta of publishedPrekWorldsMeta) {
+        const totals = preKLevelStars.worldTotals(meta.world_number);
+        const storiesFromLegacy = worldProgressData[meta.world_number.toString()] || [];
+        // Prefer the higher of (per-level completions) vs (legacy world_progress
+        // titles) so kids who completed levels before the migration still see
+        // their progress.
+        const levelsCompleted = Math.max(totals.levelsCompleted, storiesFromLegacy.length);
+        const starsEarned = Math.max(totals.starsEarned, storiesFromLegacy.length * 2);
+        const totalLevels = meta.level_count || Math.max(1, levelsCompleted);
+
+        if (existingIds.has(meta.world_number)) {
+          // Overwrite the (usually empty) hardcoded entry with the DB numbers.
+          const idx = worldProgress.findIndex((p) => p.worldId === meta.world_number);
+          worldProgress[idx] = {
+            worldId: meta.world_number,
+            levelsCompleted,
+            totalLevels,
+            starsEarned,
+            isUnlocked: true,
+          };
+        } else {
+          worldProgress.push({
+            worldId: meta.world_number,
+            levelsCompleted,
+            totalLevels,
+            starsEarned,
+            isUnlocked: true,
+          });
+        }
+      }
+    }
 
     return (
       <div className="min-h-screen flex flex-col bg-background" onClick={handlePageInteraction}>
