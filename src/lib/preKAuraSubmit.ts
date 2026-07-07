@@ -18,6 +18,10 @@ export interface PreKAuraContext {
   expected_word: string;
   attempts: number;
   auto_passed: boolean;
+  retried?: boolean;
+  first_attempt_missed?: boolean;
+  score_credit?: number;
+  outcome?: "first_try_correct" | "retry_correct" | "skipped" | "missed";
 }
 
 export async function submitPreKAuraReading(opts: {
@@ -63,6 +67,10 @@ export async function submitPreKAuraReading(opts: {
           matched,
           attempts: context.attempts,
           auto_passed: context.auto_passed,
+          retried: context.retried ?? false,
+          first_attempt_missed: context.first_attempt_missed ?? false,
+          score_credit: context.score_credit ?? (matched ? 1 : 0),
+          outcome: context.outcome ?? (matched ? "first_try_correct" : context.auto_passed ? "skipped" : "missed"),
         },
       },
     });

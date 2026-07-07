@@ -132,6 +132,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const [phase, setPhase] = useState<Phase>("tap-to-begin");
   const [attempts, setAttempts] = useState(0);
   const [correct, setCorrect] = useState(0);
+  const [scoreCredit, setScoreCredit] = useState(0);
   const [wordsAsked, setWordsAsked] = useState(0);
   const [showSparkle, setShowSparkle] = useState(false);
 
@@ -397,7 +398,17 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // ── word read handlers ─────────────────────────────────────────────────────
   const advanceFromWord = useCallback(
-    (matched: boolean, spokenWord: string, autoPassed: boolean) => {
+    (
+      matched: boolean,
+      spokenWord: string,
+      autoPassed: boolean,
+      options: {
+        retried?: boolean;
+        attemptsOverride?: number;
+        scoreCredit?: number;
+        firstAttemptMissed?: boolean;
+      } = {}
+    ) => {
       if (advancedRef.current) return;
       advancedRef.current = true;
       if (!current || current.kind !== "word") return;
@@ -406,6 +417,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
       const sid = studentIdRef.current;
       if (sid && adventure) {
+        const credit = options.scoreCredit ?? (matched && !autoPassed ? 1 : 0);
         submitPreKAuraReading({
           studentId: sid,
           audioBlob: blob,
@@ -416,14 +428,27 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
             level_id: adventure.id,
             step_index: stepIndex,
             expected_word: current.word,
-            attempts: attempts + 1,
+            attempts: options.attemptsOverride ?? attempts + 1,
             auto_passed: autoPassed,
+            retried: options.retried ?? false,
+            first_attempt_missed: options.firstAttemptMissed ?? false,
+            score_credit: credit,
+            outcome: options.retried
+              ? "retry_correct"
+              : matched && !autoPassed
+              ? "first_try_correct"
+              : autoPassed
+              ? "skipped"
+              : "missed",
           },
         });
       }
 
+      const credit = options.scoreCredit ?? (matched && !autoPassed ? 1 : 0);
+      setScoreCredit((s) => s + credit);
+
       if (matched && !autoPassed) {
-        setCorrect((c) => c + 1);
+        if (!options.retried) setCorrect((c) => c + 1);
         playChime();
         playSparkle();
         setShowSparkle(true);
@@ -608,12 +633,12 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     queue(() => {
       const stars = wordsAsked === 0
         ? 1
-        : correct >= wordsAsked
+        : scoreCredit >= wordsAsked
         ? 3
-        : correct >= Math.ceil(wordsAsked * 0.7)
+        : scoreCredit >= wordsAsked * 0.7
         ? 2
         : 1;
-      onComplete({ wordsRead: wordsAsked, correctWords: correct, stars });
+      onComplete({ wordsRead: wordsAsked, correctWords: Math.round(scoreCredit), stars });
     }, 2400);
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -879,6 +904,14 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
                   enableEchoRetry={false}
                   onResult={handleReaderResult}
                   onMiss={(_, __) => handleReaderMiss()}
+                  onRetrySuccess={(_, spokenWord, retryAttempts) => {
+                    advanceFromWord(true, spokenWord || wordStep.word, false, {
+                      retried: true,
+                      attemptsOverride: retryAttempts ?? 2,
+                      scoreCredit: 0.6,
+                      firstAttemptMissed: true,
+                    });
+                  }}
                 />
               </div>
             </div>

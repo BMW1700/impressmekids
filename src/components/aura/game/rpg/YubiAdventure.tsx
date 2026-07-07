@@ -452,6 +452,7 @@ export const YubiAdventure = ({ world, level, onBack, onComplete }: Props) => {
                   key={`prek-adv-${world.id}-${level.id}-${index}`}
                   words={[current.word]}
                   onResult={(c) => handleResult(c)}
+                  onRetrySuccess={() => triggerWin(true)}
                   onBatchComplete={() => { /* size-1 batch */ }}
                   disabled={false}
                   streak={0}
