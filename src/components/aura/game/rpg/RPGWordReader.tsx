@@ -766,10 +766,15 @@ export const RPGWordReader = ({
     soundEffects.correctWord();
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     
-    // NO damage dealt, NO coins given - just practice
-    // Don't call onResult(true, ...) since this doesn't count as a real correct
-    // BUT call onRetrySuccess to trigger HP healing!
-    onRetrySuccess?.(wordIndex, spokenWord, retryAttempts);
+    // NO first-try damage/coins. Parent screens with retry-specific scoring
+    // handle partial credit via onRetrySuccess. Older parents still need a
+    // result signal so they advance turn/batch state instead of swallowing the
+    // retry success forever.
+    if (onRetrySuccess) {
+      onRetrySuccess(wordIndex, spokenWord, retryAttempts);
+    } else {
+      onResult(false, spokenWord, wordIndex, undefined);
+    }
 
     // Retry is now resolved.
     isRetryAttemptRef.current = false;
