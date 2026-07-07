@@ -177,39 +177,58 @@ const PreKLevelBuilder = () => {
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const saveProgress = async () => {
-    if (!level) return;
+  const persistEdits = async ({ showToast = true }: { showToast?: boolean } = {}): Promise<boolean> => {
+    if (!level) return false;
     setSaving(true);
     try {
-      const results = await Promise.all(
-        words.map((w) =>
+      const [{ error: levelError }, ...results] = await Promise.all([
+        supabase
+          .from("prek_levels")
+          .update({
+            opening_trim_in_seconds: level.opening_trim_in_seconds,
+            opening_trim_out_seconds: level.opening_trim_out_seconds,
+            closing_trim_in_seconds: level.closing_trim_in_seconds,
+            closing_trim_out_seconds: level.closing_trim_out_seconds,
+          })
+          .eq("id", level.id),
+        ...words.map((w) =>
           supabase
             .from("prek_level_words")
             .update({
               word: (w.word ?? "").trim(),
               ask_line: w.ask_line ?? "",
               success_line: w.success_line ?? "",
+              first_trim_in_seconds: w.first_trim_in_seconds,
+              first_trim_out_seconds: w.first_trim_out_seconds,
+              second_trim_in_seconds: w.second_trim_in_seconds,
+              second_trim_out_seconds: w.second_trim_out_seconds,
             })
             .eq("id", w.id),
         ),
-      );
+      ]);
+      if (levelError) throw levelError;
       const firstErr = results.find((r) => r.error)?.error;
       if (firstErr) throw firstErr;
       invalidatePreKLevelCacheByDbId(level.id);
-      toast.success("Saved — live for the next play");
+      if (showToast) toast.success("Saved — all clip crops are locked in");
+      return true;
     } catch (e: any) {
       toast.error(e?.message ?? "Save failed");
+      return false;
     } finally {
       setSaving(false);
     }
   };
+
+  const saveProgress = () => persistEdits();
 
   // Manual "Update Live" — flush pending edits, bust the cache, and bump the
   // level row so any open student session picks up the changes immediately
   // via the realtime subscription in usePreKVideoLevel.
   const pushLive = async () => {
     if (!level) return;
-    await saveProgress();
+    const saved = await persistEdits({ showToast: false });
+    if (!saved) return;
     invalidatePreKLevelCacheByDbId(level.id);
     const { error } = await supabase
       .from("prek_levels")
@@ -327,9 +346,6 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_out_seconds`]: next.trimOut,
     };
     setLevel((cur) => (cur ? ({ ...cur, ...patch } as LevelRow) : cur));
-    const { error } = await supabase.from("prek_levels").update(patch).eq("id", level.id);
-    if (error) toast.error(error.message);
-    else invalidatePreKLevelCacheByDbId(level.id);
   };
 
   const updateWordTrim = async (
@@ -342,9 +358,6 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_out_seconds`]: next.trimOut,
     };
     setWords((cur) => cur.map((w) => (w.id === wordId ? ({ ...w, ...patch } as WordRow) : w)));
-    const { error } = await supabase.from("prek_level_words").update(patch).eq("id", wordId);
-    if (error) toast.error(error.message);
-    else invalidatePreKLevelCacheByDbId(level.id);
   };
 
   // ---- Word-level operations -------------------------------------------------
@@ -446,6 +459,9 @@ const PreKLevelBuilder = () => {
 
 
   const togglePublish = async () => {
+    if (!level) return;
+    const saved = await persistEdits({ showToast: false });
+    if (!saved) return;
     const ready =
       !!level.opening_video_url &&
       !!level.closing_video_url &&
@@ -491,7 +507,7 @@ const PreKLevelBuilder = () => {
               <Radio className="h-4 w-4 mr-1" />
               Update Live
             </Button>
-            <Button onClick={togglePublish} variant={level.is_published ? "outline" : "default"}>
+            <Button onClick={togglePublish} variant={level.is_published ? "outline" : "default"} disabled={saving}>
               {level.is_published ? "Unpublish" : "Publish"}
             </Button>
           </div>
