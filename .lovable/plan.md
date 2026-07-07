@@ -1,50 +1,41 @@
-## 1. Grant super_admin access to jacob.besser0@gmail.com
+## 1. Force dark styling on the Pre-K / RPG World Map cards
 
-Insert into `public.user_roles`:
+In `src/components/aura/game/rpg/RPGWorldMap.tsx` the whole map assumes a dark background, but each `Card` uses shadcn's `bg-card` token. In light mode that token resolves to near-white, so the pink gradient overlay produces the washed-out pastel cards seen in the screenshot; in dark mode `bg-card` is the deep slate that looks correct.
 
-```sql
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('c69298fa-8421-451b-94ab-3fb52d0fabea', 'super_admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-```
+Fix: add the Tailwind `dark` class to the map's root wrapper `<div>` (line 334) so every shadcn primitive underneath — Card, DropdownMenu, etc. — resolves its semantic tokens against the dark palette regardless of the user's app theme. This keeps light mode intact everywhere else on the platform and matches the design goal of "keep them as they are in dark mode".
 
-This unlocks the Super Admin CMS (Pre-K Worlds/Levels builder, R2 migration, etc.) where Benny episodes/levels are authored.
+No other component styling changes — the existing gradient overlays, borders, and text tokens are already tuned for the dark surface.
 
-## 2. Platform-wide Nabu → Yubi rename
+## 2. Fix the Retry button on the word-feedback overlay
 
-Case-preserving find/replace across all code + data. 35 files, ~270 occurrences.
+In `src/components/aura/game/rpg/RPGWordReader.tsx`:
 
-### 2a. User-visible strings (highest priority)
-Every `Nabu` in copy → `Yubi`, `NABU` → `YUBI`, `nabu` → `yubi`. Files: `nabuStoryCopy.ts`, `campaignData.ts`, `preKAdventures.ts`, `preKWordBanks.ts`, `NabuScene.tsx`, `NabuPreKStoryScene.tsx`, `NabuAdventure.tsx`, `NabuBubble.tsx`, `NabuOwl.tsx`, `NabuProblemScene.tsx`, `NabuEpisodeIntroOverlay.tsx`, `NabuEpisodeOutroOverlay.tsx`, `NabuVideoAdventure.tsx`, `RPGOneWordReader.tsx`, `RPGLevelSelect.tsx`, `RPGWorldMap.tsx`, `ThemeSelector.tsx`, `SettingsMenu.tsx`, `PremiumHero.tsx`, `BennyVideoHero.tsx`, `ForFamilies.tsx`, `GameDashboard.tsx`, `AuraPractice.tsx`, `tts.ts` (pronunciation hints), `preKSceneGraph.ts`, `usePreKAudioMixerRuntime.ts`, `PreKWorldsList.tsx`, `PreKLevelBuilder.tsx`, edge functions (`auth-email-hook`, `sign-r2-audio-url`, `migrate-to-r2`).
+- `handleTryAgain` (line 657) currently sets `setRecognitionState('listening')` and calls `startRecognitionRef.current?.()`, but it does NOT reset `isWordTransitioningRef.current` or re-arm the speech target token. Because `handleIncorrectFinal` called `stopRecognitionSession()` (which flips `shouldBeListeningRef` false) and the target-arm `useEffect` only re-runs when `currentIndex`/`cleanWord`/`wordsKey` change — and none of those change on a retry — the newly-started mic can start listening but the next matching transcript is rejected by the "target not armed" guard at line 882-891, so "nothing happens" when the child says the word again.
 
-### 2b. Identifiers & filenames
-Rename symbols and files so the codebase itself no longer says Nabu:
-- Components: `NabuOwl` → `YubiOwl`, `NabuBubble` → `YubiBubble`, `NabuScene` → `YubiScene`, `NabuProblemScene` → `YubiProblemScene`, `NabuPreKStoryScene` → `YubiPreKStoryScene`, `NabuAdventure` → `YubiAdventure`, `NabuVideoAdventure` → `YubiVideoAdventure`, `NabuEpisodeWrapper` → `YubiEpisodeWrapper`, `NabuEpisodeIntroOverlay` / `NabuEpisodeOutroOverlay` → `Yubi*`.
-- Page: `src/pages/game/NabuVillage.tsx` → `YubiVillage.tsx` (plus route/import update in `App.tsx`, `GameDashboard.tsx`).
-- Lib: `nabuStoryCopy.ts` → `yubiStoryCopy.ts`; exported functions `getNabuCreatureName`, `getNabuMeterLabel`, `getNabuHelpChip`, `getNabuLevelTitle`, `getNabuLevelCopy`, `isNabuPreKWorld`, `getNabuDemoWords` → `getYubi*` / `isYubiPreKWorld`.
-- Demo flag: URL param `?nabu_demo=1` and localStorage key `nabu_prek_demo` → `yubi_demo` / `yubi_prek_demo` (breaking for anyone who set the old flag — acceptable, internal demo only).
-- Poster asset pointer `nabu-hero-poster.jpg.asset.json` left in place (only referenced by nothing now that the hero video import is `yubi-hero.mp4.asset.json`); will delete via `lovable-assets delete` if unreferenced after rename.
+  Fix inside `handleTryAgain`:
+  1. Explicitly re-arm the speech target token for the current word: bump `speechTargetTokenRef.current.id`, set `generation = wordGenerationRef.current`, `index = currentIndexRef.current`, `word = getTargetWord(currentIndexRef.current)`, and `armedAt = Date.now() + WORD_TRANSITION_ARM_MS_NORMAL` (or the fast constant when `mode === 'fast'`).
+  2. Set `isWordTransitioningRef.current = false` (after a matching short timeout, mirroring the pattern at lines 287-298) so `processResult` no longer bails out.
+  3. Clear `processedFinalsRef.current` and `batchCompletedRef.current` guards so a fresh final transcript is accepted.
+  4. Set `shouldBeListeningRef.current = true` before calling `startRecognitionRef.current?.()` (belt-and-suspenders; `startRecognitionSession` already does this, but the ref may have been read stale by an in-flight `scheduleRestart`).
 
-### 2c. Database content
-One migration:
+- After the fix, a successful retry already routes through `handleRetrySuccess` (line 954-962) which advances to the next word (YELLOW result, no coins) — matching the requested "move the game forward" behavior.
 
-```sql
-UPDATE public.prek_worlds
-SET title = 'Yubi Village'
-WHERE id = '04420500-93a3-4836-aed4-3c9aa9efc62e' AND title = 'Nabu Village';
-```
+## 3. Show only "Skip" on a failed retry
 
-(A full-text sweep confirmed this is the only "Nabu" string in `prek_worlds`, `prek_levels`, or `prek_level_words`.)
+Currently `WordFeedbackOverlay` receives `canRetry={canRetry}`. On the second miss `processResult` falls into `handleIncorrectFinal` again, which reopens the overlay — but `canRetry` state was set to `false` by `handleTryAgain`, so the Retry button is already hidden. However the "Continue" button still labels as **Skip** — good — and the Hear button remains. That already matches the requested UI:
 
-### 2d. Route
-If `/nabu-village` or similar route exists in `App.tsx`, add a redirect from the old path to `/yubi-village` so any bookmarks still work.
+- First miss: Hear · Retry · Skip
+- Second miss (after Retry): Hear · Skip
 
-## Out of scope
-- Asset URLs already uploaded to R2 that contain "nabu" in the filename (e.g. `nabu-hero-poster.jpg`) — the URLs are immutable; the pointer JSON file can be renamed but the CDN path stays. Not user-visible.
-- Migration filenames under `supabase/migrations/` are historical and never displayed; left as-is.
-- `mem://` memory files mentioning Nabu (internal to the AI, not user-facing) — left as-is.
+Verify the overlay renders correctly for the second-miss case (the `canRetry && onTryAgain` gate at `WordFeedbackOverlay.tsx` line ~232 already hides Retry). No overlay code changes needed beyond confirming this branch is exercised once the retry flow above is fixed.
 
 ## Verification
-- `rg -i nabu src/ supabase/functions/` returns zero hits after the rename (aside from historical migration files).
-- Load `/for-families`, mode-select, and a Pre-K episode; confirm all copy says "Yubi".
-- Sign in as Jacob and confirm the Super Admin dashboard is reachable.
+
+- Reload the Pre-K world map in light mode; confirm the four Benny world cards render with the dark slate background and legible white text, matching the dark-mode look.
+- In a Pre-K level, intentionally mis-say a word → overlay appears with Hear/Retry/Skip → click Retry → say the word correctly → game advances (yellow result). Then repeat, and on the second attempt say it wrong → overlay reappears with only Hear/Skip.
+
+### Technical details
+
+- Files touched: `src/components/aura/game/rpg/RPGWorldMap.tsx`, `src/components/aura/game/rpg/RPGWordReader.tsx`.
+- No DB, RLS, or edge-function changes.
+- No changes to `WordFeedbackOverlay.tsx` — it already conditionally hides Retry when `canRetry` is false.

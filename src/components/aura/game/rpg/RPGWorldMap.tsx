@@ -332,7 +332,7 @@ export const RPGWorldMap = ({
 
   return (
     <div
-      className={`min-h-screen p-4 relative overflow-hidden z-0 ${isPrek ? '' : 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900'}`}
+      className={`dark min-h-screen p-4 relative overflow-hidden z-0 ${isPrek ? '' : 'bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900'}`}
     >
       {/* Milestone celebrations */}
       <MilestoneCelebration currentCount={totalBooksRescued} />
