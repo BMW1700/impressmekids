@@ -1,41 +1,51 @@
-## 1. Force dark styling on the Pre-K / RPG World Map cards
+## Brutally honest audit
 
-In `src/components/aura/game/rpg/RPGWorldMap.tsx` the whole map assumes a dark background, but each `Card` uses shadcn's `bg-card` token. In light mode that token resolves to near-white, so the pink gradient overlay produces the washed-out pastel cards seen in the screenshot; in dark mode `bg-card` is the deep slate that looks correct.
+The retry flow is still fragile for two separate reasons:
 
-Fix: add the Tailwind `dark` class to the map's root wrapper `<div>` (line 334) so every shadcn primitive underneath — Card, DropdownMenu, etc. — resolves its semantic tokens against the dark palette regardless of the user's app theme. This keeps light mode intact everywhere else on the platform and matches the design goal of "keep them as they are in dark mode".
+1. **The reader can restart the mic before the browser has fully ended the old speech session.** The current `Retry` handler flips state and calls `startRecognitionRef.current?.()` immediately after `stopRecognitionSession()` was called on the miss. In Web Speech, `stop()` finishes asynchronously. Because `isRecognitionRunningRef` can still be true for a moment, the retry start call can be ignored, leaving the UI saying it is listening while no useful recognition result is processed.
 
-No other component styling changes — the existing gradient overlays, borders, and text tokens are already tuned for the dark surface.
+2. **Pre-K/Benny video mode never receives retry-success continuation.** `RPGWordReader` has an `onRetrySuccess` callback, but `YubiVideoAdventure` only passes `onResult` and `onMiss`. So when a child misses, taps Retry, then says the word correctly, the reader marks it retried internally but the story parent does not advance or save that retry success as a resolved second attempt.
 
-## 2. Fix the Retry button on the word-feedback overlay
+3. **Scoring/data currently treats retry success inconsistently.** Battle mode counts the first miss immediately, then retry success heals a little but does not count as a correct first-try reward. That is directionally right, but the data model does not explicitly distinguish `missed_then_retried_correct` from a final skip in parent-level telemetry, especially in Pre-K video mode.
 
-In `src/components/aura/game/rpg/RPGWordReader.tsx`:
+## Plan
 
-- `handleTryAgain` (line 657) currently sets `setRecognitionState('listening')` and calls `startRecognitionRef.current?.()`, but it does NOT reset `isWordTransitioningRef.current` or re-arm the speech target token. Because `handleIncorrectFinal` called `stopRecognitionSession()` (which flips `shouldBeListeningRef` false) and the target-arm `useEffect` only re-runs when `currentIndex`/`cleanWord`/`wordsKey` change — and none of those change on a retry — the newly-started mic can start listening but the next matching transcript is rejected by the "target not armed" guard at line 882-891, so "nothing happens" when the child says the word again.
+1. **Harden `RPGWordReader` retry restart**
+   - Replace the immediate retry start with a deterministic restart sequence:
+     - fully abort/clear the stale recognition instance,
+     - re-arm the same target word,
+     - reset processing/final-result guards,
+     - set `shouldBeListeningRef.current = true`,
+     - start recognition after the stale session has had a short tick to end.
+   - Make failed retry show the same overlay with **Skip only**, not another retry.
+   - Keep successful retry advancing to the next word/batch.
 
-  Fix inside `handleTryAgain`:
-  1. Explicitly re-arm the speech target token for the current word: bump `speechTargetTokenRef.current.id`, set `generation = wordGenerationRef.current`, `index = currentIndexRef.current`, `word = getTargetWord(currentIndexRef.current)`, and `armedAt = Date.now() + WORD_TRANSITION_ARM_MS_NORMAL` (or the fast constant when `mode === 'fast'`).
-  2. Set `isWordTransitioningRef.current = false` (after a matching short timeout, mirroring the pattern at lines 287-298) so `processResult` no longer bails out.
-  3. Clear `processedFinalsRef.current` and `batchCompletedRef.current` guards so a fresh final transcript is accepted.
-  4. Set `shouldBeListeningRef.current = true` before calling `startRecognitionRef.current?.()` (belt-and-suspenders; `startRecognitionSession` already does this, but the ref may have been read stale by an in-flight `scheduleRestart`).
+2. **Add explicit retry outcome callbacks**
+   - Extend the reader callback path so parent components can know:
+     - first attempt miss happened,
+     - retry succeeded,
+     - skip/final miss happened.
+   - Keep existing `onResult`, `onMiss`, and `onRetrySuccess` compatible so other modes don’t break.
 
-- After the fix, a successful retry already routes through `handleRetrySuccess` (line 954-962) which advances to the next word (YELLOW result, no coins) — matching the requested "move the game forward" behavior.
+3. **Fix Benny/Pre-K video continuation**
+   - Pass `onRetrySuccess` into `YubiVideoAdventure`.
+   - On retry success, advance the story exactly like a resolved correct word, but submit telemetry with:
+     - `matched: true`,
+     - `attempts: 2`,
+     - `retried: true`,
+     - `first_attempt_missed: true`,
+     - reduced score credit compared with first-try correct.
+   - On skip, submit as a final miss/auto-pass with worse score impact.
 
-## 3. Show only "Skip" on a failed retry
+4. **Make scoring honest**
+   - First-try correct: full credit.
+   - Retry correct: partial credit / reduced score impact, no first-try combat rewards.
+   - Skip/final miss: lowest credit and remains a missed word.
+   - Preserve memory-bank/backend context that the word was missed first and later retried correctly.
 
-Currently `WordFeedbackOverlay` receives `canRetry={canRetry}`. On the second miss `processResult` falls into `handleIncorrectFinal` again, which reopens the overlay — but `canRetry` state was set to `false` by `handleTryAgain`, so the Retry button is already hidden. However the "Continue" button still labels as **Skip** — good — and the Hear button remains. That already matches the requested UI:
-
-- First miss: Hear · Retry · Skip
-- Second miss (after Retry): Hear · Skip
-
-Verify the overlay renders correctly for the second-miss case (the `canRetry && onTryAgain` gate at `WordFeedbackOverlay.tsx` line ~232 already hides Retry). No overlay code changes needed beyond confirming this branch is exercised once the retry flow above is fixed.
-
-## Verification
-
-- Reload the Pre-K world map in light mode; confirm the four Benny world cards render with the dark slate background and legible white text, matching the dark-mode look.
-- In a Pre-K level, intentionally mis-say a word → overlay appears with Hear/Retry/Skip → click Retry → say the word correctly → game advances (yellow result). Then repeat, and on the second attempt say it wrong → overlay reappears with only Hear/Skip.
-
-### Technical details
-
-- Files touched: `src/components/aura/game/rpg/RPGWorldMap.tsx`, `src/components/aura/game/rpg/RPGWordReader.tsx`.
-- No DB, RLS, or edge-function changes.
-- No changes to `WordFeedbackOverlay.tsx` — it already conditionally hides Retry when `canRetry` is false.
+5. **Validate with a local mocked speech-recognition harness**
+   - Add a focused test/simulation path or use a temporary Playwright script to simulate:
+     - wrong final transcript → Retry → correct final transcript → advances,
+     - wrong final transcript → Retry → wrong final transcript → overlay returns with Skip only,
+     - Skip advances and records lower-credit miss.
+   - Verify both `RPGWordReader` and `YubiVideoAdventure` callback behavior.
