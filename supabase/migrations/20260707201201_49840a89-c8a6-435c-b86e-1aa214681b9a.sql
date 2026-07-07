@@ -1,0 +1,2 @@
+INSERT INTO public.user_roles (user_id, role) VALUES ('c69298fa-8421-451b-94ab-3fb52d0fabea', 'super_admin') ON CONFLICT (user_id) DO UPDATE SET role = EXCLUDED.role;
+UPDATE public.prek_worlds SET title = 'Yubi Village' WHERE id = '04420500-93a3-4836-aed4-3c9aa9efc62e';
