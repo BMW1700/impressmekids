@@ -386,7 +386,23 @@ const AuraPractice = () => {
   // RPG Pre-K One-Word Reader (no story, no minigames, no fail state)
   if (isRpgMode && rpgView === 'prek_reader' && selectedWorld && selectedLevel && user?.id) {
     const handlePreKComplete = async (preKStats: { wordsRead: number; correctWords: number; stars: number }) => {
+      console.debug('[PreK/complete] fired', {
+        world: selectedWorld.id, level: selectedLevel.id, stats: preKStats,
+      });
       try {
+        // 1) Per-level completion — the new source of truth for stars/checkmarks.
+        await recordPreKLevelCompletion({
+          userId: user.id,
+          gradeMode: currentGradeMode,
+          worldNumber: selectedWorld.id,
+          levelNumber: Number(selectedLevel.id),
+          stars: Math.max(1, preKStats.stars || 1),
+          wordsRead: preKStats.wordsRead,
+          correctWords: preKStats.correctWords,
+        });
+
+        // 2) Legacy campaign_progress row — kept in sync so books_rescued /
+        //    world_progress totals continue to power older UI + rewards.
         const session = await startBattle({
           storyTitle: selectedLevel.story.title,
           storyCategory: selectedLevel.story.category,
@@ -404,11 +420,12 @@ const AuraPractice = () => {
           worldNumber: selectedWorld.id,
           goldEarned: preKStats.stars * 5,
         });
-        // Award 1 Village Token per completed Pre-K level + sync zone unlocks
+
+        // 3) Village tokens.
         await awardVillageProgress(user.id, 1);
         refetch();
       } catch (e) {
-        console.error('[Pre-K] Failed to persist completion:', e);
+        console.error('[PreK/complete] persist failed', e);
       }
       setRpgView('level_select');
     };
