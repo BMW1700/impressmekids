@@ -565,14 +565,17 @@ const AuraPractice = () => {
           cover_gradient: selectedWorld.gradient || 'from-pink-300 to-rose-400',
           target_phonemes: [] as string[],
         };
-        const isCompleted = completedStories.includes(title);
-        const isUnlocked = idx === 0 || completedStories.length >= idx;
+        const dbStars = preKLevelStars.starsFor(selectedWorld.id, levelData.id);
+        const dbCompleted = preKLevelStars.isCompleted(selectedWorld.id, levelData.id);
+        const isCompleted = dbCompleted || completedStories.includes(title);
+        const isUnlocked = idx === 0 || completedStories.length >= idx || dbCompleted
+          || preKLevelStars.isCompleted(selectedWorld.id, levelData.id - 1);
         return {
           id: levelData.id,
           story,
           enemies: levelData.enemies as CampaignLevel['enemies'],
           isBossLevel: levelData.isBossLevel,
-          starsEarned: isCompleted ? 2 : 0,
+          starsEarned: dbStars > 0 ? dbStars : (isCompleted ? 2 : 0),
           isCompleted,
           isUnlocked,
           isTutorial: false,
