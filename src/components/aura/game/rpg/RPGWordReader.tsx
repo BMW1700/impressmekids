@@ -670,7 +670,7 @@ export const RPGWordReader = ({
     // Re-arm the speech target token for the same word so processResult
     // doesn't reject the retry transcript as "target not armed".
     const retryIndex = currentIndexRef.current;
-    const retryTarget = getTargetWord(retryIndex);
+    const retryTarget = currentBatch[retryIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     const armMs = mode === 'fast' ? WORD_TRANSITION_ARM_MS_FAST : WORD_TRANSITION_ARM_MS_NORMAL;
     const tokenId = speechTargetTokenRef.current.id + 1;
     speechTargetTokenRef.current = {
@@ -692,7 +692,7 @@ export const RPGWordReader = ({
     shouldBeListeningRef.current = true;
     setRecognitionState('listening');
     startRecognitionRef.current?.();
-  }, [pendingIncorrectWord, getTargetWord, mode]);
+  }, [pendingIncorrectWord, currentBatch, mode]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
