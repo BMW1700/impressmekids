@@ -164,6 +164,16 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   useEffect(() => { ensureSparkleStyle(); }, []);
 
+  useEffect(() => {
+    setStepIndex(0);
+    setAttempts(0);
+    setCorrect(0);
+    setScoreCredit(0);
+    setWordsAsked(0);
+    advancedRef.current = false;
+    askedStepRef.current = -1;
+  }, [adventure?.id]);
+
   // ── Scene-event emission for the audio overlay mixer ─────────────────────
   // We emit `end` for the previous scene + `start` for the new scene whenever
   // the active step changes (and on tap-to-begin → opening start).
