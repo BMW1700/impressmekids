@@ -1,6 +1,6 @@
 // Browser Web Speech API helper for Pre-K Benny speech bubbles.
 // $0/month — no server, no key. Respects a user-controlled toggle stored in
-// localStorage under "nabu.tts.enabled" (default ON). When the toggle is off,
+// localStorage under "yubi.tts.enabled" (default ON). When the toggle is off,
 // speak() is a no-op so the rest of the UI stays fully usable.
 //
 // One stable, kid-friendly voice is selected once on boot and reused for
@@ -8,8 +8,8 @@
 
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "nabu.tts.enabled";
-const EVENT_NAME = "nabu-tts-changed";
+const STORAGE_KEY = "yubi.tts.enabled";
+const EVENT_NAME = "yubi-tts-changed";
 
 export function isTtsEnabled(): boolean {
   if (typeof window === "undefined") return false;

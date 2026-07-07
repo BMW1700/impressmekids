@@ -1,5 +1,5 @@
 // PreKAudioMixer — runtime hook that plays the per-level audio overlay mix in
-// response to scene-change events from NabuVideoAdventure.
+// response to scene-change events from YubiVideoAdventure.
 //
 // Routing per clip:
 //   HTMLAudioElement → MediaElementSourceNode → clipGain → trackGain[i]

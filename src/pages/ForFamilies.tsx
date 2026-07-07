@@ -76,7 +76,7 @@ const ForFamilies = () => {
             >
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium tracking-wide text-white/80 backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5 text-[hsl(48_100%_70%)]" />
-                <span>NABU LEARN · AGES 2–5</span>
+                <span>YUBI LEARN · AGES 2–5</span>
               </div>
               <h1 className="text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">
                 Reading. With their{" "}

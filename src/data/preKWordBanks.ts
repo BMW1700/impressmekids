@@ -42,7 +42,7 @@ const WORLD_102: Record<number, string[]> = {
 
 // World 103: Word + Picture (two-word phrases with verb-phrase mappings).
 // A few friendly object phrases are added to early levels — preschool-relatable
-// words (teddy, dog, cookie, ball) per the Nabu story shell.
+// words (teddy, dog, cookie, ball) per the Yubi story shell.
 const WORLD_103: Record<number, string[]> = {
   1: ["help me", "help you", "my teddy"],
   2: ["my dog", "your dog", "big dog"],

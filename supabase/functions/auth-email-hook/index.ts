@@ -36,12 +36,12 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-// NOTE: Lovable Emails is provisioned on notify.nabulearn.com (verified).
+// NOTE: Lovable Emails is provisioned on notify.yubilearn.com (verified).
 // Sending from any other domain returns 403 no_matching_sender.
 const SITE_NAME = "YubiLearn"
-const SENDER_DOMAIN = "notify.nabulearn.com"
-const ROOT_DOMAIN = "nabulearn.com"
-const FROM_DOMAIN = "notify.nabulearn.com"
+const SENDER_DOMAIN = "notify.yubilearn.com"
+const ROOT_DOMAIN = "yubilearn.com"
+const FROM_DOMAIN = "notify.yubilearn.com"
 
 
 // Sample data for preview mode ONLY (not used in actual email sending).
@@ -49,7 +49,7 @@ const FROM_DOMAIN = "notify.nabulearn.com"
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
-const SAMPLE_PROJECT_URL = "https://nabulearn.lovable.app"
+const SAMPLE_PROJECT_URL = "https://yubilearn.lovable.app"
 const SAMPLE_EMAIL = "user@example.test"
 const SAMPLE_DATA: Record<string, object> = {
   signup: {

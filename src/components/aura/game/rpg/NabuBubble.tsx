@@ -11,7 +11,7 @@ interface Props {
 
 const CHEERS = ["Yes!", "Great!", "Nice!", "Yay!", "One more!", "Wow!", "Keep going!"];
 
-export const NabuBubble = ({ nonce, text }: Props) => {
+export const YubiBubble = ({ nonce, text }: Props) => {
   const message =
     text ?? CHEERS[Math.abs(nonce) % CHEERS.length];
 

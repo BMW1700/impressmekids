@@ -1,12 +1,12 @@
 // Pre-K in-level story scene. Replaces the K-12 "battle row" (enemy + knight)
-// for worlds 101/102/103. Nabu the Owl is the main character on screen; the
+// for worlds 101/102/103. Yubi the Owl is the main character on screen; the
 // child's voice is what advances the scene. Each correct word ticks `progress`
 // forward and a visible scene beat plays out — sleepy houses light up, Bobo
 // bounces higher, Echo's bubble cracks, etc. No before/after overlays.
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useMemo } from "react";
-import { NabuOwl } from "./NabuOwl";
+import { YubiOwl } from "./YubiOwl";
 
 interface Props {
   worldId: number;
@@ -16,7 +16,7 @@ interface Props {
   lastTick: number;    // increments on every correct read → triggers burst
 }
 
-export const NabuPreKStoryScene = ({ worldId, progress, total, celebrating, lastTick }: Props) => {
+export const YubiPreKStoryScene = ({ worldId, progress, total, celebrating, lastTick }: Props) => {
   if (worldId === 101) return <SleepyVillageScene progress={progress} total={total} celebrating={celebrating} lastTick={lastTick} />;
   if (worldId === 102) return <BoboBounceScene progress={progress} total={total} celebrating={celebrating} lastTick={lastTick} />;
   if (worldId === 103) return <EchoBubbleScene progress={progress} total={total} celebrating={celebrating} lastTick={lastTick} />;
@@ -24,9 +24,9 @@ export const NabuPreKStoryScene = ({ worldId, progress, total, celebrating, last
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// Shared: floating Nabu (owl) that reacts to ticks
+// Shared: floating Yubi (owl) that reacts to ticks
 // ─────────────────────────────────────────────────────────────────────
-const NabuFloater = ({ lastTick, size = 110, x = "50%", y = "30%", mood = "happy" as const }: {
+const YubiFloater = ({ lastTick, size = 110, x = "50%", y = "30%", mood = "happy" as const }: {
   lastTick: number;
   size?: number;
   x?: string;
@@ -45,7 +45,7 @@ const NabuFloater = ({ lastTick, size = 110, x = "50%", y = "30%", mood = "happy
       animate={{ scale: [1, 1.18, 1], rotate: [0, -6, 6, 0] }}
       transition={{ duration: 0.6, ease: "easeOut" }}
     >
-      <NabuOwl size={size} mood={mood} />
+      <YubiOwl size={size} mood={mood} />
     </motion.div>
   </motion.div>
 );
@@ -69,9 +69,9 @@ const SparkleBurst = ({ tick, x, y }: { tick: number; x: string; y: string }) =>
 );
 
 // ─────────────────────────────────────────────────────────────────────
-// WORLD 101 — Sleepy Nabu Village
+// WORLD 101 — Sleepy Yubi Village
 // As the child reads, the sky brightens, houses light up one at a time,
-// and the sun rises. Nabu flutters across the village cheering.
+// and the sun rises. Yubi flutters across the village cheering.
 // ─────────────────────────────────────────────────────────────────────
 const SleepyVillageScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
   const ratio = total > 0 ? Math.min(1, progress / total) : 0;
@@ -130,8 +130,8 @@ const SleepyVillageScene = ({ progress, total, celebrating, lastTick }: Omit<Pro
         ))}
       </div>
 
-      {/* Nabu fluttering across — moves with progress */}
-      <NabuFloater
+      {/* Yubi fluttering across — moves with progress */}
+      <YubiFloater
         lastTick={lastTick}
         x={`${15 + ratio * 70}%`}
         y="28%"
@@ -192,14 +192,14 @@ const SleepyHouse = ({ index, lit }: { index: number; lit: boolean }) => {
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// WORLD 102 — Nabu Flies to the Moon
-// Each correct word flaps Nabu's wings and lifts him higher in the sky
+// WORLD 102 — Yubi Flies to the Moon
+// Each correct word flaps Yubi's wings and lifts him higher in the sky
 // toward a glowing moon. By the end he reaches it and the moon smiles.
 // ─────────────────────────────────────────────────────────────────────
 const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
   const ratio = total > 0 ? Math.min(1, progress / total) : 0;
-  // Nabu's vertical position: starts low (10%) and climbs to the moon (~78%)
-  const nabuY = `${88 - ratio * 68}%`;
+  // Yubi's vertical position: starts low (10%) and climbs to the moon (~78%)
+  const yubiY = `${88 - ratio * 68}%`;
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-2xl border-2 border-white/60 shadow-inner"
@@ -222,7 +222,7 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         </motion.div>
       ))}
 
-      {/* The moon — Nabu's goal. Grows + smiles as Nabu gets closer. */}
+      {/* The moon — Yubi's goal. Grows + smiles as Yubi gets closer. */}
       <motion.div
         className="absolute"
         style={{ left: "50%", top: "12%", transform: "translateX(-50%)" }}
@@ -243,7 +243,7 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
           <circle cx="44" cy="48" r="4" fill="#fde68a" opacity="0.7" />
           <circle cx="66" cy="60" r="3" fill="#fde68a" opacity="0.7" />
           <circle cx="58" cy="42" r="2" fill="#fde68a" opacity="0.7" />
-          {/* eyes that open as Nabu approaches */}
+          {/* eyes that open as Yubi approaches */}
           {ratio > 0.3 && (
             <>
               <circle cx="46" cy="52" r="2" fill="#1f2937" />
@@ -257,7 +257,7 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         </svg>
       </motion.div>
 
-      {/* Drifting clouds Nabu passes through */}
+      {/* Drifting clouds Yubi passes through */}
       {[20, 70].map((left, i) => (
         <motion.div
           key={i}
@@ -274,7 +274,7 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         </motion.div>
       ))}
 
-      {/* Trail of feathers / sparkles showing where Nabu has been */}
+      {/* Trail of feathers / sparkles showing where Yubi has been */}
       {Array.from({ length: progress }).map((_, i) => (
         <motion.div
           key={`trail-${i}`}
@@ -292,19 +292,19 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         </motion.div>
       ))}
 
-      {/* NABU — the hero, climbing the sky */}
+      {/* YUBI — the hero, climbing the sky */}
       <motion.div
         className="absolute"
         style={{ left: "50%", transform: "translate(-50%, -50%)" }}
-        animate={{ top: nabuY }}
+        animate={{ top: yubiY }}
         transition={{ duration: 0.9, ease: "easeOut" }}
       >
         <motion.div
-          key={`nabu-flap-${lastTick}`}
+          key={`yubi-flap-${lastTick}`}
           animate={{ y: [0, -10, 0, -6, 0], rotate: [0, -6, 6, -4, 0], scale: [1, 1.1, 1] }}
           transition={{ duration: 0.9, ease: "easeOut" }}
         >
-          <NabuOwl size={celebrating ? 130 : 110} mood={celebrating ? "cheer" : "happy"} />
+          <YubiOwl size={celebrating ? 130 : 110} mood={celebrating ? "cheer" : "happy"} />
         </motion.div>
         {/* Flap lines */}
         <motion.div
@@ -327,22 +327,22 @@ const BoboBounceScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         </motion.div>
       </motion.div>
 
-      <SparkleBurst tick={lastTick} x="50%" y={nabuY} />
+      <SparkleBurst tick={lastTick} x="50%" y={yubiY} />
       {celebrating && <Confetti />}
     </div>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// WORLD 103 — Nabu's Voice Wakes the Night
-// Nabu's hoot starts tiny. Each correct word makes his sound waves
+// WORLD 103 — Yubi's Voice Wakes the Night
+// Yubi's hoot starts tiny. Each correct word makes his sound waves
 // grow bigger until they fill the whole sky and stars sparkle in time.
 // ─────────────────────────────────────────────────────────────────────
 const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props, "worldId">) => {
   const ratio = total > 0 ? Math.min(1, progress / total) : 0;
   // How many concentric song rings to show
   const rings = Math.max(1, Math.min(5, progress + 1));
-  // Sky brightens with Nabu's growing song
+  // Sky brightens with Yubi's growing song
   const skyTop = interpolateColor("#1e1b4b", "#312e81", ratio);
   const skyBot = interpolateColor("#4c1d95", "#a78bfa", ratio);
 
@@ -350,7 +350,7 @@ const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
     <div className="relative w-full h-full overflow-hidden rounded-2xl border-2 border-white/60 shadow-inner"
       style={{ background: `linear-gradient(180deg, ${skyTop} 0%, ${skyBot} 100%)` }}
     >
-      {/* Stars that pulse to Nabu's song */}
+      {/* Stars that pulse to Yubi's song */}
       {[...Array(16)].map((_, i) => (
         <motion.div
           key={i}
@@ -395,7 +395,7 @@ const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         {ratio > 0.7 && <circle cx="40" cy="56" r="3" fill="#fef3c7" />}
       </svg>
 
-      {/* SONG RINGS — emanate from Nabu, grow with progress */}
+      {/* SONG RINGS — emanate from Yubi, grow with progress */}
       <div className="absolute" style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)" }}>
         {Array.from({ length: rings }).map((_, i) => (
           <motion.div
@@ -416,7 +416,7 @@ const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
         ))}
       </div>
 
-      {/* NABU — the singer, glowing with his song */}
+      {/* YUBI — the singer, glowing with his song */}
       <motion.div
         className="absolute"
         style={{ left: "50%", top: "52%", transform: "translate(-50%, -50%)" }}
@@ -436,11 +436,11 @@ const EchoBubbleScene = ({ progress, total, celebrating, lastTick }: Omit<Props,
           }}
         />
         <motion.div
-          key={`nabu-sing-${lastTick}`}
+          key={`yubi-sing-${lastTick}`}
           animate={{ scale: [1, 1.18, 1], rotate: [0, -4, 4, 0] }}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <NabuOwl size={celebrating ? 140 : 120} mood={celebrating ? "cheer" : "happy"} />
+          <YubiOwl size={celebrating ? 140 : 120} mood={celebrating ? "cheer" : "happy"} />
         </motion.div>
         {/* Music notes popping out per tick */}
         <AnimatePresence>

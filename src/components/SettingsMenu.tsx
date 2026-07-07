@@ -86,7 +86,7 @@ export const SettingsMenu = () => {
 
         <DropdownMenuSeparator />
 
-        {/* Read-aloud (TTS) toggle — for Pre-K Nabu speech bubbles */}
+        {/* Read-aloud (TTS) toggle — for Pre-K Yubi speech bubbles */}
         <DropdownMenuLabel className="flex items-center gap-2">
           {ttsEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
           Read aloud

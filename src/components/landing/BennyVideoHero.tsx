@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Play } from "lucide-react";
 import videoAsset from "@/assets/yubi-hero.mp4.asset.json";
-import posterAsset from "@/assets/nabu-hero-poster.jpg.asset.json";
+import posterAsset from "@/assets/yubi-hero-poster.jpg.asset.json";
 
 /**
  * Cinematic video stage for Benny.

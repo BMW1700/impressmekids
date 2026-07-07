@@ -15,7 +15,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const R2_ACCESS_KEY_ID = Deno.env.get("R2_ACCESS_KEY_ID") ?? "";
 const R2_SECRET_ACCESS_KEY = Deno.env.get("R2_SECRET_ACCESS_KEY") ?? "";
 const R2_ENDPOINT = Deno.env.get("R2_ENDPOINT") ?? "";
-const R2_BUCKET = "nabulearn-media";
+const R2_BUCKET = "yubilearn-media";
 const MIGRATABLE_BUCKETS = new Set([
   "prek-level-videos",
   "prek-level-audio",

@@ -1,16 +1,16 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { NabuOwl } from "./NabuOwl";
+import { YubiOwl } from "./YubiOwl";
 import { speak, cancelSpeech } from "@/lib/tts";
-import type { NabuEpisodeOutro } from "@/lib/nabuStoryCopy";
+import type { YubiEpisodeOutro } from "@/lib/yubiStoryCopy";
 
 interface Props {
-  outro: NabuEpisodeOutro;
+  outro: YubiEpisodeOutro;
   onContinue: () => void;
 }
 
-export const NabuEpisodeOutroOverlay = ({ outro, onContinue }: Props) => {
+export const YubiEpisodeOutroOverlay = ({ outro, onContinue }: Props) => {
   useEffect(() => {
     speak(outro.line);
     return () => cancelSpeech();
@@ -42,7 +42,7 @@ export const NabuEpisodeOutroOverlay = ({ outro, onContinue }: Props) => {
           animate={{ scale: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
         >
-          <NabuOwl size={160} mood="cheer" />
+          <YubiOwl size={160} mood="cheer" />
         </motion.div>
 
         <motion.div

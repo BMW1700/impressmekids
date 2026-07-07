@@ -1,14 +1,14 @@
-// Simple, friendly SVG owl mascot — Nabu.
+// Simple, friendly SVG owl mascot — Yubi.
 // Pure visual, no behavior. Sized via the `size` prop. Used in episode
 // intro/outro panels for the Pre-K story shell.
 
-interface NabuOwlProps {
+interface YubiOwlProps {
   size?: number;
   className?: string;
   mood?: "happy" | "curious" | "cheer";
 }
 
-export const NabuOwl = ({ size = 140, className = "", mood = "happy" }: NabuOwlProps) => {
+export const YubiOwl = ({ size = 140, className = "", mood = "happy" }: YubiOwlProps) => {
   const pupilY = mood === "curious" ? 33 : 35;
   const beakDip = mood === "cheer" ? 2 : 0;
   return (

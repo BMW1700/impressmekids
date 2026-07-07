@@ -18,7 +18,7 @@ import prekBedroomBg from "@/assets/prek-bedroom-bg.png.asset.json";
 
 const SLOTS_PER_ZONE = 6;
 
-export default function NabuVillage() {
+export default function YubiVillage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: zones = [] } = useVillageZones();

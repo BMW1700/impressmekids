@@ -7,7 +7,7 @@ import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
 import { RPGBattleArena } from "@/components/aura/game/rpg/RPGBattleArena";
 import { RPGWorldMap, type WorldProgress } from "@/components/aura/game/rpg/RPGWorldMap";
 import { RPGLevelSelect, type CampaignLevel } from "@/components/aura/game/rpg/RPGLevelSelect";
-import { NabuEpisodeWrapper } from "@/components/aura/game/rpg/NabuEpisodeWrapper";
+import { YubiEpisodeWrapper } from "@/components/aura/game/rpg/YubiEpisodeWrapper";
 import { getPreKContent, isPreKWorldId } from "@/data/preKWordBanks";
 import { usePublishedPrekLevels } from "@/hooks/usePublishedPrekLevels";
 import { type BattleMode } from "@/components/aura/game/rpg/RPGBattleModeSelector";
@@ -385,7 +385,7 @@ const AuraPractice = () => {
       <div className="h-screen overflow-hidden flex flex-col bg-background" onClick={handlePageInteraction}>
         {isGameMode ? <GameHeader studentId={user?.id} /> : <Header />}
         <main className="flex-1 min-h-0 container mx-auto px-3 py-3 sm:px-4 sm:py-4">
-          <NabuEpisodeWrapper
+          <YubiEpisodeWrapper
             world={selectedWorld}
             level={selectedLevel}
             onBack={() => setRpgView('level_select')}

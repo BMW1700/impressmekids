@@ -526,7 +526,7 @@ export const RPGWorldMap = ({
           {mapTheme === 'agent'
             ? 'Your covert reading mission begins, agent!'
             : mapTheme === 'prek'
-              ? 'Your Nabu Village adventure awaits!'
+              ? 'Your Yubi Village adventure awaits!'
               : 'Your reading adventure awaits, hero!'}
         </p>
 
@@ -888,7 +888,7 @@ export const RPGWorldMap = ({
           {mapTheme === 'agent'
             ? '"The Syndicate has stolen classified intelligence files. Infiltrate their operation, decode their secrets, and bring down The Director!"'
             : mapTheme === 'prek'
-              ? '"Nabu Village is ready for little readers. Follow the published worlds and practice each friendly word."'
+              ? '"Yubi Village is ready for little readers. Follow the published worlds and practice each friendly word."'
               : '"Princess Ella\'s books are scattered across four worlds. Defeat Grog\'s minions, rescue the books, and restore magic to the kingdom!"'
           }
         </motion.p>
