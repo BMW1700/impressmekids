@@ -245,7 +245,7 @@ const PreKWorldsList = () => {
               </div>
               <div>
                 <Label>Title</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nabu Village" />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Yubi Village" />
               </div>
               <div>
                 <Label>Description</Label>

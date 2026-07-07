@@ -1,13 +1,13 @@
-// Real SVG scenes for Pre-K Nabu adventures.
+// Real SVG scenes for Pre-K Yubi adventures.
 // Each scene renders a believable environment for the obstacle (river, gate,
-// tree, dark night, etc.), animates Nabu reacting on the left, and on
-// "solved"/"transition" reveals the SOLUTION inside the world and walks Nabu
+// tree, dark night, etc.), animates Yubi reacting on the left, and on
+// "solved"/"transition" reveals the SOLUTION inside the world and walks Yubi
 // across/through/onto it. No emojis are used inside the stage.
 //
 // Phase contract:
-//   - "problem" | "ask" | "reading": obstacle visible, Nabu reacts on the left
+//   - "problem" | "ask" | "reading": obstacle visible, Yubi reacts on the left
 //   - "solved": solution appears and interacts with the obstacle
-//   - "transition": Nabu walks/uses the solution and exits to the right
+//   - "transition": Yubi walks/uses the solution and exits to the right
 //
 // Words without a custom scene fall back to a generic illustrated card.
 
@@ -34,7 +34,7 @@ const BENNY_WALK_FRAMES = 24;
 const BENNY_WALK_VISIBLE_BOTTOM_PAD = 38; // source px hidden below paws after watermark removal
 const BENNY_TRANSITION_SECONDS = 2.6;
 
-interface NabuSceneProps {
+interface YubiSceneProps {
   word: string;
   phase: ScenePhase;
   index: number;
@@ -52,13 +52,13 @@ const VB_H = 500;
 const GROUND_Y = 380;
 const BENNY_SCENE_SIZE = 240;
 
-// ── Nabu positions through the scene ──────────────────────────────────────
+// ── Yubi positions through the scene ──────────────────────────────────────
 // y anchors at GROUND_Y so the sprite's bottom edge sits exactly on the ground line.
-const NABU_START = { x: 140, y: GROUND_Y };
-const NABU_EXIT = { x: 860, y: GROUND_Y };
-const NABU_IDLE_ANIM = {
-  x: NABU_START.x,
-  y: NABU_START.y,
+const YUBI_START = { x: 140, y: GROUND_Y };
+const YUBI_EXIT = { x: 860, y: GROUND_Y };
+const YUBI_IDLE_ANIM = {
+  x: YUBI_START.x,
+  y: YUBI_START.y,
   scaleY: 1,
   scaleX: 1,
   rotate: 0,
@@ -66,11 +66,11 @@ const NABU_IDLE_ANIM = {
 };
 
 
-const nabuAnim = (phase: ScenePhase) => {
+const yubiAnim = (phase: ScenePhase) => {
   if (phase === "transition") {
     return {
-      x: NABU_EXIT.x,
-      y: NABU_EXIT.y,
+      x: YUBI_EXIT.x,
+      y: YUBI_EXIT.y,
       scaleY: 1, scaleX: 1, rotate: 0,
       transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" as const },
     };
@@ -78,18 +78,18 @@ const nabuAnim = (phase: ScenePhase) => {
   if (phase === "solved") {
     // Stay grounded after the word is accepted. Reward FX can celebrate, but
     // Benny's body must not hop before the walking handoff begins.
-    return NABU_IDLE_ANIM;
+    return YUBI_IDLE_ANIM;
   }
   // problem / ask / reading: the sprite-sheet animation is the only idle motion.
-  return NABU_IDLE_ANIM;
+  return YUBI_IDLE_ANIM;
 };
 
-// ── Scene-specific Nabu motion helpers ─────────────────────────────────────
+// ── Scene-specific Yubi motion helpers ─────────────────────────────────────
 // All return a framer-motion `animate` object for the <motion.g> wrapper.
 
 // Hop over an obstacle centered at obstacleX — anticipation crouch, big arc,
 // squash on landing, then trot off. Reads as a real jump, not a slide-up.
-const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
+const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): YubiAnim => {
   if (phase === "transition") {
     return {
       x: [140, obstacleX - 90, obstacleX - 70, obstacleX, obstacleX + 70, obstacleX + 90, 860],
@@ -100,26 +100,26 @@ const hopOverAnim = (obstacleX: number) => (phase: ScenePhase): NabuAnim => {
       transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeOut", times: [0, 0.18, 0.28, 0.5, 0.72, 0.82, 1] },
     };
   }
-  return nabuAnim(phase);
+  return yubiAnim(phase);
 };
 
 // Walk forward and stop at a target — adds a small settle-bob on arrival.
 const walkToAnim = (targetX: number, targetY: number = GROUND_Y) =>
-  (phase: ScenePhase): NabuAnim => {
+  (phase: ScenePhase): YubiAnim => {
     if (phase === "transition") {
       return {
-        x: [NABU_START.x, (NABU_START.x + targetX) / 2, targetX],
-        y: [NABU_START.y, targetY, targetY],
+        x: [YUBI_START.x, (YUBI_START.x + targetX) / 2, targetX],
+        y: [YUBI_START.y, targetY, targetY],
         scaleY: [1, 1, 1],
         scaleX: [1, 1, 1],
         transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut", times: [0, 0.55, 1] },
       };
     }
-    return nabuAnim(phase);
+    return yubiAnim(phase);
   };
 
 const climbToAnim = (targetX: number, targetY: number) =>
-  (phase: ScenePhase): NabuAnim => {
+  (phase: ScenePhase): YubiAnim => {
     if (phase === "transition") {
       return {
         x: targetX,
@@ -130,16 +130,16 @@ const climbToAnim = (targetX: number, targetY: number) =>
         transition: { duration: BENNY_TRANSITION_SECONDS, ease: "easeInOut" },
       };
     }
-    return nabuAnim(phase);
+    return yubiAnim(phase);
   };
 
 
 // Loose type — framer-motion accepts many shapes here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NabuAnim = any;
+type YubiAnim = any;
 
 
-const NabuSprite = ({
+const YubiSprite = ({
   phase,
   size = BENNY_SCENE_SIZE,
   anim,
@@ -147,7 +147,7 @@ const NabuSprite = ({
 }: {
   phase: ScenePhase;
   size?: number;
-  anim?: (phase: ScenePhase) => NabuAnim;
+  anim?: (phase: ScenePhase) => YubiAnim;
   action?: "idle" | "walk" | "jump" | "climb";
 }) => {
   const ctxMood = useContext(BennyMoodContext);
@@ -159,7 +159,7 @@ const NabuSprite = ({
   // Memoize the animate object so framer-motion doesn't restart on every parent
   // re-render. Do NOT key by phase: that remount caused the pre-walk glitch.
   const animateValue = useMemo(
-    () => (anim ? anim(phase) : nabuAnim(phase)),
+    () => (anim ? anim(phase) : yubiAnim(phase)),
     // `anim` is scene-stable for a single obstacle; depending on its inline
     // function identity would rebuild the same motion target on parent re-renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -414,8 +414,8 @@ const Stage = ({ children }: { children: React.ReactNode }) => (
 // SCENES
 // ──────────────────────────────────────────────────────────────────────────
 
-// ── JUMP: river across the path, Nabu leaps over it ──────────────────────
-const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
+// ── JUMP: river across the path, Yubi leaps over it ──────────────────────
+const jumpArcAnim = (phase: ScenePhase): YubiAnim => {
   if (phase === "transition") {
     // Even arc across the river at constant speed (linear easing, evenly spaced keyframes)
     const xs = [140, 230, 320, 410, 500, 590, 680, 770, 860];
@@ -432,8 +432,8 @@ const jumpArcAnim = (phase: ScenePhase): NabuAnim => {
       transition: { duration: BENNY_TRANSITION_SECONDS, ease: "linear" },
     };
   }
-  if (phase === "solved") return nabuAnim(phase);
-  return nabuAnim(phase);
+  if (phase === "solved") return yubiAnim(phase);
+  return yubiAnim(phase);
 };
 
 const JumpScene = ({ phase, hideBackdrop = false }: { phase: ScenePhase; hideBackdrop?: boolean }) => {
@@ -463,12 +463,12 @@ const JumpScene = ({ phase, hideBackdrop = false }: { phase: ScenePhase; hideBac
         </>
       )}
 
-      <NabuSprite phase={phase} anim={jumpArcAnim} action="jump" />
+      <YubiSprite phase={phase} anim={jumpArcAnim} action="jump" />
     </Stage>
   );
 };
 
-// ── BOOTS: muddy ground, boots appear on Nabu, walks through ─────────────
+// ── BOOTS: muddy ground, boots appear on Yubi, walks through ─────────────
 const BootsScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -494,15 +494,15 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
           ))}
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+      <YubiSprite phase={phase} anim={walkToAnim(860)} />
 
-      {/* boots on Nabu — chunky, painted, with highlights so they read at 5ft */}
+      {/* boots on Yubi — chunky, painted, with highlights so they read at 5ft */}
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y, opacity: 0, scale: 0.6 }}
+          initial={{ x: YUBI_START.x, y: YUBI_START.y, opacity: 0, scale: 0.6 }}
           animate={{
-            x: phase === "transition" ? NABU_EXIT.x : NABU_START.x,
-            y: phase === "transition" ? NABU_EXIT.y : NABU_START.y,
+            x: phase === "transition" ? YUBI_EXIT.x : YUBI_START.x,
+            y: phase === "transition" ? YUBI_EXIT.y : YUBI_START.y,
             opacity: 1,
             scale: 1,
           }}
@@ -542,7 +542,7 @@ const BootsScene = ({ phase }: { phase: ScenePhase }) => {
   );
 };
 
-// ── KEY: locked gate, key appears, gate opens, Nabu walks through ────────
+// ── KEY: locked gate, key appears, gate opens, Yubi walks through ────────
 const KeyScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -610,13 +610,13 @@ const KeyScene = ({ phase }: { phase: ScenePhase }) => {
           <rect x="74" y="6" width="8" height="10" fill="url(#key-gold)" stroke="#713f12" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+      <YubiSprite phase={phase} anim={walkToAnim(860)} />
 
     </Stage>
   );
 };
 
-// ── AXE: tree blocking the path, axe chops, tree falls, Nabu walks ────────
+// ── AXE: tree blocking the path, axe chops, tree falls, Yubi walks ────────
 const AxeScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -646,7 +646,7 @@ const AxeScene = ({ phase }: { phase: ScenePhase }) => {
           <path d="M-14 -4 L18 -4 L24 12 L-8 12 Z" fill="#94a3b8" stroke="#475569" strokeWidth="2" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
+      <YubiSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );
@@ -703,12 +703,12 @@ const BoneScene = ({ phase }: { phase: ScenePhase }) => {
           <circle cx="22" cy="4" r="6" fill="#fef3c7" stroke="#a16207" strokeWidth="1.5" />
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
     </Stage>
   );
 };
 
-// ── LADDER: tall tree/cliff, ladder appears, Nabu climbs up ──────────────
+// ── LADDER: tall tree/cliff, ladder appears, Yubi climbs up ──────────────
 const LadderScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -736,12 +736,12 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
         ))}
       </motion.g>
       {/* Benny climbs up without swapping/remounting the character tree. */}
-      <NabuSprite phase={phase} anim={climbToAnim(612, GROUND_Y - 260)} action="climb" />
+      <YubiSprite phase={phase} anim={climbToAnim(612, GROUND_Y - 260)} action="climb" />
     </Stage>
   );
 };
 
-// ── UMBRELLA: rain falling, umbrella opens over Nabu ─────────────────────
+// ── UMBRELLA: rain falling, umbrella opens over Yubi ─────────────────────
 const UmbrellaScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -762,14 +762,14 @@ const UmbrellaScene = ({ phase }: { phase: ScenePhase }) => {
         />
       ))}
       <Grass from="#4d7c0f" to="#365314" />
-      <NabuSprite phase={phase} />
-      {/* umbrella following Nabu */}
+      <YubiSprite phase={phase} />
+      {/* umbrella following Yubi */}
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x, y: NABU_START.y - 100, opacity: 0 }}
+          initial={{ x: YUBI_START.x, y: YUBI_START.y - 100, opacity: 0 }}
           animate={{
-            x: phase === "transition" ? NABU_EXIT.x : NABU_START.x,
-            y: (phase === "transition" ? NABU_EXIT.y : NABU_START.y) - 100,
+            x: phase === "transition" ? YUBI_EXIT.x : YUBI_START.x,
+            y: (phase === "transition" ? YUBI_EXIT.y : YUBI_START.y) - 100,
             opacity: 1,
           }}
           transition={{ duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" }}
@@ -827,7 +827,7 @@ const SunScene = ({ phase }: { phase: ScenePhase }) => {
         </g>
       ))}
       <rect x="0" y={GROUND_Y} width={VB_W} height={VB_H - GROUND_Y} fill={solved ? "#65a30d" : "#1e293b"} />
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
     </Stage>
   );
 };
@@ -846,7 +846,7 @@ const LightScene = ({ phase, kind }: { phase: ScenePhase; kind: "STAR" | "LAMP" 
       {/* glow */}
       {solved && (
         <motion.circle
-          cx={NABU_START.x} cy={NABU_START.y - 30}
+          cx={YUBI_START.x} cy={YUBI_START.y - 30}
           r="200"
           fill="#fde047"
           opacity="0.25"
@@ -855,7 +855,7 @@ const LightScene = ({ phase, kind }: { phase: ScenePhase; kind: "STAR" | "LAMP" 
           transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
       {solved && (
         <motion.g
           initial={{ opacity: 0, scale: 0 }}
@@ -868,14 +868,14 @@ const LightScene = ({ phase, kind }: { phase: ScenePhase; kind: "STAR" | "LAMP" 
             </g>
           )}
           {kind === "LAMP" && (
-            <g transform={`translate(${NABU_START.x + 60} ${NABU_START.y - 60})`}>
+            <g transform={`translate(${YUBI_START.x + 60} ${YUBI_START.y - 60})`}>
               <rect x="-4" y="-50" width="8" height="50" fill="#78350f" />
               <ellipse cx="0" cy="0" rx="34" ry="44" fill="#fde047" stroke="#dc2626" strokeWidth="3" />
               <rect x="-30" y="-6" width="60" height="3" fill="#7f1d1d" />
             </g>
           )}
           {kind === "TORCH" && (
-            <g transform={`translate(${NABU_START.x + 50} ${NABU_START.y - 30})`}>
+            <g transform={`translate(${YUBI_START.x + 50} ${YUBI_START.y - 30})`}>
               <rect x="-4" y="0" width="8" height="60" fill="#78350f" />
               <motion.path
                 d="M-14 0 Q-8 -30 0 -36 Q8 -30 14 0 Z" fill="#f97316"
@@ -923,8 +923,8 @@ const GenericScene = ({
       {/* "?" thought when problem */}
       {!solved && (
         <motion.g animate={{ y: [0, -10, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
-          <circle cx={NABU_START.x + 60} cy={NABU_START.y - 160} r="28" fill="#ffffff" stroke="#475569" strokeWidth="3" />
-          <text x={NABU_START.x + 60} y={NABU_START.y - 150} textAnchor="middle" fontSize="36" fontWeight="900" fill="#475569">?</text>
+          <circle cx={YUBI_START.x + 60} cy={YUBI_START.y - 160} r="28" fill="#ffffff" stroke="#475569" strokeWidth="3" />
+          <text x={YUBI_START.x + 60} y={YUBI_START.y - 150} textAnchor="middle" fontSize="36" fontWeight="900" fill="#475569">?</text>
         </motion.g>
       )}
       {/* Giant animated emoji solution */}
@@ -954,13 +954,13 @@ const GenericScene = ({
           <text x="560" y={GROUND_Y + 2} textAnchor="middle" fontSize="30" fontWeight="900" fill="#92400e">{word}</text>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+      <YubiSprite phase={phase} anim={walkToAnim(860)} />
     </Stage>
   );
 };
 
 
-// ── BOAT: water, boat appears, Nabu sails across ─────────────────────────
+// ── BOAT: water, boat appears, Yubi sails across ─────────────────────────
 const BoatScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -986,8 +986,8 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
       {/* boat */}
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x, y: 0 }}
-          animate={{ x: phase === "transition" ? NABU_EXIT.x : NABU_START.x, y: 0 }}
+          initial={{ x: YUBI_START.x, y: 0 }}
+          animate={{ x: phase === "transition" ? YUBI_EXIT.x : YUBI_START.x, y: 0 }}
           transition={{ duration: phase === "transition" ? 1.6 : 0.4, ease: "easeInOut" }}
         >
           <g transform={`translate(0 ${GROUND_Y - 30})`}>
@@ -997,13 +997,13 @@ const BoatScene = ({ phase }: { phase: ScenePhase }) => {
           </g>
         </motion.g>
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(860)} />
+      <YubiSprite phase={phase} anim={walkToAnim(860)} />
 
     </Stage>
   );
 };
 
-// ── ROCKET: launch pad, rocket lifts off (Nabu rides) ────────────────────
+// ── ROCKET: launch pad, rocket lifts off (Yubi rides) ────────────────────
 const RocketScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -1032,13 +1032,13 @@ const RocketScene = ({ phase }: { phase: ScenePhase }) => {
             style={{ originY: 100 }} />
         )}
       </motion.g>
-      <NabuSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
+      <YubiSprite phase={phase} anim={hopOverAnim(500)} action="jump" />
 
     </Stage>
   );
 };
 
-// ── WAVE: shore, big wave carries Nabu ───────────────────────────────────
+// ── WAVE: shore, big wave carries Yubi ───────────────────────────────────
 const WaveScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -1055,7 +1055,7 @@ const WaveScene = ({ phase }: { phase: ScenePhase }) => {
         animate={{ x: solved ? 0 : -800 }}
         transition={{ duration: 1.4, ease: "easeOut" }}
       />
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
     </Stage>
   );
 };
@@ -1076,11 +1076,11 @@ const NetScene = ({ phase }: { phase: ScenePhase }) => {
         <circle cx="670" cy="160" r="6" fill="#1a1a1a" />
         <path d="M640 195 q15 10 30 0" stroke="#1a1a1a" strokeWidth="3" fill="none" />
       </motion.g>
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
       {solved && (
         <motion.g
-          initial={{ x: NABU_START.x + 30, y: NABU_START.y - 80, rotate: -20, opacity: 0 }}
-          animate={{ x: NABU_START.x + 80, y: NABU_START.y - 140, rotate: 10, opacity: 1 }}
+          initial={{ x: YUBI_START.x + 30, y: YUBI_START.y - 80, rotate: -20, opacity: 0 }}
+          animate={{ x: YUBI_START.x + 80, y: YUBI_START.y - 140, rotate: 10, opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
           <rect x="0" y="0" width="6" height="100" fill="#78350f" transform="rotate(-30)" />
@@ -1116,18 +1116,18 @@ const RopeScene = ({ phase }: { phase: ScenePhase }) => {
       {/* rope */}
       {solved && (
         <motion.path
-          d={`M${NABU_START.x + 40} ${NABU_START.y - 30} Q400 ${GROUND_Y - 100} 540 ${GROUND_Y - 30}`}
+          d={`M${YUBI_START.x + 40} ${YUBI_START.y - 30} Q400 ${GROUND_Y - 100} 540 ${GROUND_Y - 30}`}
           stroke="#a16207" strokeWidth="6" fill="none" strokeLinecap="round"
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(600)} />
+      <YubiSprite phase={phase} anim={walkToAnim(600)} />
 
     </Stage>
   );
 };
 
-// ── TENT: stormy, tent appears, Nabu walks into it ───────────────────────
+// ── TENT: stormy, tent appears, Yubi walks into it ───────────────────────
 const TentScene = ({ phase }: { phase: ScenePhase }) => {
   const solved = phase === "solved" || phase === "transition";
   return (
@@ -1152,7 +1152,7 @@ const TentScene = ({ phase }: { phase: ScenePhase }) => {
         <path d={`M600 ${GROUND_Y} L600 ${GROUND_Y - 180}`} stroke="#7f1d1d" strokeWidth="3" />
         <path d={`M580 ${GROUND_Y} L600 ${GROUND_Y - 100} L620 ${GROUND_Y}`} fill="#1f2937" />
       </motion.g>
-      <NabuSprite phase={phase} anim={walkToAnim(560)} />
+      <YubiSprite phase={phase} anim={walkToAnim(560)} />
 
     </Stage>
   );
@@ -1190,7 +1190,7 @@ const BedScene = ({ phase }: { phase: ScenePhase }) => {
         <rect x="540" y={GROUND_Y - 30} width="180" height="30" rx="6" fill="#c084fc" />
         <rect x="540" y={GROUND_Y - 50} width="60" height="20" rx="4" fill="#f0abfc" />
       </motion.g>
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
     </Stage>
   );
 };
@@ -1221,7 +1221,7 @@ const SoundScene = ({ phase, kind }: { phase: ScenePhase; kind: "ROOSTER" | "BEL
       {solved && Array.from({ length: 3 }).map((_, i) => (
         <motion.circle
           key={i}
-          cx={NABU_START.x + 60} cy={NABU_START.y - 40}
+          cx={YUBI_START.x + 60} cy={YUBI_START.y - 40}
           r="20"
           stroke="#0ea5e9"
           strokeWidth="3"
@@ -1237,10 +1237,10 @@ const SoundScene = ({ phase, kind }: { phase: ScenePhase; kind: "ROOSTER" | "BEL
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 200, damping: 14 }}
-          style={{ transformOrigin: `${NABU_START.x + 60}px ${NABU_START.y - 40}px` }}
+          style={{ transformOrigin: `${YUBI_START.x + 60}px ${YUBI_START.y - 40}px` }}
         >
           {kind === "ROOSTER" && (
-            <g transform={`translate(${NABU_START.x + 60} ${NABU_START.y - 60})`}>
+            <g transform={`translate(${YUBI_START.x + 60} ${YUBI_START.y - 60})`}>
               <ellipse cx="0" cy="10" rx="28" ry="22" fill="#fef3c7" />
               <circle cx="-18" cy="-10" r="18" fill="#ffffff" />
               <path d="M-26 -22 L-18 -34 L-12 -22 L-6 -32 L-2 -22 Z" fill="#dc2626" />
@@ -1250,14 +1250,14 @@ const SoundScene = ({ phase, kind }: { phase: ScenePhase; kind: "ROOSTER" | "BEL
             </g>
           )}
           {kind === "BELL" && (
-            <g transform={`translate(${NABU_START.x + 60} ${NABU_START.y - 60})`}>
+            <g transform={`translate(${YUBI_START.x + 60} ${YUBI_START.y - 60})`}>
               <path d="M-30 20 Q-30 -40 0 -40 Q30 -40 30 20 Z" fill="#fbbf24" stroke="#92400e" strokeWidth="3" />
               <circle cx="0" cy="28" r="6" fill="#78350f" />
               <rect x="-4" y="-46" width="8" height="10" fill="#78350f" />
             </g>
           )}
           {kind === "DRUM" && (
-            <g transform={`translate(${NABU_START.x + 60} ${NABU_START.y - 40})`}>
+            <g transform={`translate(${YUBI_START.x + 60} ${YUBI_START.y - 40})`}>
               <ellipse cx="0" cy="0" rx="40" ry="14" fill="#dc2626" />
               <rect x="-40" y="0" width="80" height="40" fill="#dc2626" />
               <ellipse cx="0" cy="40" rx="40" ry="14" fill="#7f1d1d" />
@@ -1265,7 +1265,7 @@ const SoundScene = ({ phase, kind }: { phase: ScenePhase; kind: "ROOSTER" | "BEL
             </g>
           )}
           {kind === "FAN" && (
-            <g transform={`translate(${NABU_START.x + 60} ${NABU_START.y - 40})`}>
+            <g transform={`translate(${YUBI_START.x + 60} ${YUBI_START.y - 40})`}>
               <circle cx="0" cy="0" r="40" fill="#475569" />
               <motion.g animate={{ rotate: 360 }} transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}>
                 <ellipse cx="0" cy="-20" rx="6" ry="20" fill="#cbd5e1" />
@@ -1278,12 +1278,12 @@ const SoundScene = ({ phase, kind }: { phase: ScenePhase; kind: "ROOSTER" | "BEL
           )}
         </motion.g>
       )}
-      <NabuSprite phase={phase} />
+      <YubiSprite phase={phase} />
     </Stage>
   );
 };
 
-// ── BALLOON / KITE / WINGS / CAPE: lifts Nabu up ─────────────────────────
+// ── BALLOON / KITE / WINGS / CAPE: lifts Yubi up ─────────────────────────
 const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE" | "WINGS" | "CAPE" }) => {
   const solved = phase === "solved" || phase === "transition";
   const flyUp = phase === "transition";
@@ -1295,10 +1295,10 @@ const LiftScene = ({ phase, kind }: { phase: ScenePhase; kind: "BALLOON" | "KITE
       {/* cliff */}
       <path d={`M500 ${GROUND_Y} L${VB_W} ${GROUND_Y} L${VB_W} ${VB_H} L500 ${VB_H} Z`} fill="#78716c" />
       <path d={`M500 ${GROUND_Y} L520 ${GROUND_Y - 10} L${VB_W} ${GROUND_Y - 10} L${VB_W} ${GROUND_Y} Z`} fill="#a8a29e" />
-      {/* nabu flies up */}
+      {/* yubi flies up */}
       <motion.g
-        initial={{ x: NABU_START.x, y: NABU_START.y }}
-        animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: NABU_START.y - 60 } : { y: NABU_START.y }}
+        initial={{ x: YUBI_START.x, y: YUBI_START.y }}
+        animate={flyUp ? { x: 700, y: 100 } : phase === "solved" ? { y: YUBI_START.y - 60 } : { y: YUBI_START.y }}
         transition={{ duration: flyUp ? BENNY_TRANSITION_SECONDS : 0.8 }}
       >
         <BennySvgImage mood="idle" size={BENNY_SCENE_SIZE} />
@@ -1364,7 +1364,7 @@ const NestScene = ({ phase }: { phase: ScenePhase }) => {
           <line key={i} x1={500 + i * 9} y1={GROUND_Y - 18} x2={510 + i * 9} y2={GROUND_Y - 6} stroke="#92400e" strokeWidth="2" />
         ))}
       </motion.g>
-      <NabuSprite phase={phase} anim={walkToAnim(490)} />
+      <YubiSprite phase={phase} anim={walkToAnim(490)} />
 
     </Stage>
   );
@@ -1395,14 +1395,14 @@ const WormScene = ({ phase }: { phase: ScenePhase }) => {
           transition={{ duration: 0.8 }}
         />
       )}
-      <NabuSprite phase={phase} anim={walkToAnim(540)} />
+      <YubiSprite phase={phase} anim={walkToAnim(540)} />
 
     </Stage>
   );
 };
 
 // ── Map a word to a scene component ──────────────────────────────────────
-export const NabuScene = ({ word, phase, index, mood = null, solutionEmoji, hideBackdrop = false }: NabuSceneProps) => {
+export const YubiScene = ({ word, phase, index, mood = null, solutionEmoji, hideBackdrop = false }: YubiSceneProps) => {
   const w = word.toUpperCase();
   const k = `${w}-${index}`;
   const wrap = (children: React.ReactNode) => (

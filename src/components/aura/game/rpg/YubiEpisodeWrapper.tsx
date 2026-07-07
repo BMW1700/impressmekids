@@ -3,7 +3,7 @@
 //     - First we try to load a DB-backed level (admin-authored content). If
 //       the DB returns a complete level with all videos, we render that.
 //     - Otherwise, if the hardcoded video script exists, we render that.
-//     - Otherwise → NabuAdventure (legacy emoji/sprite obstacle runner).
+//     - Otherwise → YubiAdventure (legacy emoji/sprite obstacle runner).
 //   K-12 → existing RPGOneWordReader.
 //
 // For K-12 worlds, before mounting the reader we show CustomStoryChooser so
@@ -12,8 +12,8 @@
 
 import { useState } from "react";
 import { RPGOneWordReader } from "./RPGOneWordReader";
-import { NabuAdventure } from "./NabuAdventure";
-import { NabuVideoAdventure } from "./NabuVideoAdventure";
+import { YubiAdventure } from "./YubiAdventure";
+import { YubiVideoAdventure } from "./YubiVideoAdventure";
 import { isPreKAdventureWorld } from "@/data/preKAdventures";
 import { hasVideoLevel } from "@/data/preKAdventuresVideo";
 import { usePreKVideoLevel } from "@/lib/preKLevelFromDb";
@@ -34,7 +34,7 @@ interface Props {
   onComplete: (stats: CompleteStats) => void;
 }
 
-export const NabuEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) => {
+export const YubiEpisodeWrapper = ({ world, level, onBack, onComplete }: Props) => {
   // Pre-K: try DB → hardcoded video script → legacy obstacle runner.
   if (world.mode === 'prek' || isPreKAdventureWorld(world.id)) {
     return <PreKEpisodeRouter world={world} level={level} onBack={onBack} onComplete={onComplete} />;
@@ -62,7 +62,7 @@ const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
 
   if (dbLevel) {
     return (
-      <NabuVideoAdventure
+      <YubiVideoAdventure
         world={world}
         level={level}
         onBack={onBack}
@@ -74,10 +74,10 @@ const PreKEpisodeRouter = ({ world, level, onBack, onComplete }: Props) => {
   }
 
   if (hasVideoLevel(world.id, level.id)) {
-    return <NabuVideoAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
+    return <YubiVideoAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
   }
 
-  return <NabuAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
+  return <YubiAdventure world={world} level={level} onBack={onBack} onComplete={onComplete} />;
 };
 
 const K12LevelWithChooser = ({ world, level, onBack, onComplete }: Props) => {

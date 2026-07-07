@@ -191,7 +191,7 @@ export function buildSceneGraph(
   };
 }
 
-/** Map a runtime step index (in NabuVideoAdventure's flat steps array) to a scene key. */
+/** Map a runtime step index (in YubiVideoAdventure's flat steps array) to a scene key. */
 export function sceneKeyForStep(stepIndex: number, words: number): string {
   // steps shape: [opening, (first, card, second) x N, closing]
   if (stepIndex === 0) return SCENE_KEYS.opening;

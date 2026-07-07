@@ -57,8 +57,8 @@ export const campaignWorlds: CampaignWorld[] = [
   // Always unlocked. IDs 101/102/103 don't collide with story worlds 0-12.
   {
     id: 101,
-    name: 'Nabu Village: First Words',
-    description: 'Help wake up Nabu Village with your voice.',
+    name: 'Yubi Village: First Words',
+    description: 'Help wake up Yubi Village with your voice.',
     gradient: 'from-pink-300 via-rose-300 to-orange-300',
     bgColor: 'bg-pink-900/10',
     enemyTypes: ['wiggleworm'],
@@ -66,7 +66,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Nabu Village is sleepy and quiet. Read each word out loud — your voice brings the village back to life.',
+    lore: 'Yubi Village is sleepy and quiet. Read each word out loud — your voice brings the village back to life.',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['wiggleworm'], isBossLevel: false, starThresholds: [50, 70, 90] },

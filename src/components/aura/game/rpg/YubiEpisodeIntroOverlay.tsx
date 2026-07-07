@@ -2,16 +2,16 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { speak, cancelSpeech } from "@/lib/tts";
-import type { NabuEpisodeIntro } from "@/lib/nabuStoryCopy";
-import { NabuProblemScene } from "./NabuProblemScene";
+import type { YubiEpisodeIntro } from "@/lib/yubiStoryCopy";
+import { YubiProblemScene } from "./YubiProblemScene";
 
 interface Props {
-  intro: NabuEpisodeIntro;
+  intro: YubiEpisodeIntro;
   worldId: number;
   onStart: () => void;
 }
 
-export const NabuEpisodeIntroOverlay = ({ intro, worldId, onStart }: Props) => {
+export const YubiEpisodeIntroOverlay = ({ intro, worldId, onStart }: Props) => {
   // 3-4 year olds can't read — narrate the problem out loud (if TTS is on)
   // while the animation visually communicates it.
   useEffect(() => {
@@ -34,7 +34,7 @@ export const NabuEpisodeIntroOverlay = ({ intro, worldId, onStart }: Props) => {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
         >
-          <NabuProblemScene worldId={worldId} size={300} />
+          <YubiProblemScene worldId={worldId} size={300} />
         </motion.div>
 
         <Button

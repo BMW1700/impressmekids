@@ -62,7 +62,7 @@ export const PremiumHero = () => {
             className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-medium tracking-wide text-white/80 backdrop-blur"
           >
             <Sparkles className="h-3.5 w-3.5 text-[hsl(48_100%_70%)]" />
-            <span>NABU LEARN · K–12 LITERACY PLATFORM</span>
+            <span>YUBI LEARN · K–12 LITERACY PLATFORM</span>
           </motion.div>
 
           {/* Kinetic headline */}

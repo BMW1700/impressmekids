@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ArrowLeft, Star, Lock, Swords, Flame, Crown, BookOpen, HelpCircle, GraduationCap } from "lucide-react";
 import { CampaignWorld } from "@/lib/campaignData";
 import { CuratedStory } from "@/data/curatedStories";
-import { getNabuHelpChip, getNabuLevelTitle } from "@/lib/nabuStoryCopy";
+import { getYubiHelpChip, getYubiLevelTitle } from "@/lib/yubiStoryCopy";
 import { RPGBattleModeSelector, BattleMode } from "./RPGBattleModeSelector";
 import { RPGTutorial } from "./RPGTutorial";
 import { getGradeTitle } from "@/lib/gradeUtils";
@@ -208,8 +208,8 @@ export const RPGLevelSelect = ({
           const isUnlocked = level.isUnlocked;
           const isTutorialLevel = isTutorialWorld;
           const isPreKLevel = world.mode === 'prek';
-          const helpChip = isPreKLevel ? getNabuHelpChip(world.id) : null;
-          const prekMissionTitle = isPreKLevel ? getNabuLevelTitle(world.id, level.id) : null;
+          const helpChip = isPreKLevel ? getYubiHelpChip(world.id) : null;
+          const prekMissionTitle = isPreKLevel ? getYubiLevelTitle(world.id, level.id) : null;
           
           
           return (

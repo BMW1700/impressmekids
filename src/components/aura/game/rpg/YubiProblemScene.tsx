@@ -1,16 +1,16 @@
 // Animated "show the problem" scene for the Pre-K episode intro.
 // Designed for 3-4 year olds who can't read: communicates the level's
-// problem visually with looping motion. One scene per Nabu world.
+// problem visually with looping motion. One scene per Yubi world.
 
 import { motion } from "framer-motion";
-import { NabuOwl } from "./NabuOwl";
+import { YubiOwl } from "./YubiOwl";
 
 interface Props {
   worldId: number;
   size?: number;
 }
 
-export const NabuProblemScene = ({ worldId, size = 280 }: Props) => {
+export const YubiProblemScene = ({ worldId, size = 280 }: Props) => {
   if (worldId === 101) return <SleepyVillageScene size={size} />;
   if (worldId === 102) return <BoboStuckScene size={size} />;
   if (worldId === 103) return <EchoBubbleScene size={size} />;
@@ -18,14 +18,14 @@ export const NabuProblemScene = ({ worldId, size = 280 }: Props) => {
 };
 
 // ───────────────────────────────────────────────────────────────────
-// World 101 — Nabu Village is asleep. Houses snore "Zzz", sun hides
-// behind a cloud, Nabu flutters in trying to wake them.
+// World 101 — Yubi Village is asleep. Houses snore "Zzz", sun hides
+// behind a cloud, Yubi flutters in trying to wake them.
 // ───────────────────────────────────────────────────────────────────
 const SleepyVillageScene = ({ size }: { size: number }) => (
   <div
     className="relative"
     style={{ width: size, height: size }}
-    aria-label="Nabu Village is sleeping"
+    aria-label="Yubi Village is sleeping"
   >
     {/* moon/sun hiding behind cloud */}
     <motion.div
@@ -51,14 +51,14 @@ const SleepyVillageScene = ({ size }: { size: number }) => (
       ))}
     </div>
 
-    {/* Nabu fluttering above, looking concerned */}
+    {/* Yubi fluttering above, looking concerned */}
     <motion.div
       className="absolute"
       style={{ left: size * 0.34, top: size * 0.22 }}
       animate={{ y: [0, -8, 0], rotate: [-3, 3, -3] }}
       transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
     >
-      <NabuOwl size={size * 0.34} mood="curious" />
+      <YubiOwl size={size * 0.34} mood="curious" />
     </motion.div>
   </div>
 );
@@ -97,14 +97,14 @@ const BoboStuckScene = ({ size }: { size: number }) => (
       className="absolute rounded-full bg-rose-200/70"
       style={{ left: size * 0.18, right: size * 0.18, bottom: size * 0.18, height: size * 0.04 }}
     />
-    {/* Nabu cheering on the side */}
+    {/* Yubi cheering on the side */}
     <motion.div
       className="absolute"
       style={{ left: size * 0.04, top: size * 0.18 }}
       animate={{ y: [0, -6, 0] }}
       transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
     >
-      <NabuOwl size={size * 0.3} mood="curious" />
+      <YubiOwl size={size * 0.3} mood="curious" />
     </motion.div>
 
     {/* Bobo: round little fellow that tries to jump and flops back */}
@@ -152,14 +152,14 @@ const EchoBubbleScene = ({ size }: { size: number }) => (
     style={{ width: size, height: size }}
     aria-label="Echo is stuck in a bubble"
   >
-    {/* Nabu floating above */}
+    {/* Yubi floating above */}
     <motion.div
       className="absolute"
       style={{ left: size * 0.06, top: size * 0.1 }}
       animate={{ y: [0, -8, 0] }}
       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
     >
-      <NabuOwl size={size * 0.28} mood="curious" />
+      <YubiOwl size={size * 0.28} mood="curious" />
     </motion.div>
 
     {/* the bubble + Echo inside */}

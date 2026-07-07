@@ -101,7 +101,7 @@ const ensureSparkleStyle = () => {
 type Slot = "A" | "B";
 const otherSlot = (s: Slot): Slot => (s === "A" ? "B" : "A");
 
-export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel, dbLevelId }: Props) => {
+export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideLevel, dbLevelId }: Props) => {
   const adventure = useMemo<VideoLevel | null>(
     () => overrideLevel ?? getVideoLevel(world.id, level.id),
     [overrideLevel, world.id, level.id]
@@ -272,7 +272,7 @@ export const NabuVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       mediaRecorderRef.current = mr;
       recordingStartRef.current = Date.now();
     } catch (err) {
-      console.warn("[NabuVideo] mic capture unavailable:", err);
+      console.warn("[YubiVideo] mic capture unavailable:", err);
     }
   }, []);
 

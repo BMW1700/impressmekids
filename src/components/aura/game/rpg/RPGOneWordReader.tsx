@@ -25,9 +25,9 @@ import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
-import { getNabuLevelCopy, getNabuDemoWords, getNabuCreatureName, getNabuMeterLabel } from "@/lib/nabuStoryCopy";
-import { NabuBubble } from "./NabuBubble";
-import { NabuPreKStoryScene } from "./NabuPreKStoryScene";
+import { getYubiLevelCopy, getYubiDemoWords, getYubiCreatureName, getYubiMeterLabel } from "@/lib/yubiStoryCopy";
+import { YubiBubble } from "./YubiBubble";
+import { YubiPreKStoryScene } from "./YubiPreKStoryScene";
 
 type FriendlyEnemy = "wiggleworm" | "bouncer" | "echo_blob";
 
@@ -79,15 +79,15 @@ interface RPGOneWordReaderProps {
 
 export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideText, overrideTitle }: RPGOneWordReaderProps) => {
   const content: PreKLevelContent = useMemo(() => {
-    const demoWords = getNabuDemoWords(world.id, level.id);
+    const demoWords = getYubiDemoWords(world.id, level.id);
     if (demoWords && demoWords.length > 0) {
       return { kind: "single", words: demoWords };
     }
     return getPreKContent(world.id, level.id);
   }, [world.id, level.id]);
 
-  const nabuCopy = useMemo(
-    () => getNabuLevelCopy(world.id, level.id),
+  const yubiCopy = useMemo(
+    () => getYubiLevelCopy(world.id, level.id),
     [world.id, level.id]
   );
 
@@ -130,8 +130,8 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
   // no knight, no combat language.
   const isPreK = world.id === 101 || world.id === 102 || world.id === 103;
   const showCombatUI = !isPreK;
-  const creatureName = isPreK ? getNabuCreatureName(world.id) : (enemy === "bouncer" ? "Benny" : enemy === "echo_blob" ? "Maddy" : "Wiggleworm");
-  const meterLabel = getNabuMeterLabel(world.id);
+  const creatureName = isPreK ? getYubiCreatureName(world.id) : (enemy === "bouncer" ? "Benny" : enemy === "echo_blob" ? "Maddy" : "Wiggleworm");
+  const meterLabel = getYubiMeterLabel(world.id);
   // Per-level emotional staging flags
   const showEchoStuck = isPreK && world.id === 103 && level.id === 1;
   const showBoboLostBounce = isPreK && world.id === 102 && level.id === 1;
@@ -242,7 +242,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
 
   const triggerHit = useCallback((phrase: string) => {
     setHeroAttacking(true);
-    // Pre-K cheer bubble from Nabu between words/phrases.
+    // Pre-K cheer bubble from Yubi between words/phrases.
     if (isPreK) setCheerNonce((n) => n + 1);
     window.setTimeout(() => {
       setHeroAttacking(false);
@@ -410,7 +410,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
 
   return (
     <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
-      {isPreK && <NabuBubble nonce={cheerNonce} />}
+      {isPreK && <YubiBubble nonce={cheerNonce} />}
       {/* Soft meadow decorations */}
       <div className="absolute inset-0 pointer-events-none opacity-40 select-none">
         <div className="absolute top-4 left-6 text-4xl">☁️</div>
@@ -422,7 +422,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
       </div>
       <div className={`absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t ${meadow.ground} pointer-events-none`} />
 
-      {/* Pre-K W101 L3 "Wake Up Nabu Village" decorative backdrop */}
+      {/* Pre-K W101 L3 "Wake Up Yubi Village" decorative backdrop */}
       {showVillageScene && (
         <div className="absolute inset-0 pointer-events-none select-none">
           {/* Warm morning glow that brightens as the village wakes */}
@@ -529,7 +529,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
             <ArrowLeft className="h-4 w-4 mr-1" /> Map
           </Button>
           <div className="text-base sm:text-lg font-extrabold text-slate-800 truncate">
-            {nabuCopy?.title ?? `${world.name} · Lv ${level.id}`}
+            {yubiCopy?.title ?? `${world.name} · Lv ${level.id}`}
           </div>
           <div className="text-sm sm:text-base font-bold flex items-center gap-1 text-amber-700 bg-white/90 rounded-full px-3 py-1 shadow">
             <Star className="h-4 w-4 fill-amber-400 text-amber-500" />
@@ -537,11 +537,11 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
           </div>
         </div>
 
-        {/* Nabu prompt banner — only for K-12 worlds. In Pre-K the visual
+        {/* Yubi prompt banner — only for K-12 worlds. In Pre-K the visual
             scene IS the story, so the text banner would be noise. */}
-        {!isPreK && nabuCopy && correctPhrases === 0 && !allDone && (
+        {!isPreK && yubiCopy && correctPhrases === 0 && !allDone && (
           <div className="mx-auto -mt-0.5 max-w-[92%] rounded-full bg-white/85 px-3 py-1 text-center text-xs sm:text-sm font-bold text-slate-700 shadow">
-            {nabuCopy.prompt}
+            {yubiCopy.prompt}
           </div>
         )}
 
@@ -549,7 +549,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
             advances visibly with every correct word. */}
         {isPreK ? (
           <div className="flex min-h-0 flex-1 px-1 pt-2">
-            <NabuPreKStoryScene
+            <YubiPreKStoryScene
               worldId={world.id}
               progress={correctPhrases}
               total={phrases.length}
@@ -813,12 +813,12 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
 
 
 
-          {/* Helper column — Pre-K shows a friendly Nabu Helper (voice-shield orb).
+          {/* Helper column — Pre-K shows a friendly Yubi Helper (voice-shield orb).
               K–12 keeps the knight. Same column footprint + motion wrapper so
               existing animation hooks (heroAttacking pulse) keep working. */}
           <div className="relative flex flex-col items-center w-[44%]">
             <div className="absolute left-1/2 -translate-x-1/2 -top-14 text-xs sm:text-sm font-bold text-slate-700 bg-white/90 rounded-full px-3 py-0.5 shadow whitespace-nowrap">
-              {isPreK ? "Nabu Helper" : "You can do it!"}
+              {isPreK ? "Yubi Helper" : "You can do it!"}
             </div>
             <motion.div
               animate={
@@ -914,7 +914,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
         {/* Word card */}
         <div className="relative">
           <AnimatePresence mode="wait">
-            {allDone && nabuCopy ? (
+            {allDone && yubiCopy ? (
               <motion.div
                 key="success-card"
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -924,7 +924,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
                 className="bg-gradient-to-br from-emerald-50 via-amber-50 to-rose-50 rounded-2xl shadow-xl border-2 border-emerald-200 px-6 py-4 text-center"
               >
                 <div className="text-2xl sm:text-3xl md:text-4xl text-emerald-700 font-extrabold leading-tight">
-                  {nabuCopy.successMessage}
+                  {yubiCopy.successMessage}
                 </div>
                 <div className="mt-1 text-base sm:text-lg">🎉 ✨ 🎉</div>
               </motion.div>
@@ -945,7 +945,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
                 </div>
                 {verbHint && (
                   <div className="mt-1 inline-flex items-center gap-1 text-xs sm:text-sm font-bold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
-                    {nabuCopy?.hint ?? "✨ Watch what happens!"}
+                    {yubiCopy?.hint ?? "✨ Watch what happens!"}
                   </div>
                 )}
               </motion.div>

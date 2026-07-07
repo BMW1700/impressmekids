@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mic, SkipForward, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NabuScene } from "./NabuScene";
+import { YubiScene } from "./YubiScene";
 import { RPGWordReader } from "./RPGWordReader";
 import { getPreKAdventure, type PreKAdventure } from "@/data/preKAdventures";
 import riverStreamVideo from "@/assets/river-stream-bg.mp4.asset.json";
@@ -100,7 +100,7 @@ const ensureSparkleStyle = () => {
 
 const MAX_ATTEMPTS = 3;
 
-export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
+export const YubiAdventure = ({ world, level, onBack, onComplete }: Props) => {
   const adventure = useMemo<PreKAdventure>(
     () => getPreKAdventure(world.id, level.id) ?? FALLBACK,
     [world.id, level.id]
@@ -297,7 +297,7 @@ export const NabuAdventure = ({ world, level, onBack, onComplete }: Props) => {
 
 
       {scene && phase !== "ending" && (
-        <NabuScene
+        <YubiScene
           word={scene.word}
           phase={scenePhase as "problem" | "ask" | "reading" | "solved" | "transition"}
           index={index}

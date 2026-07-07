@@ -5,7 +5,7 @@
 //
 // Super admins upload the videos, type the spoken word + lines, save. Each
 // upload writes the storage path to the corresponding *_video_url DB column.
-// Playback uses the same NabuVideoAdventure runner the kids see.
+// Playback uses the same YubiVideoAdventure runner the kids see.
 
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
