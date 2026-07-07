@@ -105,6 +105,10 @@ function useSignedSrc(pathOrUrl: string | null): { src: string | null; fallbackS
   return { src, fallbackSrc };
 }
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 const VideoSlot = ({
   label,
   pathOrUrl,
@@ -212,8 +216,8 @@ const PreKLevelBuilder = () => {
       invalidatePreKLevelCacheByDbId(level.id);
       if (showToast) toast.success("Saved — all clip crops are locked in");
       return true;
-    } catch (e: any) {
-      toast.error(e?.message ?? "Save failed");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "Save failed"));
       return false;
     } finally {
       setSaving(false);
@@ -317,8 +321,8 @@ const PreKLevelBuilder = () => {
           : `${slot === "opening" ? "Opening" : "Closing"} video saved — backend preview is ready`,
       );
       load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Upload failed");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "Upload failed"));
     } finally {
       setUploadingKey(null);
     }
@@ -411,8 +415,8 @@ const PreKLevelBuilder = () => {
       invalidatePreKLevelCacheByDbId(level.id);
       toast.success(r2Copied ? "Word video saved and copied to R2" : "Word video saved — backend preview is ready");
       load();
-    } catch (e: any) {
-      toast.error(e.message ?? "Upload failed");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e, "Upload failed"));
     } finally {
       setUploadingKey(null);
     }
