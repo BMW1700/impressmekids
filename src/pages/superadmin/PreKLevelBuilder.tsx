@@ -269,8 +269,26 @@ const PreKLevelBuilder = () => {
             supabase.from("prek_levels").select("*").eq("id", levelId).maybeSingle(),
             supabase.from("prek_level_words").select("*").eq("level_id", levelId).order("sort_order"),
           ]);
-          setLevel(l2 as LevelRow | null);
-          setWords((ws2 ?? []) as WordRow[]);
+          const durationLevel = l2 as LevelRow | null;
+          const durationWordsById = new Map(((ws2 ?? []) as WordRow[]).map((w) => [w.id, w]));
+          setLevel((cur) => {
+            if (!cur || !durationLevel || cur.id !== durationLevel.id) return cur;
+            return {
+              ...cur,
+              opening_video_duration_seconds: durationLevel.opening_video_duration_seconds,
+              closing_video_duration_seconds: durationLevel.closing_video_duration_seconds,
+            };
+          });
+          setWords((cur) => cur.map((w) => {
+            const fresh = durationWordsById.get(w.id);
+            return fresh
+              ? {
+                  ...w,
+                  first_video_duration_seconds: fresh.first_video_duration_seconds,
+                  second_video_duration_seconds: fresh.second_video_duration_seconds,
+                }
+              : w;
+          }));
         }
       });
     }
