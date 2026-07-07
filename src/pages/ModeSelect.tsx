@@ -401,9 +401,9 @@ const ModeSelect = () => {
                     isLight ? "text-[hsl(270_30%_28%)]" : "text-white/75"
                   }`}
                 >
-                  An AI-powered literacy RPG. Speak words to cast spells, defeat
-                  bosses, and level up — fluency goes up because the game won't
-                  work otherwise.
+                  An AI-powered literacy RPG. Speak words to cast spells,
+                  defeat dark forces, and level up. The stronger your words,
+                  the stronger your power.
                 </p>
 
                 <div
