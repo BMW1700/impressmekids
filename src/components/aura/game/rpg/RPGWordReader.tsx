@@ -36,7 +36,7 @@ interface RPGWordReaderProps {
   /** Called with response time in ms for speed-based damage calculation */
   onResult: (correct: boolean, spokenWord: string, wordIndex: number, responseTimeMs?: number) => void;
   onBatchComplete?: (results: WordAttempt[]) => void;
-  onRetrySuccess?: (wordIndex: number) => void; // Called when a retried word is read correctly (for HP healing)
+  onRetrySuccess?: (wordIndex: number, spokenWord?: string, attempts?: number) => void; // Called when a retried word is read correctly (for HP healing / parent advancement)
   onMiss?: (spokenWord: string, wordIndex: number) => void; // Called immediately when first attempt is incorrect (for accuracy tracking)
   disabled?: boolean;
   streak?: number;
@@ -58,6 +58,15 @@ const soundEffects = new SoundEffects();
 let emojiPopId = 0;
 const WORD_TRANSITION_ARM_MS_NORMAL = 260;
 const WORD_TRANSITION_ARM_MS_FAST = 80;
+const RETRY_RESTART_DELAY_MS_NORMAL = 180;
+const RETRY_RESTART_DELAY_MS_FAST = 120;
+
+type IncorrectFinalOptions = {
+  /** Initial misses count immediately toward accuracy. A failed retry should not double-count the same word. */
+  countMiss?: boolean;
+  /** Failed retry keeps the result red, bumps attempts, and shows Skip-only overlay. */
+  retryFailure?: boolean;
+};
 
 interface SpeechTargetToken {
   id: number;
@@ -608,7 +617,8 @@ export const RPGWordReader = ({
 
 
   // Handle incorrect word (after echo fails or no echo) - NOW PAUSES FOR USER ACTION
-  const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
+  const handleIncorrectFinal = useCallback((spokenWord: string, expectedWord: string, wordIndex: number, options: IncorrectFinalOptions = {}) => {
+    const { countMiss = true, retryFailure = false } = options;
     const token = speechTargetTokenRef.current;
     if (isWordTransitioningRef.current || Date.now() < token.armedAt || token.index !== wordIndex || token.word !== expectedWord) {
       console.log('[RPGWordReader] Ignoring stale incorrect during transition', { spokenWord, expectedWord, wordIndex, token });
@@ -617,12 +627,14 @@ export const RPGWordReader = ({
 
     isProcessingRef.current = true;
     
-    // Track as missed (RED) - can become 'retried' (YELLOW) if they try again
+    // Track as missed (RED) - can become 'retried' (YELLOW) if they try again.
+    // On a failed retry, do not reset attempts back to 1.
+    const previousAttempt = wordResultsRef.current.get(wordIndex);
     const missedAttempt: WordAttempt = {
       word: expectedWord,
       result: 'missed',
       spokenAs: spokenWord,
-      attempts: 1,
+      attempts: retryFailure ? (previousAttempt?.attempts || 1) + 1 : 1,
     };
     wordResultsRef.current = new Map(wordResultsRef.current).set(wordIndex, missedAttempt);
     setWordResults(prev => new Map(prev).set(wordIndex, missedAttempt));
@@ -638,9 +650,11 @@ export const RPGWordReader = ({
       playCorrectPronunciation(expectedWord);
     }, 300);
     
-    // IMMEDIATELY report miss for accuracy tracking (before user decides Try Again or Continue)
-    // This ensures the miss counts toward wordsRead even if the user later succeeds on retry
-    onMiss?.(spokenWord, wordIndex);
+    // IMMEDIATELY report the first miss for accuracy tracking (before user decides Try Again or Continue).
+    // A failed retry is the same word's second attempt, so it must not double-count wordsRead.
+    if (countMiss) {
+      onMiss?.(spokenWord, wordIndex);
+    }
     
     // PAUSE - Don't auto-advance! Wait for user action
     stopRecognitionSession();
@@ -656,6 +670,25 @@ export const RPGWordReader = ({
   
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
+
+    // Kill any stale Web Speech instance first. Browser recognition.stop() ends
+    // asynchronously; starting a new session in the same tick can be ignored by
+    // Chrome/Safari, which made Retry look active while no result was processed.
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+    speechSessionIdRef.current += 1;
+    const staleRecognition = recognitionRef.current;
+    recognitionRef.current = null;
+    isRecognitionRunningRef.current = false;
+    isRecognitionStartingRef.current = false;
+    if (staleRecognition) {
+      try {
+        if (typeof staleRecognition.abort === 'function') staleRecognition.abort();
+        else staleRecognition.stop();
+      } catch (e) {}
+    }
     
     setShowFeedbackOverlay(false);
     setFeedback(null);
@@ -671,27 +704,35 @@ export const RPGWordReader = ({
     // doesn't reject the retry transcript as "target not armed".
     const retryIndex = currentIndexRef.current;
     const retryTarget = currentBatch[retryIndex]?.replace(/[^a-zA-Z']/g, '') || '';
-    const armMs = mode === 'fast' ? WORD_TRANSITION_ARM_MS_FAST : WORD_TRANSITION_ARM_MS_NORMAL;
+    const restartDelayMs = mode === 'fast' ? RETRY_RESTART_DELAY_MS_FAST : RETRY_RESTART_DELAY_MS_NORMAL;
     const tokenId = speechTargetTokenRef.current.id + 1;
     speechTargetTokenRef.current = {
       id: tokenId,
       generation: wordGenerationRef.current,
       index: retryIndex,
       word: retryTarget,
-      armedAt: Date.now() + armMs,
+      armedAt: Date.now() + restartDelayMs,
     };
     isWordTransitioningRef.current = true;
     if (targetArmTimeoutRef.current) clearTimeout(targetArmTimeoutRef.current);
     targetArmTimeoutRef.current = setTimeout(() => {
-      isWordTransitioningRef.current = false;
-      wordDisplayTimestampRef.current = Date.now();
+      const token = speechTargetTokenRef.current;
+      if (token.id === tokenId && token.index === retryIndex && token.word === retryTarget) {
+        isWordTransitioningRef.current = false;
+        wordDisplayTimestampRef.current = Date.now();
+      }
       targetArmTimeoutRef.current = null;
-    }, armMs);
+    }, restartDelayMs);
 
     // Stay on the same word index — restart mic
     shouldBeListeningRef.current = true;
     setRecognitionState('listening');
-    startRecognitionRef.current?.();
+    restartTimeoutRef.current = setTimeout(() => {
+      restartTimeoutRef.current = null;
+      if (shouldBeListeningRef.current && !recognitionRef.current && !isRecognitionRunningRef.current && !isRecognitionStartingRef.current) {
+        startRecognitionRef.current?.();
+      }
+    }, restartDelayMs);
   }, [pendingIncorrectWord, currentBatch, mode]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
@@ -705,21 +746,19 @@ export const RPGWordReader = ({
     
     const targetWord = currentBatch[wordIndex]?.replace(/[^a-zA-Z']/g, '') || '';
     
-    // Update to retried (YELLOW)
-    setWordResults(prev => {
-      const updated = new Map(prev);
-      const existing = updated.get(wordIndex);
-      const newEntry: WordAttempt = {
-        word: targetWord,
-        result: 'retried' as const,
-        spokenAs: spokenWord,
-        attempts: (existing?.attempts || 1) + 1,
-      };
-      updated.set(wordIndex, newEntry);
-      wordResultsRef.current = new Map(updated);
-      console.log('[RPGWordReader] SET RETRIED (YELLOW):', { wordIndex, targetWord, newEntry });
-      return updated;
-    });
+    // Update to retried (YELLOW). Use the ref as source of truth so parent
+    // callbacks and batch completion see the retry result immediately.
+    const existing = wordResultsRef.current.get(wordIndex);
+    const retryAttempts = (existing?.attempts || 1) + 1;
+    const newEntry: WordAttempt = {
+      word: targetWord,
+      result: 'retried' as const,
+      spokenAs: spokenWord,
+      attempts: retryAttempts,
+    };
+    wordResultsRef.current = new Map(wordResultsRef.current).set(wordIndex, newEntry);
+    setWordResults(new Map(wordResultsRef.current));
+    console.log('[RPGWordReader] SET RETRIED (YELLOW):', { wordIndex, targetWord, newEntry });
 
     
     setFeedback('correct');
@@ -727,10 +766,15 @@ export const RPGWordReader = ({
     soundEffects.correctWord();
     setCompletedWords(prev => new Set([...prev, wordIndex]));
     
-    // NO damage dealt, NO coins given - just practice
-    // Don't call onResult(true, ...) since this doesn't count as a real correct
-    // BUT call onRetrySuccess to trigger HP healing!
-    onRetrySuccess?.(wordIndex);
+    // NO first-try damage/coins. Parent screens with retry-specific scoring
+    // handle partial credit via onRetrySuccess. Older parents still need a
+    // result signal so they advance turn/batch state instead of swallowing the
+    // retry success forever.
+    if (onRetrySuccess) {
+      onRetrySuccess(wordIndex, spokenWord, retryAttempts);
+    } else {
+      onResult(false, spokenWord, wordIndex, undefined);
+    }
 
     // Retry is now resolved.
     isRetryAttemptRef.current = false;
@@ -770,7 +814,7 @@ export const RPGWordReader = ({
         setRecognitionState('listening');
       }
     }, 300);
-  }, [currentBatch, words, batchSize, stopRecognitionSession, onBatchComplete, onRetrySuccess, abortActiveRecognitionForBatchTransition]);
+  }, [currentBatch, words, batchSize, stopRecognitionSession, onBatchComplete, onRetrySuccess, onResult, abortActiveRecognitionForBatchTransition]);
 
 
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
@@ -991,7 +1035,7 @@ export const RPGWordReader = ({
       // If this is a retry attempt and they got it wrong again, show overlay
       if (isRetryAttemptRef.current || !canRetryRef.current) {
         // Failed retry - go straight to continue (they already had their chance)
-        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex);
+        handleIncorrectFinal(cleanTranscript, targetWord, wordIndex, { countMiss: false, retryFailure: true });
       } else if (enableEchoRetry && mode !== 'fast' && currentRecState !== 'echo_retry') {
         startEchoRetry(cleanTranscript, targetWord, wordIndex);
       } else if (currentRecState === 'echo_retry') {

@@ -2180,7 +2180,19 @@ export const RPGBattleArena = ({
       
       console.log('[RPGBattle] Retry success - healed', healAmount, 'HP');
     }
-  }, [enemy.attack, playerCharacter.maxHp]);
+
+    // Retry success advances the child to the next word without full combat
+    // rewards. If it was the last word in this 5-word batch, parent state must
+    // advance too; otherwise the reader resets while the battle keeps serving
+    // the old batch and appears stuck.
+    const globalIndex = batchStartIndex + wordIndex;
+    const batchSize = 5;
+    if (wordIndex >= batchSize - 1 && lastBatchAdvanceGlobalIndexRef.current !== globalIndex) {
+      lastBatchAdvanceGlobalIndexRef.current = globalIndex;
+      setBatchStartIndex(prev => prev + batchSize);
+      console.log('[RPGBattle] Advancing to next batch after retry success:', batchStartIndex + batchSize);
+    }
+  }, [enemy.attack, maxHpWithBoost, batchStartIndex]);
   
   // Handle spell effect complete
   const handleSpellComplete = useCallback(() => {

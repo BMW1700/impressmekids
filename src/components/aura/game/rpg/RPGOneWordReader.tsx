@@ -383,6 +383,15 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
     [phrases, wordPhraseIndex, triggerHit]
   );
 
+  const handleRetrySuccess = useCallback(
+    (wordIndex: number) => {
+      // A retry success should move the Pre-K story forward, but it should not
+      // count the same as a first-try correct phrase in the final score.
+      handleResult(false, "", wordIndex);
+    },
+    [handleResult]
+  );
+
   const handleBatchComplete = useCallback(
     (results: WordAttempt[]) => {
       // Score by phrase completion (a phrase counts as correct only if every word was correct).
@@ -984,6 +993,7 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
             key={`prek-${world.id}-${level.id}`}
             words={wordList}
             onResult={handleResult}
+            onRetrySuccess={handleRetrySuccess}
             onBatchComplete={handleBatchComplete}
             disabled={false}
             streak={0}
