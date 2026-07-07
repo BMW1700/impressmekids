@@ -664,11 +664,35 @@ export const RPGWordReader = ({
     canRetryRef.current = false; // Synchronous update to prevent race condition!
     isRetryAttemptRef.current = true;
     isProcessingRef.current = false;
-    
-    // Stay on the same word index
+    batchCompletedRef.current = false;
+    processedFinalsRef.current.clear();
+
+    // Re-arm the speech target token for the same word so processResult
+    // doesn't reject the retry transcript as "target not armed".
+    const retryIndex = currentIndexRef.current;
+    const retryTarget = currentBatch[retryIndex]?.replace(/[^a-zA-Z']/g, '') || '';
+    const armMs = mode === 'fast' ? WORD_TRANSITION_ARM_MS_FAST : WORD_TRANSITION_ARM_MS_NORMAL;
+    const tokenId = speechTargetTokenRef.current.id + 1;
+    speechTargetTokenRef.current = {
+      id: tokenId,
+      generation: wordGenerationRef.current,
+      index: retryIndex,
+      word: retryTarget,
+      armedAt: Date.now() + armMs,
+    };
+    isWordTransitioningRef.current = true;
+    if (targetArmTimeoutRef.current) clearTimeout(targetArmTimeoutRef.current);
+    targetArmTimeoutRef.current = setTimeout(() => {
+      isWordTransitioningRef.current = false;
+      wordDisplayTimestampRef.current = Date.now();
+      targetArmTimeoutRef.current = null;
+    }, armMs);
+
+    // Stay on the same word index — restart mic
+    shouldBeListeningRef.current = true;
     setRecognitionState('listening');
     startRecognitionRef.current?.();
-  }, [pendingIncorrectWord]);
+  }, [pendingIncorrectWord, currentBatch, mode]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
