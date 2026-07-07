@@ -57,8 +57,23 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
   // Local draft values during a drag so we don't spam onChange.
   const [draftIn, setDraftIn] = useState<number | null>(trimIn);
   const [draftOut, setDraftOut] = useState<number | null>(trimOut);
-  useEffect(() => { setDraftIn(trimIn); }, [trimIn]);
-  useEffect(() => { setDraftOut(trimOut); }, [trimOut]);
+  const draftInRef = useRef<number | null>(trimIn);
+  const draftOutRef = useRef<number | null>(trimOut);
+  const durationRef = useRef<number>(0);
+
+  const setDraftInValue = useCallback((value: number | null) => {
+    draftInRef.current = value;
+    setDraftIn(value);
+  }, []);
+
+  const setDraftOutValue = useCallback((value: number | null) => {
+    draftOutRef.current = value;
+    setDraftOut(value);
+  }, []);
+
+  useEffect(() => { durationRef.current = duration; }, [duration]);
+  useEffect(() => { setDraftInValue(trimIn); }, [trimIn, setDraftInValue]);
+  useEffect(() => { setDraftOutValue(trimOut); }, [trimOut, setDraftOutValue]);
 
   const effIn = draftIn ?? 0;
   const effOut = draftOut ?? duration;
@@ -118,6 +133,14 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
     } catch { /* noop */ }
   }, [duration]);
 
+  const committedTrim = useCallback((rawIn = draftInRef.current, rawOut = draftOutRef.current) => {
+    const d = durationRef.current;
+    return {
+      trimIn: rawIn !== null && rawIn > 0.001 ? rawIn : null,
+      trimOut: rawOut !== null && d > 0 && rawOut < d - 0.001 ? rawOut : null,
+    };
+  }, []);
+
   // ── Transport (custom play/pause — native controls are hidden) ────────────
   const togglePlay = () => {
     const v = videoRef.current;
@@ -142,36 +165,32 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
     if (!bar) return 0;
     const rect = bar.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
-    return pct * (duration || 0);
+    return pct * (durationRef.current || 0);
   };
 
   const onPointerMove = useCallback((e: PointerEvent) => {
     const which = draggingRef.current;
     if (!which) return;
     const t = pctToTime(e.clientX);
+    const d = durationRef.current;
     if (which === "in") {
-      const next = Math.min(t, (draftOut ?? duration) - 0.05);
-      setDraftIn(Math.max(0, next));
+      const next = Math.min(t, (draftOutRef.current ?? d) - 0.05);
+      setDraftInValue(Math.max(0, next));
       seek(Math.max(0, next));
     } else {
-      const next = Math.max(t, (draftIn ?? 0) + 0.05);
-      setDraftOut(Math.min(duration, next));
-      seek(Math.min(duration, next));
+      const next = Math.max(t, (draftInRef.current ?? 0) + 0.05);
+      setDraftOutValue(Math.min(d, next));
+      seek(Math.min(d, next));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duration, draftIn, draftOut, seek]);
+  }, [seek, setDraftInValue, setDraftOutValue]);
 
   const onPointerUp = useCallback(() => {
     if (!draggingRef.current) return;
     draggingRef.current = null;
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
-    // Commit
-    const nextIn = draftIn !== null && draftIn > 0.001 ? draftIn : null;
-    const nextOut = draftOut !== null && duration > 0 && draftOut < duration - 0.001 ? draftOut : null;
-    onChange({ trimIn: nextIn, trimOut: nextOut });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftIn, draftOut, duration, onChange, onPointerMove]);
+    onChange(committedTrim());
+  }, [committedTrim, onChange, onPointerMove]);
 
   const startDrag = (which: "in" | "out") => (e: React.PointerEvent) => {
     e.preventDefault();
@@ -183,22 +202,24 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
   const setInAtPlayhead = () => {
     const v = videoRef.current;
     if (!v) return;
-    const t = Math.min(v.currentTime, (draftOut ?? duration) - 0.05);
+    const d = durationRef.current;
+    const t = Math.min(v.currentTime, (draftOutRef.current ?? d) - 0.05);
     const nextIn = Math.max(0, t);
-    setDraftIn(nextIn);
-    onChange({ trimIn: nextIn > 0.001 ? nextIn : null, trimOut: draftOut !== null && duration > 0 && draftOut < duration - 0.001 ? draftOut : null });
+    setDraftInValue(nextIn);
+    onChange(committedTrim(nextIn, draftOutRef.current));
   };
   const setOutAtPlayhead = () => {
     const v = videoRef.current;
     if (!v) return;
-    const t = Math.max(v.currentTime, (draftIn ?? 0) + 0.05);
-    const nextOut = Math.min(duration, t);
-    setDraftOut(nextOut);
-    onChange({ trimIn: draftIn !== null && draftIn > 0.001 ? draftIn : null, trimOut: nextOut < duration - 0.001 ? nextOut : null });
+    const d = durationRef.current;
+    const t = Math.max(v.currentTime, (draftInRef.current ?? 0) + 0.05);
+    const nextOut = Math.min(d, t);
+    setDraftOutValue(nextOut);
+    onChange(committedTrim(draftInRef.current, nextOut));
   };
   const reset = () => {
-    setDraftIn(null);
-    setDraftOut(null);
+    setDraftInValue(null);
+    setDraftOutValue(null);
     onChange({ trimIn: null, trimOut: null });
   };
 
@@ -333,12 +354,9 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
               onChange={(e) => {
                 const v = parseFloat(e.target.value);
                 if (!isFinite(v)) return;
-                setDraftIn(Math.max(0, Math.min(v, (draftOut ?? duration) - 0.05)));
+                setDraftInValue(Math.max(0, Math.min(v, (draftOutRef.current ?? durationRef.current) - 0.05)));
               }}
-              onBlur={() => onChange({
-                trimIn: draftIn !== null && draftIn > 0.001 ? draftIn : null,
-                trimOut: draftOut !== null && duration > 0 && draftOut < duration - 0.001 ? draftOut : null,
-              })}
+              onBlur={() => onChange(committedTrim())}
               className="h-8 font-mono text-xs"
             />
           </div>
@@ -353,12 +371,10 @@ export function VideoTrimEditor({ src, fallbackSrc, trimIn, trimOut, onChange }:
               onChange={(e) => {
                 const v = parseFloat(e.target.value);
                 if (!isFinite(v)) return;
-                setDraftOut(Math.max((draftIn ?? 0) + 0.05, Math.min(v, duration || v)));
+                const d = durationRef.current;
+                setDraftOutValue(Math.max((draftInRef.current ?? 0) + 0.05, Math.min(v, d || v)));
               }}
-              onBlur={() => onChange({
-                trimIn: draftIn !== null && draftIn > 0.001 ? draftIn : null,
-                trimOut: draftOut !== null && duration > 0 && draftOut < duration - 0.001 ? draftOut : null,
-              })}
+              onBlur={() => onChange(committedTrim())}
               className="h-8 font-mono text-xs"
             />
           </div>
