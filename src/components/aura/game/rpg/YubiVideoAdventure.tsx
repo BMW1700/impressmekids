@@ -791,7 +791,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
             <Button
               variant="ghost"
               size="sm"
-              onClick={onBack}
+              onClick={handleBack}
               className="bg-white/80 text-slate-800 hover:bg-white"
             >
               <ArrowLeft className="h-4 w-4 mr-1" /> Map
