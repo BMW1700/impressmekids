@@ -721,7 +721,7 @@ export const RPGWorldMap = ({
                           animate={unlocked ? { scale: [1, 1.05, 1] } : {}}
                           transition={{ duration: 2, repeat: Infinity }}
                         >
-                          {world.id}
+                          {world.mode === 'prek' ? index + 1 : world.id}
                         </motion.div>
                       </div>
                     </div>
