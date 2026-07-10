@@ -41,7 +41,6 @@ const PreKWorldsList = () => {
     const { data, error } = await supabase
       .from("prek_worlds")
       .select("*, prek_levels(count)")
-      .order("sort_order", { ascending: true })
       .order("world_number", { ascending: true });
     if (error) {
       toast.error("Failed to load worlds");
