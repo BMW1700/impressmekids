@@ -33,7 +33,11 @@ class SpeechRecognitionManager {
   private isRunning = false;
   private shouldRestart = false;
   private config: RecognitionConfig | null = null;
-  private restartTimeout: NodeJS.Timeout | null = null;
+  private restartTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Native-only state
+  private isNative = Capacitor.isNativePlatform();
+  private nativeListenerHandle: any = null;
 
   private constructor() {}
 
