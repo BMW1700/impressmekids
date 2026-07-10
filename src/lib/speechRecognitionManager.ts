@@ -86,27 +86,8 @@ class SpeechRecognitionManager {
       return false;
     }
 
-    // If same owner is already running, just update config
-    if (this.currentOwner === config.owner && this.isRunning) {
-      console.log('[SpeechManager] Same owner already running:', config.owner);
-      this.config = config;
-      return true;
-    }
+    console.log('[SpeechManager] Starting web recognition for:', config.owner);
 
-    // Force stop any existing recognition first
-    this.forceStop();
-
-    console.log('[SpeechManager] Starting recognition for:', config.owner);
-    
-    this.config = config;
-    this.currentOwner = config.owner;
-    this.shouldRestart = config.continuous !== false;
-
-    // Clear any pending restart
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
 
     // Create new recognition instance
     this.recognition = new SpeechRecognitionAPI();
