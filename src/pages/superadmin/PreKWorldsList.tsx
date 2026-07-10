@@ -228,7 +228,8 @@ const PreKWorldsList = () => {
                   </div>
                 </CardHeader>
               </Card>
-            ))}
+            ));
+            })()}
           </div>
         )}
 
