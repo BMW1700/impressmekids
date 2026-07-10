@@ -168,7 +168,16 @@ const PreKWorldsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {worlds.map((w, idx) => (
+            {(() => {
+              let pubCounter = 0;
+              const publishedIndex = new Map<string, number>();
+              worlds.forEach((w) => {
+                if (w.is_published) {
+                  pubCounter += 1;
+                  publishedIndex.set(w.id, pubCounter);
+                }
+              });
+              return worlds.map((w, idx) => (
               <Card key={w.id}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
                   <div className="flex items-center gap-2">
@@ -196,7 +205,7 @@ const PreKWorldsList = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
+                        <span className="text-xs text-muted-foreground font-mono">{w.is_published ? `#${publishedIndex.get(w.id)}` : "—"}</span>
                         <CardTitle className="text-lg">{w.title}</CardTitle>
                         <Badge variant={w.is_published ? "default" : "secondary"}>
                           {w.is_published ? "Published" : "Draft"}
@@ -219,7 +228,8 @@ const PreKWorldsList = () => {
                   </div>
                 </CardHeader>
               </Card>
-            ))}
+            ));
+            })()}
           </div>
         )}
 
