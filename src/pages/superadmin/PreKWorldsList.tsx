@@ -41,7 +41,6 @@ const PreKWorldsList = () => {
     const { data, error } = await supabase
       .from("prek_worlds")
       .select("*, prek_levels(count)")
-      .order("sort_order", { ascending: true })
       .order("world_number", { ascending: true });
     if (error) {
       toast.error("Failed to load worlds");
@@ -129,19 +128,23 @@ const PreKWorldsList = () => {
     if (target < 0 || target >= worlds.length) return;
     const a = worlds[index];
     const b = worlds[target];
+    // Swap world_numbers so the position label (# = world_number) matches ordering.
+    const aNum = a.world_number;
+    const bNum = b.world_number;
     const prev = worlds;
     const next = [...worlds];
-    next[index] = { ...b, sort_order: index };
-    next[target] = { ...a, sort_order: target };
+    next[index] = { ...b, world_number: aNum };
+    next[target] = { ...a, world_number: bNum };
     setWorlds(next);
-    const [r1, r2] = await Promise.all([
-      supabase.from("prek_worlds").update({ sort_order: target }).eq("id", a.id),
-      supabase.from("prek_worlds").update({ sort_order: index }).eq("id", b.id),
-    ]);
-    if (r1.error || r2.error) {
-      toast.error("Reorder failed");
-      setWorlds(prev);
-    }
+    // Two-step swap to avoid unique constraint collisions (if any).
+    const tmp = -Math.abs(aNum) - 1000000;
+    const step1 = await supabase.from("prek_worlds").update({ world_number: tmp }).eq("id", a.id);
+    if (step1.error) { toast.error("Reorder failed"); setWorlds(prev); return; }
+    const step2 = await supabase.from("prek_worlds").update({ world_number: aNum }).eq("id", b.id);
+    if (step2.error) { toast.error("Reorder failed"); setWorlds(prev); return; }
+    const step3 = await supabase.from("prek_worlds").update({ world_number: bNum }).eq("id", a.id);
+    if (step3.error) { toast.error("Reorder failed"); setWorlds(prev); return; }
+    load();
   };
 
   return (
@@ -193,7 +196,7 @@ const PreKWorldsList = () => {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground font-mono">#{idx + 1}</span>
+                        <span className="text-xs text-muted-foreground font-mono">#{w.world_number}</span>
                         <CardTitle className="text-lg">{w.title}</CardTitle>
                         <Badge variant={w.is_published ? "default" : "secondary"}>
                           {w.is_published ? "Published" : "Draft"}
