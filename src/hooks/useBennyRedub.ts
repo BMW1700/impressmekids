@@ -191,6 +191,7 @@ export function useBennyRedub(levelId: string | null) {
     batchProgress,
     reload,
     saveVoiceSettings,
+    saveWorldDefaultVoiceId,
     redubScene,
     redubAll,
   };
