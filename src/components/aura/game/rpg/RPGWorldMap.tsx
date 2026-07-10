@@ -243,7 +243,6 @@ export const RPGWorldMap = ({
         .from('prek_worlds')
         .select('id, world_number, title, description, difficulty, sort_order')
         .eq('is_published', true)
-        .order('sort_order', { ascending: true })
         .order('world_number', { ascending: true });
       if (cancelled) return;
       if (error || !worlds) {
