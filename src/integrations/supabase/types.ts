@@ -5224,6 +5224,11 @@ export type Database = {
           opening_trim_out_seconds: number | null
           opening_video_duration_seconds: number | null
           opening_video_url: string | null
+          redub_audio_paths: Json
+          redub_generated_at: string | null
+          redub_similarity_boost: number
+          redub_stability: number
+          redub_voice_id: string | null
           sort_order: number
           title: string
           updated_at: string
@@ -5248,6 +5253,11 @@ export type Database = {
           opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
+          redub_audio_paths?: Json
+          redub_generated_at?: string | null
+          redub_similarity_boost?: number
+          redub_stability?: number
+          redub_voice_id?: string | null
           sort_order?: number
           title: string
           updated_at?: string
@@ -5272,6 +5282,11 @@ export type Database = {
           opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
+          redub_audio_paths?: Json
+          redub_generated_at?: string | null
+          redub_similarity_boost?: number
+          redub_stability?: number
+          redub_voice_id?: string | null
           sort_order?: number
           title?: string
           updated_at?: string
@@ -5287,6 +5302,56 @@ export type Database = {
           },
         ]
       }
+      prek_redub_jobs: {
+        Row: {
+          completed: number
+          created_at: string
+          created_by: string | null
+          failed: number
+          id: string
+          last_error: string | null
+          level_id: string
+          scene_results: Json
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          completed?: number
+          created_at?: string
+          created_by?: string | null
+          failed?: number
+          id?: string
+          last_error?: string | null
+          level_id: string
+          scene_results?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          completed?: number
+          created_at?: string
+          created_by?: string | null
+          failed?: number
+          id?: string
+          last_error?: string | null
+          level_id?: string
+          scene_results?: Json
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prek_redub_jobs_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "prek_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prek_worlds: {
         Row: {
           created_at: string
@@ -5295,6 +5360,7 @@ export type Database = {
           difficulty: string
           id: string
           is_published: boolean
+          redub_voice_id: string | null
           sort_order: number
           title: string
           updated_at: string
@@ -5307,6 +5373,7 @@ export type Database = {
           difficulty?: string
           id?: string
           is_published?: boolean
+          redub_voice_id?: string | null
           sort_order?: number
           title: string
           updated_at?: string
@@ -5319,6 +5386,7 @@ export type Database = {
           difficulty?: string
           id?: string
           is_published?: boolean
+          redub_voice_id?: string | null
           sort_order?: number
           title?: string
           updated_at?: string
