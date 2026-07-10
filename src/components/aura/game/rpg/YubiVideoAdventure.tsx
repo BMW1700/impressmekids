@@ -28,6 +28,7 @@ import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
 import { usePreKAudioMix } from "@/hooks/usePreKAudioMix";
 import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
+import { usePreKRedubPlayback } from "@/hooks/usePreKRedubPlayback";
 import { sceneKeyForStep, SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 interface Props {
@@ -126,7 +127,11 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     enabled: !!dbLevelId,
     event: sceneEvent,
   });
-  const muteSourceVideo = !!dbLevelId && mix.settings.mute_source_video_audio;
+  const redub = usePreKRedubPlayback({ levelId: dbLevelId ?? null, event: sceneEvent, enabled: !!dbLevelId });
+  // When a redub track exists, always mute the source video's audio so Benny's
+  // new voice isn't fighting the original take.
+  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || redub.hasRedub;
+
 
   const [stepIndex, setStepIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("tap-to-begin");

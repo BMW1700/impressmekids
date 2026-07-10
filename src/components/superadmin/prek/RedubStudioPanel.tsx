@@ -1,0 +1,200 @@
+// RedubStudioPanel — Benny voice-swap UI inside the Pre-K level editor.
+//
+// Flow: paste ElevenLabs voice ID → adjust stability/similarity → hit
+// "Redub entire level" (or per-scene). Each row shows spinner → ✓ → ▶ preview.
+// After success, the redub MP3 lives on prek_levels.redub_audio_paths keyed
+// by scene key; the student player picks it up automatically.
+
+import { useMemo, useRef, useState } from "react";
+import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { useBennyRedub, type RedubSceneInput } from "@/hooks/useBennyRedub";
+import { SCENE_KEYS, isVideoScene, type SceneGraph } from "@/lib/preKSceneGraph";
+
+interface Props {
+  levelId: string;
+  sceneGraph: SceneGraph;
+  /** From the level / words rows: scene key -> source video storage_path (relative). */
+  sourcePathsByScene: Record<string, string>;
+}
+
+export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Props) => {
+  const redub = useBennyRedub(levelId);
+  const [voiceIdDraft, setVoiceIdDraft] = useState<string>("");
+  const [voiceIdInitialized, setVoiceIdInitialized] = useState(false);
+  const previewRef = useRef<HTMLAudioElement | null>(null);
+  const [previewingKey, setPreviewingKey] = useState<string | null>(null);
+
+  // Sync draft with loaded settings once
+  if (!voiceIdInitialized && !redub.loading) {
+    setVoiceIdDraft(redub.settings.voiceId);
+    setVoiceIdInitialized(true);
+  }
+
+  const scenes: RedubSceneInput[] = useMemo(() => {
+    return sceneGraph.scenes.filter(isVideoScene).map((s) => ({
+      sceneKey: s.key,
+      sourceStoragePath: sourcePathsByScene[s.key] ?? "",
+      label: s.label,
+    })).filter((s) => !!s.sourceStoragePath);
+  }, [sceneGraph, sourcePathsByScene]);
+
+  const missingCount = sceneGraph.scenes.filter(isVideoScene).length - scenes.length;
+
+  const stopPreview = () => {
+    const a = previewRef.current;
+    if (a) { try { a.pause(); } catch { /* noop */ } }
+    setPreviewingKey(null);
+  };
+  const startPreview = (sceneKey: string, url: string) => {
+    stopPreview();
+    const a = new Audio(url);
+    previewRef.current = a;
+    a.onended = () => setPreviewingKey((k) => (k === sceneKey ? null : k));
+    a.play().catch(() => setPreviewingKey(null));
+    setPreviewingKey(sceneKey);
+  };
+
+  const handleRedubAll = async () => {
+    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
+    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (scenes.length === 0) { toast.error("No source videos found to redub."); return; }
+    toast.info(`Redubbing ${scenes.length} clips in Benny's voice… this will take ~${Math.ceil(scenes.length * 45 / 60)} min.`);
+    await redub.redubAll(scenes);
+    toast.success("Redub complete. Preview each clip inline.");
+  };
+
+  const handleRedubOne = async (scene: RedubSceneInput) => {
+    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
+    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    const ok = await redub.redubScene(scene);
+    if (ok) toast.success(`Redubbed ${scene.label}`);
+  };
+
+  return (
+    <Card className="border-purple-500/40 bg-purple-500/5">
+      <CardHeader className="py-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Wand2 className="h-4 w-4 text-purple-500"/>
+          Redub Studio — swap voice with ElevenLabs (lip-sync preserved)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
+          <p><strong>How it works:</strong> Speech-to-Speech re-voices each clip in your cloned Benny voice using the original clip's timing as a template — the mouth movements still match. Original videos stay untouched; redub MP3s save separately and the student app plays them automatically.</p>
+          <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio. A 30-second Benny line ≈ 500 chars.</p>
+        </div>
+
+        {/* Voice + settings */}
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(240px,1fr)_auto_auto] gap-3 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs">ElevenLabs Benny Voice ID</Label>
+            <Input
+              value={voiceIdDraft}
+              onChange={(e) => setVoiceIdDraft(e.target.value.trim())}
+              onBlur={() => { if (voiceIdDraft !== redub.settings.voiceId) void redub.saveVoiceSettings({ voiceId: voiceIdDraft }); }}
+              placeholder="paste the voice_id from ElevenLabs → My Voices"
+              className="font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1 min-w-[180px]">
+            <Label className="text-xs">Stability: {redub.settings.stability.toFixed(2)}</Label>
+            <Slider
+              min={0} max={1} step={0.05}
+              value={[redub.settings.stability]}
+              onValueChange={(v) => void redub.saveVoiceSettings({ stability: v[0] })}
+            />
+          </div>
+          <div className="space-y-1 min-w-[180px]">
+            <Label className="text-xs">Similarity: {redub.settings.similarityBoost.toFixed(2)}</Label>
+            <Slider
+              min={0} max={1} step={0.05}
+              value={[redub.settings.similarityBoost]}
+              onValueChange={(v) => void redub.saveVoiceSettings({ similarityBoost: v[0] })}
+            />
+          </div>
+        </div>
+
+        {missingCount > 0 && (
+          <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3"/> {missingCount} scene(s) have no source video uploaded — upload them first to include in redub.
+          </div>
+        )}
+
+        {/* Batch controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleRedubAll}
+            disabled={!!redub.batchProgress || scenes.length === 0}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {redub.batchProgress
+              ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing {redub.batchProgress.done}/{redub.batchProgress.total}…</>
+              : <><Sparkles className="h-3 w-3 mr-1"/> Redub entire level ({scenes.length} clips)</>
+            }
+          </Button>
+          {redub.settings.generatedAt && (
+            <Badge variant="outline" className="text-[10px]">
+              Last redub: {new Date(redub.settings.generatedAt).toLocaleString()}
+            </Badge>
+          )}
+        </div>
+
+        {/* Per-scene table */}
+        <div className="rounded-md border bg-background/40 divide-y">
+          {scenes.map((s) => {
+            const state = redub.states[s.sceneKey];
+            const existing = redub.signedRedubUrls[s.sceneKey];
+            const url = state?.signedUrl ?? existing;
+            const isPreviewing = previewingKey === s.sceneKey;
+            const status = state?.status ?? (existing ? "done" : "idle");
+            return (
+              <div key={s.sceneKey} className="flex items-center gap-2 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm truncate">{s.label}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
+                </div>
+                {status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0"/>}
+                {status === "error" && (
+                  <span className="text-[10px] text-red-500 truncate max-w-[200px]" title={state?.errorMessage}>
+                    <AlertCircle className="inline h-3 w-3 mr-0.5"/>{state?.errorMessage}
+                  </span>
+                )}
+                {url && (
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => isPreviewing ? stopPreview() : startPreview(s.sceneKey, url)}
+                  >
+                    {isPreviewing ? <Pause className="h-3 w-3"/> : <Play className="h-3 w-3"/>}
+                  </Button>
+                )}
+                <Button
+                  size="sm" variant="ghost"
+                  disabled={status === "running" || !!redub.batchProgress}
+                  onClick={() => handleRedubOne(s)}
+                  title="Regenerate this clip"
+                >
+                  {status === "running"
+                    ? <Loader2 className="h-3 w-3 animate-spin"/>
+                    : existing ? <RotateCw className="h-3 w-3"/> : <Wand2 className="h-3 w-3"/>}
+                </Button>
+              </div>
+            );
+          })}
+          {scenes.length === 0 && (
+            <div className="px-3 py-4 text-xs text-muted-foreground text-center">
+              No source videos uploaded yet.
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};

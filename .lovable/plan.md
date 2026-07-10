@@ -1,110 +1,58 @@
-# Benny Voice Redub + Clip Micro-Splice + Waveform Fix
+## Goal
+Get every Benny clip re-voiced in your cloned ElevenLabs voice, perfectly lip-synced, in one sitting — with a splice tool to trim stutters first.
 
-Three connected upgrades that make the Pre-K editor production-ready for App Store launch:
+## What's already done (from last turn)
+- **Waveform on Track 1 is fixed** → you'll now see the source audio to line up against.
+- **`prek-clip-redub` edge function is live** → downloads a source clip, sends it to ElevenLabs Speech-to-Speech (STS) with your Benny voice, saves the MP3 to Storage, records the path on `prek_levels.redub_audio_paths`.
+- **Database is ready** → `redub_voice_id`, `redub_audio_paths`, `redub_stability`, `redub_similarity_boost`, `redub_generated_at` all exist on `prek_levels`; `prek_worlds.redub_voice_id` exists for world-level defaults; `prek_redub_jobs` table exists for progress tracking.
 
-1. **Bulk-redub every Benny clip** with your cloned ElevenLabs voice (fixes voice inconsistency between clips)
-2. **Micro-splice tool** on the Video lane (cut out stuttered/repeated words in source clips before redubbing)
-3. **Waveform for the Video track** (see the source Benny audio you're aligning to)
+## What I'll build this turn
 
-## Flow when you use it
+### 1. Redub Studio panel (in the level builder)
+A new card inside `AudioMixEditor.tsx` with:
+- **Voice ID field** — paste your ElevenLabs Benny voice ID once, saves to the level (defaults from `prek_worlds.redub_voice_id`).
+- **Stability / Similarity sliders** — with sensible defaults (0.5 / 0.85).
+- **Per-clip "Redub" button** — next to each scene in the timeline; runs one clip, shows spinner, then a green ✓ + a ▶ preview button that plays the new MP3.
+- **"Redub entire level" button** — runs every scene sequentially with a progress bar (X of Y done), writing to `prek_redub_jobs`. Retryable on failures.
+- **"Redub entire world" button (world editor)** — iterates all published levels in the world.
 
-```text
-For each Benny clip in a level:
+### 2. Playback swap in the student app
+Update `usePreKLevelVideoUrls.ts` to also resolve `redub_audio_paths` → signed URLs, and update the Pre-K player to:
+- Mute the source video track
+- Play the redubbed MP3 in sync with `video.currentTime`
+- Fall back to source audio if no redub exists for that scene
 
-  [Source mp4]  ─► See waveform in Track 1  ─► Spot a stutter
-                                                     │
-                                                     ▼
-                                        Micro-splice: mark in/out, "Cut"
-                                                     │
-                                                     ▼
-                                          New trimmed mp4 in storage
-                                                     │
-                                                     ▼
-                                    Click "Redub this scene"
-                                                     │
-                                                     ▼
-                       Browser extracts audio → Edge fn → ElevenLabs STS
-                       model: eleven_multilingual_sts_v2
-                       voice: <cloned Benny voice id>
-                                                     │
-                                                     ▼
-                       Clean, consistent Benny voice, identical timing
-                                                     │
-                                                     ▼
-                   Stored at redubs/<levelId>/<sceneKey>.mp3
-                   Plays as synced track over the muted source video
-```
+### 3. Micro-splice tool (Video track)
+Add a "Splice" mode toggle on Track 1. When on:
+- Click-drag on the video waveform to select a region → "Cut selection" removes those seconds from the source clip's effective playback (stored as `trim_ranges` jsonb on the word row — a list of `[startSec, endSec]` chunks to skip).
+- The redub function passes the trimmed audio to ElevenLabs, so stutters/repeated words never enter the STS input.
+- Non-destructive: original MP4 stays intact; you can clear splices any time.
+- Requires a new migration to add `first_trim_ranges` / `second_trim_ranges` jsonb columns to `prek_level_words` and `opening_trim_ranges` / `closing_trim_ranges` to `prek_levels`.
 
-Lip-sync survives because STS preserves phoneme boundaries from the (now clean) source. Voice identity is consistent because every clip uses the same cloned voice. Repeated words are gone because you cut them before the redub even runs.
+## Your workflow once shipped
+1. Open a level in the super admin editor.
+2. Paste your ElevenLabs Benny voice ID (once per world — it inherits down).
+3. **(Optional)** Turn on splice mode, cut out any stutters/repeat words on Track 1.
+4. Click **"Redub entire level"** → wait ~30-60s per clip (STS is roughly 2× realtime). A 10-clip level finishes in ~5-10 minutes.
+5. Hit ▶ preview inline — Benny's voice, original timing, lip-sync intact.
+6. If one clip sounds off, click its per-clip **Redub** button to regenerate just that one.
+7. Publish. Student app automatically uses the redubbed track.
 
-## What gets built
-
-### 1. Waveform fix (30-second fix, ships first)
-- `TimelineCanvas.tsx`: on the Video lane, pass `fallbackVideoUrls[scene.key] ?? videoUrls[scene.key]` into `ClipWaveform`. Signed Supabase URLs return CORS headers; the R2 CDN doesn't, which is why `decodeAudioData` was silently failing and rendering a flat line.
-- Result: Track 1 shows the actual Benny audio waveform per scene.
-
-### 2. Micro-splice tool (Video lane)
-- New "Splice" mode toggle on each Video-lane clip
-- Two draggable handles on the clip: **In** and **Out** (default: 0 and duration)
-- Two buttons:
-  - **Keep selection** — writes a new mp4 containing only In→Out
-  - **Cut selection** — writes a new mp4 with In→Out removed (concatenates the two halves)
-- Trim happens client-side using MediaBunny (already in the stack) — no server ffmpeg needed
-- New mp4 uploaded to `prek-level-videos/<levelId>/spliced/<sceneKey>-<timestamp>.mp4`
-- `prek_words.first_video_url` / `second_video_url` (or `prek_levels.opening_video_url` / `closing_video_url`) is updated to the new path
-- Undo: keeps the previous path in a `spliced_history` column so one click restores the original
-
-### 3. Redub Studio (in `AudioMixEditor`)
-- Right-side panel: "Benny Voice Redub"
-- Voice ID input (persists to `prek_levels.redub_voice_id`, falls back to world default)
-- Stability + Similarity sliders (0–1)
-- "Mute original video audio when redub exists" toggle
-- Per-scene rows: status chip (Original / Redubbed / Regenerating / Failed) + Preview / Redub / Revert buttons
-- Bulk buttons: **Redub entire level**, **Revert all**
-- Live progress bar via `prek_redub_jobs`
-
-### 4. Edge function `prek-clip-redub`
-- Validates caller is super_admin or content_editor
-- Calls `https://api.elevenlabs.io/v1/speech-to-speech/{voiceId}?output_format=mp3_44100_128` with `model_id=eleven_multilingual_sts_v2`, `remove_background_noise=true`
-- Uploads mp3 to `prek-level-videos/redubs/<levelId>/<sceneKey>.mp3`
-- Updates `prek_levels.redub_audio_paths` jsonb with `{[sceneKey]: storagePath}`
-- Uses linked `ELEVENLABS_API_KEY` (already provisioned via the connector)
-
-### 5. Client orchestrator `useBennyRedub`
-- Per scene: fetches source video → decodes audio via Web Audio API → WAV-encodes (16kHz mono) → base64 → calls `prek-clip-redub`
-- Sequential (STS is heavy)
-- Updates `prek_redub_jobs` for live progress
-- Idempotent — re-run any scene without regenerating others
-
-### 6. Playback swap (student + admin preview)
-- `usePreKLevelVideoUrls` gains `redubAudioUrls: Record<sceneKey, string>` when `level.redub_audio_paths` is set
-- `usePreKAudioTimelineTransport` gains a virtual "Redub" track injected first, one clip per scene anchored to scene start
-- When `mute_source_video_audio` is true AND a redub exists for current scene → source `<video>.muted = true`
-
-## Cost & speed
-
-- STS: ~$0.30 / minute of audio input. Typical 40-clip level (~2.5 min) ≈ **$0.75 per full-level redub**
-- Full-level redub end-to-end: **~90 seconds**, one clip at a time with live progress
-- Splice: instant (client-side MediaBunny), ~1s upload per new clip
-- Waveform fix: zero cost, one line
+## Technical notes
+- STS uses the source cadence as a template, so lip-sync is preserved automatically — no manual alignment needed.
+- Redub MP3s are stored under `prek-level-videos/redub/<levelId>/<sceneKey>-<timestamp>.mp3`. Old redubs are kept (not deleted) so you can roll back by editing `redub_audio_paths` jsonb.
+- All calls are gated to `super_admin` and `content_editor` roles.
+- Rate limit: ElevenLabs allows ~10 concurrent STS requests on paid tiers. We run sequentially per level to stay safe; the world-level button chunks 3 levels in parallel.
+- Cost: STS is billed per character-equivalent (~1000 chars ≈ 1 min of audio). A 30-second Benny clip ≈ 500 chars.
 
 ## Files touched
+- `src/components/superadmin/prek/AudioMixEditor.tsx` — Redub Studio panel + splice toggle
+- `src/components/superadmin/prek/TimelineCanvas.tsx` — splice-mode overlay + per-clip Redub buttons
+- `src/hooks/usePreKLevelVideoUrls.ts` — resolve `redub_audio_paths`
+- `src/hooks/useBennyRedub.ts` — new orchestrator hook (progress, retries)
+- `src/components/aura/game/rpg/prek/PreKPlayer.tsx` (or equivalent) — playback swap
+- `src/pages/superadmin/PreKWorldEditor.tsx` — world-level Redub + voice ID
+- `supabase/migrations/...` — add trim_ranges jsonb columns
 
-| File | Change |
-|---|---|
-| `src/components/superadmin/prek/TimelineCanvas.tsx` | Waveform CORS fix + splice-mode overlay on Video lane |
-| `src/components/superadmin/prek/ClipSpliceControls.tsx` | NEW — in/out handles + Keep/Cut buttons |
-| `src/lib/preKClipSplice.ts` | NEW — MediaBunny-based client-side mp4 trim/concat |
-| `src/components/superadmin/prek/AudioMixEditor.tsx` | Redub Studio panel |
-| `src/hooks/useBennyRedub.ts` | NEW — orchestrator |
-| `src/hooks/usePreKLevelVideoUrls.ts` | Resolve redub audio URLs |
-| `src/hooks/usePreKAudioTimelineTransport.ts` | Inject virtual redub track, conditional source mute |
-| `src/lib/preKWavEncoder.ts` | NEW — browser WAV encoder |
-| `supabase/functions/prek-clip-redub/index.ts` | NEW — STS proxy + storage upload |
-| Migration | `prek_levels.redub_voice_id`, `redub_audio_paths jsonb`, `mute_source_video_audio bool`, `prek_words.spliced_history jsonb`, `prek_redub_jobs` table |
-
-## What we're deliberately NOT doing
-
-- Not muxing redub back into the mp4 (ffmpeg-in-Deno is unreliable; synced audio track achieves identical UX). Baked mp4 export is a follow-up if needed for offline distribution.
-- Not doing server-side splice (MediaBunny in the browser is faster and free).
-- Not transcribing (STS uses source audio directly as the timing template).
+## Ready to build?
+Approve and I'll ship all of the above in the next turn. After that you'll be redubbing full levels end-to-end.
