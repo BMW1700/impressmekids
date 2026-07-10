@@ -205,54 +205,97 @@ class SpeechRecognitionManager {
   forceStop(): void {
     console.log('[SpeechManager] Force stopping. Current owner:', this.currentOwner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
-
-    if (this.recognition) {
-      try {
-        this.recognition.abort();
-      } catch (e) {
-        // Ignore
-      }
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.abort(); } catch { /* ignore */ }
       this.recognition = null;
     }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
   }
 
-  /**
-   * Abort recognition immediately (for cleanup)
-   */
   abort(owner: RecognitionOwner): void {
-    if (this.currentOwner !== owner) {
-      return;
-    }
-
+    if (this.currentOwner !== owner) return;
     console.log('[SpeechManager] Aborting recognition for:', owner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
-
-    if (this.recognition) {
-      try {
-        this.recognition.abort();
-      } catch (e) {
-        // Ignore
-      }
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.abort(); } catch { /* ignore */ }
       this.recognition = null;
     }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
+  }
+
+  // ---------------- Native (Capacitor) path ----------------
+  //
+  // The @capacitor-community/speech-recognition plugin exposes an event-based
+  // partial-results stream on iOS/Android. We forward each partial as a
+  // non-final result and mark the terminal event as final so callers that
+  // rely on `isFinal` (e.g. Benny word cards) behave identically to web.
+
+  private async startNative(config: RecognitionConfig): Promise<void> {
+    try {
+      const avail = await NativeSpeech.available().catch(() => ({ available: false }));
+      if (!(avail as any).available) {
+        console.error('[SpeechManager] Native speech recognition unavailable');
+        config.onError?.('not-supported');
+        return;
+      }
+      const perm = await NativeSpeech.checkPermissions().catch(() => ({ speechRecognition: 'prompt' }));
+      if ((perm as any).speechRecognition !== 'granted') {
+        const req = await NativeSpeech.requestPermissions().catch(() => ({ speechRecognition: 'denied' }));
+        if ((req as any).speechRecognition !== 'granted') {
+          config.onError?.('not-allowed');
+          return;
+        }
+      }
+
+      // Detach any prior listener before attaching a new one.
+      try { await NativeSpeech.removeAllListeners(); } catch { /* ignore */ }
+
+      this.nativeListenerHandle = await NativeSpeech.addListener(
+        'partialResults',
+        (data: { matches?: string[] }) => {
+          if (!this.config || this.currentOwner !== config.owner) return;
+          const alts = (data?.matches ?? []).map((s) => (s || '').trim()).filter(Boolean);
+          if (alts.length === 0) return;
+          this.config.onResult(alts[0], alts, false);
+        },
+      );
+
+      await NativeSpeech.start({
+        language: 'en-US',
+        maxResults: 5,
+        prompt: undefined,
+        partialResults: true,
+        popup: false,
+      } as any);
+
+      this.isRunning = true;
+      this.config?.onStart?.();
+    } catch (e: any) {
+      console.error('[SpeechManager] Native start failed:', e);
+      this.isRunning = false;
+      config.onError?.(String(e?.message || e || 'native-start-failed'));
+    }
+  }
+
+  private async stopNative(): Promise<void> {
+    try { await NativeSpeech.stop(); } catch { /* ignore */ }
+    try { await NativeSpeech.removeAllListeners(); } catch { /* ignore */ }
+    this.nativeListenerHandle = null;
+    // Emit a terminal final result using the last known transcript is not
+    // possible here (the plugin does not expose one on stop). Callers that
+    // subscribed via `partialResults` have already received partials; we
+    // fire `onEnd` so word readers can advance if they were waiting.
+    this.config?.onEnd?.();
   }
 }
 
