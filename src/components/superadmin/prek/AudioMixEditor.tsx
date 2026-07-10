@@ -698,18 +698,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       <RedubStudioPanel
         levelId={levelId}
         sceneGraph={sceneGraph}
-        sourcePathsByScene={useMemo(() => {
-          const out: Record<string, string> = {};
-          if (level.opening_video_url) out[SCENE_KEYS.opening] = level.opening_video_url;
-          if (level.closing_video_url) out[SCENE_KEYS.closing] = level.closing_video_url;
-          [...words].sort((a, b) => a.sort_order - b.sort_order).forEach((w, idx) => {
-            const i = idx + 1;
-            if (w.first_video_url) out[SCENE_KEYS.wordFirst(i)] = w.first_video_url;
-            if (w.second_video_url) out[SCENE_KEYS.wordSecond(i)] = w.second_video_url;
-          });
-          return out;
-        }, [level, words])}
+        sourcePathsByScene={redubSourcePaths}
       />
+
 
 
       {/* Track mixer strips */}
