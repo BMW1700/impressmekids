@@ -20,7 +20,12 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   ios: {
     contentInset: 'always',
-    limitsNavigationsToAppBoundDomains: true,
+    // Kept OFF: our OAuth flow (Google, Clever, Supabase magic links) redirects
+    // through third-party origins that are NOT app-bound. Turning this on would
+    // silently break every social login on device unless every provider host
+    // is also declared as an associated domain — which is fragile and not
+    // required by App Store policy.
+    limitsNavigationsToAppBoundDomains: false,
   },
   android: {
     allowMixedContent: false,
