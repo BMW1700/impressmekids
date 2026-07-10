@@ -663,7 +663,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             wallClock={wallClock}
             playheadSec={effectivePlayhead > 0 || previewPlaying ? effectivePlayhead : null}
             signedUrls={mix.signedUrls}
-            videoUrls={videoUrlsState.videoUrls}
+            // Prefer signed Storage URLs (CORS-enabled) so ClipWaveform.decodeAudioData works.
+            // The CDN URLs in videoUrls are CORS-blocked by Cloudflare for cross-origin fetches.
+            videoUrls={{ ...videoUrlsState.videoUrls, ...videoUrlsState.fallbackVideoUrls }}
             onSelectClip={setSelectedClipId}
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
