@@ -27,7 +27,10 @@ export interface RedubState {
 }
 
 export interface LevelRedubSettings {
-  voiceId: string;
+  voiceId: string;              // effective voice ID (level override or world default)
+  levelVoiceId: string;         // raw level override (may be empty)
+  worldDefaultVoiceId: string;  // world-level default (may be empty)
+  worldId: string | null;
   stability: number;
   similarityBoost: number;
   audioPaths: Record<string, string>;
@@ -37,6 +40,9 @@ export interface LevelRedubSettings {
 export function useBennyRedub(levelId: string | null) {
   const [settings, setSettings] = useState<LevelRedubSettings>({
     voiceId: "",
+    levelVoiceId: "",
+    worldDefaultVoiceId: "",
+    worldId: null,
     stability: 0.5,
     similarityBoost: 0.85,
     audioPaths: {},
@@ -52,19 +58,32 @@ export function useBennyRedub(levelId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("prek_levels")
-      .select("redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_generated_at")
+      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_generated_at")
       .eq("id", levelId)
       .maybeSingle();
     const paths = ((data?.redub_audio_paths as Record<string, string> | null) ?? {});
+    const levelVoiceId = data?.redub_voice_id ?? "";
+    const worldId = data?.world_id ?? null;
+    let worldDefaultVoiceId = "";
+    if (worldId) {
+      const { data: w } = await supabase
+        .from("prek_worlds")
+        .select("default_redub_voice_id")
+        .eq("id", worldId)
+        .maybeSingle();
+      worldDefaultVoiceId = (w as any)?.default_redub_voice_id ?? "";
+    }
     setSettings({
-      voiceId: data?.redub_voice_id ?? "",
+      voiceId: levelVoiceId || worldDefaultVoiceId,
+      levelVoiceId,
+      worldDefaultVoiceId,
+      worldId,
       stability: data?.redub_stability != null ? Number(data.redub_stability) : 0.5,
       similarityBoost: data?.redub_similarity_boost != null ? Number(data.redub_similarity_boost) : 0.85,
       audioPaths: paths,
       generatedAt: data?.redub_generated_at ?? null,
     });
 
-    // Sign every existing redub MP3 for playback preview.
     const pathsList = Object.values(paths).filter(Boolean);
     if (pathsList.length > 0) {
       const { data: signed } = await supabase.storage
@@ -92,8 +111,29 @@ export function useBennyRedub(levelId: string | null) {
     if (patch.stability !== undefined) dbPatch.redub_stability = patch.stability;
     if (patch.similarityBoost !== undefined) dbPatch.redub_similarity_boost = patch.similarityBoost;
     await supabase.from("prek_levels").update(dbPatch).eq("id", levelId);
-    setSettings((s) => ({ ...s, ...patch }));
+    setSettings((s) => {
+      const nextLevel = patch.voiceId !== undefined ? (patch.voiceId ?? "") : s.levelVoiceId;
+      return {
+        ...s,
+        ...patch,
+        levelVoiceId: nextLevel,
+        voiceId: nextLevel || s.worldDefaultVoiceId,
+      };
+    });
   }, [levelId]);
+
+  const saveWorldDefaultVoiceId = useCallback(async (voiceId: string) => {
+    if (!settings.worldId) return;
+    await supabase
+      .from("prek_worlds")
+      .update({ default_redub_voice_id: voiceId || null } as any)
+      .eq("id", settings.worldId);
+    setSettings((s) => ({
+      ...s,
+      worldDefaultVoiceId: voiceId,
+      voiceId: s.levelVoiceId || voiceId,
+    }));
+  }, [settings.worldId]);
 
   const redubScene = useCallback(async (scene: RedubSceneInput, overrides?: { voiceId?: string; stability?: number; similarityBoost?: number }): Promise<boolean> => {
     if (!levelId) return false;
@@ -151,6 +191,7 @@ export function useBennyRedub(levelId: string | null) {
     batchProgress,
     reload,
     saveVoiceSettings,
+    saveWorldDefaultVoiceId,
     redubScene,
     redubAll,
   };

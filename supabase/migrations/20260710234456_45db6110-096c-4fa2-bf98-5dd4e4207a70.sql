@@ -1,0 +1,1 @@
+ALTER TABLE public.prek_worlds ADD COLUMN IF NOT EXISTS default_redub_voice_id TEXT;

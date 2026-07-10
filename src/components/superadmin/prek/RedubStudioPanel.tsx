@@ -33,7 +33,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
 
   // Sync draft with loaded settings once
   if (!voiceIdInitialized && !redub.loading) {
-    setVoiceIdDraft(redub.settings.voiceId);
+    setVoiceIdDraft(redub.settings.levelVoiceId);
     setVoiceIdInitialized(true);
   }
 
@@ -61,9 +61,11 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     setPreviewingKey(sceneKey);
   };
 
+  const effectiveVoice = voiceIdDraft || redub.settings.worldDefaultVoiceId;
+
   const handleRedubAll = async () => {
-    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
-    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     if (scenes.length === 0) { toast.error("No source videos found to redub."); return; }
     toast.info(`Redubbing ${scenes.length} clips in Benny's voice… this will take ~${Math.ceil(scenes.length * 45 / 60)} min.`);
     await redub.redubAll(scenes);
@@ -71,8 +73,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
   };
 
   const handleRedubOne = async (scene: RedubSceneInput) => {
-    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
-    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     const ok = await redub.redubScene(scene);
     if (ok) toast.success(`Redubbed ${scene.label}`);
   };
@@ -91,15 +93,44 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
           <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio. A 30-second Benny line ≈ 500 chars.</p>
         </div>
 
+        {/* World-level default */}
+        {redub.settings.worldId && (
+          <div className="rounded-md border border-purple-500/30 bg-purple-500/5 p-3 space-y-2">
+            <Label className="text-xs font-semibold text-purple-900 dark:text-purple-200">
+              World default Benny voice ID (applies to every level in this world unless overridden)
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                defaultValue={redub.settings.worldDefaultVoiceId}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  if (v !== redub.settings.worldDefaultVoiceId) {
+                    void redub.saveWorldDefaultVoiceId(v).then(() => toast.success("World default voice saved"));
+                  }
+                }}
+                placeholder="paste once → every level in this world uses it"
+                className="font-mono text-xs"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Voice + settings */}
         <div className="grid grid-cols-1 md:grid-cols-[minmax(240px,1fr)_auto_auto] gap-3 items-end">
           <div className="space-y-1">
-            <Label className="text-xs">ElevenLabs Benny Voice ID</Label>
+            <Label className="text-xs">
+              This level's voice ID override
+              {!voiceIdDraft && redub.settings.worldDefaultVoiceId && (
+                <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                  (using world default: <span className="font-mono">{redub.settings.worldDefaultVoiceId.slice(0, 8)}…</span>)
+                </span>
+              )}
+            </Label>
             <Input
               value={voiceIdDraft}
               onChange={(e) => setVoiceIdDraft(e.target.value.trim())}
-              onBlur={() => { if (voiceIdDraft !== redub.settings.voiceId) void redub.saveVoiceSettings({ voiceId: voiceIdDraft }); }}
-              placeholder="paste the voice_id from ElevenLabs → My Voices"
+              onBlur={() => { if (voiceIdDraft !== redub.settings.levelVoiceId) void redub.saveVoiceSettings({ voiceId: voiceIdDraft }); }}
+              placeholder={redub.settings.worldDefaultVoiceId ? "leave blank to use world default" : "paste the voice_id from ElevenLabs → My Voices"}
               className="font-mono text-xs"
             />
           </div>
@@ -120,6 +151,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
             />
           </div>
         </div>
+
 
         {missingCount > 0 && (
           <div className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
