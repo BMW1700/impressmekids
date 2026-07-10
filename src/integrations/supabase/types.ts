@@ -5356,6 +5356,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          default_redub_voice_id: string | null
           description: string
           difficulty: string
           id: string
@@ -5369,6 +5370,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          default_redub_voice_id?: string | null
           description?: string
           difficulty?: string
           id?: string
@@ -5382,6 +5384,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          default_redub_voice_id?: string | null
           description?: string
           difficulty?: string
           id?: string
