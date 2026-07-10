@@ -35,6 +35,8 @@ import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipReso
 import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelinePreviewPlayer } from "./TimelinePreviewPlayer";
 import { usePreKLevelVideoUrls } from "@/hooks/usePreKLevelVideoUrls";
+import { RedubStudioPanel } from "./RedubStudioPanel";
+import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 interface Props {
   levelId: string;
