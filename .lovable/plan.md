@@ -1,114 +1,75 @@
-## Deep-audit findings
+## Short answer: No — not in 2 days without fixing 3 hard blockers
 
-### What actually happens today
-
-I traced the Pre-K completion path end-to-end (`YubiVideoAdventure` → `handlePreKComplete` in `AuraPractice` → `completeBattle` in `useCampaignProgress` → `campaign_progress.world_progress` in the DB → back to `RPGWorldMap`) and pulled the DB rows.
-
-DB state for a Benny player is fine:
-```
-grade_mode='k5'
-world_progress = {
-  "4":  ["This and That"],
-  "5":  ["Benny Meets his Family", "Benny goes to school", "Benny Goes Home"],
-  "6":  [5 stories completed],
-  "7":  [4], "8": [3], "101": [1], "102": [1], ...
-}
-books_rescued = 60
-```
-So completions ARE being saved. The bug is on the display / consumption side.
-
-### The three real bugs
-
-**Bug 1 — Pre-K world grid reads the wrong world list, so progress lookup misses every DB world.**
-
-- `RPGWorldMap` (prek theme) renders `publishedPrekWorlds` fetched from `prek_worlds` — world_numbers 4, 5, 6, 7, 8, 11, 101, 102.
-- `AuraPractice.tsx` (lines 110–115) computes `activeWorlds` for prek theme as `campaignWorlds.filter(w => w.mode === 'prek')`, which is only the three hardcoded worlds **101, 102, 103**.
-- `worldProgress[]` (lines 684–708) is built by mapping over `activeWorlds`, so it only ever contains entries for 101/102/103.
-- In `RPGWorldMap.getWorldProgress(worldId)`, worlds 4/5/6/7/8/11 fall through to the default `{levelsCompleted: 0, starsEarned: 0}` — which is exactly what the screenshots show.
-
-**Bug 2 — Per-level "completed" and stars on the level-select grid are computed from the same broken list.**
-
-The `CampaignLevel[]` for DB Pre-K worlds is synthesized inside `RPGWorldMap` with `storyIndex: -1`, `isCompleted: false`, `starsEarned: 0`. Even where `world_progress["4"] = ["This and That"]` exists, the level cards can't cross-reference it because the level's `story.title` is never wired to the DB level's title. So Level 1 of "Benny Teaches Personal Pronouns" shows unstarred even though the child finished it.
-
-**Bug 3 — Village / UB Village never unlocks for many Pre-K completions.**
-
-`awardVillageProgress(user.id, 1)` runs inside `handlePreKComplete`. But `handlePreKComplete` only runs when `YubiVideoAdventure` fires `onComplete`. Any completion path that doesn't reach `phase === "ending"` (retry-then-advance branch, `onRetrySuccess` skipping the video ending, or the fallback `onResult(false)` we added last turn) never fires `onComplete`, so no token is granted and the DB `world_progress` entry is never written either. This is why some Pre-K levels the child clearly played show zero progress AND the village never opens.
-
-Secondary: `isBossRushUnlocked` and `isWorldUnlocked` compare `worldId` numerically. In prek theme the DB world_number 8 ("Benny's Wardrobe") collides with classic world 8, so the unlock check is meaningless in prek theme.
+Capacitor wrapping alone will **not** give you a working App Store build. Here's the brutally honest audit of what will and won't work if you archive today.
 
 ---
 
-## The fix
+## 🔴 HARD BLOCKERS (app will not function or will be rejected)
 
-### 1. Make `AuraPractice` build `worldProgress` from the DB-published Pre-K worlds, not `activeWorlds`
+### 1. Web Speech API does not exist in iOS WKWebView
+This is the biggest one. Your entire literacy engine — Benny word reading, AURA, RPG spellcasting, retry flow — runs on `window.webkitSpeechRecognition`. **That API is Chrome-only. It does not exist in the WebView Capacitor ships.** On an iPhone/iPad build:
+- Benny word cards will never advance (mic never returns a result)
+- AURA reading practice will not score anything
+- RPG "speak to cast" will do nothing
+- Retry button will do nothing (there's nothing to retry against)
 
-- Load `prek_worlds` + `prek_levels` published rows once (reuse `usePublishedPrekLevels` or hoist the query already in `RPGWorldMap`) and expose the list to `AuraPractice`.
-- In prek theme, build `worldProgress[]` by iterating over the union of `activeWorlds` **and** the DB Pre-K worlds. For each DB world `w`:
-  - `worldStoriesInDB = campaignProgress.world_progress[w.world_number]`
-  - `levelsCompleted = min(worldStoriesInDB.length, publishedLevelCount)`
-  - `totalLevels = publishedLevelCount`
-  - `starsEarned = worldStoriesInDB.reduce(...)` — see (2).
+Fix: install `@capacitor-community/speech-recognition`, add a platform adapter in `speechRecognitionManager.ts` that routes to the native plugin on `Capacitor.isNativePlatform()`, and keep the Web Speech path for web. Non-trivial but bounded — ~1 day of focused work + device testing.
 
-### 2. Persist per-level stars, not just story titles
+### 2. `limitsNavigationsToAppBoundDomains: true` will break OAuth
+Your `capacitor.config.ts` has this on. Combined with no `server.url`, it restricts WebView navigation to app-bound domains. Google Sign-In, Clever SSO, and Supabase magic-link redirects all bounce through external origins. Without associated-domain entitlements declared for `accounts.google.com`, `clever.com`, and your Supabase auth host, sign-in will fail silently on device.
 
-`world_progress` today is `Record<world_number, string[] of story titles>`. That can't hold star counts. Extend the completion payload so per-level results survive:
+Fix: either turn the flag off (simpler, still App Store legal) or declare the associated domains. `appUrlOpen` handler is already wired, so once the redirect lands in the app it routes correctly.
 
-- Add a lightweight sibling table `prek_level_completions` (or reuse `campaign_battle_sessions` — it already stores `story_title`, `world_number`, `xp_earned`; add `stars smallint`, `level_number int`, `grade_mode text`).
-- On Pre-K completion, insert one row per attempt with `stars` derived from `preKStats.stars`, and upsert best-stars per `(user, grade_mode, world_number, level_number)`.
-- `RPGLevelSelect` and `RPGWorldMap` read best-stars per level from this table via a new `usePreKLevelStars(userId, gradeMode)` hook and merge into the synthesized `CampaignLevel[]` so cards show real stars/checkmarks.
+### 3. Pre-K videos: MOV files + signed-URL expiry
+Your Pre-K asset manifests include `.mov` files. iOS WKWebView plays H.264 MP4 reliably; `.mov` playback is inconsistent depending on codec inside. Also, `usePreKLevelVideoUrls` signs URLs for 7 days — if a kid opens the app after 7 days offline-then-online, the cached scene graph has dead URLs. Web papers over this by re-fetching; native app needs re-sign on session start (already happens on hook mount, so *probably* fine, but worth verifying with an actual archive build).
 
-Migration outline (single migration, with grants + RLS as per the project rules):
-```
-create table public.prek_level_completions (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  grade_mode text not null default 'k5',
-  world_number int not null,
-  level_number int not null,
-  best_stars smallint not null default 0,
-  best_score int not null default 0,
-  words_read int not null default 0,
-  correct_words int not null default 0,
-  completed_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (user_id, grade_mode, world_number, level_number)
-);
-grant select, insert, update on public.prek_level_completions to authenticated;
-grant all on public.prek_level_completions to service_role;
-alter table public.prek_level_completions enable row level security;
-create policy "own rows" on public.prek_level_completions
-  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-```
+R2 CDN + signed fallback logic itself is sound and will work on device.
 
-### 3. Make sure every Pre-K completion path actually persists
+---
 
-- `handlePreKComplete` in `AuraPractice` must be the single source of truth. Move `awardVillageProgress`, `completeBattle`, and the new `prek_level_completions` upsert into one `try/finally` so a village token is granted iff the DB write succeeded.
-- In `YubiVideoAdventure`, ensure the retry-then-correct branch (from last turn's fix) still funnels into `phase === "ending"` (or fire `onComplete` explicitly with `wordsAsked/scoreCredit`) so the final callback always runs. Add a hard-failsafe: on `onBack` after the last word was correct, fire `onComplete` if it hasn't fired yet.
-- Add `console.debug` telemetry keyed `[PreK/complete]` around the three writes so the next regression is visible in the console.
+## 🟡 SOFT BLOCKERS (will pass review, may embarrass you)
 
-### 4. Fix world-unlock collisions in prek theme
+- **Info.plist strings** are documented in `docs/ios-info-plist-additions.md` but must actually be pasted into `ios/App/App/Info.plist` after `npx cap add ios`. Missing mic string = auto-reject.
+- **Sign in with Apple** required because you offer Google/Clever. Capability must be enabled in Xcode and wired to Supabase Apple provider. Docs exist; implementation not verified in an ios/ folder yet.
+- **Splash + icon assets** — still Lovable defaults unless you've run `npx capacitor-assets generate` with branded source art.
+- **Push notifications** — currently a no-op stub. Fine to ship without, but don't advertise it.
+- **Demo accounts** in reviewer notes must actually exist and work before you submit.
 
-- In `RPGWorldMap.isWorldUnlocked`, when `mapTheme === 'prek'` keep the existing "Pre-K always unlocked" behavior but stop the `isBossRushUnlocked` check from firing (Boss Rush is classic-only).
-- Namespace `worldProgress` lookups by `(mode, worldId)` internally to prevent future collisions.
+---
 
-### 5. Backfill existing players
+## 🟢 What will actually work out of the box
 
-One-shot SQL from existing `campaign_progress.world_progress` on prek players: for every `(user_id, world_number, story_title)` present, insert a `prek_level_completions` row with `best_stars = 2` (safe midpoint) and `words_read/correct_words = 0`. This restores star counts for kids who already played (like the Benny account with 60 books rescued) so their village state and world tiles look correct immediately.
+- Landing page, mode select, navigation, dashboards
+- Video playback of the MP4 hero videos and MP4 Pre-K clips
+- Supabase reads/writes, RLS, edge functions (network calls are not gated by app-bound domains)
+- Account deletion route
+- Tap-based interaction (Pre-K skip button, level select, world map, video adventures)
+- The crop/save editor for superadmins (not needed on-device anyway)
 
-### 6. Verification
+---
 
-After the change, verify against the current Benny row:
-- World 4 should read `1/3 Complete`, ~2 stars.
-- World 6 should read `5/6 Complete`, ~10 stars.
-- Village should show tokens = `sum(best_stars > 0)` and unlock zones per the existing thresholds.
-Run one Pre-K level end-to-end, confirm a `prek_level_completions` row appears and the world tile updates without reload.
+## Realistic 2-day plan to actually ship
 
-## Files touched
+**Day 1**
+1. Install `@capacitor-community/speech-recognition`; add native adapter in `speechRecognitionManager.ts`; keep web fallback.
+2. Set `limitsNavigationsToAppBoundDomains: false` in `capacitor.config.ts` (or add associated domains — flag off is faster).
+3. Audit `.mov` references in Pre-K assets/DB rows; replace with MP4 where any exist.
+4. `npx cap add ios`, paste Info.plist strings, enable Sign in with Apple capability, generate branded icon/splash.
 
-- `src/pages/student/AuraPractice.tsx` — union world list, single-source completion handler.
-- `src/components/aura/game/rpg/RPGWorldMap.tsx` — consume per-level stars, remove theme collisions.
-- `src/components/aura/game/rpg/RPGLevelSelect.tsx` — show real stars/completion per level.
-- `src/components/aura/game/rpg/YubiVideoAdventure.tsx` — guarantee `onComplete` fires on every successful finish path.
-- New: `src/hooks/usePreKLevelStars.ts`.
-- Migration: `prek_level_completions` table + grants + RLS + backfill.
-- `src/hooks/useVillage.ts` — no logic change, but called from the new unified handler.
+**Day 2**
+5. Physical iPad + iPhone test pass: Benny world 1 full playthrough, retry flow, Google sign-in, Clever sign-in, account deletion.
+6. Seed reviewer demo accounts, archive, upload to TestFlight, submit for review.
+
+If speech-recognition adapter slips, you don't ship — because without it the entire product does nothing on iOS.
+
+---
+
+## Technical details
+
+- `capacitor.config.ts`: flip `limitsNavigationsToAppBoundDomains` to `false`; keep `server` block removed.
+- `src/lib/speechRecognitionManager.ts`: branch on `Capacitor.isNativePlatform()`; native path uses `SpeechRecognition.start({ language, partialResults: true, popup: false })` and emits the same event shape the web path emits so `RPGWordReader`, `RPGOneWordReader`, and Benny video adventures see no change.
+- Pre-K video hook: no code change needed if signed-URL refresh on mount is confirmed working; add a session-start refresh if not.
+- `Info.plist`: mic + speech + camera strings from `docs/ios-info-plist-additions.md`.
+- App Store Connect: reviewer notes from `docs/app-store-submission.md` §7; App Privacy label from §2.
+
+Want me to switch to build mode and start with the speech-recognition native adapter, since it's the one blocker that actually gates whether the app does anything at all?

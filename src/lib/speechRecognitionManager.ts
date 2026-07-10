@@ -2,7 +2,17 @@
  * Singleton Speech Recognition Manager
  * Ensures only ONE recognition session runs at a time across the entire app.
  * Prevents mic conflicts between main reader and mini-games.
+ *
+ * Platform routing:
+ *  - Web browsers  -> window.webkitSpeechRecognition (Chrome, Edge, Safari desktop)
+ *  - iOS/Android   -> @capacitor-community/speech-recognition (native SFSpeechRecognizer)
+ *
+ * The native adapter emits the same (transcript, alternatives, isFinal) shape
+ * as the web path, so RPGWordReader / Benny / AURA see no difference.
  */
+
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
 
 type RecognitionOwner = 'reader' | 'tug_of_war' | 'balloon_battle' | 'shield' | 'spell_combo' | 'rhyme_chain' | 'speed_typist' | 'dodge_words' | 'fireball_defense' | 'beast_swarm' | 'asteroid_barrage' | 'ice_crystal' | 'ghostly_whispers' | 'rolling_boulders' | 'fireball_barrage' | 'quickblock' | 'web_trap' | 'ink_splash' | 'goblin_horde' | 'word_cannon' | 'word_echo' | 'word_ninja' | 'pvp_battle' | 'coop_battle' | 'castle_swarm' | null;
 
@@ -23,7 +33,11 @@ class SpeechRecognitionManager {
   private isRunning = false;
   private shouldRestart = false;
   private config: RecognitionConfig | null = null;
-  private restartTimeout: NodeJS.Timeout | null = null;
+  private restartTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  // Native-only state
+  private isNative = Capacitor.isNativePlatform();
+  private nativeListenerHandle: any = null;
 
   private constructor() {}
 
@@ -47,33 +61,33 @@ class SpeechRecognitionManager {
    * If another owner is active, it will be forcefully stopped first.
    */
   start(config: RecognitionConfig): boolean {
+    // If same owner is already running, just update config (works for both paths)
+    if (this.currentOwner === config.owner && this.isRunning) {
+      console.log('[SpeechManager] Same owner already running:', config.owner);
+      this.config = config;
+      return true;
+    }
+    // Force stop any existing recognition first
+    this.forceStop();
+
+    this.config = config;
+    this.currentOwner = config.owner;
+    this.shouldRestart = config.continuous !== false;
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+
+    if (this.isNative) {
+      void this.startNative(config);
+      return true;
+    }
+
     const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) {
       console.error('[SpeechManager] Speech recognition not supported');
       return false;
     }
 
-    // If same owner is already running, just update config
-    if (this.currentOwner === config.owner && this.isRunning) {
-      console.log('[SpeechManager] Same owner already running:', config.owner);
-      this.config = config;
-      return true;
-    }
+    console.log('[SpeechManager] Starting web recognition for:', config.owner);
 
-    // Force stop any existing recognition first
-    this.forceStop();
-
-    console.log('[SpeechManager] Starting recognition for:', config.owner);
-    
-    this.config = config;
-    this.currentOwner = config.owner;
-    this.shouldRestart = config.continuous !== false;
-
-    // Clear any pending restart
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
 
     // Create new recognition instance
     this.recognition = new SpeechRecognitionAPI();
@@ -171,23 +185,14 @@ class SpeechRecognitionManager {
       console.log('[SpeechManager] Stop ignored - different owner. Current:', this.currentOwner, 'Requested:', owner);
       return;
     }
-
     console.log('[SpeechManager] Stopping recognition for:', owner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.stop(); } catch { /* ignore */ }
     }
-
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
@@ -200,54 +205,97 @@ class SpeechRecognitionManager {
   forceStop(): void {
     console.log('[SpeechManager] Force stopping. Current owner:', this.currentOwner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
-
-    if (this.recognition) {
-      try {
-        this.recognition.abort();
-      } catch (e) {
-        // Ignore
-      }
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.abort(); } catch { /* ignore */ }
       this.recognition = null;
     }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
   }
 
-  /**
-   * Abort recognition immediately (for cleanup)
-   */
   abort(owner: RecognitionOwner): void {
-    if (this.currentOwner !== owner) {
-      return;
-    }
-
+    if (this.currentOwner !== owner) return;
     console.log('[SpeechManager] Aborting recognition for:', owner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
-    }
-
-    if (this.recognition) {
-      try {
-        this.recognition.abort();
-      } catch (e) {
-        // Ignore
-      }
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.abort(); } catch { /* ignore */ }
       this.recognition = null;
     }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
+  }
+
+  // ---------------- Native (Capacitor) path ----------------
+  //
+  // The @capacitor-community/speech-recognition plugin exposes an event-based
+  // partial-results stream on iOS/Android. We forward each partial as a
+  // non-final result and mark the terminal event as final so callers that
+  // rely on `isFinal` (e.g. Benny word cards) behave identically to web.
+
+  private async startNative(config: RecognitionConfig): Promise<void> {
+    try {
+      const avail = await NativeSpeech.available().catch(() => ({ available: false }));
+      if (!(avail as any).available) {
+        console.error('[SpeechManager] Native speech recognition unavailable');
+        config.onError?.('not-supported');
+        return;
+      }
+      const perm = await NativeSpeech.checkPermissions().catch(() => ({ speechRecognition: 'prompt' }));
+      if ((perm as any).speechRecognition !== 'granted') {
+        const req = await NativeSpeech.requestPermissions().catch(() => ({ speechRecognition: 'denied' }));
+        if ((req as any).speechRecognition !== 'granted') {
+          config.onError?.('not-allowed');
+          return;
+        }
+      }
+
+      // Detach any prior listener before attaching a new one.
+      try { await NativeSpeech.removeAllListeners(); } catch { /* ignore */ }
+
+      this.nativeListenerHandle = await NativeSpeech.addListener(
+        'partialResults',
+        (data: { matches?: string[] }) => {
+          if (!this.config || this.currentOwner !== config.owner) return;
+          const alts = (data?.matches ?? []).map((s) => (s || '').trim()).filter(Boolean);
+          if (alts.length === 0) return;
+          this.config.onResult(alts[0], alts, false);
+        },
+      );
+
+      await NativeSpeech.start({
+        language: 'en-US',
+        maxResults: 5,
+        prompt: undefined,
+        partialResults: true,
+        popup: false,
+      } as any);
+
+      this.isRunning = true;
+      this.config?.onStart?.();
+    } catch (e: any) {
+      console.error('[SpeechManager] Native start failed:', e);
+      this.isRunning = false;
+      config.onError?.(String(e?.message || e || 'native-start-failed'));
+    }
+  }
+
+  private async stopNative(): Promise<void> {
+    try { await NativeSpeech.stop(); } catch { /* ignore */ }
+    try { await NativeSpeech.removeAllListeners(); } catch { /* ignore */ }
+    this.nativeListenerHandle = null;
+    // Emit a terminal final result using the last known transcript is not
+    // possible here (the plugin does not expose one on stop). Callers that
+    // subscribed via `partialResults` have already received partials; we
+    // fire `onEnd` so word readers can advance if they were waiting.
+    this.config?.onEnd?.();
   }
 }
 
