@@ -2,7 +2,17 @@
  * Singleton Speech Recognition Manager
  * Ensures only ONE recognition session runs at a time across the entire app.
  * Prevents mic conflicts between main reader and mini-games.
+ *
+ * Platform routing:
+ *  - Web browsers  -> window.webkitSpeechRecognition (Chrome, Edge, Safari desktop)
+ *  - iOS/Android   -> @capacitor-community/speech-recognition (native SFSpeechRecognizer)
+ *
+ * The native adapter emits the same (transcript, alternatives, isFinal) shape
+ * as the web path, so RPGWordReader / Benny / AURA see no difference.
  */
+
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition as NativeSpeech } from '@capacitor-community/speech-recognition';
 
 type RecognitionOwner = 'reader' | 'tug_of_war' | 'balloon_battle' | 'shield' | 'spell_combo' | 'rhyme_chain' | 'speed_typist' | 'dodge_words' | 'fireball_defense' | 'beast_swarm' | 'asteroid_barrage' | 'ice_crystal' | 'ghostly_whispers' | 'rolling_boulders' | 'fireball_barrage' | 'quickblock' | 'web_trap' | 'ink_splash' | 'goblin_horde' | 'word_cannon' | 'word_echo' | 'word_ninja' | 'pvp_battle' | 'coop_battle' | 'castle_swarm' | null;
 
