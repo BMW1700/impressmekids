@@ -38,6 +38,8 @@ class SpeechRecognitionManager {
   // Native-only state
   private isNative = Capacitor.isNativePlatform();
   private nativeListenerHandle: any = null;
+  private nativeStateHandle: any = null;
+  private lastPartial: { transcript: string; alternatives: string[] } | null = null;
 
   private constructor() {}
 
@@ -266,7 +268,37 @@ class SpeechRecognitionManager {
           if (!this.config || this.currentOwner !== config.owner) return;
           const alts = (data?.matches ?? []).map((s) => (s || '').trim()).filter(Boolean);
           if (alts.length === 0) return;
+          // Cache so we can promote to a final result on stop().
+          this.lastPartial = { transcript: alts[0], alternatives: alts };
           this.config.onResult(alts[0], alts, false);
+        },
+      );
+
+      // Auto-restart when the OS ends the utterance, matching Web Speech continuous mode.
+      this.nativeStateHandle = await NativeSpeech.addListener(
+        'listeningState',
+        (data: { status?: string }) => {
+          if (!this.config || this.currentOwner !== config.owner) return;
+          if (data?.status === 'stopped') {
+            // Promote the last partial to a final result so downstream
+            // Benny word cards / AURA scoring see isFinal=true.
+            const last = this.lastPartial;
+            if (last) {
+              try { this.config.onResult(last.transcript, last.alternatives, true); } catch { /* ignore */ }
+              this.lastPartial = null;
+            }
+            this.config.onEnd?.();
+            this.isRunning = false;
+
+            // Auto-restart if the owner still wants continuous listening.
+            if (this.shouldRestart && this.currentOwner === config.owner) {
+              this.restartTimeout = setTimeout(() => {
+                if (this.shouldRestart && this.currentOwner === config.owner) {
+                  void this.restartNative(config);
+                }
+              }, 120);
+            }
+          }
         },
       );
 
@@ -279,6 +311,7 @@ class SpeechRecognitionManager {
       } as any);
 
       this.isRunning = true;
+      this.lastPartial = null;
       this.config?.onStart?.();
     } catch (e: any) {
       console.error('[SpeechManager] Native start failed:', e);
@@ -287,14 +320,32 @@ class SpeechRecognitionManager {
     }
   }
 
+  private async restartNative(config: RecognitionConfig): Promise<void> {
+    try {
+      await NativeSpeech.start({
+        language: 'en-US',
+        maxResults: 5,
+        partialResults: true,
+        popup: false,
+      } as any);
+      this.isRunning = true;
+      this.lastPartial = null;
+    } catch (e) {
+      console.log('[SpeechManager] Native restart failed:', e);
+    }
+  }
+
   private async stopNative(): Promise<void> {
     try { await NativeSpeech.stop(); } catch { /* ignore */ }
     try { await NativeSpeech.removeAllListeners(); } catch { /* ignore */ }
     this.nativeListenerHandle = null;
-    // Emit a terminal final result using the last known transcript is not
-    // possible here (the plugin does not expose one on stop). Callers that
-    // subscribed via `partialResults` have already received partials; we
-    // fire `onEnd` so word readers can advance if they were waiting.
+    this.nativeStateHandle = null;
+    // Promote any cached partial to a final result so word readers advance.
+    const last = this.lastPartial;
+    this.lastPartial = null;
+    if (last && this.config) {
+      try { this.config.onResult(last.transcript, last.alternatives, true); } catch { /* ignore */ }
+    }
     this.config?.onEnd?.();
   }
 }
