@@ -38,6 +38,8 @@ class SpeechRecognitionManager {
   // Native-only state
   private isNative = Capacitor.isNativePlatform();
   private nativeListenerHandle: any = null;
+  private nativeStateHandle: any = null;
+  private lastPartial: { transcript: string; alternatives: string[] } | null = null;
 
   private constructor() {}
 
