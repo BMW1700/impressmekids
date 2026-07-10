@@ -119,6 +119,18 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     [...words].sort((a, b) => a.sort_order - b.sort_order).forEach((w, i) => { out[i + 1] = w.word; });
     return out;
   }, [words]);
+  // Scene key -> source video storage path, for the Redub Studio panel.
+  const redubSourcePaths = useMemo(() => {
+    const out: Record<string, string> = {};
+    if (level.opening_video_url) out[SCENE_KEYS.opening] = level.opening_video_url;
+    if (level.closing_video_url) out[SCENE_KEYS.closing] = level.closing_video_url;
+    [...words].sort((a, b) => a.sort_order - b.sort_order).forEach((w, idx) => {
+      const i = idx + 1;
+      if (w.first_video_url) out[SCENE_KEYS.wordFirst(i)] = w.first_video_url;
+      if (w.second_video_url) out[SCENE_KEYS.wordSecond(i)] = w.second_video_url;
+    });
+    return out;
+  }, [level, words]);
   // Drag-preview override: while dragging a clip, scrub the video to the
   // proposed drop point. Clears on pointer-up.
   const [dragPreviewSec, setDragPreviewSec] = useState<number | null>(null);
