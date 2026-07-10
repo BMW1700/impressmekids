@@ -617,7 +617,7 @@ export const RPGWorldMap = ({
             if (theme === 'agent') {
               displayedWorlds = agentCampaignWorlds;
             } else if (theme === 'prek') {
-              displayedWorlds = publishedPrekWorlds ?? [];
+              displayedWorlds = [...(publishedPrekWorlds ?? [])].sort((a, b) => a.id - b.id);
             } else {
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
             }
