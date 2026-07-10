@@ -61,6 +61,25 @@ class SpeechRecognitionManager {
    * If another owner is active, it will be forcefully stopped first.
    */
   start(config: RecognitionConfig): boolean {
+    // If same owner is already running, just update config (works for both paths)
+    if (this.currentOwner === config.owner && this.isRunning) {
+      console.log('[SpeechManager] Same owner already running:', config.owner);
+      this.config = config;
+      return true;
+    }
+    // Force stop any existing recognition first
+    this.forceStop();
+
+    this.config = config;
+    this.currentOwner = config.owner;
+    this.shouldRestart = config.continuous !== false;
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+
+    if (this.isNative) {
+      void this.startNative(config);
+      return true;
+    }
+
     const SpeechRecognitionAPI = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
     if (!SpeechRecognitionAPI) {
       console.error('[SpeechManager] Speech recognition not supported');
