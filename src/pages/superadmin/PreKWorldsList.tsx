@@ -168,7 +168,16 @@ const PreKWorldsList = () => {
           </CardContent></Card>
         ) : (
           <div className="grid gap-3">
-            {worlds.map((w, idx) => (
+            {(() => {
+              let pubCounter = 0;
+              const publishedIndex = new Map<string, number>();
+              worlds.forEach((w) => {
+                if (w.is_published) {
+                  pubCounter += 1;
+                  publishedIndex.set(w.id, pubCounter);
+                }
+              });
+              return worlds.map((w, idx) => (
               <Card key={w.id}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 py-4">
                   <div className="flex items-center gap-2">
