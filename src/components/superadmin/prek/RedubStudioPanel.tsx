@@ -61,9 +61,11 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     setPreviewingKey(sceneKey);
   };
 
+  const effectiveVoice = voiceIdDraft || redub.settings.worldDefaultVoiceId;
+
   const handleRedubAll = async () => {
-    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
-    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     if (scenes.length === 0) { toast.error("No source videos found to redub."); return; }
     toast.info(`Redubbing ${scenes.length} clips in Benny's voice… this will take ~${Math.ceil(scenes.length * 45 / 60)} min.`);
     await redub.redubAll(scenes);
@@ -71,8 +73,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
   };
 
   const handleRedubOne = async (scene: RedubSceneInput) => {
-    if (!voiceIdDraft) { toast.error("Set a Benny voice ID first."); return; }
-    await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     const ok = await redub.redubScene(scene);
     if (ok) toast.success(`Redubbed ${scene.label}`);
   };
