@@ -185,23 +185,14 @@ class SpeechRecognitionManager {
       console.log('[SpeechManager] Stop ignored - different owner. Current:', this.currentOwner, 'Requested:', owner);
       return;
     }
-
     console.log('[SpeechManager] Stopping recognition for:', owner);
     this.shouldRestart = false;
-    
-    if (this.restartTimeout) {
-      clearTimeout(this.restartTimeout);
-      this.restartTimeout = null;
+    if (this.restartTimeout) { clearTimeout(this.restartTimeout); this.restartTimeout = null; }
+    if (this.isNative) {
+      void this.stopNative();
+    } else if (this.recognition) {
+      try { this.recognition.stop(); } catch { /* ignore */ }
     }
-
-    if (this.recognition) {
-      try {
-        this.recognition.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
-    
     this.isRunning = false;
     this.currentOwner = null;
     this.config = null;
