@@ -33,7 +33,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
 
   // Sync draft with loaded settings once
   if (!voiceIdInitialized && !redub.loading) {
-    setVoiceIdDraft(redub.settings.voiceId);
+    setVoiceIdDraft(redub.settings.levelVoiceId);
     setVoiceIdInitialized(true);
   }
 
