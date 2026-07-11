@@ -1,88 +1,79 @@
-# Redub Studio v2 — Isolate, Auto-Place, Splice
+## What we're fixing
 
-Goal: make the existing Redub Studio produce clean Benny audio even when source clips have background music / secondary voices, and drop the finished redubs straight onto the timeline so they replace the original audio without manual dragging.
+**Bug 1 — Retry disappears after tapping Hear.** In Pre-K, when a child gets a word wrong, the feedback overlay opens with three buttons: Hear, Retry, Skip. Tapping Hear plays the word via the browser's built-in voice, but the underlying mic session sometimes fires a new "empty/incorrect" result while the overlay is open, which flips `canRetry` to false and hides the Retry button. Tapping Hear should never affect the Retry state.
 
-Because re-shooting VO3 clips is cheap (~$25–30/level), we treat re-shoot as the fallback for the rare clip Isolator can't save — not the default.
+**Bug 2 — Correction voice sounds terrible.** All pronunciation playback (`playCorrectPronunciation`) currently uses `window.speechSynthesis`. On iPad/Safari especially, that voice is muffled, quiet, and inconsistent. Now that ElevenLabs is connected, we replace it with the Benny voice.
 
-## What ships
+**Enhancement — Real phonics teaching.** When a Pre-K child misses a word, they should hear it taught the way a teacher would: **"dog. D — O — G. d–o–g… dog!"** — same Benny voice, cached so it's free after the first play.
 
-### 1. Voice Isolator pre-pass (default ON)
-`supabase/functions/prek-clip-redub/index.ts`:
-- Before calling STS, POST the source audio to `https://api.elevenlabs.io/v1/audio-isolation` (multipart `audio` field).
-- Feed the isolated MP3 bytes into the existing STS call instead of raw MP4.
-- Store the isolated MP3 alongside the redub at `redub/<levelId>/<sceneKey>-isolated.mp3` so the editor can preview it and confirm quality before wasting STS credits on a bad isolation.
-- Add request fields: `isolate: boolean` (default true), `isolateOnly: boolean` (skip STS, just return isolated audio for preview).
-- Return `{ storagePath, signedUrl, isolatedStoragePath, isolatedSignedUrl }`.
+---
 
-### 2. Auto-place redubs on a dedicated timeline track
-When STS succeeds, the edge function also:
-- Ensures a track named **"Benny (Redub)"** exists in `prek_level_audio_tracks` for this level (create if missing, with `role='dialogue'`, high track_index).
-- Inserts a row into `prek_level_audio_clips` for this scene with:
-  - `storage_path` = redub MP3 path
-  - `scene_anchor_key` = sceneKey, `start_offset_seconds` = 0
-  - `duration_mode` = `fill-scene`
-  - `volume` = 1.0
-- Upserts by `(level_id, track_id, scene_anchor_key)` so re-redubbing replaces the clip in place instead of stacking.
+## Plan
 
-Result: hit "Redub entire level" → every scene gets a clip on the Redub track automatically. No manual dragging.
+### 1. Fix the Retry button (frontend only, no schema change)
 
-### 3. Auto-mute the source video's audio on that track
-`AudioMixEditor` already has a "Main video audio" concept. Add a per-level toggle **"Mute source video where redub exists"** (default ON when any redub is present). The student player (`YubiVideoAdventure` / `usePreKRedubPlayback`) already mutes source when a redub is available — this just mirrors that into the editor preview so what you hear in the editor matches what students hear.
+`src/components/aura/game/rpg/RPGWordReader.tsx`
+- Add `isFeedbackOverlayOpenRef`. While true:
+  - `stopRecognitionSession()` on overlay open and **do not** auto-restart the mic.
+  - Any speech result / `onend` / `onerror` that arrives is ignored (guard at the top of `processResult` and the restart timers).
+  - `canRetry` cannot be flipped to false by anything except the Retry button itself.
+- `handleTryAgain` remains the only path that sets `canRetry=false` and re-arms the mic.
+- Guarantee overlay stays mounted until user taps Retry or Skip/Continue.
 
-### 4. Micro-splice handles on Redub Studio rows
-Each scene row in `RedubStudioPanel.tsx` gets an expand chevron. Expanded view shows:
-- Waveform of the **isolated** audio (uses existing `ClipWaveform`).
-- Two draggable handles → `trim_start_seconds` / `trim_end_seconds` on the auto-placed clip row.
-- "Re-redub with this trim" button → sends `trimStart/trimEnd` to the edge function, which slices the isolated MP3 with `ffmpeg` (already available in Deno via `npm:fluent-ffmpeg` alt: use the WebCodecs-free `npm:@ffmpeg-installer/ffmpeg` — spawn subprocess) before STS. Fixes the "repeats a word" clips without re-shooting.
+`src/components/aura/game/rpg/WordFeedbackOverlay.tsx`
+- Reorder buttons to **Retry · Hear · Skip** (Retry first, most visible).
+- Make Retry the large primary button (bigger tap target for Pre-K fingers) and keep it enabled even while Hear audio is playing.
+- Add a tiny "Teach me" button next to Hear that plays the phonics breakdown (see §3).
 
-### 5. Multi-speaker heuristic warning
-After isolation, run a cheap check: if isolated audio RMS in the first 2s vs middle 2s vs last 2s differs by >12dB, OR if isolated file size <30% of source audio size, flag the row with an amber "⚠ Possible multi-speaker / heavy music — preview before redubbing whole level" badge. Doesn't block, just warns.
+### 2. Swap the correction voice to ElevenLabs Benny
 
-### 6. Preview isolated vs redubbed vs source
-Row gets three tiny play buttons: **Src / Iso / Redub**. Lets you A/B before spending credits on a full-level redub.
+New edge function `supabase/functions/prek-word-tts/index.ts`:
+- Input: `{ word: string, voiceId?: string, mode: "say" | "teach" }`.
+- If a cached MP3 exists in Storage bucket `prek-word-tts` at `<voiceId>/<mode>/<word>.mp3`, return a signed URL immediately (no ElevenLabs call).
+- Otherwise call `https://api.elevenlabs.io/v1/text-to-speech/{voiceId}?output_format=mp3_44100_128` with `model_id: "eleven_turbo_v2_5"`, upload the bytes to Storage, return signed URL.
+- Uses the already-connected `ELEVENLABS_API_KEY`. `verify_jwt = false` so it works for anonymous Pre-K users.
 
-## Technical details
+New storage bucket `prek-word-tts` (public read, service-role write).
 
-**Migration** (one file):
-```sql
-ALTER TABLE public.prek_levels
-  ADD COLUMN IF NOT EXISTS redub_isolated_paths jsonb DEFAULT '{}'::jsonb,
-  ADD COLUMN IF NOT EXISTS redub_mute_source boolean DEFAULT true;
+New client module `src/lib/bennyVoice.ts`:
+- `speakBenny(word, { mode })` — fetches URL from edge function, plays via `HTMLAudioElement` at `volume=1.0`.
+- In-memory `Map<string,string>` cache so a repeated Hear tap is instant.
+- Falls back to existing `playCorrectPronunciation` (Web Speech) only if the edge function fails.
+- Voice ID resolution: use the world-level `default_voice_id` on `prek_worlds` we already added for Redub Studio; fall back to a `VITE_BENNY_DEFAULT_VOICE_ID` const we set once the user shares the ID.
 
-ALTER TABLE public.prek_level_audio_clips
-  ADD COLUMN IF NOT EXISTS source_kind text DEFAULT 'manual'
-    CHECK (source_kind IN ('manual','redub'));
+Replace call sites (Pre-K only, K-12 RPG stays on Web Speech for now to keep cost predictable):
+- `RPGOneWordReader.handleHearIt` → `speakBenny(currentPhrase, { mode: "say" })`.
+- `RPGWordReader` overlay `onPlayAudio` → `speakBenny(word, { mode: "say" })`.
+- `RPGWordReader` on-miss auto-cue → same.
 
-CREATE UNIQUE INDEX IF NOT EXISTS prek_audio_clips_redub_uniq
-  ON public.prek_level_audio_clips(level_id, track_id, scene_anchor_key)
-  WHERE source_kind = 'redub';
-```
+### 3. Phonics "Teach me" mode
 
-**Edge function changes** (`prek-clip-redub/index.ts`):
-1. Download source (existing).
-2. If `isolate !== false`: POST to `/v1/audio-isolation`, capture MP3, upload to `redub/<levelId>/<sceneKey>-isolated.mp3`, patch `prek_levels.redub_isolated_paths`.
-3. If `isolateOnly`: return here.
-4. Optional trim: shell out to ffmpeg on isolated bytes.
-5. POST trimmed isolated MP3 to `/v1/speech-to-speech/{voiceId}` (existing).
-6. Upload redub MP3 (existing).
-7. **New:** upsert Redub track + clip row via service role.
-8. Return both signed URLs.
+Same edge function, `mode: "teach"`. Server builds the prompt from the word:
+- 1-syllable CVC (dog): `"dog... D — O — G... d–o–g... dog!"`
+- Multi-syllable: split on syllables (reuse `syllableHint` logic already in the codebase) → `"puppy... pup–py... puppy!"`
+- Sight words: `"the... this is a sight word... the!"`
 
-**Files touched**
-- `supabase/functions/prek-clip-redub/index.ts` — isolate + auto-place + trim
-- new migration (above)
-- `src/hooks/useBennyRedub.ts` — pass `isolate`, `trimStart`, `trimEnd`; expose isolated URLs
-- `src/components/superadmin/prek/RedubStudioPanel.tsx` — per-row expand, waveform + handles, Src/Iso/Redub A/B, warning badge, "Mute source video where redub exists" checkbox
-- `src/hooks/usePreKAudioMix.ts` — surface auto-placed redub clips (they already load; just tag `source_kind='redub'` in the UI so admin knows not to hand-edit them)
-- `src/components/aura/game/rpg/YubiVideoAdventure.tsx` — read `redub_mute_source` to gate the auto-mute (already effectively on; makes it explicit)
+Cached the same way, so each word costs ~1 ElevenLabs call ever. At ~200 unique Pre-K words × 2 modes = ~400 lifetime calls total.
 
-## What you'll do after this ships
+UI:
+- Overlay adds a **"Teach me"** button (book icon) that plays the teach clip.
+- After the 2nd miss on the same word, we auto-play the teach clip once (existing scaffold hook `scaffoldAfterSecondMiss` — we just swap the audio source).
 
-1. Open any level → Redub Studio → paste world default voice ID once.
-2. Click **"Preview isolation"** on 1–2 scenes to sanity-check the model separated Benny cleanly.
-3. Click **"Redub entire level"** — clips auto-drop onto the "Benny (Redub)" track, source video auto-mutes.
-4. For any flagged/bad scene: expand row → drag trim handles → **"Re-redub with this trim"**. If still bad after two attempts → re-shoot that one VO3 clip (cheap).
+### 4. Verification
 
-## Out of scope this pass
-- Muxing MP3 back into MP4 for offline (later; not needed for streaming playback).
-- Batch "Redub whole world" button (trivial follow-up once per-level flow is solid).
+- Playwright: open a Pre-K level, force a wrong answer, confirm overlay shows Retry+Hear+Teach, tap Hear, confirm Retry still clickable, tap Retry, confirm mic re-arms and next attempt scores.
+- Check network tab: first Hear on a new word hits `prek-word-tts`; second Hear on same word is a cache hit (no function call).
+- Edge function logs clean; no ElevenLabs 4xx.
+
+---
+
+## Technical notes
+
+- **Cost control:** cache-first design means the 20-credit ElevenLabs top-up the user mentioned covers the entire Pre-K word bank essentially forever. No per-play cost after the first play of each word.
+- **iOS Capacitor:** `HTMLAudioElement` with a public URL plays fine inside the WKWebView; no native plugin needed.
+- **Fallback:** if `ELEVENLABS_API_KEY` is missing or the function returns non-2xx, we transparently fall back to Web Speech so nothing regresses.
+- **Not touching K-12 RPG audio** in this change — only Pre-K, where the child-facing voice quality matters most and the word set is bounded.
+
+## One thing I need from you
+
+The **Benny voice ID** from ElevenLabs (the same one you'd paste into Redub Studio). Paste it once and I'll wire it as the default for the whole Pre-K app. If you don't paste one, I'll ship with a solid default ElevenLabs voice (`Charlie` — warm, kid-friendly) that you can swap later per-world.
