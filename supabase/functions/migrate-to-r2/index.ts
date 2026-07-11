@@ -591,6 +591,54 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (action === "purge-orphaned-failed") {
+      // Rows where status='failed' with a download 404 ("Object not found")
+      // point to Storage objects that no longer exist. They can never migrate.
+      // Verify absence via HEAD against Storage, then delete only the ghosts.
+      const { data: rows, error: selErr } = await admin
+        .from("r2_migration_log")
+        .select("id, bucket, path, error")
+        .eq("status", "failed")
+        .in("bucket", MIGRATABLE_BUCKET_LIST)
+        .or("error.ilike.%Object not found%,error.ilike.%not_found%,error.ilike.%NoSuchKey%,error.ilike.%404%");
+      if (selErr) throw selErr;
+
+      let purged = 0;
+      let kept = 0;
+      const idsToDelete: string[] = [];
+      for (const row of rows ?? []) {
+        const headUrl = `${SUPABASE_URL}/storage/v1/object/${row.bucket}/${row.path
+          .split("/")
+          .map(encodeURIComponent)
+          .join("/")}`;
+        let confirmedAbsent = false;
+        try {
+          const h = await fetch(headUrl, {
+            method: "HEAD",
+            headers: { Authorization: `Bearer ${SERVICE_ROLE}`, apikey: SERVICE_ROLE },
+          });
+          confirmedAbsent = h.status === 404 || h.status === 400;
+        } catch {
+          confirmedAbsent = false;
+        }
+        if (confirmedAbsent) {
+          idsToDelete.push(row.id as string);
+        } else {
+          kept++;
+        }
+      }
+      if (idsToDelete.length > 0) {
+        const { error: delErr, count } = await admin
+          .from("r2_migration_log")
+          .delete({ count: "exact" })
+          .in("id", idsToDelete);
+        if (delErr) throw delErr;
+        purged = count ?? idsToDelete.length;
+      }
+      return new Response(JSON.stringify({ ok: true, purged, kept, scanned: rows?.length ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (action === "list-failed") {
       const size = Math.min(Number(body.size) || 100, 500);
       const [failedRes, repatchRes] = await Promise.all([

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, RefreshCw, Play, Search, TestTube2, Zap, RotateCcw } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, Play, Search, TestTube2, Zap, RotateCcw, Trash2 } from "lucide-react";
 import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
@@ -242,6 +242,23 @@ export default function R2Migration() {
     }
   };
 
+  const purgeGhostFailures = async () => {
+    setResetting(true);
+    try {
+      const r = await call("purge-orphaned-failed");
+      const purged = Number(r.purged ?? 0);
+      const kept = Number(r.kept ?? 0);
+      if (purged > 0) toast.success(`Removed ${purged} ghost log rows (source files were already deleted from Storage)`);
+      if (kept > 0) toast.warning(`${kept} rows kept — source file still exists, needs real retry`);
+      if (purged === 0 && kept === 0) toast.info("No ghost rows found");
+      await loadStats();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const pending = stats?.counts.pending ?? 0;
   const copied = stats?.counts.copied ?? 0;
   const failedCount = stats?.counts.failed ?? 0;
@@ -362,7 +379,21 @@ export default function R2Migration() {
           <Button variant="outline" onClick={clearRepatchFailures} disabled={resetting || running || scanning || repatchFailedCount === 0}>
             Only clear stale messages ({repatchFailedCount})
           </Button>
+          <Button
+            variant="default"
+            onClick={purgeGhostFailures}
+            disabled={resetting || running || scanning || failedCount === 0}
+            title="Deletes log rows whose source Storage file no longer exists. Verified via HEAD before delete."
+          >
+            {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+            Purge ghost failures ({failedCount})
+          </Button>
         </div>
+        {failedCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            <b>Ghost failures</b> = log rows pointing to files that were deleted from Storage before migration ran. They can't be copied because the source no longer exists. "Purge ghost failures" HEAD-checks each one and only deletes verified ghosts.
+          </p>
+        )}
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
         {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
       </Card>
