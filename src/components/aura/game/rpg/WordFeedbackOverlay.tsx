@@ -188,44 +188,58 @@ export const WordFeedbackOverlay = ({
               </motion.div>
             )}
 
-            {/* Compact Action buttons */}
-            <div className="flex gap-2">
-              {onPlayAudio && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onPlayAudio}
-                  className="flex-1 border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
-                >
-                  <Volume2 className="h-4 w-4 mr-1" />
-                  Hear
-                </Button>
-              )}
-              
+            {/* Action buttons — Retry gets top billing for Pre-K tap targets */}
+            <div className="flex flex-col gap-2">
               {!isCorrect && canRetry && onTryAgain && (
                 <Button
-                  variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={onTryAgain}
-                  className="flex-1 border-orange-500/50 text-orange-300 hover:bg-orange-500/20"
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-base h-12"
                 >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Retry
+                  <RefreshCw className="h-5 w-5 mr-2" />
+                  Try Again
                 </Button>
               )}
-              
-              <Button
-                size="sm"
-                onClick={onContinue}
-                className={`flex-1 ${
-                  isCorrect 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {isCorrect ? 'Continue' : 'Skip'}
-              </Button>
+
+              <div className="flex gap-2">
+                {onPlayAudio && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onPlayAudio}
+                    className="flex-1 border-purple-500/50 text-purple-300 hover:bg-purple-500/20"
+                  >
+                    <Volume2 className="h-4 w-4 mr-1" />
+                    Hear
+                  </Button>
+                )}
+
+                {!isCorrect && onTeachPhonics && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onTeachPhonics}
+                    className="flex-1 border-blue-500/50 text-blue-300 hover:bg-blue-500/20"
+                  >
+                    <BookOpen className="h-4 w-4 mr-1" />
+                    Teach me
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  onClick={onContinue}
+                  className={`flex-1 ${
+                    isCorrect
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-slate-600 hover:bg-slate-700'
+                  }`}
+                >
+                  {isCorrect ? 'Continue' : 'Skip'}
+                </Button>
+              </div>
             </div>
+
 
             {/* Compact Retry hint */}
             {!isCorrect && canRetry && (
