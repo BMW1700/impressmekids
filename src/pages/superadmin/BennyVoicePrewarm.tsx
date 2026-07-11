@@ -306,6 +306,17 @@ const BennyVoicePrewarm = () => {
               </div>
             </div>
 
+            <div className="flex items-center gap-3 rounded border border-amber-500/30 bg-amber-500/5 p-3">
+              <Switch id="force" checked={force} onCheckedChange={setForce} />
+              <div className="flex-1">
+                <Label htmlFor="force" className="font-semibold">Force regenerate (overwrite cache)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Off = only re-runs missing words (free). On = regenerates every word from ElevenLabs (spends credits).
+                  Turn on after changing voice or prompt style.
+                </p>
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <Button size="lg" onClick={startPrewarm} disabled={running || scanLoading || uniqueWords.length === 0}>
                 {running ? (
