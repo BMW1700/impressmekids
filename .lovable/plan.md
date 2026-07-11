@@ -1,79 +1,55 @@
-## What we're fixing
+# R2 Cost Audit — Brutal Honest Findings
 
-**Bug 1 — Retry disappears after tapping Hear.** In Pre-K, when a child gets a word wrong, the feedback overlay opens with three buttons: Hear, Retry, Skip. Tapping Hear plays the word via the browser's built-in voice, but the underlying mic session sometimes fires a new "empty/incorrect" result while the overlay is open, which flips `canRetry` to false and hides the Retry button. Tapping Hear should never affect the Retry state.
+## The truth about what's on R2 right now
 
-**Bug 2 — Correction voice sounds terrible.** All pronunciation playback (`playCorrectPronunciation`) currently uses `window.speechSynthesis`. On iPad/Safari especially, that voice is muffled, quiet, and inconsistent. Now that ElevenLabs is connected, we replace it with the Benny voice.
+Your existing R2 setup has an **auto-mirror-on-upload** helper (`src/lib/r2Mirror.ts`) plus a **HEAD-check fallback** on read (`src/lib/cdn.ts`). The fallback silently patches anything that misses the mirror — so nothing is *broken*, but every missed file costs Supabase egress on every read until a full re-migration scan is run.
 
-**Enhancement — Real phonics teaching.** When a Pre-K child misses a word, they should hear it taught the way a teacher would: **"dog. D — O — G. d–o–g… dog!"** — same Benny voice, cached so it's free after the first play.
+I audited every `storage.upload()` call site. Here's the score:
 
----
+| Call site | Bucket | Auto-mirrors to R2? |
+|---|---|---|
+| `preKAudioUpload.ts` (admin audio tracks) | `prek-level-audio` | ✅ Yes |
+| `AccountSection.tsx` (avatars) | `avatars` | ✅ Yes |
+| `CampaignModeEntry.tsx` (campaign art) | `campaign-assets` | ✅ Yes |
+| **`preKVideoUpload.ts` (Benny videos)** | `prek-level-videos` | ❌ **NO** |
+| **`prek-clip-redub` edge fn (redub MP3s)** | `prek-level-audio` | ❌ **NO** |
+| **`prek-word-tts` edge fn (Benny word audio)** | `prek-word-tts` | ❌ **NO** — bucket isn't even in the R2 allowlist |
 
-## Plan
+**Translation:** the three highest-volume things you're about to generate — new Benny videos, ElevenLabs redubs, and every pre-warmed word MP3 — are currently going to Supabase Storage only. They *work* (HEAD fallback), but you pay Supabase egress on every child playback forever. That's the exact opposite of what you want at 100K users.
 
-### 1. Fix the Retry button (frontend only, no schema change)
+## What I'll fix (one build turn)
 
-`src/components/aura/game/rpg/RPGWordReader.tsx`
-- Add `isFeedbackOverlayOpenRef`. While true:
-  - `stopRecognitionSession()` on overlay open and **do not** auto-restart the mic.
-  - Any speech result / `onend` / `onerror` that arrives is ignored (guard at the top of `processResult` and the restart timers).
-  - `canRetry` cannot be flipped to false by anything except the Retry button itself.
-- `handleTryAgain` remains the only path that sets `canRetry=false` and re-arms the mic.
-- Guarantee overlay stays mounted until user taps Retry or Skip/Continue.
+### 1. Auto-mirror the 3 gaps
+- `preKVideoUpload.ts` → add `mirrorToR2Async('prek-level-videos', path, …)` after upload.
+- `prek-clip-redub/index.ts` → invoke `migrate-to-r2` `copy-path` after each MP3 upload (edge fn can't import client helper).
+- `prek-word-tts/index.ts` → same, plus **add `prek-word-tts` to `R2_MIRRORED_BUCKETS` and `R2_ENABLED_BUCKETS`** so word-audio serves from `cdn.yubilearn.com` instead of signed Supabase URLs. Bucket becomes public (word pronunciations, no PII — same trust level as `prek-level-audio`).
 
-`src/components/aura/game/rpg/WordFeedbackOverlay.tsx`
-- Reorder buttons to **Retry · Hear · Skip** (Retry first, most visible).
-- Make Retry the large primary button (bigger tap target for Pre-K fingers) and keep it enabled even while Hear audio is playing.
-- Add a tiny "Teach me" button next to Hear that plays the phonics breakdown (see §3).
+### 2. Backfill anything already in Supabase-only
+Run the existing **Super Admin → R2 Migration** tool once (Scan → Run). This walks every bucket, copies missed files to R2, and stamps cache headers. Zero code needed — the tool already exists. I'll add a note on the R2 Migration page telling you to re-run it after every big content push (or I can add a cron that runs it nightly — your call).
 
-### 2. Swap the correction voice to ElevenLabs Benny
+### 3. Verify
+Post-fix, upload one test video + trigger one redub + prewarm one word, then confirm all three land at `cdn.yubilearn.com/<bucket>/<path>` with HTTP 200.
 
-New edge function `supabase/functions/prek-word-tts/index.ts`:
-- Input: `{ word: string, voiceId?: string, mode: "say" | "teach" }`.
-- If a cached MP3 exists in Storage bucket `prek-word-tts` at `<voiceId>/<mode>/<word>.mp3`, return a signed URL immediately (no ElevenLabs call).
-- Otherwise call `https://api.elevenlabs.io/v1/text-to-speech/{voiceId}?output_format=mp3_44100_128` with `model_id: "eleven_turbo_v2_5"`, upload the bytes to Storage, return signed URL.
-- Uses the already-connected `ELEVENLABS_API_KEY`. `verify_jwt = false` so it works for anonymous Pre-K users.
+## Cost math (brutally honest)
 
-New storage bucket `prek-word-tts` (public read, service-role write).
+Assumptions: avg Pre-K session = 5 videos (~15 MB each) + 20 word plays (~30 KB each) + 3 redub tracks (~200 KB). ≈ **76 MB egress per session**. Assume 20 sessions/user/month.
 
-New client module `src/lib/bennyVoice.ts`:
-- `speakBenny(word, { mode })` — fetches URL from edge function, plays via `HTMLAudioElement` at `volume=1.0`.
-- In-memory `Map<string,string>` cache so a repeated Hear tap is instant.
-- Falls back to existing `playCorrectPronunciation` (Web Speech) only if the edge function fails.
-- Voice ID resolution: use the world-level `default_voice_id` on `prek_worlds` we already added for Redub Studio; fall back to a `VITE_BENNY_DEFAULT_VOICE_ID` const we set once the user shares the ID.
+| Users | Monthly egress | Supabase cost (@$0.09/GB) | R2 cost (@$0/GB egress) |
+|---|---|---|---|
+| 10,000 | ~15 TB | **~$1,350/mo** | **$0** |
+| 100,000 | ~150 TB | **~$13,500/mo** | **$0** |
 
-Replace call sites (Pre-K only, K-12 RPG stays on Web Speech for now to keep cost predictable):
-- `RPGOneWordReader.handleHearIt` → `speakBenny(currentPhrase, { mode: "say" })`.
-- `RPGWordReader` overlay `onPlayAudio` → `speakBenny(word, { mode: "say" })`.
-- `RPGWordReader` on-miss auto-cue → same.
+R2 storage itself is $0.015/GB/mo. Even at 500 GB of total video library that's **$7.50/mo storage, $0 egress**. Your only ongoing Cloudflare bill for media at 100K users is roughly **$10–20/month total**, vs. **$13.5K/month** if we leave the gaps open.
 
-### 3. Phonics "Teach me" mode
+Private student audio (`aura-audio`) already mints R2 presigned URLs via `sign-r2-audio-url` — that path is already free-egress and FERPA-clean. No change needed.
 
-Same edge function, `mode: "teach"`. Server builds the prompt from the word:
-- 1-syllable CVC (dog): `"dog... D — O — G... d–o–g... dog!"`
-- Multi-syllable: split on syllables (reuse `syllableHint` logic already in the codebase) → `"puppy... pup–py... puppy!"`
-- Sight words: `"the... this is a sight word... the!"`
+## Answer to your direct questions
 
-Cached the same way, so each word costs ~1 ElevenLabs call ever. At ~200 unique Pre-K words × 2 modes = ~400 lifetime calls total.
+- **"Is all new stuff automatically stored in R2?"** — Right now: only the 3 rows marked ✅. After this fix: **yes, everything.**
+- **"Do I have to do it manually?"** — No. Mirror-on-upload is invisible. For pre-existing files, one click on Super Admin → R2 Migration → Scan/Run.
+- **"Can you just do it for me?"** — Yes, that's what this plan does.
 
-UI:
-- Overlay adds a **"Teach me"** button (book icon) that plays the teach clip.
-- After the 2nd miss on the same word, we auto-play the teach clip once (existing scaffold hook `scaffoldAfterSecondMiss` — we just swap the audio source).
-
-### 4. Verification
-
-- Playwright: open a Pre-K level, force a wrong answer, confirm overlay shows Retry+Hear+Teach, tap Hear, confirm Retry still clickable, tap Retry, confirm mic re-arms and next attempt scores.
-- Check network tab: first Hear on a new word hits `prek-word-tts`; second Hear on same word is a cache hit (no function call).
-- Edge function logs clean; no ElevenLabs 4xx.
-
----
-
-## Technical notes
-
-- **Cost control:** cache-first design means the 20-credit ElevenLabs top-up the user mentioned covers the entire Pre-K word bank essentially forever. No per-play cost after the first play of each word.
-- **iOS Capacitor:** `HTMLAudioElement` with a public URL plays fine inside the WKWebView; no native plugin needed.
-- **Fallback:** if `ELEVENLABS_API_KEY` is missing or the function returns non-2xx, we transparently fall back to Web Speech so nothing regresses.
-- **Not touching K-12 RPG audio** in this change — only Pre-K, where the child-facing voice quality matters most and the word set is bounded.
-
-## One thing I need from you
-
-The **Benny voice ID** from ElevenLabs (the same one you'd paste into Redub Studio). Paste it once and I'll wire it as the default for the whole Pre-K app. If you don't paste one, I'll ship with a solid default ElevenLabs voice (`Charlie` — warm, kid-friendly) that you can swap later per-world.
+## Technical details
+- Edge-function mirror uses `supabase.functions.invoke("migrate-to-r2", { action: "copy-path", bucket, path, contentType, size })` — same path as the client helper, no new infra.
+- Making `prek-word-tts` public: `supabase--storage_update_bucket(name="prek-word-tts", public=true)`. Client switches from `createSignedUrl` to `getPublicUrl` + `rewriteToCdn`. Existing cached MP3s keep working (signed URLs still valid until TTL expires; new reads use CDN).
+- All mirror calls are fire-and-forget; a mirror failure never blocks the upload — HEAD fallback still catches it.
