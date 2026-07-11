@@ -379,7 +379,21 @@ export default function R2Migration() {
           <Button variant="outline" onClick={clearRepatchFailures} disabled={resetting || running || scanning || repatchFailedCount === 0}>
             Only clear stale messages ({repatchFailedCount})
           </Button>
+          <Button
+            variant="default"
+            onClick={purgeGhostFailures}
+            disabled={resetting || running || scanning || failedCount === 0}
+            title="Deletes log rows whose source Storage file no longer exists. Verified via HEAD before delete."
+          >
+            {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+            Purge ghost failures ({failedCount})
+          </Button>
         </div>
+        {failedCount > 0 && (
+          <p className="text-xs text-muted-foreground">
+            <b>Ghost failures</b> = log rows pointing to files that were deleted from Storage before migration ran. They can't be copied because the source no longer exists. "Purge ghost failures" HEAD-checks each one and only deletes verified ghosts.
+          </p>
+        )}
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
         {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
       </Card>
