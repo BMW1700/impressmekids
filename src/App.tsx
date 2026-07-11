@@ -107,6 +107,7 @@ const PreKWorldsList = lazy(() => import("./pages/superadmin/PreKWorldsList"));
 const R2Migration = lazy(() => import("./pages/superadmin/R2Migration"));
 const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
 const PreKLevelBuilder = lazy(() => import("./pages/superadmin/PreKLevelBuilder"));
+const BennyVoicePrewarm = lazy(() => import("./pages/superadmin/BennyVoicePrewarm"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -282,6 +283,7 @@ const App = () => (
                     <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
                     <Route path="/super-admin/r2-migration" element={<RequireSuperAdmin><R2Migration /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/benny-voice" element={<RequireSuperAdmin><BennyVoicePrewarm /></RequireSuperAdmin>} />
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
