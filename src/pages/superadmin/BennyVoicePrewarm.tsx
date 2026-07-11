@@ -114,10 +114,54 @@ const BennyVoicePrewarm = () => {
     return Array.from(s).sort();
   }, [items]);
 
+  // Probe storage so previously-cached words show as ✓ across page reloads.
+  useEffect(() => {
+    if (uniqueWords.length === 0 || !voiceId) return;
+    let cancelled = false;
+    (async () => {
+      const listAll = async (prefix: string): Promise<Set<string>> => {
+        const out = new Set<string>();
+        // Storage list is capped at 100 by default; page until empty.
+        let offset = 0;
+        for (;;) {
+          const { data, error } = await supabase.storage
+            .from("prek-word-tts")
+            .list(prefix, { limit: 1000, offset });
+          if (error || !data || data.length === 0) break;
+          for (const f of data) {
+            if (f.name.endsWith(".mp3")) out.add(f.name.replace(/\.mp3$/, ""));
+          }
+          if (data.length < 1000) break;
+          offset += 1000;
+        }
+        return out;
+      };
+      const [saySet, teachSet] = await Promise.all([
+        listAll(`${voiceId}/${CACHE_VERSION}/say`),
+        listAll(`${voiceId}/${CACHE_VERSION}/teach`),
+      ]);
+      if (cancelled) return;
+      const slugify = (w: string) =>
+        w.toLowerCase().replace(/[^a-z0-9']+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+      const seed: Record<string, RowState> = {};
+      for (const w of uniqueWords) {
+        const slug = slugify(w);
+        seed[w] = {
+          word: w,
+          say: saySet.has(slug) ? "cached" : "pending",
+          teach: teachSet.has(slug) ? "cached" : "pending",
+        };
+      }
+      setRows(seed);
+    })().catch((e) => console.warn("[prewarm] storage probe failed", e));
+    return () => {
+      cancelled = true;
+    };
+  }, [uniqueWords, voiceId]);
+
   const totalCalls = uniqueWords.length * 2; // say + teach
-  // Rough estimate: turbo v2.5 ≈ 0.3 credits/char, ~10 chars/word → ~3 credits per call
   const creditEstimate = totalCalls * 3;
-  const usdEstimate = (creditEstimate / 1000).toFixed(2); // ~$1 per 1k credits on Creator tier
+  const usdEstimate = (creditEstimate / 1000).toFixed(2);
 
   const cachedCount = Object.values(rows).reduce(
     (n, r) => n + (r.say === "cached" || r.say === "generated" ? 1 : 0) + (r.teach === "cached" || r.teach === "generated" ? 1 : 0),
@@ -132,7 +176,7 @@ const BennyVoicePrewarm = () => {
   const runOne = async (word: string, mode: "say" | "teach"): Promise<"cached" | "generated" | "error"> => {
     try {
       const { data, error } = await supabase.functions.invoke("prek-word-tts", {
-        body: { word, mode, voiceId: voiceId || undefined },
+        body: { word, mode, voiceId: voiceId || undefined, force },
       });
       if (error || !data?.signedUrl) {
         return "error";
