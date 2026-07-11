@@ -65,7 +65,7 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls, videoUrls,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview, onBeforeIsolatedPreview,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onScrub, onDragPreview, onBeforeIsolatedPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
