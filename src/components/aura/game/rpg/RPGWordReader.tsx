@@ -943,8 +943,14 @@ export const RPGWordReader = ({
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
+    // Hard guard: while the feedback overlay is open, ignore all speech
+    // events. The mic should be stopped, but Chrome/Safari can flush a
+    // late final result after stop() that would otherwise flip canRetry
+    // and hide the Retry button under the child's finger.
+    if (showFeedbackOverlay) return;
     const cleanTranscript = transcript.trim();
     if (!cleanTranscript) return;
+
     
     const wordIndex = currentIndexRef.current;
     const targetWord = getTargetWord(wordIndex);
