@@ -49,6 +49,10 @@ async function readR2Error(resp: Response, op: string) {
   return `${op} ${resp.status}: ${text.slice(0, 300)}`;
 }
 
+function r2CopySource(r2Key: string) {
+  return `/${R2_BUCKET}/${r2Key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 async function testR2Permissions() {
   const r2 = getR2();
   const now = Date.now();
@@ -164,7 +168,9 @@ async function scanInBackground(admin: ReturnType<typeof createClient>) {
     if (error) throw error;
     let discovered = 0;
     for (const b of buckets ?? []) {
-      const files = await walkBucket(admin, (b as any).name);
+      const bucketName = (b as any).name;
+      if (!MIGRATABLE_BUCKETS.has(bucketName)) continue;
+      const files = await walkBucket(admin, bucketName);
       if (files.length === 0) continue;
       const rows = files.map((f) => ({
         bucket: f.bucket,
@@ -362,7 +368,7 @@ async function repatchHeadersBatch(
       const resp = await r2.fetch(url, {
         method: "PUT",
         headers: {
-          "x-amz-copy-source": `/${R2_BUCKET}/${r2Key}`,
+          "x-amz-copy-source": r2CopySource(r2Key),
           "x-amz-metadata-directive": "REPLACE",
           "Content-Type": (row as any).content_type || "application/octet-stream",
           "Cache-Control": "public, max-age=31536000, immutable",
@@ -491,22 +497,31 @@ Deno.serve(async (req) => {
         repatch_failed: repatchFailed ?? 0,
       };
       const total = pending + copied + failed;
-      const { data: bucketRows } = await admin
-        .from("r2_migration_log")
-        .select("bucket, status, error");
-      const byBucket = new Map<string, { pending: number; copied: number; failed: number; repatch_failed: number }>();
-      for (const row of bucketRows ?? []) {
-        const bucket = String((row as any).bucket || "unknown");
-        const item = byBucket.get(bucket) ?? { pending: 0, copied: 0, failed: 0, repatch_failed: 0 };
-        const statusValue = String((row as any).status || "");
-        if (statusValue === "pending") item.pending += 1;
-        if (statusValue === "copied") item.copied += 1;
-        if (statusValue === "failed") item.failed += 1;
-        if (statusValue === "copied" && String((row as any).error || "").startsWith("repatch:")) {
-          item.repatch_failed += 1;
-        }
-        byBucket.set(bucket, item);
-      }
+      const countByBucket = async (bucket: string, status: string, repatchOnly = false) => {
+        let q = admin
+          .from("r2_migration_log")
+          .select("id", { count: "exact", head: true })
+          .eq("bucket", bucket)
+          .eq("status", status);
+        if (repatchOnly) q = q.ilike("error", "repatch:%");
+        const { count } = await q;
+        return count ?? 0;
+      };
+      const byBucket = await Promise.all(Array.from(MIGRATABLE_BUCKETS).map(async (bucket) => {
+        const [bucketPending, bucketCopied, bucketFailed, bucketRepatchFailed] = await Promise.all([
+          countByBucket(bucket, "pending"),
+          countByBucket(bucket, "copied"),
+          countByBucket(bucket, "failed"),
+          countByBucket(bucket, "copied", true),
+        ]);
+        return {
+          bucket,
+          pending: bucketPending,
+          copied: bucketCopied,
+          failed: bucketFailed,
+          repatch_failed: bucketRepatchFailed,
+        };
+      }));
       const { data: status } = await admin
         .from("r2_migration_status")
         .select("state, last_error, discovered, started_at, finished_at")
@@ -517,7 +532,7 @@ Deno.serve(async (req) => {
           ok: true,
           counts,
           total,
-          byBucket: Array.from(byBucket.entries()).map(([bucket, counts]) => ({ bucket, ...counts })),
+          byBucket,
           scan: status ?? { state: "idle" },
         }),
         {
