@@ -148,10 +148,14 @@ export function useBennyRedub(levelId: string | null) {
     }));
   }, [settings.worldId]);
 
-  const redubScene = useCallback(async (scene: RedubSceneInput, overrides?: { voiceId?: string; stability?: number; similarityBoost?: number }): Promise<boolean> => {
+  const redubScene = useCallback(async (
+    scene: RedubSceneInput,
+    overrides?: { voiceId?: string; stability?: number; similarityBoost?: number; isolate?: boolean; isolateOnly?: boolean },
+  ): Promise<boolean> => {
     if (!levelId) return false;
+    const isolateOnly = overrides?.isolateOnly === true;
     const voiceId = overrides?.voiceId ?? settings.voiceId;
-    if (!voiceId) {
+    if (!isolateOnly && !voiceId) {
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Benny voice ID first." } }));
       return false;
     }
@@ -165,17 +169,31 @@ export function useBennyRedub(levelId: string | null) {
           voiceId,
           stability: overrides?.stability ?? settings.stability,
           similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,
+          isolate: overrides?.isolate !== false,
+          isolateOnly,
         },
       });
       if (error) throw error;
-      const storagePath: string | undefined = data?.storagePath;
-      const signedUrl: string | undefined = data?.signedUrl;
-      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "done", storagePath, signedUrl } }));
+      const storagePath: string | undefined = data?.storagePath ?? undefined;
+      const signedUrl: string | undefined = data?.signedUrl ?? undefined;
+      const isolatedStoragePath: string | undefined = data?.isolatedStoragePath ?? undefined;
+      const isolatedSignedUrl: string | undefined = data?.isolatedSignedUrl ?? undefined;
+
+      setStates((m) => ({
+        ...m,
+        [scene.sceneKey]: { status: "done", storagePath, signedUrl, isolatedStoragePath, isolatedSignedUrl },
+      }));
       if (storagePath) {
         setSettings((s) => ({ ...s, audioPaths: { ...s.audioPaths, [scene.sceneKey]: storagePath } }));
       }
+      if (isolatedStoragePath) {
+        setSettings((s) => ({ ...s, isolatedPaths: { ...s.isolatedPaths, [scene.sceneKey]: isolatedStoragePath } }));
+      }
       if (signedUrl) {
         setSignedRedubUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
+      }
+      if (isolatedSignedUrl) {
+        setSignedIsolatedUrls((m) => ({ ...m, [scene.sceneKey]: isolatedSignedUrl }));
       }
       return true;
     } catch (e) {
@@ -200,6 +218,7 @@ export function useBennyRedub(levelId: string | null) {
     loading,
     settings,
     signedRedubUrls,
+    signedIsolatedUrls,
     states,
     batchProgress,
     reload,
