@@ -55,6 +55,13 @@ interface ClipState {
   trackVolume: number; // mirror for fallback path
 }
 
+function audioBoundsForClip(clip: PreKAudioClip) {
+  const start = Math.max(0, clip.trim_start_seconds || 0);
+  const rawEnd = clip.trim_end_seconds ?? clip.duration_seconds ?? Number.POSITIVE_INFINITY;
+  const end = Math.max(start + 0.1, rawEnd);
+  return { start, end, length: Math.max(0.1, end - start), finite: Number.isFinite(end) };
+}
+
 export interface PreKAudioMixerHandle {
   ready: boolean;
   stopAll: () => void;
@@ -227,12 +234,35 @@ export function usePreKAudioMixerRuntime({
     // Mutual exclusivity: kill anything else on this track first.
     stopSiblingsOnTrack(clip.track_index, clip.id);
     try { if (ctx.state === "suspended") void ctx.resume(); } catch { /* noop */ }
-    st.el.loop = !!opts.loop || clip.loop_clip;
-    try { st.el.playbackRate = clip.playback_rate || 1; } catch { /* noop */ }
-    try { st.el.currentTime = clip.trim_start_seconds || 0; } catch { /* noop */ }
+    const bounds = audioBoundsForClip(clip);
+    const rate = Math.max(0.05, clip.playback_rate || 1);
+    const shouldLoop = !!opts.loop || clip.loop_clip;
+    st.el.loop = false;
+    st.el.ontimeupdate = shouldLoop && bounds.finite
+      ? () => {
+          if (st.el.currentTime >= bounds.end - 0.03) {
+            try { st.el.currentTime = bounds.start; } catch { /* noop */ }
+            st.el.play().catch(() => { /* noop */ });
+          }
+        }
+      : null;
+    st.el.onended = shouldLoop
+      ? () => {
+          try { st.el.currentTime = bounds.start; } catch { /* noop */ }
+          st.el.play().catch(() => { /* noop */ });
+        }
+      : null;
+    try { st.el.playbackRate = rate; } catch { /* noop */ }
+    try { st.el.currentTime = bounds.start; } catch { /* noop */ }
     const playPromise = st.el.play();
     if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => { /* gesture not yet, ignore */ });
     setClipTargetVolume(st, clip.volume, clip.fade_in_seconds || FADE_RAMP_SEC);
+    if (!shouldLoop && bounds.finite) {
+      const tid = window.setTimeout(() => {
+        fadeOutAndPause(st, clip.fade_out_seconds || STOP_FADE_SEC);
+      }, Math.max(20, (bounds.length / rate) * 1000));
+      scheduledTimersRef.current.push(tid);
+    }
   };
 
   // Handle scene events
