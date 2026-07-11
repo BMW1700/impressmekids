@@ -416,8 +416,11 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
   );
 
   const handleHearIt = () => {
-    if (currentPhrase) playCorrectPronunciation(currentPhrase);
+    if (currentPhrase) {
+      speakBenny(currentPhrase, { mode: "say" }).catch(() => playCorrectPronunciation(currentPhrase));
+    }
   };
+
 
   return (
     <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>
