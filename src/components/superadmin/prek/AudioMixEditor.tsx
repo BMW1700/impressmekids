@@ -519,7 +519,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       trim_end_seconds: c.trim_end_seconds,
       playback_rate: c.playback_rate,
       source_kind: c.source_kind,
-    } as const;
+    } as Record<string, unknown>;
     const { data, error } = await supabase.from("prek_level_audio_clips").insert(insertPayload).select("id").maybeSingle();
     if (error) { toast.error(error.message); return; }
     if (data?.id) pushUndo({ kind: "clip-restore", id: data.id });
