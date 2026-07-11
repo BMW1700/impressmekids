@@ -25,6 +25,8 @@ import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
+import { speakBenny } from "@/lib/bennyVoice";
+
 import { getYubiLevelCopy, getYubiDemoWords, getYubiCreatureName, getYubiMeterLabel } from "@/lib/yubiStoryCopy";
 import { YubiBubble } from "./YubiBubble";
 import { YubiPreKStoryScene } from "./YubiPreKStoryScene";
@@ -414,8 +416,11 @@ export const RPGOneWordReader = ({ world, level, onBack, onComplete, overrideTex
   );
 
   const handleHearIt = () => {
-    if (currentPhrase) playCorrectPronunciation(currentPhrase);
+    if (currentPhrase) {
+      speakBenny(currentPhrase, { mode: "say" }).catch(() => playCorrectPronunciation(currentPhrase));
+    }
   };
+
 
   return (
     <div className={`relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-gradient-to-br ${meadow.sky} shadow-xl`}>

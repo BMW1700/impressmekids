@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { speakBenny } from "@/lib/bennyVoice";
+
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
 import { RPGEmojiManager } from "./RPGEmojiPop";
@@ -645,10 +647,11 @@ export const RPGWordReader = ({
     setEchoCountdown(0);
     soundEffects.incorrectWord();
     
-    // Play correct pronunciation
+    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
     setTimeout(() => {
-      playCorrectPronunciation(expectedWord);
+      speakBenny(expectedWord, { mode: "say" }).catch(() => playCorrectPronunciation(expectedWord));
     }, 300);
+
     
     // IMMEDIATELY report the first miss for accuracy tracking (before user decides Try Again or Continue).
     // A failed retry is the same word's second attempt, so it must not double-count wordsRead.
@@ -940,8 +943,14 @@ export const RPGWordReader = ({
   // Process speech result
   const processResult = useCallback((transcript: string, alternatives: string[]) => {
     if (isProcessingRef.current) return;
+    // Hard guard: while the feedback overlay is open, ignore all speech
+    // events. The mic should be stopped, but Chrome/Safari can flush a
+    // late final result after stop() that would otherwise flip canRetry
+    // and hide the Retry button under the child's finger.
+    if (showFeedbackOverlay) return;
     const cleanTranscript = transcript.trim();
     if (!cleanTranscript) return;
+
     
     const wordIndex = currentIndexRef.current;
     const targetWord = getTargetWord(wordIndex);
@@ -1708,8 +1717,10 @@ export const RPGWordReader = ({
         canRetry={canRetry}
         onContinue={handleContinueAfterMiss}
         onTryAgain={handleTryAgain}
-        onPlayAudio={() => pendingIncorrectWord?.word && playCorrectPronunciation(pendingIncorrectWord.word)}
+        onPlayAudio={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" })}
+        onTeachPhonics={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "teach" })}
       />
     </div>
   );
 };
+
