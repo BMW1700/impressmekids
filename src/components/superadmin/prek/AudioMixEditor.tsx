@@ -694,15 +694,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         </CardContent>
       </Card>
 
-      {/* Redub Studio — ElevenLabs Speech-to-Speech voice swap */}
-      <RedubStudioPanel
-        levelId={levelId}
-        sceneGraph={sceneGraph}
-        sourcePathsByScene={redubSourcePaths}
-      />
-
-
-
       {/* Track mixer strips */}
       <Card>
         <CardHeader className="py-3 flex flex-row items-center justify-between">
@@ -710,6 +701,9 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           <Button size="sm" variant="outline" onClick={() => addTrack()}><Plus className="h-3 w-3 mr-1"/> Add Track</Button>
         </CardHeader>
         <CardContent className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+          <p className="text-[11px] text-muted-foreground">
+            Tip: after uploading, click the clip on the timeline above to trim, splice, fade, or change its anchor in the Clip inspector. Changes save automatically.
+          </p>
           {mix.tracks.map((t, i) => {
             const isSolo = soloTrackIndex === t.track_index;
             const effectivelyMuted = t.muted || (soloTrackIndex !== null && !isSolo);
@@ -762,6 +756,13 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Redub Studio — ElevenLabs Speech-to-Speech voice swap */}
+      <RedubStudioPanel
+        levelId={levelId}
+        sceneGraph={sceneGraph}
+        sourcePathsByScene={redubSourcePaths}
+      />
 
       {/* Inspector */}
       {selectedClip && (
