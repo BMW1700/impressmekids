@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Play, Search, Zap } from "lucide-react";
+import { Loader2, RefreshCw, Play, Search, Zap, RotateCcw } from "lucide-react";
 import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
@@ -14,8 +14,15 @@ interface ScanStatus {
 }
 interface Stats {
   total: number;
-  counts: Record<string, number>;
+  counts: { pending: number; copied: number; failed: number; repatch_failed: number };
   scan?: ScanStatus;
+}
+
+interface FailedRow {
+  bucket: string;
+  path: string;
+  error: string | null;
+  attempts?: number;
 }
 
 export default function R2Migration() {
@@ -23,13 +30,12 @@ export default function R2Migration() {
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [running, setRunning] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [lastBatch, setLastBatch] = useState<string>("");
   const [repatching, setRepatching] = useState(false);
   const [repatchStatus, setRepatchStatus] = useState<string>("");
-  const [failed, setFailed] = useState<
-    Array<{ bucket: string; path: string; error: string | null }>
-  >([]);
-
+  const [failed, setFailed] = useState<FailedRow[]>([]);
+  const [repatchFailedList, setRepatchFailedList] = useState<FailedRow[]>([]);
 
   const call = async (action: string, body: Record<string, unknown> = {}) => {
     const { data, error } = await supabase.functions.invoke("migrate-to-r2", {
@@ -45,12 +51,9 @@ export default function R2Migration() {
     try {
       const s = await call("stats");
       setStats({ total: s.total, counts: s.counts, scan: s.scan });
-      const { data: fails } = await supabase
-        .from("r2_migration_log")
-        .select("bucket, path, error")
-        .eq("status", "failed")
-        .limit(50);
-      setFailed((fails ?? []) as any);
+      const list = await call("list-failed", { size: 200 });
+      setFailed((list.failed ?? []) as FailedRow[]);
+      setRepatchFailedList((list.repatchFailed ?? []) as FailedRow[]);
       return s as Stats;
     } catch (e: any) {
       toast.error(e.message);
@@ -69,7 +72,6 @@ export default function R2Migration() {
     try {
       await call("scan");
       toast.info("Scan started — this runs in the background");
-      // Poll every 2s until state !== 'scanning'
       while (true) {
         await new Promise((r) => setTimeout(r, 2000));
         const s = await loadStats();
@@ -89,7 +91,6 @@ export default function R2Migration() {
     }
   };
 
-
   const runOnce = async () => {
     const r = await call("batch", { size: 25 });
     setLastBatch(`attempted ${r.attempted}, ok ${r.ok}, failed ${r.failed}`);
@@ -99,17 +100,36 @@ export default function R2Migration() {
   const runUntilDone = async () => {
     setRunning(true);
     try {
-      // Loop batches until no more pending
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const r = await runOnce();
         await loadStats();
         if (!r.attempted) break;
       }
-      toast.success("Migration finished");
+      toast.success("Migration pass finished");
     } catch (e: any) {
       toast.error(e.message);
     } finally {
+      setRunning(false);
+    }
+  };
+
+  const resetAndRetry = async () => {
+    setResetting(true);
+    try {
+      const r = await call("reset-failed");
+      toast.info(`Reset ${r.reset} failed rows → retrying`);
+      await loadStats();
+      setRunning(true);
+      while (true) {
+        const b = await runOnce();
+        await loadStats();
+        if (!b.attempted) break;
+      }
+      toast.success("Retry pass finished");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResetting(false);
       setRunning(false);
     }
   };
@@ -122,7 +142,6 @@ export default function R2Migration() {
       let totalOk = 0;
       let totalFailed = 0;
       let totalAttempted = 0;
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const r: any = await call("repatch-headers", { size: 150, cursor });
         totalOk += r.ok || 0;
@@ -132,6 +151,7 @@ export default function R2Migration() {
         if (!r.attempted || !r.nextCursor) break;
         cursor = r.nextCursor;
       }
+      await loadStats();
       toast.success(`Cache headers re-patched on ${totalOk} files`);
     } catch (e: any) {
       toast.error(e.message);
@@ -140,10 +160,10 @@ export default function R2Migration() {
     }
   };
 
-
   const pending = stats?.counts.pending ?? 0;
   const copied = stats?.counts.copied ?? 0;
   const failedCount = stats?.counts.failed ?? 0;
+  const repatchFailedCount = stats?.counts.repatch_failed ?? 0;
   const total = stats?.total ?? 0;
   const pct = total > 0 ? Math.round((copied / total) * 100) : 0;
 
@@ -162,8 +182,11 @@ export default function R2Migration() {
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm text-muted-foreground">Progress</div>
+            <div className="text-sm text-muted-foreground">Progress (of known files)</div>
             <div className="text-2xl font-semibold">{copied} / {total} copied ({pct}%)</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              Run "Scan Storage" to refresh the known-file count.
+            </div>
           </div>
           <Button variant="outline" onClick={loadStats} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -171,25 +194,34 @@ export default function R2Migration() {
           </Button>
         </div>
         <Progress value={pct} />
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-4 gap-4 text-sm">
           <div><span className="text-muted-foreground">Pending:</span> <b>{pending}</b></div>
           <div><span className="text-muted-foreground">Copied:</span> <b className="text-green-600">{copied}</b></div>
           <div><span className="text-muted-foreground">Failed:</span> <b className="text-red-600">{failedCount}</b></div>
+          <div><span className="text-muted-foreground">Repatch failed:</span> <b className="text-amber-600">{repatchFailedCount}</b></div>
         </div>
       </Card>
 
       <Card className="p-6 space-y-4">
         <h2 className="font-semibold">Steps</h2>
         <div className="flex flex-wrap gap-3">
-          <Button onClick={scan} disabled={scanning || running}>
+          <Button onClick={scan} disabled={scanning || running || resetting}>
             {scanning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Search className="w-4 h-4 mr-2" />}
             1. Scan Storage
           </Button>
-          <Button onClick={runUntilDone} disabled={running || scanning || pending === 0}>
+          <Button onClick={runUntilDone} disabled={running || scanning || resetting || pending === 0}>
             {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
             2. Run migration
           </Button>
-          <Button variant="secondary" onClick={repatchHeaders} disabled={repatching || running || scanning || copied === 0}>
+          <Button
+            variant="destructive"
+            onClick={resetAndRetry}
+            disabled={resetting || running || scanning || failedCount === 0}
+          >
+            {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+            Reset failed → retry ({failedCount})
+          </Button>
+          <Button variant="secondary" onClick={repatchHeaders} disabled={repatching || running || scanning || resetting || copied === 0}>
             {repatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
             3. Re-patch cache headers
           </Button>
@@ -200,12 +232,34 @@ export default function R2Migration() {
 
       {failed.length > 0 && (
         <Card className="p-6 space-y-2">
-          <h2 className="font-semibold text-red-600">Failed files ({failed.length})</h2>
+          <h2 className="font-semibold text-red-600">Transfer failures ({failedCount})</h2>
+          <p className="text-xs text-muted-foreground">
+            Showing up to 200. Fix the Cloudflare R2 token (Object Read &amp; Write, all buckets),
+            then click "Reset failed → retry".
+          </p>
           <div className="max-h-96 overflow-y-auto text-xs space-y-1 font-mono">
             {failed.map((f, i) => (
               <div key={i} className="border-b py-1">
                 <div><b>{f.bucket}</b>/{f.path}</div>
                 <div className="text-red-600">{f.error}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {repatchFailedList.length > 0 && (
+        <Card className="p-6 space-y-2">
+          <h2 className="font-semibold text-amber-600">Repatch failures ({repatchFailedCount})</h2>
+          <p className="text-xs text-muted-foreground">
+            These files were copied but the immutable-cache header did not stick. Fix the R2 token
+            and click "Re-patch cache headers" again.
+          </p>
+          <div className="max-h-96 overflow-y-auto text-xs space-y-1 font-mono">
+            {repatchFailedList.map((f, i) => (
+              <div key={i} className="border-b py-1">
+                <div><b>{f.bucket}</b>/{f.path}</div>
+                <div className="text-amber-600">{f.error}</div>
               </div>
             ))}
           </div>
