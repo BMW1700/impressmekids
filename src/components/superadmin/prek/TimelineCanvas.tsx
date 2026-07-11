@@ -40,6 +40,10 @@ interface Props {
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
   onDropOnNewTrack: (clip: PreKAudioClip, newStartSec: number) => void;
+  /** Delete a clip (inline trash button on each block). */
+  onDeleteClip?: (clip: PreKAudioClip) => void;
+  /** Split a clip at the current playhead (inline scissors button). */
+  onSplitClip?: (clip: PreKAudioClip, atSec: number) => void;
   /** Click/drag on the timeline header to move the playhead. */
   onScrub?: (sec: number) => void;
   /** Fired during clip drags so the preview can scrub to the drop target. */
