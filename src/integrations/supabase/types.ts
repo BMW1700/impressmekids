@@ -4976,6 +4976,7 @@ export type Database = {
           pause_on_word_card: boolean
           playback_rate: number
           sort_order: number
+          source_kind: string
           storage_path: string
           track_index: number
           trim_end_seconds: number | null
@@ -5003,6 +5004,7 @@ export type Database = {
           pause_on_word_card?: boolean
           playback_rate?: number
           sort_order?: number
+          source_kind?: string
           storage_path: string
           track_index: number
           trim_end_seconds?: number | null
@@ -5030,6 +5032,7 @@ export type Database = {
           pause_on_word_card?: boolean
           playback_rate?: number
           sort_order?: number
+          source_kind?: string
           storage_path?: string
           track_index?: number
           trim_end_seconds?: number | null
@@ -5226,6 +5229,7 @@ export type Database = {
           opening_video_url: string | null
           redub_audio_paths: Json
           redub_generated_at: string | null
+          redub_isolated_paths: Json
           redub_similarity_boost: number
           redub_stability: number
           redub_voice_id: string | null
@@ -5255,6 +5259,7 @@ export type Database = {
           opening_video_url?: string | null
           redub_audio_paths?: Json
           redub_generated_at?: string | null
+          redub_isolated_paths?: Json
           redub_similarity_boost?: number
           redub_stability?: number
           redub_voice_id?: string | null
@@ -5284,6 +5289,7 @@ export type Database = {
           opening_video_url?: string | null
           redub_audio_paths?: Json
           redub_generated_at?: string | null
+          redub_isolated_paths?: Json
           redub_similarity_boost?: number
           redub_stability?: number
           redub_voice_id?: string | null
