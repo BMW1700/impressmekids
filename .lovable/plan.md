@@ -1,65 +1,68 @@
-# Answer first: you're already doing extra steps you don't need to
+## Brutally honest audit
 
-The pipeline you described (download VO3 clip → run through ElevenLabs Voice Isolator → upload → redub → drop on a track) is **exactly what `prek-clip-redub` already does server-side, in one call, per scene**. You never have to touch ElevenLabs' Isolator UI or re-download anything.
+### 1) Crop/splice editor
+- The timeline currently has split/delete buttons, but it does **not** have a clear, reliable crop UI on the clip itself.
+- The existing split logic is also risky: it shortens the left clip by overwriting `duration_seconds`, which can corrupt timing for clips that were already trimmed or played at a different speed.
+- Result: it looks like there is no crop button, and even when a user tries to splice, the stored trim math can be wrong.
 
-What happens today when you click **Redub** on a scene in the Pre-K editor:
-
-```text
-Source MP4 in prek-level-videos
-        │
-        ▼
-[1] Edge function downloads the clip (no CORS, no browser)
-        │
-        ▼
-[2] ElevenLabs Voice Isolation  →  isolated MP3 saved to prek-level-audio
-        │                          (this is the same isolator you tested manually)
-        ▼
-[3] ElevenLabs Speech-to-Speech (Benny voice, your stability/similarity)
-        │                          → clean redub MP3, cadence preserved for lip-sync
-        ▼
-[4] Upload MP3 to prek-level-audio  +  mirror to R2
-        │
-        ▼
-[5] Auto-create "Benny (Redub)" track (index 90) if missing
-        │
-        ▼
-[6] Upsert timeline clip anchored to the scene, fill-scene, pause-on-word-card
-        │
-        ▼
-[7] Auto-enable "mute source video audio" so old audio doesn't fight the redub
-```
-
-So the manual VO3 → Isolator → upload dance is redundant. The isolator step (which is what made your test sound clean) is already baked in — that's why the redub sounds like "new Benny" instead of muddy VO3 audio with background voices.
-
-**"Redub entire level"** already exists in the Redub Studio panel and loops every scene through that same pipeline.
-
-## What's missing (and what this plan adds)
-
-Right now you can one-click a whole **level**, but not a whole **world**. If you want every clip across every Pre-K level to sound like clean Benny in one shot, you still have to open each level and press "Redub entire level". That's the only real friction left.
+### 2) R2 transfers
+- The backend secrets exist: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_ENDPOINT` are configured.
+- The failure is not a missing setting. The database shows real R2 permission failures:
+  - `R2 PUT 403 AccessDenied` on new transfers.
+  - `R2 COPY 403 AccessDenied` on cache-header repatching.
+- Most failures are concentrated in:
+  - `prek-word-tts` new uploads.
+  - `prek-level-videos` new uploads.
+  - `aura-audio` / `prek-level-videos` repatch operations.
+- The current R2 page is misleading because the CDN health widget can be green while the S3 API token still cannot write/copy objects. CDN read health and R2 write permission are separate things.
 
 ## Plan
 
-Add a **"Redub entire world in Benny's voice"** button in the world editor that:
+### A) Make crop actually work in the timeline
+1. Add visible draggable crop handles on audio clips:
+   - Left handle = crop/trim start.
+   - Right handle = crop/trim end.
+   - Handles appear on the clip block itself, not hidden only inside the inspector.
+2. Wire the handles to update:
+   - `trim_start_seconds` when dragging the left edge inward.
+   - `trim_end_seconds` when dragging the right edge inward.
+3. Keep the clip anchored correctly:
+   - Cropping the start should move the timeline anchor forward and advance the audio trim start by the same audio-time amount.
+   - Cropping the end should set the effective audio end without moving the start.
+4. Keep this safe for iPad/touch by using the existing pointer-event drag system.
 
-1. Loads every published level in that world.
-2. For each level, enumerates its scene graph and calls the existing `prek-clip-redub` function once per scene (isolate + STS + auto-place, exactly like today).
-3. Runs sequentially with a live progress bar: `Level 3/8 • Scene 5/12 • ~14 min remaining`.
-4. Skips scenes that already have a redub MP3 with the current voice ID (idempotent — safe to re-run).
-5. Writes a small run log to `prek_redub_batches` so you can see failures and retry just the failed ones.
+### B) Fix split/splice math
+1. Update split logic so it preserves the original raw audio duration.
+2. For the left clip, set `trim_end_seconds` instead of overwriting the source duration incorrectly.
+3. For the right clip, set `trim_start_seconds` from the split point and preserve the original `duration_seconds`.
+4. Add guardrails so users cannot split/crop outside the clip or create near-zero-length clips.
 
-No new ElevenLabs product, no new manual steps, no changes to the audio quality path — it's the same isolate→STS pipeline you already validated, just fanned out across a whole world.
+### C) Make playback respect crop end
+1. Update editor preview playback so it stops or loops based on the trimmed audio window, not just the raw file.
+2. Update runtime audio playback so cropped clips do not continue past `trim_end_seconds`.
 
-## Technical details
+### D) Make the R2 Migration page tell the truth
+1. Add an API-level R2 write diagnostic action to `migrate-to-r2`:
+   - Performs a tiny signed `PUT` test to the configured bucket.
+   - Performs a tiny signed self-copy/metadata replacement test.
+   - Deletes the test object if possible.
+   - Returns exact pass/fail details without exposing secrets.
+2. Add a “Test R2 write permissions” button to the migration page.
+3. Show the actual conclusion on the page:
+   - CDN health is only read-path health.
+   - `403 AccessDenied` means the R2 token cannot perform the required S3 object operations on `yubilearn-media`.
 
-- New file: `src/components/superadmin/prek/RedubWorldPanel.tsx` — button + progress UI, mounted in the world editor (`PreKWorldsList` / world detail page).
-- New hook: `src/hooks/useBennyWorldRedub.ts` — walks `prek_levels` for the world, reuses `useBennyRedub.redubScene` per scene so we get the exact same isolate + STS + track-placement behavior. No edge-function changes needed.
-- New table: `prek_redub_batches` (id, world_id, started_at, finished_at, total, succeeded, failed, error_summary jsonb) with `GRANT` + RLS restricted to `super_admin` / `content_editor` via `has_role`.
-- Idempotency: before calling `prek-clip-redub` for a scene, check `prek_levels.redub_audio_paths[sceneKey]` and `redub_voice_id === current voice`. Skip if matched, unless the user checks "Force re-render".
-- Concurrency: **1 scene at a time** to stay under ElevenLabs' STS rate limits (~45s/clip). Concurrency of 2 optional behind a toggle.
-- Failure handling: per-scene errors are captured, batch continues, final toast lists failed scenes with a "Retry failed only" button.
+### E) Make R2 retry/repatch recovery cleaner
+1. Add “Clear repatch failures” / reset logic so old repatch errors do not keep polluting the count after credentials are fixed.
+2. Add bucket-level failure summary so it is obvious whether failures are from Pre-K videos, word TTS, private audio, etc.
+3. Keep migration batches idempotent and non-destructive.
 
-## Nothing else changes
+## What you will still need to do outside the app
+The code cannot magically grant Cloudflare permissions. If the diagnostic still returns `AccessDenied`, the Cloudflare R2 API token must be replaced or re-scoped with permissions equivalent to:
+- Object Read
+- Object Write
+- Object Delete
+- Permission for the exact R2 bucket `yubilearn-media`
+- Ideally no path/prefix restriction unless it includes every app prefix being written, such as `prek-level-videos/`, `prek-level-audio/`, `prek-word-tts/`, and `aura-audio/`
 
-- Voice Isolator is already server-side — you can uninstall it from your desktop workflow.
-- Manual VO3 downloads are only needed if you want to keep the raw MP4 for editing outside YubiLearn.
-- Existing per-scene and per-level Redub buttons stay exactly as they are.
+Once the token is fixed, the app-side reset/retry tools will recover the failed rows.
