@@ -96,9 +96,11 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
-          <p><strong>How it works:</strong> Speech-to-Speech re-voices each clip in your cloned Benny voice using the original clip's timing as a template — the mouth movements still match. Original videos stay untouched; redub MP3s save separately and the student app plays them automatically.</p>
-          <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio. A 30-second Benny line ≈ 500 chars.</p>
+          <p><strong>How it works:</strong> Each clip is first run through ElevenLabs <em>Voice Isolator</em> (strips music, background noise, secondary voices), then the clean Benny stem is fed into Speech-to-Speech, which re-voices it in your cloned Benny voice while preserving cadence so mouth movements still match. Redub MP3s are auto-placed on a "Benny (Redub)" track in the timeline and the source video audio is muted, so students hear only the clean redub.</p>
+          <p><strong>Tip:</strong> Use <strong>Iso only</strong> on a couple of scenes first (free of STS credits) to sanity-check isolation quality. If Benny sounds clean, hit <strong>Redub entire level</strong>.</p>
+          <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio + isolation minutes.</p>
         </div>
+
 
         {/* World-level default */}
         {redub.settings.worldId && (
