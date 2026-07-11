@@ -44,6 +44,69 @@ function getR2() {
   });
 }
 
+async function readR2Error(resp: Response, op: string) {
+  const text = await resp.text().catch(() => "");
+  return `${op} ${resp.status}: ${text.slice(0, 300)}`;
+}
+
+async function testR2Permissions() {
+  const r2 = getR2();
+  const now = Date.now();
+  const testKey = `_diagnostics/lovable-r2-write-test-${now}.txt`;
+  const url = `${R2_ENDPOINT}/${R2_BUCKET}/${testKey}`;
+  const result: Record<string, { ok: boolean; status?: number; error?: string }> = {
+    put: { ok: false },
+    copy: { ok: false },
+    delete: { ok: false },
+  };
+
+  const putResp = await r2.fetch(url, {
+    method: "PUT",
+    body: new TextEncoder().encode(`r2 diagnostics ${now}`),
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=60",
+    },
+  });
+  result.put.status = putResp.status;
+  if (!putResp.ok) {
+    result.put.error = await readR2Error(putResp, "R2 PUT");
+    return { ok: false, bucket: R2_BUCKET, key: testKey, result };
+  }
+  result.put.ok = true;
+
+  const copyResp = await r2.fetch(url, {
+    method: "PUT",
+    headers: {
+      "x-amz-copy-source": `/${R2_BUCKET}/${testKey}`,
+      "x-amz-metadata-directive": "REPLACE",
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+  result.copy.status = copyResp.status;
+  if (!copyResp.ok) {
+    result.copy.error = await readR2Error(copyResp, "R2 COPY");
+  } else {
+    result.copy.ok = true;
+  }
+
+  const deleteResp = await r2.fetch(url, { method: "DELETE" });
+  result.delete.status = deleteResp.status;
+  if (!deleteResp.ok) {
+    result.delete.error = await readR2Error(deleteResp, "R2 DELETE");
+  } else {
+    result.delete.ok = true;
+  }
+
+  return {
+    ok: result.put.ok && result.copy.ok && result.delete.ok,
+    bucket: R2_BUCKET,
+    key: testKey,
+    result,
+  };
+}
+
 interface WalkedFile {
   bucket: string;
   path: string;
@@ -154,7 +217,7 @@ async function copyOne(
   const r2Key = `${row.bucket}/${row.path}`;
   const url = `${R2_ENDPOINT}/${R2_BUCKET}/${r2Key}`;
   const body = new Uint8Array(await blob.arrayBuffer());
-  const resp = await r2.fetch(url, {
+    const resp = await r2.fetch(url, {
     method: "PUT",
     body,
     headers: {
@@ -167,8 +230,7 @@ async function copyOne(
   });
 
   if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`R2 PUT ${resp.status}: ${t.slice(0, 200)}`);
+      throw new Error(await readR2Error(resp, "R2 PUT"));
   }
   return { r2Key, size: body.byteLength };
 }
@@ -307,8 +369,7 @@ async function repatchHeadersBatch(
         },
       });
       if (!resp.ok) {
-        const t = await resp.text();
-        throw new Error(`R2 COPY ${resp.status}: ${t.slice(0, 200)}`);
+        throw new Error(await readR2Error(resp, "R2 COPY"));
       }
       ok++;
     } catch (e: any) {
@@ -391,6 +452,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "test-r2-permissions") {
+      const result = await testR2Permissions();
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "copy-path") {
       const result = await copySinglePath(admin, body);
       return new Response(JSON.stringify({ ok: true, ...result }), {
@@ -423,6 +491,22 @@ Deno.serve(async (req) => {
         repatch_failed: repatchFailed ?? 0,
       };
       const total = pending + copied + failed;
+      const { data: bucketRows } = await admin
+        .from("r2_migration_log")
+        .select("bucket, status, error");
+      const byBucket = new Map<string, { pending: number; copied: number; failed: number; repatch_failed: number }>();
+      for (const row of bucketRows ?? []) {
+        const bucket = String((row as any).bucket || "unknown");
+        const item = byBucket.get(bucket) ?? { pending: 0, copied: 0, failed: 0, repatch_failed: 0 };
+        const statusValue = String((row as any).status || "");
+        if (statusValue === "pending") item.pending += 1;
+        if (statusValue === "copied") item.copied += 1;
+        if (statusValue === "failed") item.failed += 1;
+        if (statusValue === "copied" && String((row as any).error || "").startsWith("repatch:")) {
+          item.repatch_failed += 1;
+        }
+        byBucket.set(bucket, item);
+      }
       const { data: status } = await admin
         .from("r2_migration_status")
         .select("state, last_error, discovered, started_at, finished_at")
@@ -433,6 +517,7 @@ Deno.serve(async (req) => {
           ok: true,
           counts,
           total,
+          byBucket: Array.from(byBucket.entries()).map(([bucket, counts]) => ({ bucket, ...counts })),
           scan: status ?? { state: "idle" },
         }),
         {
@@ -453,6 +538,17 @@ Deno.serve(async (req) => {
         .eq("status", "copied")
         .ilike("error", "repatch:%");
       return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action === "clear-repatch-failures") {
+      const { error, count } = await admin
+        .from("r2_migration_log")
+        .update({ error: null }, { count: "exact" })
+        .eq("status", "copied")
+        .ilike("error", "repatch:%");
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true, cleared: count ?? 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
