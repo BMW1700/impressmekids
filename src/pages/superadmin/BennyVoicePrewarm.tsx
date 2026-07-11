@@ -191,15 +191,29 @@ const BennyVoicePrewarm = () => {
     if (running) return;
     setRunning(true);
     setCancelFlag(false);
-    // Seed rows
-    const seed: Record<string, RowState> = {};
-    for (const w of uniqueWords) seed[w] = { word: w, say: "pending", teach: "pending" };
-    setRows(seed);
 
+    // Build queue: skip already-cached entries unless force is on.
     const queue: Array<{ word: string; mode: "say" | "teach" }> = [];
-    for (const w of uniqueWords) {
-      queue.push({ word: w, mode: "say" });
-      queue.push({ word: w, mode: "teach" });
+    setRows((cur) => {
+      const next = { ...cur };
+      for (const w of uniqueWords) {
+        const r = next[w] ?? { word: w, say: "pending" as const, teach: "pending" as const };
+        (["say", "teach"] as const).forEach((mode) => {
+          const already = r[mode] === "cached" || r[mode] === "generated";
+          if (force || !already) {
+            queue.push({ word: w, mode });
+            r[mode] = "pending";
+          }
+        });
+        next[w] = r;
+      }
+      return next;
+    });
+
+    if (queue.length === 0) {
+      setRunning(false);
+      toast.success("Every word is already cached — nothing to do.");
+      return;
     }
 
     let idx = 0;
@@ -222,12 +236,12 @@ const BennyVoicePrewarm = () => {
     });
     await Promise.all(workers);
     setRunning(false);
-    toast.success("Benny voice prewarm complete");
+    toast.success(`Benny voice prewarm complete — ${queue.length} calls made`);
   };
 
   const previewOne = async (word: string, mode: "say" | "teach") => {
     const { data, error } = await supabase.functions.invoke("prek-word-tts", {
-      body: { word, mode, voiceId: voiceId || undefined },
+      body: { word, mode, voiceId: voiceId || undefined, force },
     });
     if (error || !data?.signedUrl) {
       toast.error("Preview failed");
