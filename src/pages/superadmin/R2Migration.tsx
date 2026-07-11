@@ -254,7 +254,7 @@ export default function R2Migration() {
       <div>
         <h1 className="text-3xl font-bold">R2 Migration</h1>
         <p className="text-muted-foreground">
-          Copy Supabase Storage → Cloudflare R2 (cdn.yubilearn.com). Zero egress after cutover.
+          Copy Backend Storage → Cloudflare R2 (cdn.yubilearn.com). Zero egress after cutover.
         </p>
       </div>
 
@@ -292,7 +292,7 @@ export default function R2Migration() {
         <Progress value={pct} />
         <div className="grid grid-cols-4 gap-4 text-sm">
           <div><span className="text-muted-foreground">Pending:</span> <b>{pending}</b></div>
-          <div><span className="text-muted-foreground">Copied:</span> <b className="text-green-600">{copied}</b></div>
+          <div><span className="text-muted-foreground">Logged copied:</span> <b className="text-green-600">{copied}</b></div>
           <div><span className="text-muted-foreground">Failed:</span> <b className="text-red-600">{failedCount}</b></div>
           <div><span className="text-muted-foreground">Repatch failed:</span> <b className="text-amber-600">{repatchFailedCount}</b></div>
         </div>
@@ -360,7 +360,7 @@ export default function R2Migration() {
             3. Re-patch cache headers
           </Button>
           <Button variant="outline" onClick={clearRepatchFailures} disabled={resetting || running || scanning || repatchFailedCount === 0}>
-            Clear repatch failures ({repatchFailedCount})
+            Only clear stale messages ({repatchFailedCount})
           </Button>
         </div>
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
