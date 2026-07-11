@@ -2,6 +2,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Volume2, Check, RefreshCw, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getBennyPace, setBennyPace, type Pace } from "@/lib/bennyTeach";
+import { useState } from "react";
 
 
 
@@ -94,6 +96,8 @@ export const WordFeedbackOverlay = ({
 
   const phoneticBreakdown = getPhoneticHint(expectedWord);
   const tip = getWordTip(expectedWord);
+  const [pace, setPaceState] = useState<Pace>(() => getBennyPace());
+  const applyPace = (p: Pace) => { setBennyPace(p); setPaceState(p); };
 
   return (
     <>{createPortal(
@@ -240,6 +244,26 @@ export const WordFeedbackOverlay = ({
               </div>
             </div>
 
+
+            {/* Teach pace toggle */}
+            {!isCorrect && onTeachPhonics && (
+              <div className="flex items-center justify-center gap-1 mt-3">
+                <span className="text-[10px] text-slate-400 mr-1">Teach pace:</span>
+                {(["slow","normal","fast"] as Pace[]).map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => applyPace(p)}
+                    className={`text-lg px-2 py-0.5 rounded transition ${
+                      pace === p ? "bg-blue-500/40 ring-1 ring-blue-400" : "opacity-50 hover:opacity-90"
+                    }`}
+                    aria-label={`Set teach pace ${p}`}
+                    title={p}
+                  >
+                    {p === "slow" ? "🐢" : p === "normal" ? "🚶" : "🏃"}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Compact Retry hint */}
             {!isCorrect && canRetry && (
