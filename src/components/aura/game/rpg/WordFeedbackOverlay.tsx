@@ -14,7 +14,9 @@ interface WordFeedbackOverlayProps {
   onContinue: () => void;
   onTryAgain?: () => void;
   onPlayAudio?: () => void;
+  onTeachPhonics?: () => void;
 }
+
 
 // Simple phonetic breakdown helper
 const getPhoneticHint = (word: string): string => {
