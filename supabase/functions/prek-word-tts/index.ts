@@ -133,6 +133,18 @@ Deno.serve(async (req) => {
       console.error("[prek-word-tts] upload error:", uploadRes.error);
       return json({ error: "Upload failed", details: uploadRes.error.message }, 500);
     }
+    // Best-effort mirror to R2 so future backfills / migrations pick it up.
+    void admin.functions
+      .invoke("migrate-to-r2", {
+        body: {
+          action: "copy-path",
+          bucket: BUCKET,
+          path: objectPath,
+          contentType: "audio/mpeg",
+          size: audioBytes.byteLength,
+        },
+      })
+      .catch((e) => console.warn(`[prek-word-tts] R2 mirror failed: ${e}`));
 
     const signed = await admin.storage.from(BUCKET).createSignedUrl(objectPath, SIGNED_URL_TTL);
     if (!signed.data?.signedUrl) {

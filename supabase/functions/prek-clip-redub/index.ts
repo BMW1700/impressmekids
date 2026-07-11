@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
         contentType: "audio/mpeg", upsert: true,
       });
       if (isoUp.error) return json({ error: `Isolated upload failed: ${isoUp.error.message}` }, 500);
+      mirrorToR2Async(admin, AUDIO_BUCKET, isolatedStoragePath, "audio/mpeg", isolatedBytes.byteLength);
 
       const { data: levelRow } = await admin
         .from("prek_levels").select("redub_isolated_paths").eq("id", body.levelId).single();
@@ -158,6 +159,7 @@ Deno.serve(async (req) => {
       contentType: "audio/mpeg", upsert: true,
     });
     if (up.error) return json({ error: `Upload failed: ${up.error.message}` }, 500);
+    mirrorToR2Async(admin, AUDIO_BUCKET, outPath, "audio/mpeg", mp3Bytes.byteLength);
 
     // 5. Merge into prek_levels.redub_audio_paths.
     const { data: levelRow2 } = await admin
@@ -261,4 +263,29 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+/**
+ * Fire-and-forget copy of a freshly-uploaded Supabase Storage object into
+ * Cloudflare R2 via the migrate-to-r2 edge function. Zero-egress reads via
+ * cdn.yubilearn.com (or presigned R2 URLs for private buckets). Failures
+ * are non-fatal — the HEAD-check fallback in src/lib/cdn.ts still catches
+ * anything this misses, and the manual R2 Migration tool can backfill.
+ */
+function mirrorToR2Async(
+  admin: ReturnType<typeof createClient>,
+  bucket: string,
+  path: string,
+  contentType: string,
+  size: number,
+): void {
+  void (async () => {
+    try {
+      await admin.functions.invoke("migrate-to-r2", {
+        body: { action: "copy-path", bucket, path, contentType, size },
+      });
+    } catch (e) {
+      console.warn(`[prek-clip-redub] R2 mirror failed for ${bucket}/${path}:`, e);
+    }
+  })();
 }
