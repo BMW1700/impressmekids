@@ -741,6 +741,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
             onDropOnNewTrack={onDropOnNewTrack}
+            onDeleteClip={deleteClip}
+            onSplitClip={splitClip}
             onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
             onBeforeIsolatedPreview={pausePreview}
