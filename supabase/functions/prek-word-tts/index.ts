@@ -1,28 +1,60 @@
 // prek-word-tts — ElevenLabs TTS for Pre-K word pronunciation & phonics teach.
 //
-// Cache-first: if an MP3 already exists at prek-word-tts/<voiceId>/<mode>/<slug>.mp3
+// Cache-first: if an MP3 already exists at prek-word-tts/<voiceId>/v2/<mode>/<slug>.mp3
 // we return a fresh signed URL and skip ElevenLabs entirely.
 // Otherwise we call ElevenLabs TTS, upload the MP3, and return a signed URL.
 //
-// Body: { word: string, voiceId?: string, mode?: "say" | "teach" }
+// Body: { word: string, voiceId?: string, mode?: "say" | "teach", force?: boolean }
 // Response: { signedUrl: string, cached: boolean }
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "prek-word-tts";
+const CACHE_VERSION = "v2"; // Bump to invalidate all previous cached MP3s
 const DEFAULT_VOICE_ID = Deno.env.get("BENNY_DEFAULT_VOICE_ID")?.trim() || "IKne3meq5aSn9XLyUdCD";
 const MODEL_ID = "eleven_turbo_v2_5";
 const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
 
 const VOWELS = new Set(["a", "e", "i", "o", "u", "y"]);
 
+// Very rough letter → phoneme sound map for CVC teaching. Written using
+// simple English "sound out" spellings that ElevenLabs pronounces well —
+// avoids IPA which most TTS voices butcher.
+const LETTER_SOUND: Record<string, string> = {
+  a: "ah",
+  b: "buh",
+  c: "kuh",
+  d: "duh",
+  e: "eh",
+  f: "fff",
+  g: "guh",
+  h: "huh",
+  i: "ih",
+  j: "juh",
+  k: "kuh",
+  l: "lll",
+  m: "mmm",
+  n: "nnn",
+  o: "ah",
+  p: "puh",
+  q: "kwuh",
+  r: "rrr",
+  s: "sss",
+  t: "tuh",
+  u: "uh",
+  v: "vvv",
+  w: "wuh",
+  x: "ks",
+  y: "yuh",
+  z: "zzz",
+};
+
 function slugifyWord(word: string): string {
   return word.toLowerCase().replace(/[^a-z0-9']+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 }
 
 function splitSyllablesLoose(word: string): string[] {
-  // Simple heuristic mirroring the client's syllableHint.
   const w = word.toLowerCase();
   const parts: string[] = [];
   let cur = "";
@@ -43,18 +75,23 @@ function splitSyllablesLoose(word: string): string[] {
 
 function buildTeachPrompt(word: string): string {
   const clean = word.trim();
-  const letters = clean.replace(/[^a-zA-Z']/g, "").toUpperCase().split("").join(" — ");
+  const letters = clean.replace(/[^a-zA-Z']/g, "").toLowerCase().split("");
   const syllables = splitSyllablesLoose(clean);
-  if (syllables.length <= 1) {
-    // CVC / short word: spell it, blend it, say it
-    const blend = clean.replace(/[^a-zA-Z']/g, "").toLowerCase().split("").join(" - ");
-    return `${clean}. ${letters}. ${blend}... ${clean}!`;
+
+  if (syllables.length <= 1 && letters.length <= 5) {
+    // CVC / short word: name letters, then sound them out, then blend.
+    const letterNames = letters.map((l) => l.toUpperCase()).join("... ");
+    const sounds = letters.map((l) => LETTER_SOUND[l] ?? l).join("... ");
+    return `${clean}... Let's sound it out. ${letterNames}... ${sounds}... ${clean}!`;
   }
-  return `${clean}. ${syllables.join(" — ")}... ${clean}!`;
+  // Longer / multi-syllable: name letters, break into syllables, blend.
+  return `${clean}... Let's sound it out. ${syllables.join("... ")}... ${clean}!`;
 }
 
 function buildSayPrompt(word: string): string {
-  return `${word.trim()}.`;
+  // Say it twice with a real pause so a child hears it clearly.
+  const clean = word.trim();
+  return `${clean}... ${clean}.`;
 }
 
 function json(body: unknown, status = 200) {
@@ -74,11 +111,13 @@ Deno.serve(async (req) => {
       word?: string;
       voiceId?: string;
       mode?: "say" | "teach";
+      force?: boolean;
     };
     const word = (body.word ?? "").trim();
     if (!word || word.length > 60) return json({ error: "Invalid word" }, 400);
     const mode = body.mode === "teach" ? "teach" : "say";
     const voiceId = (body.voiceId && body.voiceId.trim()) || DEFAULT_VOICE_ID;
+    const force = body.force === true;
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -87,12 +126,13 @@ Deno.serve(async (req) => {
 
     const slug = slugifyWord(word);
     if (!slug) return json({ error: "Invalid word" }, 400);
-    const objectPath = `${voiceId}/${mode}/${slug}.mp3`;
+    const objectPath = `${voiceId}/${CACHE_VERSION}/${mode}/${slug}.mp3`;
 
-    // Cache probe: try to sign — if the object doesn't exist, signing fails.
-    const existing = await admin.storage.from(BUCKET).createSignedUrl(objectPath, SIGNED_URL_TTL);
-    if (existing.data?.signedUrl) {
-      return json({ signedUrl: existing.data.signedUrl, cached: true });
+    if (!force) {
+      const existing = await admin.storage.from(BUCKET).createSignedUrl(objectPath, SIGNED_URL_TTL);
+      if (existing.data?.signedUrl) {
+        return json({ signedUrl: existing.data.signedUrl, cached: true });
+      }
     }
 
     const prompt = mode === "teach" ? buildTeachPrompt(word) : buildSayPrompt(word);
@@ -108,11 +148,11 @@ Deno.serve(async (req) => {
           text: prompt,
           model_id: MODEL_ID,
           voice_settings: {
-            stability: 0.55,
+            stability: mode === "teach" ? 0.7 : 0.6,
             similarity_boost: 0.85,
-            style: 0.35,
+            style: 0.2,
             use_speaker_boost: true,
-            speed: mode === "teach" ? 0.9 : 1.0,
+            speed: mode === "teach" ? 0.75 : 0.85,
           },
         }),
       },

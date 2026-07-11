@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Baby, GraduationCap, Swords, Volume2 } from "lucide-react";
+import { ArrowLeft, Baby, GraduationCap, Swords, Volume2, Cloud } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsSection } from "@/components/student/sections/SiteSettingsSection";
 
@@ -75,6 +75,18 @@ const SuperAdminDashboard = () => {
                 <CardTitle>Benny Voice Prewarm</CardTitle>
                 <CardDescription>
                   Pre-cache every word's audio in Benny's ElevenLabs voice. One credit per word, ever.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to="/super-admin/r2-migration">
+            <Card className="hover:border-primary transition-colors h-full">
+              <CardHeader>
+                <Cloud className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>R2 Migration</CardTitle>
+                <CardDescription>
+                  Backfill every existing audio/video file to Cloudflare R2. Scan, then run — one time.
                 </CardDescription>
               </CardHeader>
             </Card>
