@@ -575,6 +575,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (action === "reset-repatch-missing-to-pending") {
+      // A NoSuchKey during repatch means the DB log says "copied", but the
+      // object is not present in the currently configured R2 bucket/key. Reset
+      // those rows so the normal migration pass re-downloads from Storage and
+      // performs a fresh PUT into R2.
+      const { error, count } = await admin
+        .from("r2_migration_log")
+        .update({ status: "pending", attempts: 0, error: null }, { count: "exact" })
+        .eq("status", "copied")
+        .in("bucket", MIGRATABLE_BUCKET_LIST)
+        .ilike("error", "repatch:%NoSuchKey%");
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (action === "list-failed") {
       const size = Math.min(Number(body.size) || 100, 500);
       const [failedRes, repatchRes] = await Promise.all([
