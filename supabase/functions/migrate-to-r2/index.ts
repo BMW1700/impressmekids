@@ -31,6 +31,7 @@ const MIGRATABLE_BUCKETS = new Set([
   // rebuild them later if needed (public CDN not used for this bucket).
   "prek-word-tts",
 ]);
+const MIGRATABLE_BUCKET_LIST = Array.from(MIGRATABLE_BUCKETS);
 
 function getR2() {
   if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_ENDPOINT) {
@@ -42,6 +43,73 @@ function getR2() {
     service: "s3",
     region: "auto",
   });
+}
+
+async function readR2Error(resp: Response, op: string) {
+  const text = await resp.text().catch(() => "");
+  return `${op} ${resp.status}: ${text.slice(0, 300)}`;
+}
+
+function r2CopySource(r2Key: string) {
+  return `/${R2_BUCKET}/${r2Key.split("/").map(encodeURIComponent).join("/")}`;
+}
+
+async function testR2Permissions() {
+  const r2 = getR2();
+  const now = Date.now();
+  const testKey = `_diagnostics/lovable-r2-write-test-${now}.txt`;
+  const url = `${R2_ENDPOINT}/${R2_BUCKET}/${testKey}`;
+  const result: Record<string, { ok: boolean; status?: number; error?: string }> = {
+    put: { ok: false },
+    copy: { ok: false },
+    delete: { ok: false },
+  };
+
+  const putResp = await r2.fetch(url, {
+    method: "PUT",
+    body: new TextEncoder().encode(`r2 diagnostics ${now}`),
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=60",
+    },
+  });
+  result.put.status = putResp.status;
+  if (!putResp.ok) {
+    result.put.error = await readR2Error(putResp, "R2 PUT");
+    return { ok: false, bucket: R2_BUCKET, key: testKey, result };
+  }
+  result.put.ok = true;
+
+  const copyResp = await r2.fetch(url, {
+    method: "PUT",
+    headers: {
+      "x-amz-copy-source": r2CopySource(testKey),
+      "x-amz-metadata-directive": "REPLACE",
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
+  });
+  result.copy.status = copyResp.status;
+  if (!copyResp.ok) {
+    result.copy.error = await readR2Error(copyResp, "R2 COPY");
+  } else {
+    result.copy.ok = true;
+  }
+
+  const deleteResp = await r2.fetch(url, { method: "DELETE" });
+  result.delete.status = deleteResp.status;
+  if (!deleteResp.ok) {
+    result.delete.error = await readR2Error(deleteResp, "R2 DELETE");
+  } else {
+    result.delete.ok = true;
+  }
+
+  return {
+    ok: result.put.ok && result.copy.ok && result.delete.ok,
+    bucket: R2_BUCKET,
+    key: testKey,
+    result,
+  };
 }
 
 interface WalkedFile {
@@ -101,7 +169,9 @@ async function scanInBackground(admin: ReturnType<typeof createClient>) {
     if (error) throw error;
     let discovered = 0;
     for (const b of buckets ?? []) {
-      const files = await walkBucket(admin, (b as any).name);
+      const bucketName = (b as any).name;
+      if (!MIGRATABLE_BUCKETS.has(bucketName)) continue;
+      const files = await walkBucket(admin, bucketName);
       if (files.length === 0) continue;
       const rows = files.map((f) => ({
         bucket: f.bucket,
@@ -154,7 +224,7 @@ async function copyOne(
   const r2Key = `${row.bucket}/${row.path}`;
   const url = `${R2_ENDPOINT}/${R2_BUCKET}/${r2Key}`;
   const body = new Uint8Array(await blob.arrayBuffer());
-  const resp = await r2.fetch(url, {
+    const resp = await r2.fetch(url, {
     method: "PUT",
     body,
     headers: {
@@ -167,8 +237,7 @@ async function copyOne(
   });
 
   if (!resp.ok) {
-    const t = await resp.text();
-    throw new Error(`R2 PUT ${resp.status}: ${t.slice(0, 200)}`);
+      throw new Error(await readR2Error(resp, "R2 PUT"));
   }
   return { r2Key, size: body.byteLength };
 }
@@ -234,6 +303,7 @@ async function migrateBatch(admin: ReturnType<typeof createClient>, batchSize: n
     .from("r2_migration_log")
     .select("id, bucket, path, content_type, attempts")
     .in("status", ["pending", "failed"])
+    .in("bucket", MIGRATABLE_BUCKET_LIST)
     .lt("attempts", 5)
     .order("created_at", { ascending: true })
     .limit(batchSize);
@@ -282,6 +352,7 @@ async function repatchHeadersBatch(
     .from("r2_migration_log")
     .select("id, bucket, path, content_type, r2_key")
     .eq("status", "copied")
+    .in("bucket", MIGRATABLE_BUCKET_LIST)
     .order("id", { ascending: true })
     .limit(batchSize);
   if (cursor) q = q.gt("id", cursor);
@@ -300,15 +371,14 @@ async function repatchHeadersBatch(
       const resp = await r2.fetch(url, {
         method: "PUT",
         headers: {
-          "x-amz-copy-source": `/${R2_BUCKET}/${r2Key}`,
+          "x-amz-copy-source": r2CopySource(r2Key),
           "x-amz-metadata-directive": "REPLACE",
           "Content-Type": (row as any).content_type || "application/octet-stream",
           "Cache-Control": "public, max-age=31536000, immutable",
         },
       });
       if (!resp.ok) {
-        const t = await resp.text();
-        throw new Error(`R2 COPY ${resp.status}: ${t.slice(0, 200)}`);
+        throw new Error(await readR2Error(resp, "R2 COPY"));
       }
       ok++;
     } catch (e: any) {
@@ -391,6 +461,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "test-r2-permissions") {
+      const result = await testR2Permissions();
+      return new Response(JSON.stringify({ ok: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "copy-path") {
       const result = await copySinglePath(admin, body);
       return new Response(JSON.stringify({ ok: true, ...result }), {
@@ -403,7 +480,8 @@ Deno.serve(async (req) => {
         const { count } = await admin
           .from("r2_migration_log")
           .select("id", { count: "exact", head: true })
-          .eq("status", status);
+          .eq("status", status)
+          .in("bucket", MIGRATABLE_BUCKET_LIST);
         return count ?? 0;
       };
       const [pending, copied, failed] = await Promise.all([
@@ -415,6 +493,7 @@ Deno.serve(async (req) => {
         .from("r2_migration_log")
         .select("id", { count: "exact", head: true })
         .eq("status", "copied")
+        .in("bucket", MIGRATABLE_BUCKET_LIST)
         .ilike("error", "repatch:%");
       const counts = {
         pending,
@@ -423,6 +502,31 @@ Deno.serve(async (req) => {
         repatch_failed: repatchFailed ?? 0,
       };
       const total = pending + copied + failed;
+      const countByBucket = async (bucket: string, status: string, repatchOnly = false) => {
+        let q = admin
+          .from("r2_migration_log")
+          .select("id", { count: "exact", head: true })
+          .eq("bucket", bucket)
+          .eq("status", status);
+        if (repatchOnly) q = q.ilike("error", "repatch:%");
+        const { count } = await q;
+        return count ?? 0;
+      };
+      const byBucket = await Promise.all(Array.from(MIGRATABLE_BUCKETS).map(async (bucket) => {
+        const [bucketPending, bucketCopied, bucketFailed, bucketRepatchFailed] = await Promise.all([
+          countByBucket(bucket, "pending"),
+          countByBucket(bucket, "copied"),
+          countByBucket(bucket, "failed"),
+          countByBucket(bucket, "copied", true),
+        ]);
+        return {
+          bucket,
+          pending: bucketPending,
+          copied: bucketCopied,
+          failed: bucketFailed,
+          repatch_failed: bucketRepatchFailed,
+        };
+      }));
       const { data: status } = await admin
         .from("r2_migration_status")
         .select("state, last_error, discovered, started_at, finished_at")
@@ -433,6 +537,7 @@ Deno.serve(async (req) => {
           ok: true,
           counts,
           total,
+          byBucket,
           scan: status ?? { state: "idle" },
         }),
         {
@@ -444,15 +549,29 @@ Deno.serve(async (req) => {
       const { error, count } = await admin
         .from("r2_migration_log")
         .update({ status: "pending", attempts: 0, error: null }, { count: "exact" })
-        .eq("status", "failed");
+        .eq("status", "failed")
+        .in("bucket", MIGRATABLE_BUCKET_LIST);
       if (error) throw error;
       // Also clear repatch error annotations so a fresh repatch run is clean.
       await admin
         .from("r2_migration_log")
         .update({ error: null })
         .eq("status", "copied")
+        .in("bucket", MIGRATABLE_BUCKET_LIST)
         .ilike("error", "repatch:%");
       return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action === "clear-repatch-failures") {
+      const { error, count } = await admin
+        .from("r2_migration_log")
+        .update({ error: null }, { count: "exact" })
+        .eq("status", "copied")
+        .in("bucket", MIGRATABLE_BUCKET_LIST)
+        .ilike("error", "repatch:%");
+      if (error) throw error;
+      return new Response(JSON.stringify({ ok: true, cleared: count ?? 0 }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -463,12 +582,14 @@ Deno.serve(async (req) => {
           .from("r2_migration_log")
           .select("bucket, path, error, attempts")
           .eq("status", "failed")
+          .in("bucket", MIGRATABLE_BUCKET_LIST)
           .order("updated_at", { ascending: false })
           .limit(size),
         admin
           .from("r2_migration_log")
           .select("bucket, path, error")
           .eq("status", "copied")
+          .in("bucket", MIGRATABLE_BUCKET_LIST)
           .ilike("error", "repatch:%")
           .order("updated_at", { ascending: false })
           .limit(size),

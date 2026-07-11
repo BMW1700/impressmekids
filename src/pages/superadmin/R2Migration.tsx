@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Play, Search, Zap, RotateCcw } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, Play, Search, TestTube2, Zap, RotateCcw } from "lucide-react";
 import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
@@ -15,6 +15,7 @@ interface ScanStatus {
 interface Stats {
   total: number;
   counts: { pending: number; copied: number; failed: number; repatch_failed: number };
+  byBucket?: Array<{ bucket: string; pending: number; copied: number; failed: number; repatch_failed: number }>;
   scan?: ScanStatus;
 }
 
@@ -25,6 +26,12 @@ interface FailedRow {
   attempts?: number;
 }
 
+interface R2PermissionTest {
+  ok: boolean;
+  bucket: string;
+  result: Record<string, { ok: boolean; status?: number; error?: string }>;
+}
+
 export default function R2Migration() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -33,9 +40,11 @@ export default function R2Migration() {
   const [resetting, setResetting] = useState(false);
   const [lastBatch, setLastBatch] = useState<string>("");
   const [repatching, setRepatching] = useState(false);
+  const [testingR2, setTestingR2] = useState(false);
   const [repatchStatus, setRepatchStatus] = useState<string>("");
   const [failed, setFailed] = useState<FailedRow[]>([]);
   const [repatchFailedList, setRepatchFailedList] = useState<FailedRow[]>([]);
+  const [r2Test, setR2Test] = useState<R2PermissionTest | null>(null);
 
   const call = async (action: string, body: Record<string, unknown> = {}) => {
     const { data, error } = await supabase.functions.invoke("migrate-to-r2", {
@@ -50,7 +59,7 @@ export default function R2Migration() {
     setLoading(true);
     try {
       const s = await call("stats");
-      setStats({ total: s.total, counts: s.counts, scan: s.scan });
+      setStats({ total: s.total, counts: s.counts, byBucket: s.byBucket ?? [], scan: s.scan });
       const list = await call("list-failed", { size: 200 });
       setFailed((list.failed ?? []) as FailedRow[]);
       setRepatchFailedList((list.repatchFailed ?? []) as FailedRow[]);
@@ -160,6 +169,37 @@ export default function R2Migration() {
     }
   };
 
+  const testR2Permissions = async () => {
+    setTestingR2(true);
+    setR2Test(null);
+    try {
+      const result = await call("test-r2-permissions");
+      setR2Test(result as R2PermissionTest);
+      if (result.ok) {
+        toast.success("R2 write/copy/delete permissions passed");
+      } else {
+        toast.error("R2 token failed the API write test");
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setTestingR2(false);
+    }
+  };
+
+  const clearRepatchFailures = async () => {
+    setResetting(true);
+    try {
+      const r = await call("clear-repatch-failures");
+      toast.success(`Cleared ${r.cleared ?? 0} stale repatch failures`);
+      await loadStats();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const pending = stats?.counts.pending ?? 0;
   const copied = stats?.counts.copied ?? 0;
   const failedCount = stats?.counts.failed ?? 0;
@@ -178,6 +218,20 @@ export default function R2Migration() {
 
       <CdnHealthWidget />
       <R2FolderListingNote />
+
+      {(failedCount > 0 || repatchFailedCount > 0 || r2Test?.ok === false) && (
+        <Card className="p-4 border-destructive/40 bg-destructive/5 space-y-2">
+          <div className="flex items-start gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 mt-0.5 text-destructive shrink-0" />
+            <div>
+              <div className="font-semibold">CDN health is not the same as R2 write permission.</div>
+              <p className="text-xs text-muted-foreground">
+                The failures shown here are S3 API permission failures. A green CDN check only proves files can be read from the public domain; it does not prove the R2 token can PUT, COPY, or DELETE objects.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -203,6 +257,36 @@ export default function R2Migration() {
       </Card>
 
       <Card className="p-6 space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">R2 API permission test</h2>
+            <p className="text-xs text-muted-foreground">
+              This tests direct write, metadata-copy, and delete permissions on the configured R2 bucket.
+            </p>
+          </div>
+          <Button variant="outline" onClick={testR2Permissions} disabled={testingR2 || running || scanning}>
+            {testingR2 ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <TestTube2 className="w-4 h-4 mr-2" />}
+            Test R2 write permissions
+          </Button>
+        </div>
+        {r2Test && (
+          <div className="rounded-md border p-3 text-xs space-y-2">
+            <div className={r2Test.ok ? "font-semibold text-green-600" : "font-semibold text-red-600"}>
+              {r2Test.ok ? "Passed" : "Failed"} — bucket: {r2Test.bucket}
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+              {Object.entries(r2Test.result).map(([op, item]) => (
+                <div key={op} className="rounded border p-2">
+                  <div className="font-mono uppercase">{op}: {item.ok ? "OK" : "FAILED"}{item.status ? ` (${item.status})` : ""}</div>
+                  {item.error && <div className="mt-1 text-red-600 break-words">{item.error}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6 space-y-4">
         <h2 className="font-semibold">Steps</h2>
         <div className="flex flex-wrap gap-3">
           <Button onClick={scan} disabled={scanning || running || resetting}>
@@ -225,16 +309,51 @@ export default function R2Migration() {
             {repatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
             3. Re-patch cache headers
           </Button>
+          <Button variant="outline" onClick={clearRepatchFailures} disabled={resetting || running || scanning || repatchFailedCount === 0}>
+            Clear repatch failures ({repatchFailedCount})
+          </Button>
         </div>
         {lastBatch && <div className="text-xs text-muted-foreground">Last batch: {lastBatch}</div>}
         {repatchStatus && <div className="text-xs text-muted-foreground">{repatchStatus}</div>}
       </Card>
 
+      {stats?.byBucket && stats.byBucket.some((b) => b.failed > 0 || b.repatch_failed > 0 || b.pending > 0) && (
+        <Card className="p-6 space-y-2">
+          <h2 className="font-semibold">Bucket breakdown</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-muted-foreground">
+                <tr className="border-b">
+                  <th className="py-2 text-left">Bucket</th>
+                  <th className="py-2 text-right">Pending</th>
+                  <th className="py-2 text-right">Copied</th>
+                  <th className="py-2 text-right">Failed</th>
+                  <th className="py-2 text-right">Repatch failed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...stats.byBucket]
+                  .sort((a, b) => (b.failed + b.repatch_failed + b.pending) - (a.failed + a.repatch_failed + a.pending))
+                  .map((b) => (
+                    <tr key={b.bucket} className="border-b last:border-b-0">
+                      <td className="py-2 font-mono">{b.bucket}</td>
+                      <td className="py-2 text-right">{b.pending}</td>
+                      <td className="py-2 text-right text-green-600">{b.copied}</td>
+                      <td className="py-2 text-right text-red-600">{b.failed}</td>
+                      <td className="py-2 text-right text-amber-600">{b.repatch_failed}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
       {failed.length > 0 && (
         <Card className="p-6 space-y-2">
           <h2 className="font-semibold text-red-600">Transfer failures ({failedCount})</h2>
           <p className="text-xs text-muted-foreground">
-            Showing up to 200. Fix the Cloudflare R2 token (Object Read &amp; Write, all buckets),
+            Showing up to 200. Fix the Cloudflare R2 token so it can write objects to the configured bucket,
             then click "Reset failed → retry".
           </p>
           <div className="max-h-96 overflow-y-auto text-xs space-y-1 font-mono">
@@ -253,7 +372,7 @@ export default function R2Migration() {
           <h2 className="font-semibold text-amber-600">Repatch failures ({repatchFailedCount})</h2>
           <p className="text-xs text-muted-foreground">
             These files were copied but the immutable-cache header did not stick. Fix the R2 token
-            and click "Re-patch cache headers" again.
+            so it can copy/replace object metadata, then click "Re-patch cache headers" again.
           </p>
           <div className="max-h-96 overflow-y-auto text-xs space-y-1 font-mono">
             {repatchFailedList.map((f, i) => (
