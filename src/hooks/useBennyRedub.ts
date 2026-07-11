@@ -63,10 +63,11 @@ export function useBennyRedub(levelId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("prek_levels")
-      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_generated_at")
+      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at")
       .eq("id", levelId)
       .maybeSingle();
     const paths = ((data?.redub_audio_paths as Record<string, string> | null) ?? {});
+    const isoPaths = (((data as any)?.redub_isolated_paths as Record<string, string> | null) ?? {});
     const levelVoiceId = data?.redub_voice_id ?? "";
     const worldId = data?.world_id ?? null;
     let worldDefaultVoiceId = "";
@@ -86,23 +87,30 @@ export function useBennyRedub(levelId: string | null) {
       stability: data?.redub_stability != null ? Number(data.redub_stability) : 0.5,
       similarityBoost: data?.redub_similarity_boost != null ? Number(data.redub_similarity_boost) : 0.85,
       audioPaths: paths,
+      isolatedPaths: isoPaths,
       generatedAt: data?.redub_generated_at ?? null,
     });
 
-    const pathsList = Object.values(paths).filter(Boolean);
-    if (pathsList.length > 0) {
+    const allPaths = Array.from(new Set([...Object.values(paths), ...Object.values(isoPaths)].filter(Boolean)));
+    if (allPaths.length > 0) {
       const { data: signed } = await supabase.storage
-        .from(PREK_VIDEO_BUCKET)
-        .createSignedUrls(pathsList, 60 * 60 * 24 * 7);
+        .from(PREK_AUDIO_BUCKET)
+        .createSignedUrls(allPaths, 60 * 60 * 24 * 7);
       const map: Record<string, string> = {};
       (signed ?? []).forEach((s) => { if (s.path && s.signedUrl) map[s.path] = s.signedUrl; });
       const byScene: Record<string, string> = {};
+      const byIsoScene: Record<string, string> = {};
       for (const [sceneKey, storagePath] of Object.entries(paths)) {
         if (map[storagePath]) byScene[sceneKey] = map[storagePath];
       }
+      for (const [sceneKey, storagePath] of Object.entries(isoPaths)) {
+        if (map[storagePath]) byIsoScene[sceneKey] = map[storagePath];
+      }
       setSignedRedubUrls(byScene);
+      setSignedIsolatedUrls(byIsoScene);
     } else {
       setSignedRedubUrls({});
+      setSignedIsolatedUrls({});
     }
     setLoading(false);
   }, [levelId]);
