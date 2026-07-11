@@ -196,7 +196,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
             const existingIso = redub.signedIsolatedUrls[s.sceneKey];
             const redubUrl = state?.signedUrl ?? existingRedub;
             const isoUrl = state?.isolatedSignedUrl ?? existingIso;
-            const isPreviewing = previewingKey === s.sceneKey;
+            
             const status = state?.status ?? (existingRedub ? "done" : "idle");
             const previewKeyFor = (kind: "src" | "iso" | "redub") => `${s.sceneKey}::${kind}`;
             const isPlaying = (kind: "src" | "iso" | "redub") => previewingKey === previewKeyFor(kind);
