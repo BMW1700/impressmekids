@@ -11,7 +11,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const BUCKET = "prek-word-tts";
-const DEFAULT_VOICE_ID = "IKne3meq5aSn9XLyUdCD"; // Charlie — warm, kid-friendly fallback
+const DEFAULT_VOICE_ID = Deno.env.get("BENNY_DEFAULT_VOICE_ID")?.trim() || "IKne3meq5aSn9XLyUdCD";
 const MODEL_ID = "eleven_turbo_v2_5";
 const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
 
