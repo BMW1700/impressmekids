@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, RefreshCw, Play, Search, TestTube2, Zap, RotateCcw } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, Play, Search, TestTube2, Zap, RotateCcw, Trash2 } from "lucide-react";
 import { CdnHealthWidget, R2FolderListingNote } from "@/components/superadmin/CdnHealthWidget";
 
 interface ScanStatus {
@@ -234,6 +234,23 @@ export default function R2Migration() {
     try {
       const r = await call("clear-repatch-failures");
       toast.success(`Cleared ${r.cleared ?? 0} stale repatch failures`);
+      await loadStats();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const purgeGhostFailures = async () => {
+    setResetting(true);
+    try {
+      const r = await call("purge-orphaned-failed");
+      const purged = Number(r.purged ?? 0);
+      const kept = Number(r.kept ?? 0);
+      if (purged > 0) toast.success(`Removed ${purged} ghost log rows (source files were already deleted from Storage)`);
+      if (kept > 0) toast.warning(`${kept} rows kept — source file still exists, needs real retry`);
+      if (purged === 0 && kept === 0) toast.info("No ghost rows found");
       await loadStats();
     } catch (e: any) {
       toast.error(e.message);
