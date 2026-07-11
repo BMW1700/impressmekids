@@ -398,11 +398,31 @@ Deno.serve(async (req) => {
       });
     }
     if (action === "stats") {
-      const { data: rows } = await admin
+      // Real Postgres counts — no 1000-row PostgREST cap.
+      const countBy = async (status: string) => {
+        const { count } = await admin
+          .from("r2_migration_log")
+          .select("id", { count: "exact", head: true })
+          .eq("status", status);
+        return count ?? 0;
+      };
+      const [pending, copied, failed] = await Promise.all([
+        countBy("pending"),
+        countBy("copied"),
+        countBy("failed"),
+      ]);
+      const { count: repatchFailed } = await admin
         .from("r2_migration_log")
-        .select("status");
-      const counts: Record<string, number> = {};
-      for (const r of rows ?? []) counts[(r as any).status] = (counts[(r as any).status] ?? 0) + 1;
+        .select("id", { count: "exact", head: true })
+        .eq("status", "copied")
+        .ilike("error", "repatch:%");
+      const counts = {
+        pending,
+        copied,
+        failed,
+        repatch_failed: repatchFailed ?? 0,
+      };
+      const total = pending + copied + failed;
       const { data: status } = await admin
         .from("r2_migration_status")
         .select("state, last_error, discovered, started_at, finished_at")
@@ -412,12 +432,54 @@ Deno.serve(async (req) => {
         JSON.stringify({
           ok: true,
           counts,
-          total: rows?.length ?? 0,
+          total,
           scan: status ?? { state: "idle" },
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
+      );
+    }
+    if (action === "reset-failed") {
+      const { error, count } = await admin
+        .from("r2_migration_log")
+        .update({ status: "pending", attempts: 0, error: null }, { count: "exact" })
+        .eq("status", "failed");
+      if (error) throw error;
+      // Also clear repatch error annotations so a fresh repatch run is clean.
+      await admin
+        .from("r2_migration_log")
+        .update({ error: null })
+        .eq("status", "copied")
+        .ilike("error", "repatch:%");
+      return new Response(JSON.stringify({ ok: true, reset: count ?? 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (action === "list-failed") {
+      const size = Math.min(Number(body.size) || 100, 500);
+      const [failedRes, repatchRes] = await Promise.all([
+        admin
+          .from("r2_migration_log")
+          .select("bucket, path, error, attempts")
+          .eq("status", "failed")
+          .order("updated_at", { ascending: false })
+          .limit(size),
+        admin
+          .from("r2_migration_log")
+          .select("bucket, path, error")
+          .eq("status", "copied")
+          .ilike("error", "repatch:%")
+          .order("updated_at", { ascending: false })
+          .limit(size),
+      ]);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          failed: failedRes.data ?? [],
+          repatchFailed: repatchRes.data ?? [],
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
     return new Response(JSON.stringify({ error: "unknown action" }), {

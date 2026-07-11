@@ -1,183 +1,92 @@
-## Straight answers first
+# Why the numbers lie, and how we finish the R2 cutover
 
-**"Isn't the Teach thing already built?"**
-Yes — but only as a *shell*. What exists today in `prek-word-tts` is a single ElevenLabs call that generates one MP3 with the word, letters, and phonemes crammed into one sentence at 0.75× speed. That's why it sounds rushed, mumbles the phonemes, and repeats weirdly — it's one voice take trying to do three jobs. **My plan replaces the guts of that existing Teach button, not adds a new one.** The button, cache, prewarm UI, storage bucket — all stay. What changes is *how the audio is produced and played back*.
+## What you're actually seeing in your two screenshots
 
-**"Do I have to redo the 30 videos?"**
-No. Zero video work. This is 100% the audio layer on the word card, not the story videos.
+**Pic 1 (mid-run):** 832 / 1000 copied, 73 failed. All 73 are `prek-word-tts/*` files.
+**Pic 2 (after "Run migration"):** 1000 / 1000 copied, Failed **0** — but the "Failed files" list still shows 50 rows of `R2 PUT 403 AccessDenied`.
 
-**"Why does R2 show `1000/1000 copied 100%` but re-patch says `failed 1223`?"**
-Two different things. Copy succeeded for 1000 files. The re-patch step is failing with `R2 PUT 403 AccessDenied` on the `aura-audio` bucket — that is a **Cloudflare R2 API-token permissions issue**, not a code bug. Fix is in Cloudflare, not the app. Walkthrough below in Part 2.
+That is not a display glitch. There are three separate bugs stacked on top of each other, and one Cloudflare setting.
 
 ---
 
-# PART 1 — Rebuild the Teach flow properly
+## Bug 1 — The counters cap at 1000 rows (silent truncation)
 
-## The core change: 6 tiny audio segments, not 1 big one
-
-Instead of one ElevenLabs take saying `"cat. Let's sound it out. C ... A ... T. /k/ ... /æ/ ... /t/. cat!"` (which sounds mushed because ElevenLabs decides the pacing), we generate **6 separate MP3s** per word and the app plays them with **real, code-controlled silences between them**:
-
-```text
-CAT (short vowel, CVC):
-  seg-1  "cat"          ← whole word, spoken clean, 0.85×
-  seg-2  "C"            ← letter name (long pause after)
-  seg-3  "A"            ← letter name
-  seg-4  "T"            ← letter name
-  seg-5  "cuh — aaa — tuh"   ← sounded out with dashes
-  seg-6  "cat"          ← final blend, 0.75×
-
-SHIP (digraph):
-  seg-1  "ship"
-  seg-2  "S-H"          ← named as digraph
-  seg-3  "I"
-  seg-4  "P"
-  seg-5  "shhh — ihh — puh"
-  seg-6  "ship"
-
-RABBIT (multi-syllable):
-  seg-1  "rabbit"
-  seg-2  "rab"          ← syllable 1
-  seg-3  "bit"          ← syllable 2
-  seg-4  "rab — bit"    ← blended syllables
-  seg-5  "rabbit"       ← whole word
+`migrate-to-r2` / `stats` runs:
 ```
-
-Playback in the app:
-
-```text
-▶ seg-1                     (whole word)
-   [800ms silence]           ← the app inserts real silence, not ElevenLabs
-"Let's sound it out."        ← optional, pre-recorded once per voice, cached
-   [500ms silence]
-▶ seg-2                      (first letter/sound highlights on screen)
-   [600ms silence]
-▶ seg-3                      (next letter highlights)
-   [600ms silence]
-▶ seg-4
-   [800ms silence]
-▶ seg-5                      (blend — whole word highlights)
-   [700ms silence]
-▶ seg-6                      (final whole word)
+admin.from("r2_migration_log").select("status")
 ```
+PostgREST caps that at **1000 rows by default**. You have more than 1000 files in Storage (Pre-K videos alone + word TTS + audio mix + avatars easily exceeds it), so:
 
-This is why it will sound dramatically better:
+- `total` is clamped to 1000.
+- Every row past #1000 is invisible to the counter — including all the failed `prek-word-tts` rows.
+- That's why the top card says "1000 / 1000 (100%)" and "Failed: 0" while the Failed list underneath still shows 50 real 403s.
 
-1. **Real pauses.** ElevenLabs is bad at silence; the browser is perfect at it.
-2. **Each sound recorded in isolation** = the voice actor (Benny) gives a clean, deliberate delivery of each phoneme instead of racing through them mid-sentence.
-3. **Speed control works.** We can slow just the phoneme segments (0.7×) while keeping the whole word natural (0.9×) — impossible in one take.
-4. **Karaoke-style letter highlighting** on screen syncs to each segment starting.
-5. **Speech-therapy correct.** Onset → nucleus → coda is exactly how Wilson / UFLI / OG programs teach decoding.
+You are **not** actually done. You just can't see the rest.
 
-## Speed control the parent/teacher can change
+## Bug 2 — Repatch failures never change `status`
 
-Three-way toggle on the word card, saved per-family in localStorage:
+`repatchHeadersBatch` writes `error: "repatch: ..."` on failure but leaves `status='copied'`. So repatch 403s are completely invisible to both the counters and the Failed list (which filters `status='failed'`).
 
-- **🐢 Slow** — 900ms gaps, phoneme segs at 0.65×, whole word at 0.8×
-- **🚶 Normal** (default) — 600ms gaps, 0.75×, 0.9×
-- **🏃 Fast** — 300ms gaps, 0.85×, 1.0×
+## Bug 3 — Retry loop dies at 5 attempts, with no UI reset
 
-Default = Slow for Pre-K, since the entire complaint is "it reads too fast." Parent can bump it up.
+`migrateBatch` filters `.lt("attempts", 5)`. Once a file has failed 5 times (which the `prek-word-tts` rows have, from earlier token-permission runs), clicking "Run migration" quietly skips them forever. No button resets attempts.
 
-## What breaks with the current code (and why my plan is different, not additive)
+## The Cloudflare cause behind the 403s
 
-Current `prek-word-tts/index.ts` `mode: "teach"` builds one prompt string, ships it to ElevenLabs, caches one MP3. That is what plays today. It is what David heard. It is unfixable inside one API call because ElevenLabs won't respect the pauses.
+Every failing row is `R2 PUT 403 AccessDenied`. That is 100% a Cloudflare R2 API token scope problem — not code. Two things must be true on the token stored as `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`:
 
-My plan **replaces** that path with:
+1. **Permission**: `Object Read & Write` (not "Read only", not "Admin Read only").
+2. **Scope**: `Apply to all buckets in this account` — OR explicitly include `yubilearn-media`. If the token was minted scoped to a different bucket name, every PUT to `yubilearn-media` 403s.
 
-- New mode: `"teach-segment"` — accepts `{ word, segmentKind, segmentText }` and caches one tiny MP3.
-- The client's `teachWord()` orchestrator asks the edge function for all 6 segments (cache hits mostly), then plays them with real gaps.
-- Old `mode: "teach"` stays as a deprecated fallback for one release, then gets removed.
-
-## The pieces to build
-
-### A. Segmenter — `src/lib/phonicsSegmenter.ts` (new)
-Pure function `segmentWord(word) → Segment[]`. Uses your existing `phonicsScopeAndSequence.ts` phoneme map. Handles:
-- CVC (cat, dog, sit)
-- Digraphs sh/ch/th/ck/wh/ph
-- Blends st/fr/pl/tr/…
-- Silent-E (cake, kite)
-- Vowel teams (rain, moon, boat)
-- Multi-syllable fallback (rabbit → rab-bit)
-
-### B. Edge function upgrade — `supabase/functions/prek-word-tts/index.ts`
-- Add `mode: "teach-segment"` with `segmentKind` in the cache path: `<voiceId>/v3/teach-segment/<word>/<segmentKind>.mp3`.
-- Per-segment voice_settings: phonemes get `stability: 0.75, style: 0.15, speed: 0.7`; whole-word gets `speed: 0.85`.
-- Bump `CACHE_VERSION` to `v3` so old rushed MP3s never play again (existing v2 files stay on disk, harmless).
-
-### C. Teach orchestrator — `src/lib/bennyTeach.ts` (new)
-```ts
-teachWord(word, {
-  pace: "slow" | "normal" | "fast",
-  onSegmentStart: (kind, text) => void,  // for UI highlighting
-  onDone: () => void,
-  signal: AbortSignal,                    // stop cleanly if user leaves
-})
-```
-Fetches all segments in parallel (cache-first), then plays them sequentially with pace-driven gaps.
-
-### D. UI — `src/components/aura/game/rpg/RPGWordReader.tsx`
-- The existing Teach button now calls `teachWord()` instead of `speakBenny(word, {mode:"teach"})`.
-- Word card shows the word letters in a row; each letter gets a `.highlight` class as its segment plays (soft yellow glow, 300ms fade).
-- Speed toggle appears next to Teach: 🐢 🚶 🏃.
-- Fixes the wrong-answer bug: after a miss, auto-runs `teachWord()` once, then re-enables the mic and shows Retry — solves David's "can't get back to retry" complaint in the same commit.
-
-### E. Prewarm — `src/pages/superadmin/BennyVoicePrewarm.tsx`
-- Each word now needs ~6 segment MP3s instead of 2 blob MP3s. New estimate: **118 words × ~6 segments = ~708 API calls** (matches the number already shown in your screenshot, coincidentally).
-- Cost: **~$3–5 one-time**, then $0 forever.
-- Progress bar counts segments, not words.
-
-### F. Cache the fixed narration line
-`"Let's sound it out."` is generated once per voice and reused for every word. One extra MP3 total.
+There is no code fix for #1/#2. You regenerate the token in Cloudflare and paste it into the two secrets. I'll walk you through it below.
 
 ---
 
-# PART 2 — Fix the R2 migration (the 403 errors)
+## The plan
 
-## What's actually happening
+### Part A — Fix the migration tool so it tells the truth
 
-Your screenshot shows:
-- ✅ **Copy step**: `1000/1000 copied` — the initial copy of files from Supabase Storage → R2 worked.
-- ❌ **Re-patch cache headers**: `Re-patched 0 / attempted 1223 (failed 1223)` on `aura-audio` bucket files with `R2 PUT 403 AccessDenied`.
+**`supabase/functions/migrate-to-r2/index.ts`**
+1. Rewrite the `stats` action to use real Postgres counts (one `head:true, count:exact` query per status: pending / copied / failed) instead of `.select("status")`. Removes the 1000-row cap. Add a `repatchFailed` count = rows where `status='copied'` AND `error ILIKE 'repatch:%'`.
+2. Add a new action `reset-failed`: sets `status='pending'`, `attempts=0`, `error=null` on every `failed` row so the retry loop picks them up again after you fix the R2 token.
+3. Add a new action `list-failed` that returns both categories (transfer-failed + repatch-failed) with real pagination — not the current 50-row `.limit(50)` client query.
 
-The re-patch step re-`PUT`s each object in R2 with proper `Cache-Control: public, max-age=31536000, immutable` headers so Cloudflare caches them aggressively. It's failing because **the R2 API token you gave the migration function does not have write permission on the `aura-audio` bucket** (or does not have permission on that account's buckets at all).
+**`src/pages/superadmin/R2Migration.tsx`**
+1. Show the real totals from the new `stats` shape. Add a fourth stat: **Repatch failed**.
+2. Replace the client-side `.from('r2_migration_log').select(...).limit(50)` with the new `list-failed` action so the list matches the counters.
+3. Add a **"Reset failed → retry"** button next to "Run migration" that calls `reset-failed` then loops `batch` until done. This is the button you press after fixing the Cloudflare token.
+4. Small copy fix on the progress card: show `total` as "known files" and label the bar so 100% means "of files scanned", not "of everything in Storage" (only meaningful after a fresh scan).
 
-Two possibilities:
-1. Token was created with **read-only** or **object-read** permissions.
-2. Token was created scoped to specific buckets (e.g. `prek-level-videos`) and `aura-audio` isn't in the allow list.
+### Part B — Cloudflare token walkthrough (you do this, 90 seconds)
 
-Either way, this is a Cloudflare-side config change, not code.
+1. Cloudflare dashboard → **R2** → **Manage R2 API Tokens** → **Create API Token**.
+2. Permissions: **Object Read & Write**.
+3. Specify bucket: **Apply to all buckets in this account** (safest) OR pick `yubilearn-media` explicitly.
+4. TTL: Forever. Client IP filtering: none.
+5. Copy the **Access Key ID** and **Secret Access Key**.
+6. In Lovable, update secrets `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` with the new values (I'll open the secure form for both).
+7. Edge functions pick the new secrets up automatically on next invocation.
 
-## Walkthrough — do this yourself, takes 3 minutes
+### Part C — The finish sequence (after Part A ships + Part B is done)
 
-1. Go to **Cloudflare dashboard → R2 → Manage R2 API Tokens**.
-2. Find the token you're using for YubiLearn migration (probably named something like `yubi-r2-migrate` or `lovable-r2`).
-3. Click it → **Edit** (or "Roll" and create a new one with the same name if edit is disabled — Cloudflare sometimes disallows editing).
-4. Set:
-   - **Permissions**: `Object Read & Write`
-   - **Specify bucket(s)**: choose **"Apply to all buckets in this account"** (safer for future buckets), OR explicitly list every bucket that appears in your Supabase Storage (`prek-level-videos`, `prek-audio`, `prek-word-tts`, `aura-audio`, and any other you use).
-   - **TTL**: leave as-is or `Forever`.
-5. Save. Cloudflare shows the new **Access Key ID** and **Secret Access Key**.
-6. Come back to Lovable — I'll update the R2 secrets (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`) with `secrets--set_secret` once you paste the two values here or you set them yourself via the Backend secrets UI.
-7. Redeploy `migrate-to-r2` edge function (I'll do this after the secret is set — it only picks up new env vars on redeploy).
-8. Back in Super Admin → R2 Migration, click **3. Re-patch cache headers** again. Should now show `Re-patched 1223 / attempted 1223 (failed 0)`.
+On the R2 Migration page:
+1. **1. Scan Storage** — re-scans every bucket so the log matches reality (this is what makes `total` truthful again).
+2. **Reset failed → retry** — new button. Retries every failed row with the new token.
+3. **2. Run migration** — drains any remaining pending rows.
+4. **3. Re-patch cache headers** — safe to run last; only touches already-copied rows to guarantee the 1-year immutable cache header is set (this is what makes egress ≈ $0 at scale).
 
-## Why the copy worked but re-patch didn't
+At the end you should see: `Pending 0 / Failed 0 / Repatch failed 0`, and the failed-files section empty.
 
-Copy uses **PUT to a new object** — some tokens allow create-only.
-Re-patch uses **PUT overwrite on existing object** — requires full Object Read & Write.
+## Technical notes
 
-Yours is stuck in that in-between permission state.
+- The 1000-row PostgREST cap also affected `discovered` in the scan status but not fatally — `scanInBackground` writes rows in 500-row upserts and increments its own counter, so scans past 1000 files were fine. Only the reporting endpoint lied.
+- `mirrorToR2` (fire-and-forget on upload) will keep succeeding on new writes once the token is fixed — no code change needed there.
+- `prek-word-tts` and `aura-audio` remain **private buckets**; R2 copies are read via signed URLs from `sign-r2-audio-url` and `prek-word-tts`. This is intentional (FERPA / student audio). CDN `cdn.yubilearn.com` only serves the public buckets.
+- No database migration required — `r2_migration_log` and `r2_migration_status` schemas are untouched.
 
-## After the fix
+## Files touched
 
-Once re-patch finishes, `cdn.yubilearn.com` serves every YubiLearn media file (videos, audio, TTS MP3s) from R2 with 1-year immutable cache headers. At 100K users, Supabase egress bill drops from ~$400/mo to under $10/mo, and Cloudflare R2 egress is $0.
+- `supabase/functions/migrate-to-r2/index.ts` — new `stats` shape, new `reset-failed` and `list-failed` actions.
+- `src/pages/superadmin/R2Migration.tsx` — new stat tile, new retry button, use new list endpoint.
 
----
-
-# Decisions I need from you before I start building
-
-1. **Default speed for Pre-K**: **Slow** (my recommendation — you literally said "reads too fast"), or **Normal**?
-2. **Auto-teach on wrong answer**: auto-play once then show Retry, or make the child tap Teach themselves? (Recommendation: auto-play once.)
-3. **R2 fix**: do you want to update the Cloudflare token yourself and paste me the new keys, or do you want me to walk you through it live while you screen-share? (I can't reach your Cloudflare account — this step has to be manual.)
-
-Reply with 1/2/3 answers and I'll build the whole Teach rebuild in one shot, plus I'll wire the secret update the moment you have the new R2 keys.
+Nothing else. No schema changes, no bucket changes, no client-facing app changes.
