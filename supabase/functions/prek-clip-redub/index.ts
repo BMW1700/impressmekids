@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
         contentType: "audio/mpeg", upsert: true,
       });
       if (isoUp.error) return json({ error: `Isolated upload failed: ${isoUp.error.message}` }, 500);
+      mirrorToR2Async(admin, AUDIO_BUCKET, isolatedStoragePath, "audio/mpeg", isolatedBytes.byteLength);
 
       const { data: levelRow } = await admin
         .from("prek_levels").select("redub_isolated_paths").eq("id", body.levelId).single();
