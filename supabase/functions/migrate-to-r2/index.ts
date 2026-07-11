@@ -26,6 +26,10 @@ const MIGRATABLE_BUCKETS = new Set([
   // Private student audio (FERPA). Reads always go through sign-r2-audio-url,
   // never a public CDN URL — see supabase/functions/sign-r2-audio-url.
   "aura-audio",
+  // Cached ElevenLabs word-pronunciation MP3s. Private bucket — served via
+  // signed URLs from prek-word-tts; R2 copy exists so the migration tool can
+  // rebuild them later if needed (public CDN not used for this bucket).
+  "prek-word-tts",
 ]);
 
 function getR2() {
