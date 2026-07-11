@@ -480,8 +480,8 @@ Deno.serve(async (req) => {
         const { count } = await admin
           .from("r2_migration_log")
           .select("id", { count: "exact", head: true })
-          .eq("status", status);
-        q = q.in("bucket", MIGRATABLE_BUCKET_LIST);
+          .eq("status", status)
+          .in("bucket", MIGRATABLE_BUCKET_LIST);
         return count ?? 0;
       };
       const [pending, copied, failed] = await Promise.all([
