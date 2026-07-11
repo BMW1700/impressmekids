@@ -24,6 +24,8 @@ export interface RedubState {
   errorMessage?: string;
   storagePath?: string;
   signedUrl?: string;
+  isolatedStoragePath?: string;
+  isolatedSignedUrl?: string;
 }
 
 export interface LevelRedubSettings {
@@ -34,6 +36,7 @@ export interface LevelRedubSettings {
   stability: number;
   similarityBoost: number;
   audioPaths: Record<string, string>;
+  isolatedPaths: Record<string, string>;
   generatedAt: string | null;
 }
 
@@ -46,9 +49,11 @@ export function useBennyRedub(levelId: string | null) {
     stability: 0.5,
     similarityBoost: 0.85,
     audioPaths: {},
+    isolatedPaths: {},
     generatedAt: null,
   });
   const [signedRedubUrls, setSignedRedubUrls] = useState<Record<string, string>>({});
+  const [signedIsolatedUrls, setSignedIsolatedUrls] = useState<Record<string, string>>({});
   const [states, setStates] = useState<Record<string, RedubState>>({});
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
