@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
+import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
 
 export type RedubStatus = "idle" | "running" | "done" | "error";
 
