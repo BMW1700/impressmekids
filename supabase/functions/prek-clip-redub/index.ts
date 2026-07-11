@@ -159,6 +159,7 @@ Deno.serve(async (req) => {
       contentType: "audio/mpeg", upsert: true,
     });
     if (up.error) return json({ error: `Upload failed: ${up.error.message}` }, 500);
+    mirrorToR2Async(admin, AUDIO_BUCKET, outPath, "audio/mpeg", mp3Bytes.byteLength);
 
     // 5. Merge into prek_levels.redub_audio_paths.
     const { data: levelRow2 } = await admin
