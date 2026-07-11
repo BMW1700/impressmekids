@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
+import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
 
 export type RedubStatus = "idle" | "running" | "done" | "error";
 
@@ -24,6 +24,8 @@ export interface RedubState {
   errorMessage?: string;
   storagePath?: string;
   signedUrl?: string;
+  isolatedStoragePath?: string;
+  isolatedSignedUrl?: string;
 }
 
 export interface LevelRedubSettings {
@@ -34,6 +36,7 @@ export interface LevelRedubSettings {
   stability: number;
   similarityBoost: number;
   audioPaths: Record<string, string>;
+  isolatedPaths: Record<string, string>;
   generatedAt: string | null;
 }
 
@@ -46,9 +49,11 @@ export function useBennyRedub(levelId: string | null) {
     stability: 0.5,
     similarityBoost: 0.85,
     audioPaths: {},
+    isolatedPaths: {},
     generatedAt: null,
   });
   const [signedRedubUrls, setSignedRedubUrls] = useState<Record<string, string>>({});
+  const [signedIsolatedUrls, setSignedIsolatedUrls] = useState<Record<string, string>>({});
   const [states, setStates] = useState<Record<string, RedubState>>({});
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,10 +63,11 @@ export function useBennyRedub(levelId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("prek_levels")
-      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_generated_at")
+      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at")
       .eq("id", levelId)
       .maybeSingle();
     const paths = ((data?.redub_audio_paths as Record<string, string> | null) ?? {});
+    const isoPaths = (((data as any)?.redub_isolated_paths as Record<string, string> | null) ?? {});
     const levelVoiceId = data?.redub_voice_id ?? "";
     const worldId = data?.world_id ?? null;
     let worldDefaultVoiceId = "";
@@ -81,23 +87,30 @@ export function useBennyRedub(levelId: string | null) {
       stability: data?.redub_stability != null ? Number(data.redub_stability) : 0.5,
       similarityBoost: data?.redub_similarity_boost != null ? Number(data.redub_similarity_boost) : 0.85,
       audioPaths: paths,
+      isolatedPaths: isoPaths,
       generatedAt: data?.redub_generated_at ?? null,
     });
 
-    const pathsList = Object.values(paths).filter(Boolean);
-    if (pathsList.length > 0) {
+    const allPaths = Array.from(new Set([...Object.values(paths), ...Object.values(isoPaths)].filter(Boolean)));
+    if (allPaths.length > 0) {
       const { data: signed } = await supabase.storage
-        .from(PREK_VIDEO_BUCKET)
-        .createSignedUrls(pathsList, 60 * 60 * 24 * 7);
+        .from(PREK_AUDIO_BUCKET)
+        .createSignedUrls(allPaths, 60 * 60 * 24 * 7);
       const map: Record<string, string> = {};
       (signed ?? []).forEach((s) => { if (s.path && s.signedUrl) map[s.path] = s.signedUrl; });
       const byScene: Record<string, string> = {};
+      const byIsoScene: Record<string, string> = {};
       for (const [sceneKey, storagePath] of Object.entries(paths)) {
         if (map[storagePath]) byScene[sceneKey] = map[storagePath];
       }
+      for (const [sceneKey, storagePath] of Object.entries(isoPaths)) {
+        if (map[storagePath]) byIsoScene[sceneKey] = map[storagePath];
+      }
       setSignedRedubUrls(byScene);
+      setSignedIsolatedUrls(byIsoScene);
     } else {
       setSignedRedubUrls({});
+      setSignedIsolatedUrls({});
     }
     setLoading(false);
   }, [levelId]);
@@ -135,10 +148,14 @@ export function useBennyRedub(levelId: string | null) {
     }));
   }, [settings.worldId]);
 
-  const redubScene = useCallback(async (scene: RedubSceneInput, overrides?: { voiceId?: string; stability?: number; similarityBoost?: number }): Promise<boolean> => {
+  const redubScene = useCallback(async (
+    scene: RedubSceneInput,
+    overrides?: { voiceId?: string; stability?: number; similarityBoost?: number; isolate?: boolean; isolateOnly?: boolean },
+  ): Promise<boolean> => {
     if (!levelId) return false;
+    const isolateOnly = overrides?.isolateOnly === true;
     const voiceId = overrides?.voiceId ?? settings.voiceId;
-    if (!voiceId) {
+    if (!isolateOnly && !voiceId) {
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Benny voice ID first." } }));
       return false;
     }
@@ -152,17 +169,31 @@ export function useBennyRedub(levelId: string | null) {
           voiceId,
           stability: overrides?.stability ?? settings.stability,
           similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,
+          isolate: overrides?.isolate !== false,
+          isolateOnly,
         },
       });
       if (error) throw error;
-      const storagePath: string | undefined = data?.storagePath;
-      const signedUrl: string | undefined = data?.signedUrl;
-      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "done", storagePath, signedUrl } }));
+      const storagePath: string | undefined = data?.storagePath ?? undefined;
+      const signedUrl: string | undefined = data?.signedUrl ?? undefined;
+      const isolatedStoragePath: string | undefined = data?.isolatedStoragePath ?? undefined;
+      const isolatedSignedUrl: string | undefined = data?.isolatedSignedUrl ?? undefined;
+
+      setStates((m) => ({
+        ...m,
+        [scene.sceneKey]: { status: "done", storagePath, signedUrl, isolatedStoragePath, isolatedSignedUrl },
+      }));
       if (storagePath) {
         setSettings((s) => ({ ...s, audioPaths: { ...s.audioPaths, [scene.sceneKey]: storagePath } }));
       }
+      if (isolatedStoragePath) {
+        setSettings((s) => ({ ...s, isolatedPaths: { ...s.isolatedPaths, [scene.sceneKey]: isolatedStoragePath } }));
+      }
       if (signedUrl) {
         setSignedRedubUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
+      }
+      if (isolatedSignedUrl) {
+        setSignedIsolatedUrls((m) => ({ ...m, [scene.sceneKey]: isolatedSignedUrl }));
       }
       return true;
     } catch (e) {
@@ -187,6 +218,7 @@ export function useBennyRedub(levelId: string | null) {
     loading,
     settings,
     signedRedubUrls,
+    signedIsolatedUrls,
     states,
     batchProgress,
     reload,
