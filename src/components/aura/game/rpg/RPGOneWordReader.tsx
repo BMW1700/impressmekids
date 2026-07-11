@@ -25,6 +25,8 @@ import { getPreKContent, type PreKLevelContent } from "@/data/preKWordBanks";
 import { type CampaignWorld } from "@/lib/campaignData";
 import { type CampaignLevel } from "./RPGLevelSelect";
 import { playCorrectPronunciation } from "@/lib/pronunciationPlayer";
+import { speakBenny } from "@/lib/bennyVoice";
+
 import { getYubiLevelCopy, getYubiDemoWords, getYubiCreatureName, getYubiMeterLabel } from "@/lib/yubiStoryCopy";
 import { YubiBubble } from "./YubiBubble";
 import { YubiPreKStoryScene } from "./YubiPreKStoryScene";
