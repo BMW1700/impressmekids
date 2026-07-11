@@ -44,6 +44,8 @@ interface Props {
   onDeleteClip?: (clip: PreKAudioClip) => void;
   /** Split a clip at the current playhead (inline scissors button). */
   onSplitClip?: (clip: PreKAudioClip, atSec: number) => void;
+  /** Crop/trim a clip edge by dragging its left or right edge handle. */
+  onTrimClip?: (clip: PreKAudioClip, edge: "start" | "end", atSec: number) => void;
   /** Click/drag on the timeline header to move the playhead. */
   onScrub?: (sec: number) => void;
   /** Fired during clip drags so the preview can scrub to the drop target. */
@@ -55,7 +57,7 @@ interface Props {
 
 interface DragState {
   clipId: string;
-  mode: "body" | "end";
+  mode: "body" | "end" | "trim-start" | "trim-end";
   startX: number;
   startY: number;
   dx: number;
@@ -65,7 +67,7 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls, videoUrls,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onScrub, onDragPreview, onBeforeIsolatedPreview,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onTrimClip, onScrub, onDragPreview, onBeforeIsolatedPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -139,7 +141,7 @@ export function TimelineCanvas({
     return graph.nominalDurationTotal;
   }, [segs, graph]);
 
-  const beginDrag = (e: RPointerEvent, clip: PreKAudioClip, mode: "body" | "end") => {
+  const beginDrag = (e: RPointerEvent, clip: PreKAudioClip, mode: DragState["mode"]) => {
     if (clip.duration_mode === "fill-level") return;
     e.preventDefault();
     e.stopPropagation();
@@ -159,9 +161,12 @@ export function TimelineCanvas({
       const clip = clips.find((c) => c.id === d.clipId);
       if (clip) {
         const res = resolveClip(clip, graph);
-        if (d.mode === "end") {
+        if (d.mode === "end" || d.mode === "trim-end") {
           const endPx = secToPx(res.endSec);
           onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(endPx + dx))));
+        } else if (d.mode === "trim-start") {
+          const startPx = secToPx(res.startSec);
+          onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(startPx + dx))));
         } else {
           const startPx = secToPx(res.startSec);
           onDragPreview(Math.max(0, Math.min(graph.nominalDurationTotal, pxToSec(startPx + dx))));
@@ -181,6 +186,12 @@ export function TimelineCanvas({
     if (d.mode === "end") {
       const newEndSec = Math.max(0.1, Math.min(graph.nominalDurationTotal, pxToSec(endPx + d.dx)));
       onMoveSpanEnd(clip, newEndSec);
+    } else if (d.mode === "trim-start") {
+      const nextStart = Math.max(res.startSec, Math.min(res.endSec - 0.1, pxToSec(startPx + d.dx)));
+      onTrimClip?.(clip, "start", nextStart);
+    } else if (d.mode === "trim-end") {
+      const nextEnd = Math.max(res.startSec + 0.1, Math.min(res.endSec, pxToSec(endPx + d.dx)));
+      onTrimClip?.(clip, "end", nextEnd);
     } else {
       const newStartSec = Math.max(0, Math.min(graph.nominalDurationTotal - 0.1, pxToSec(startPx + d.dx)));
       const rowDelta = Math.round(d.dy / (TRACK_HEIGHT + TRACK_GAP));
@@ -399,8 +410,9 @@ export function TimelineCanvas({
                   return segments.map((seg, segIdx) => {
                     const isFirst = segIdx === 0;
                     const isLast = segIdx === segments.length - 1;
-                    const waveLeft = isFirst ? 24 : 4;
-                    const waveRight = 4;
+                    const waveLeft = isFirst ? 28 : 8;
+                    const waveRight = isLast ? 8 : 4;
+                    const canCrop = Boolean(onTrimClip && c.duration_mode !== "fill-level" && seg.widthPx >= 28);
                     return (
                       <div
                         key={`${c.id}-${segIdx}`}
@@ -485,8 +497,22 @@ export function TimelineCanvas({
                         {isLast && c.duration_mode === "span-videos" && (
                           <div
                             onPointerDown={(e) => beginDrag(e, c, "end")}
-                            className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/70 cursor-ew-resize z-[3]"
+                            className="absolute right-0 top-0 bottom-0 w-2.5 bg-violet-600/55 cursor-ew-resize z-[3]"
                             title="Drag to set end anchor"
+                          />
+                        )}
+                        {canCrop && isFirst && (
+                          <div
+                            onPointerDown={(e) => beginDrag(e, c, "trim-start")}
+                            className="absolute left-0 top-0 bottom-0 w-2 bg-background/95 border-r border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
+                            title="Crop start"
+                          />
+                        )}
+                        {canCrop && isLast && (
+                          <div
+                            onPointerDown={(e) => beginDrag(e, c, "trim-end")}
+                            className="absolute right-0 top-0 bottom-0 w-2 bg-background/95 border-l border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
+                            title="Crop end"
                           />
                         )}
                       </div>
