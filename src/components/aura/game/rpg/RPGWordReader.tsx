@@ -647,10 +647,11 @@ export const RPGWordReader = ({
     setEchoCountdown(0);
     soundEffects.incorrectWord();
     
-    // Play correct pronunciation
+    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
     setTimeout(() => {
-      playCorrectPronunciation(expectedWord);
+      speakBenny(expectedWord, { mode: "say" }).catch(() => playCorrectPronunciation(expectedWord));
     }, 300);
+
     
     // IMMEDIATELY report the first miss for accuracy tracking (before user decides Try Again or Continue).
     // A failed retry is the same word's second attempt, so it must not double-count wordsRead.
