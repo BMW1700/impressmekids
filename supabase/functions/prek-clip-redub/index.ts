@@ -264,3 +264,28 @@ function json(body: unknown, status = 200) {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
+
+/**
+ * Fire-and-forget copy of a freshly-uploaded Supabase Storage object into
+ * Cloudflare R2 via the migrate-to-r2 edge function. Zero-egress reads via
+ * cdn.yubilearn.com (or presigned R2 URLs for private buckets). Failures
+ * are non-fatal — the HEAD-check fallback in src/lib/cdn.ts still catches
+ * anything this misses, and the manual R2 Migration tool can backfill.
+ */
+function mirrorToR2Async(
+  admin: ReturnType<typeof createClient>,
+  bucket: string,
+  path: string,
+  contentType: string,
+  size: number,
+): void {
+  void (async () => {
+    try {
+      await admin.functions.invoke("migrate-to-r2", {
+        body: { action: "copy-path", bucket, path, contentType, size },
+      });
+    } catch (e) {
+      console.warn(`[prek-clip-redub] R2 mirror failed for ${bucket}/${path}:`, e);
+    }
+  })();
+}
