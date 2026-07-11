@@ -1711,8 +1711,10 @@ export const RPGWordReader = ({
         canRetry={canRetry}
         onContinue={handleContinueAfterMiss}
         onTryAgain={handleTryAgain}
-        onPlayAudio={() => pendingIncorrectWord?.word && playCorrectPronunciation(pendingIncorrectWord.word)}
+        onPlayAudio={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" })}
+        onTeachPhonics={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "teach" })}
       />
     </div>
   );
 };
+
