@@ -6,6 +6,7 @@ import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { speakBenny } from "@/lib/bennyVoice";
+import { teachWord, stopBennyTeach } from "@/lib/bennyTeach";
 
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
@@ -1717,8 +1718,8 @@ export const RPGWordReader = ({
         canRetry={canRetry}
         onContinue={handleContinueAfterMiss}
         onTryAgain={handleTryAgain}
-        onPlayAudio={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" })}
-        onTeachPhonics={() => pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "teach" })}
+        onPlayAudio={() => { stopBennyTeach(); pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" }); }}
+        onTeachPhonics={() => pendingIncorrectWord?.word && teachWord(pendingIncorrectWord.word)}
       />
     </div>
   );
