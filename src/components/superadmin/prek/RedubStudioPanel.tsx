@@ -76,8 +76,15 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
     if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     const ok = await redub.redubScene(scene);
-    if (ok) toast.success(`Redubbed ${scene.label}`);
+    if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
   };
+
+  const handlePreviewIsolation = async (scene: RedubSceneInput) => {
+    toast.info(`Isolating Benny's voice on ${scene.label}…`);
+    const ok = await redub.redubScene(scene, { isolateOnly: true });
+    if (ok) toast.success(`Isolation ready — hit "Iso" to preview.`);
+  };
+
 
   return (
     <Card className="border-purple-500/40 bg-purple-500/5">
