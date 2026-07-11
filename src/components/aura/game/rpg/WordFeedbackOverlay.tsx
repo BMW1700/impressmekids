@@ -89,7 +89,9 @@ export const WordFeedbackOverlay = ({
   onContinue,
   onTryAgain,
   onPlayAudio,
+  onTeachPhonics,
 }: WordFeedbackOverlayProps) => {
+
   const phoneticBreakdown = getPhoneticHint(expectedWord);
   const tip = getWordTip(expectedWord);
 
