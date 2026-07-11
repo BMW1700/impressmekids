@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+const CACHE_VERSION = "v2"; // Must match supabase/functions/prek-word-tts/index.ts
 
 // Benny Voice Prewarm — walks every published Pre-K level, dedupes the words,
 // and pre-generates BOTH the "say" and "teach" MP3s per word so playback at
@@ -40,7 +43,9 @@ const BennyVoicePrewarm = () => {
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [running, setRunning] = useState(false);
   const [cancelFlag, setCancelFlag] = useState(false);
+  const [force, setForce] = useState(false);
 
+  // Initial content scan
   useEffect(() => {
     (async () => {
       setScanLoading(true);
