@@ -190,10 +190,19 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
         <div className="rounded-md border bg-background/40 divide-y">
           {scenes.map((s) => {
             const state = redub.states[s.sceneKey];
-            const existing = redub.signedRedubUrls[s.sceneKey];
-            const url = state?.signedUrl ?? existing;
+            const existingRedub = redub.signedRedubUrls[s.sceneKey];
+            const existingIso = redub.signedIsolatedUrls[s.sceneKey];
+            const redubUrl = state?.signedUrl ?? existingRedub;
+            const isoUrl = state?.isolatedSignedUrl ?? existingIso;
             const isPreviewing = previewingKey === s.sceneKey;
-            const status = state?.status ?? (existing ? "done" : "idle");
+            const status = state?.status ?? (existingRedub ? "done" : "idle");
+            const previewKeyFor = (kind: "src" | "iso" | "redub") => `${s.sceneKey}::${kind}`;
+            const isPlaying = (kind: "src" | "iso" | "redub") => previewingKey === previewKeyFor(kind);
+            const togglePlay = (kind: "src" | "iso" | "redub", u: string) => {
+              const k = previewKeyFor(kind);
+              if (previewingKey === k) stopPreview();
+              else { stopPreview(); startPreview(k, u); }
+            };
             return (
               <div key={s.sceneKey} className="flex items-center gap-2 px-3 py-2">
                 <div className="flex-1 min-w-0">
@@ -206,23 +215,46 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     <AlertCircle className="inline h-3 w-3 mr-0.5"/>{state?.errorMessage}
                   </span>
                 )}
-                {url && (
+                {isoUrl && (
                   <Button
                     size="sm" variant="outline"
-                    onClick={() => isPreviewing ? stopPreview() : startPreview(s.sceneKey, url)}
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => togglePlay("iso", isoUrl)}
+                    title="Preview Voice Isolator output (Benny only, music/other voices removed)"
                   >
-                    {isPreviewing ? <Pause className="h-3 w-3"/> : <Play className="h-3 w-3"/>}
+                    {isPlaying("iso") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Iso
+                  </Button>
+                )}
+                {redubUrl && (
+                  <Button
+                    size="sm" variant="outline"
+                    className="h-7 px-2 text-[10px]"
+                    onClick={() => togglePlay("redub", redubUrl)}
+                    title="Preview redubbed Benny audio"
+                  >
+                    {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Redub
                   </Button>
                 )}
                 <Button
                   size="sm" variant="ghost"
                   disabled={status === "running" || !!redub.batchProgress}
+                  onClick={() => handlePreviewIsolation(s)}
+                  title="Preview isolation only (no STS credits spent) — check that Benny's voice comes through cleanly before redubbing."
+                  className="h-7 px-2 text-[10px]"
+                >
+                  {status === "running" && !state?.signedUrl
+                    ? <Loader2 className="h-3 w-3 animate-spin"/>
+                    : "Iso only"}
+                </Button>
+                <Button
+                  size="sm" variant="ghost"
+                  disabled={status === "running" || !!redub.batchProgress}
                   onClick={() => handleRedubOne(s)}
-                  title="Regenerate this clip"
+                  title="Isolate → redub → auto-place clip on Benny (Redub) track"
                 >
                   {status === "running"
                     ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : existing ? <RotateCw className="h-3 w-3"/> : <Wand2 className="h-3 w-3"/>}
+                    : existingRedub ? <RotateCw className="h-3 w-3"/> : <Wand2 className="h-3 w-3"/>}
                 </Button>
               </div>
             );
