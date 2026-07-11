@@ -143,6 +143,48 @@ export default function R2Migration() {
     }
   };
 
+  const repairMissingR2Files = async () => {
+    setResetting(true);
+    setRepatching(true);
+    setRepatchStatus("");
+    try {
+      const reset = await call("reset-repatch-missing-to-pending");
+      const resetCount = Number(reset.reset ?? 0);
+      toast.info(`Re-queued ${resetCount} missing R2 files for a fresh copy`);
+      await loadStats();
+
+      setRunning(true);
+      while (true) {
+        const b = await runOnce();
+        await loadStats();
+        if (!b.attempted) break;
+      }
+      setRunning(false);
+
+      let cursor: string | null = null;
+      let totalOk = 0;
+      let totalFailed = 0;
+      let totalAttempted = 0;
+      while (true) {
+        const r: any = await call("repatch-headers", { size: 150, cursor });
+        totalOk += r.ok || 0;
+        totalFailed += r.failed || 0;
+        totalAttempted += r.attempted || 0;
+        setRepatchStatus(`Re-patched ${totalOk} / attempted ${totalAttempted} (failed ${totalFailed})`);
+        if (!r.attempted || !r.nextCursor) break;
+        cursor = r.nextCursor;
+      }
+      await loadStats();
+      toast.success("Missing R2 files were re-copied and cache headers were checked");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setRunning(false);
+      setResetting(false);
+      setRepatching(false);
+    }
+  };
+
   const repatchHeaders = async () => {
     setRepatching(true);
     setRepatchStatus("");
@@ -237,9 +279,9 @@ export default function R2Migration() {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm text-muted-foreground">Progress (of known files)</div>
-            <div className="text-2xl font-semibold">{copied} / {total} copied ({pct}%)</div>
+            <div className="text-2xl font-semibold">{copied} / {total} logged copied ({pct}%)</div>
             <div className="text-xs text-muted-foreground mt-1">
-              Run "Scan Storage" to refresh the known-file count.
+              Run "Scan Storage" to refresh the known-file count. Repatch NoSuchKey errors mean the log says copied, but the file is missing from the current R2 bucket.
             </div>
           </div>
           <Button variant="outline" onClick={loadStats} disabled={loading}>
@@ -304,6 +346,14 @@ export default function R2Migration() {
           >
             {resetting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
             Reset failed → retry ({failedCount})
+          </Button>
+          <Button
+            variant="default"
+            onClick={repairMissingR2Files}
+            disabled={resetting || running || scanning || repatching || repatchFailedCount === 0}
+          >
+            {(resetting || running || repatching) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+            Fix missing R2 files → re-copy ({repatchFailedCount})
           </Button>
           <Button variant="secondary" onClick={repatchHeaders} disabled={repatching || running || scanning || resetting || copied === 0}>
             {repatching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
@@ -371,8 +421,8 @@ export default function R2Migration() {
         <Card className="p-6 space-y-2">
           <h2 className="font-semibold text-amber-600">Repatch failures ({repatchFailedCount})</h2>
           <p className="text-xs text-muted-foreground">
-            These files were copied but the immutable-cache header did not stick. Fix the R2 token
-            so it can copy/replace object metadata, then click "Re-patch cache headers" again.
+            NoSuchKey means the migration log says these files were copied, but they are missing from
+            the current R2 bucket. Click "Fix missing R2 files → re-copy" to force a fresh copy from storage.
           </p>
           <div className="max-h-96 overflow-y-auto text-xs space-y-1 font-mono">
             {repatchFailedList.map((f, i) => (
