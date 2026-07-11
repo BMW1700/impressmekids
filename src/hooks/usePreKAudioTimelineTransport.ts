@@ -42,6 +42,13 @@ function audioTimeForClip(clip: PreKAudioClip, clipStartSec: number, playheadSec
   return Math.max(0, (clip.trim_start_seconds || 0) + timelineOffset * rate);
 }
 
+function audioBoundsForClip(clip: PreKAudioClip) {
+  const start = Math.max(0, clip.trim_start_seconds || 0);
+  const rawEnd = clip.trim_end_seconds ?? clip.duration_seconds ?? Number.POSITIVE_INFINITY;
+  const end = Math.max(start + 0.1, rawEnd);
+  return { start, end, length: Math.max(0.1, end - start), finite: Number.isFinite(end) };
+}
+
 export function usePreKAudioTimelineTransport({
   graph,
   tracks,
@@ -132,10 +139,18 @@ export function usePreKAudioTimelineTransport({
       if (!track || !st) return;
 
       const rate = Math.max(0.05, clip.playback_rate || 1);
-      const targetAudioTime = audioTimeForClip(clip, startSec, playheadSec);
+      const bounds = audioBoundsForClip(clip);
+      const loopsWithinWindow = clip.duration_mode === "fill-level" || clip.duration_mode === "fill-scene" || clip.loop_clip;
+      let targetAudioTime = audioTimeForClip(clip, startSec, playheadSec);
+      if (loopsWithinWindow && bounds.finite && targetAudioTime >= bounds.end) {
+        targetAudioTime = bounds.start + ((targetAudioTime - bounds.start) % bounds.length);
+      } else if (!loopsWithinWindow && targetAudioTime >= bounds.end) {
+        hardStopClip(clip.id, true);
+        return;
+      }
       const targetVolume = clamp01((clip.volume ?? 1) * (track.volume ?? 1) * masterVolume);
 
-      try { st.el.loop = clip.duration_mode === "fill-level" || clip.duration_mode === "fill-scene" || clip.loop_clip; } catch { /* noop */ }
+      try { st.el.loop = false; } catch { /* noop */ }
       try { st.el.playbackRate = rate; } catch { /* noop */ }
       try { st.el.volume = targetVolume; } catch { /* noop */ }
 
