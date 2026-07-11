@@ -469,6 +469,63 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     await onMoveClipStart(c, newStartSec, t.track_index);
   };
 
+  // Split a clip at the given absolute time in seconds. Creates a second clip
+  // that starts at the split point (with trim_start advanced) and shortens the
+  // original by shifting its end anchor / duration.
+  const splitClip = async (c: PreKAudioClip, atSec: number) => {
+    const res = resolveClip(c, sceneGraph);
+    if (atSec <= res.startSec + 0.05 || atSec >= res.endSec - 0.05) {
+      toast.error("Move the playhead inside this clip first.");
+      return;
+    }
+    const leftDur = atSec - res.startSec;
+    const rightTrimStart = (c.trim_start_seconds || 0) + leftDur * (c.playback_rate || 1);
+    const rightSnap = snapToAnchor(sceneGraph, atSec);
+
+    // Shorten the original clip so it ends at the split point.
+    let leftPatch: Partial<PreKAudioClip>;
+    if (c.duration_mode === "span-videos") {
+      const eSnap = snapToVideoAnchor(sceneGraph, atSec);
+      leftPatch = {
+        end_anchor_scene_key: eSnap.scene_key,
+        end_anchor_edge: eSnap.edge,
+        end_anchor_offset_seconds: eSnap.offset,
+      };
+    } else {
+      leftPatch = { duration_mode: "fixed", duration_seconds: leftDur };
+    }
+    await updateClip(c, leftPatch);
+
+    // Insert the right-hand clip.
+    const insertPayload = {
+      level_id: c.level_id,
+      track_index: c.track_index,
+      storage_path: c.storage_path,
+      display_name: `${c.display_name} (b)`,
+      anchor_scene_key: rightSnap.scene_key,
+      anchor_edge: rightSnap.edge,
+      anchor_offset_seconds: rightSnap.offset,
+      end_anchor_scene_key: c.end_anchor_scene_key,
+      end_anchor_edge: c.end_anchor_edge,
+      end_anchor_offset_seconds: c.end_anchor_offset_seconds,
+      duration_mode: c.duration_mode === "span-videos" ? "span-videos" : "fixed",
+      duration_seconds: c.duration_mode === "span-videos" ? c.duration_seconds : Math.max(0.1, res.endSec - atSec),
+      volume: c.volume,
+      fade_in_seconds: 0,
+      fade_out_seconds: c.fade_out_seconds,
+      loop_clip: c.loop_clip,
+      pause_on_word_card: c.pause_on_word_card,
+      trim_start_seconds: rightTrimStart,
+      trim_end_seconds: c.trim_end_seconds,
+      playback_rate: c.playback_rate,
+    };
+    const { data, error } = await supabase.from("prek_level_audio_clips").insert(insertPayload as never).select("id").maybeSingle();
+    if (error) { toast.error(error.message); return; }
+    if (data?.id) pushUndo({ kind: "clip-restore", id: data.id });
+    toast.success("Clip split");
+    mix.reload();
+  };
+
   // ── Bootstrap default track ───────────────────────────────────────────────
   useEffect(() => {
     if (mix.loading) return;
@@ -684,6 +741,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             onMoveClipStart={onMoveClipStart}
             onMoveSpanEnd={onMoveSpanEnd}
             onDropOnNewTrack={onDropOnNewTrack}
+            onDeleteClip={deleteClip}
+            onSplitClip={splitClip}
             onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
             onBeforeIsolatedPreview={pausePreview}

@@ -12,7 +12,7 @@
 //   • Drop onto bottom "+" lane → create a new track and move the clip there
 
 import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
-import { Zap, Play, Pause } from "lucide-react";
+import { Zap, Play, Pause, Trash2, Scissors } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
@@ -40,6 +40,10 @@ interface Props {
   onMoveClipStart: (clip: PreKAudioClip, newStartSec: number, newTrackIndex: number) => void;
   onMoveSpanEnd: (clip: PreKAudioClip, newEndSec: number) => void;
   onDropOnNewTrack: (clip: PreKAudioClip, newStartSec: number) => void;
+  /** Delete a clip (inline trash button on each block). */
+  onDeleteClip?: (clip: PreKAudioClip) => void;
+  /** Split a clip at the current playhead (inline scissors button). */
+  onSplitClip?: (clip: PreKAudioClip, atSec: number) => void;
   /** Click/drag on the timeline header to move the playhead. */
   onScrub?: (sec: number) => void;
   /** Fired during clip drags so the preview can scrub to the drop target. */
@@ -61,7 +65,7 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls, videoUrls,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onScrub, onDragPreview, onBeforeIsolatedPreview,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onScrub, onDragPreview, onBeforeIsolatedPreview,
 }: Props) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
@@ -424,19 +428,49 @@ export function TimelineCanvas({
                           />
                         </div>
                         {isFirst && (
-                          <button
-                            type="button"
-                            onPointerDown={(e) => { e.stopPropagation(); }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isPreviewing) stopClipPreview();
-                              else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
-                            }}
-                            title={isPreviewing ? "Stop preview" : "Preview this clip"}
-                            className="absolute left-1 top-1 z-[3] h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
-                          >
-                            {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                          </button>
+                          <div className="absolute left-1 top-1 z-[3] flex items-center gap-1">
+                            <button
+                              type="button"
+                              onPointerDown={(e) => { e.stopPropagation(); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isPreviewing) stopClipPreview();
+                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                              }}
+                              title={isPreviewing ? "Stop preview" : "Preview this clip"}
+                              className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
+                            >
+                              {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                            </button>
+                            {onSplitClip && playheadSec != null && (
+                              <button
+                                type="button"
+                                onPointerDown={(e) => { e.stopPropagation(); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSplitClip(c, playheadSec);
+                                }}
+                                title="Split clip at playhead"
+                                className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
+                              >
+                                <Scissors className="h-3 w-3" />
+                              </button>
+                            )}
+                            {onDeleteClip && (
+                              <button
+                                type="button"
+                                onPointerDown={(e) => { e.stopPropagation(); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteClip(c);
+                                }}
+                                title="Delete this clip"
+                                className="h-5 w-5 rounded-sm bg-background/90 hover:bg-destructive/20 text-destructive grid place-items-center shadow-sm border border-border/60"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
                         )}
                         {isLast && (
                           <div className="absolute left-0 right-0 bottom-0 h-4 px-1.5 bg-background/80 border-t border-background/40 flex items-center gap-1 pointer-events-none">
