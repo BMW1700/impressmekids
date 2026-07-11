@@ -524,9 +524,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       patch.end_anchor_scene_key = eSnap.scene_key;
       patch.end_anchor_edge = eSnap.edge;
       patch.end_anchor_offset_seconds = eSnap.offset;
-    } else if (c.duration_mode !== "fixed") {
-      patch.duration_mode = "fixed";
-      patch.duration_seconds = Math.max(0.1, (audioAt - currentTrimStart) / rate);
     }
     await updateClip(c, patch);
   };
