@@ -428,19 +428,49 @@ export function TimelineCanvas({
                           />
                         </div>
                         {isFirst && (
-                          <button
-                            type="button"
-                            onPointerDown={(e) => { e.stopPropagation(); }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isPreviewing) stopClipPreview();
-                              else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
-                            }}
-                            title={isPreviewing ? "Stop preview" : "Preview this clip"}
-                            className="absolute left-1 top-1 z-[3] h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
-                          >
-                            {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                          </button>
+                          <div className="absolute left-1 top-1 z-[3] flex items-center gap-1">
+                            <button
+                              type="button"
+                              onPointerDown={(e) => { e.stopPropagation(); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isPreviewing) stopClipPreview();
+                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                              }}
+                              title={isPreviewing ? "Stop preview" : "Preview this clip"}
+                              className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
+                            >
+                              {isPreviewing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                            </button>
+                            {onSplitClip && playheadSec != null && (
+                              <button
+                                type="button"
+                                onPointerDown={(e) => { e.stopPropagation(); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSplitClip(c, playheadSec);
+                                }}
+                                title="Split clip at playhead"
+                                className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
+                              >
+                                <Scissors className="h-3 w-3" />
+                              </button>
+                            )}
+                            {onDeleteClip && (
+                              <button
+                                type="button"
+                                onPointerDown={(e) => { e.stopPropagation(); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteClip(c);
+                                }}
+                                title="Delete this clip"
+                                className="h-5 w-5 rounded-sm bg-background/90 hover:bg-destructive/20 text-destructive grid place-items-center shadow-sm border border-border/60"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
                         )}
                         {isLast && (
                           <div className="absolute left-0 right-0 bottom-0 h-4 px-1.5 bg-background/80 border-t border-background/40 flex items-center gap-1 pointer-events-none">
