@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
+import { speakBenny } from "@/lib/bennyVoice";
+
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
 import { RPGEmojiManager } from "./RPGEmojiPop";
