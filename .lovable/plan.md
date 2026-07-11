@@ -1,42 +1,69 @@
+# Benny Redub + Editor Fix — Simple Plan (v4)
 
-## Brutally honest breakdown
+**Brutal honest recommendation: drop Fly.io/Inngest.** You don't need them. Your bottleneck isn't infrastructure — it's that we were rushing clips through ElevenLabs in parallel. Fix the pacing and the quality problem disappears. One vendor (ElevenLabs), one Edge Function, done.
 
-**Yes, the migration worked. 99% is real.** I audited the backend directly. Here is exactly what's happening.
+If you ever hit a wall (e.g. redubbing 50 worlds in one night), we add a worker later. Not now.
 
-### What the numbers actually mean
+---
 
-- **1,512 files copied** into Cloudflare R2 (~1.67 GB). Verified in the `r2_migration_log` table.
-- **Every single active bucket is at 100% copied, 0 failed, 0 repatch failed** — prek-level-audio, world-backgrounds, campaign-assets, avatars, email-assets, aura-audio, prek-word-tts. All green.
-- **The only 19 "failed" rows are all in `prek-level-videos`, and they are all ghosts.** I checked each of the 19 paths against Supabase Storage: **none of them exist in Storage anymore.** I also checked whether any `prek_level_words` row still references them: **zero references.**
-- Translation: these 19 rows are stale log entries for videos that were deleted (old scratch uploads / rebrand cleanup). There is nothing to migrate because the source files don't exist. They will never copy no matter how many times you retry — retry keeps re-downloading a file that isn't there and re-logging "Object not found."
+## What I'll build
 
-### Egress / cost answer
+### 1. Redub pipeline — slow & perfect
+Inside the existing `prek-clip-redub` Edge Function:
+- **Serial processing**: one clip at a time, never parallel. No rate-limit collisions.
+- **Auto-split long clips**: anything over ~20s gets split at natural silences, redubbed in pieces, and stitched back. Prevents ElevenLabs quality drop.
+- **Fixed pipeline order** (what you described exactly):
+  1. Original audio → ElevenLabs **Voice Isolator** (strips background noise/music)
+  2. Isolated audio → ElevenLabs **Speech-to-Speech** in Benny's locked voice
+  3. Result → saved back to R2 + linked to the level
+- **"Redub entire world" button**: fans out across all levels in a world, still serial, with live progress + per-clip status.
+- **Retry-on-fail**: any single clip that comes back weird gets one automatic retry before being flagged.
 
-- **Yes, your egress will be effectively zero.** Every file the app currently serves for Pre-K videos, Pre-K audio, world backgrounds, campaign assets, avatars, email assets, aura audio, and Benny TTS is in R2 and served through `cdn.yubilearn.com`. Cloudflare R2 egress is $0.
-- **At 100K+ users your storage bill stays tiny.** R2 storage is $0.015/GB/month. You have ~1.67 GB migrated. Even 100x that is ~$2.50/month for storage. Class-A ops (writes) are $4.50/million and only happen on new uploads. Class-B ops (reads) are $0.36/million and are cheap even at massive read volume.
-- The only remaining variable cost that scales with users is **new** uploads to Storage (they hit R2 via the `mirrorToR2` helper on write — already wired in). Reads stay free.
+### 2. Benny voice — locked
+- You give me the ElevenLabs voice ID → I hardcode it as `BENNY_VOICE_ID` in the function.
+- Swapping later = change one constant + click "Redub entire world" again. No lock-in fear.
 
-### What to do about the 19
+### 3. Editor — bi-directional crop + splice (the real fix)
+Root cause of the "can't drag crop back out" bug: the code clamps the trim handle against the *already-cropped* visible edge instead of the *raw* audio duration. Fix:
+- Store `source_duration_seconds` on the clip when uploaded (currently missing — this is why the math breaks).
+- Left/right trim handles clamp against **raw** duration, not visible duration. You can crop tight, then drag back out to reveal the original audio. Effortless, matches the cinematic timeline behavior.
+- **Splice** = split clip at playhead (or at where you click). Produces two independent clips you can trim/move/delete separately.
+- Keyboard: `S` = split at playhead, `Delete` = remove selected, `Cmd+Z` = undo.
 
-Do **not** click "Reset failed → retry" again. It will fail again for the same reason. The correct move is to **delete the 19 orphaned log rows** so the dashboard shows a clean 0.
+### 4. Teach / Hear — the ELLO killer
+- **Hear** button: plays the whole word in Benny's locked voice (cached MP3, instant).
+- **Teach** button: plays phoneme-by-phoneme → blend → whole word → used-in-sentence. Each segment is a pre-generated ElevenLabs clip cached in R2, so it plays instantly and sounds identical every time.
+- Pre-warmed on level publish so kids never wait.
+- No mid-word interruption bug: the "Hear" button won't hijack an in-progress "Teach" sequence.
 
-## Plan
+---
 
-1. Add a new backend action `purge-orphaned-failed` to `supabase/functions/migrate-to-r2/index.ts` that:
-   - Finds rows where `status='failed'` AND `error LIKE '%Object not found%'`
-   - For each row, verifies the object is genuinely absent from Storage (HEAD check via service role) as a safety net
-   - Deletes only those rows from `r2_migration_log`
-   - Returns `{ purged: N, kept: M }` so the UI can report exactly what happened
+## What I'm explicitly NOT doing (and why)
 
-2. Add a UI button on `src/pages/superadmin/R2Migration.tsx` labeled **"Purge ghost failures (19)"** — only visible when Failed > 0, with helper text:
-   > "These log rows point to files that were deleted from Storage before migration ran. They can't be copied because the source no longer exists. Safe to remove."
+| Skipped | Why |
+|---|---|
+| Fly.io worker | Edge Function handles it if we go serial. Adds a whole second system to debug. |
+| Inngest queue | Same — overkill for your volume. |
+| New vendors | ElevenLabs does isolation + STS + TTS. That's the whole pipeline. |
+| BKT / SoR evidence schema | Separate initiative. Doesn't block audio quality. Revisit after Benny sounds perfect. |
+| Voice A/B registry | You said lock it. I'll hardcode. Swappable in one line if you change your mind. |
 
-3. Re-run **1. Scan Storage** afterward to confirm the dashboard reads **Pending: 0, Failed: 0, Repatch failed: 0** across the board.
+---
 
-4. Leave a short note on the page: **"Migration complete. All actively-referenced files are in R2. Egress costs = $0."**
+## Order of work
 
-### Not in scope
+1. **Editor fix first** (crop bi-directional + splice + undo) — unblocks you today, zero backend risk.
+2. **Redub pipeline rewrite** (serial + auto-split + isolator→STS chain) — makes the "Redub world" button actually sound good.
+3. **Teach/Hear polish** — pre-generate and cache segments, fix the interruption bug.
 
-- No changes to the migration copy logic (it works — proven by 1,512 successful copies).
-- No changes to R2 credentials/token (the permission test is green).
-- No touching the `mirrorToR2` on-upload helper (it's the right long-term design).
+---
+
+## Technical notes (for reference)
+
+- Files touched: `TimelineCanvas.tsx`, `AudioMixEditor.tsx`, `preKClipMath.ts`, `usePreKAudioMix.ts`, `supabase/functions/prek-clip-redub/index.ts`, `RPGWordReader.tsx`, `bennyVoice.ts`.
+- One migration: add `source_duration_seconds numeric` to `prek_level_audio_clips`, backfilled from existing `duration_seconds`.
+- Concurrency = 1. Per-clip timeout = 90s. Auto-split threshold = 18s. Silence detection via simple RMS threshold in the function (no ffmpeg needed for MP3 slicing at silence — we use ElevenLabs' own word timestamps from a quick STT pass to find split points).
+
+---
+
+**Approve this and I'll start with the editor fix so your content team is unblocked within the hour.** Then the redub rewrite. Then Teach/Hear.

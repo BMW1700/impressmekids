@@ -483,21 +483,17 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   const trimClip = async (c: PreKAudioClip, edge: "start" | "end", atSec: number) => {
     const res = resolveClip(c, sceneGraph);
-    if (atSec <= res.startSec + 0.05 || atSec >= res.endSec - 0.05) {
-      toast.error("Drag inside the clip to crop it.");
-      return;
-    }
     const rate = Math.max(0.05, c.playback_rate || 1);
     const rawDur = rawAudioDuration(c, res.endSec - res.startSec);
-    const audioAt = Math.max(0, Math.min(rawDur, audioTimeAtTimelineSecond(c, res.startSec, atSec)));
     const currentTrimStart = Math.max(0, c.trim_start_seconds || 0);
     const currentTrimEnd = c.trim_end_seconds != null ? Math.min(rawDur, c.trim_end_seconds) : rawDur;
 
     if (edge === "start") {
-      if (audioAt >= currentTrimEnd - 0.1) {
-        toast.error("Crop would make the clip too short.");
-        return;
-      }
+      // atSec = new visible start on the timeline. May be < res.startSec to
+      // GROW the clip back toward the raw media start (i.e. reveal audio we
+      // previously cropped away). Positive delta shrinks; negative delta grows.
+      const deltaTimelineSec = atSec - res.startSec;
+      const newTrimStart = Math.max(0, Math.min(currentTrimEnd - 0.1, currentTrimStart + deltaTimelineSec * rate));
       const snap = snapToAnchor(sceneGraph, atSec);
       await updateClip(c, {
         anchor_scene_key: snap.scene_key,
@@ -505,19 +501,18 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         anchor_offset_seconds: snap.offset,
         duration_mode: c.duration_mode === "fill-scene" ? "fixed" : c.duration_mode,
         duration_seconds: rawDur,
-        trim_start_seconds: Math.round(audioAt * 100) / 100,
+        trim_start_seconds: Math.round(newTrimStart * 100) / 100,
       });
       return;
     }
 
-    if (audioAt <= currentTrimStart + 0.1) {
-      toast.error("Crop would make the clip too short.");
-      return;
-    }
+    // edge === "end". atSec = new visible end. May be > res.endSec to grow.
+    const deltaTimelineSec = atSec - res.endSec;
+    const newTrimEnd = Math.max(currentTrimStart + 0.1, Math.min(rawDur, currentTrimEnd + deltaTimelineSec * rate));
     const patch: Partial<PreKAudioClip> = {
       duration_mode: c.duration_mode === "fill-scene" ? "fixed" : c.duration_mode,
       duration_seconds: rawDur,
-      trim_end_seconds: Math.round(audioAt * 100) / 100,
+      trim_end_seconds: Math.round(newTrimEnd * 100) / 100,
     };
     if (c.duration_mode === "span-videos") {
       const eSnap = snapToVideoAnchor(sceneGraph, atSec);
@@ -527,6 +522,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     }
     await updateClip(c, patch);
   };
+
 
   // Split a clip at the given absolute time in seconds. Creates a second clip
   // that starts at the split point (with trim_start advanced) and shortens the

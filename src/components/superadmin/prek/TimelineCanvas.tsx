@@ -183,14 +183,23 @@ export function TimelineCanvas({
     const startPx = secToPx(res.startSec);
     const endPx = secToPx(res.endSec);
 
+    // Compute RAW media bounds in timeline seconds so trim handles can drag
+    // both directions (shrink AND grow back to the original media length).
+    const rate = Math.max(0.05, clip.playback_rate || 1);
+    const trimStart = Math.max(0, clip.trim_start_seconds || 0);
+    const rawDur = clip.duration_seconds ?? ((res.endSec - res.startSec) * rate + trimStart);
+    const currentTrimEnd = clip.trim_end_seconds != null ? Math.min(rawDur, clip.trim_end_seconds) : rawDur;
+    const rawStartSec = res.startSec - trimStart / rate;
+    const rawEndSec = res.endSec + Math.max(0, rawDur - currentTrimEnd) / rate;
+
     if (d.mode === "end") {
       const newEndSec = Math.max(0.1, Math.min(graph.nominalDurationTotal, pxToSec(endPx + d.dx)));
       onMoveSpanEnd(clip, newEndSec);
     } else if (d.mode === "trim-start") {
-      const nextStart = Math.max(res.startSec, Math.min(res.endSec - 0.1, pxToSec(startPx + d.dx)));
+      const nextStart = Math.max(rawStartSec, Math.min(res.endSec - 0.1, pxToSec(startPx + d.dx)));
       onTrimClip?.(clip, "start", nextStart);
     } else if (d.mode === "trim-end") {
-      const nextEnd = Math.max(res.startSec + 0.1, Math.min(res.endSec, pxToSec(endPx + d.dx)));
+      const nextEnd = Math.max(res.startSec + 0.1, Math.min(rawEndSec, pxToSec(endPx + d.dx)));
       onTrimClip?.(clip, "end", nextEnd);
     } else {
       const newStartSec = Math.max(0, Math.min(graph.nominalDurationTotal - 0.1, pxToSec(startPx + d.dx)));
@@ -206,6 +215,7 @@ export function TimelineCanvas({
     setDrag(null);
     onDragPreview?.(null);
   };
+
 
   // Scrub by clicking/dragging the scene header (or empty canvas area)
   const scrubFromEvent = (e: RPointerEvent) => {
