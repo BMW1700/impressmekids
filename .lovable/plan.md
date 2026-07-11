@@ -1,55 +1,49 @@
-# R2 Cost Audit — Brutal Honest Findings
+## Three fixes
 
-## The truth about what's on R2 right now
+### 1. Add R2 Migration card to Super Admin dashboard
+The route `/super-admin/r2-migration` exists but there's no card linking to it — that's why you can't see it. Add a 5th card ("R2 Migration") to `SuperAdminDashboard.tsx` alongside Pre-K, K-12, Castle Swarm, Benny Voice.
 
-Your existing R2 setup has an **auto-mirror-on-upload** helper (`src/lib/r2Mirror.ts`) plus a **HEAD-check fallback** on read (`src/lib/cdn.ts`). The fallback silently patches anything that misses the mirror — so nothing is *broken*, but every missed file costs Supabase egress on every read until a full re-migration scan is run.
+### 2. Persist prewarm progress across reloads
+Right now progress lives in React state, so a reload wipes it — even though the MP3s themselves are safely stored. Fix by having the scan step **probe the storage bucket** for each word/mode and pre-populate row status as `cached` when the file already exists.
 
-I audited every `storage.upload()` call site. Here's the score:
+Implementation in `BennyVoicePrewarm.tsx`:
+- After computing `uniqueWords`, list objects in the `prek-word-tts` bucket under `<voiceId>/say/` and `<voiceId>/teach/` (one `storage.list` call per prefix, paginated).
+- Build a `Set<string>` of already-warmed slugs per mode.
+- Seed `rows` on load so every already-cached word shows the green ✓ badge immediately, and the progress bar reflects reality.
+- Re-run the probe automatically whenever `voiceId` changes.
 
-| Call site | Bucket | Auto-mirrors to R2? |
-|---|---|---|
-| `preKAudioUpload.ts` (admin audio tracks) | `prek-level-audio` | ✅ Yes |
-| `AccountSection.tsx` (avatars) | `avatars` | ✅ Yes |
-| `CampaignModeEntry.tsx` (campaign art) | `campaign-assets` | ✅ Yes |
-| **`preKVideoUpload.ts` (Benny videos)** | `prek-level-videos` | ❌ **NO** |
-| **`prek-clip-redub` edge fn (redub MP3s)** | `prek-level-audio` | ❌ **NO** |
-| **`prek-word-tts` edge fn (Benny word audio)** | `prek-word-tts` | ❌ **NO** — bucket isn't even in the R2 allowlist |
+Result: reload the page → you instantly see "847 / 900 cached" instead of a blank slate, and clicking Prewarm only hits ElevenLabs for the missing ones.
 
-**Translation:** the three highest-volume things you're about to generate — new Benny videos, ElevenLabs redubs, and every pre-warmed word MP3 — are currently going to Supabase Storage only. They *work* (HEAD fallback), but you pay Supabase egress on every child playback forever. That's the exact opposite of what you want at 100K users.
+### 3. Make the voice slow + kid-clear
+Update `supabase/functions/prek-word-tts/index.ts` prompts and voice settings:
 
-## What I'll fix (one build turn)
+**Say mode** — currently just `"cat."` spoken at speed 1.0.
+Change to say the word **twice with a pause**, at slower speed:
+```
+"cat... cat."
+```
+with `speed: 0.85`, `stability: 0.6`, `style: 0.25` (calmer, clearer, less dramatic).
 
-### 1. Auto-mirror the 3 gaps
-- `preKVideoUpload.ts` → add `mirrorToR2Async('prek-level-videos', path, …)` after upload.
-- `prek-clip-redub/index.ts` → invoke `migrate-to-r2` `copy-path` after each MP3 upload (edge fn can't import client helper).
-- `prek-word-tts/index.ts` → same, plus **add `prek-word-tts` to `R2_MIRRORED_BUCKETS` and `R2_ENABLED_BUCKETS`** so word-audio serves from `cdn.yubilearn.com` instead of signed Supabase URLs. Bucket becomes public (word pronunciations, no PII — same trust level as `prek-level-audio`).
+**Teach mode** — currently `"Cat. C — A — T. c - a - t... cat!"` at speed 0.9.
+Rewrite for real phonics teaching:
+```
+"cat. Let's sound it out. C ... A ... T. /k/ ... /æ/ ... /t/. cat!"
+```
+For multi-syllable words:
+```
+"rabbit. Let's sound it out. rab ... bit. rabbit!"
+```
+With `speed: 0.75` (much slower), `stability: 0.65`, plus explicit ellipses (ElevenLabs interprets `...` as real pauses) so each letter/phoneme lands distinctly.
 
-### 2. Backfill anything already in Supabase-only
-Run the existing **Super Admin → R2 Migration** tool once (Scan → Run). This walks every bucket, copies missed files to R2, and stamps cache headers. Zero code needed — the tool already exists. I'll add a note on the R2 Migration page telling you to re-run it after every big content push (or I can add a cron that runs it nightly — your call).
+Also add a tiny phoneme map for common CVC letters (`a → /æ/`, `e → /ɛ/`, `c → /k/`, etc.) so the teach prompt produces the actual sound, not the letter name, on the second pass.
 
-### 3. Verify
-Post-fix, upload one test video + trigger one redub + prewarm one word, then confirm all three land at `cdn.yubilearn.com/<bucket>/<path>` with HTTP 200.
+**Important — cache invalidation:** Because the cache key is `<voiceId>/<mode>/<slug>.mp3`, the existing warmed files would still play the old fast version. Two options:
+- **(a)** Bump the object path to `<voiceId>/v2/<mode>/<slug>.mp3` so all old files are ignored and you re-run the prewarm once. Old files stay on disk (harmless) but nothing points to them.
+- **(b)** Add a "Force regenerate" toggle in the prewarm UI that passes `force: true` and the edge function overwrites the existing MP3.
 
-## Cost math (brutally honest)
+Recommend **(a) + (b) together**: bump to `v2` for a clean slate, and keep the Force toggle for future voice/style tweaks so you never have to touch code again.
 
-Assumptions: avg Pre-K session = 5 videos (~15 MB each) + 20 word plays (~30 KB each) + 3 redub tracks (~200 KB). ≈ **76 MB egress per session**. Assume 20 sessions/user/month.
-
-| Users | Monthly egress | Supabase cost (@$0.09/GB) | R2 cost (@$0/GB egress) |
-|---|---|---|---|
-| 10,000 | ~15 TB | **~$1,350/mo** | **$0** |
-| 100,000 | ~150 TB | **~$13,500/mo** | **$0** |
-
-R2 storage itself is $0.015/GB/mo. Even at 500 GB of total video library that's **$7.50/mo storage, $0 egress**. Your only ongoing Cloudflare bill for media at 100K users is roughly **$10–20/month total**, vs. **$13.5K/month** if we leave the gaps open.
-
-Private student audio (`aura-audio`) already mints R2 presigned URLs via `sign-r2-audio-url` — that path is already free-egress and FERPA-clean. No change needed.
-
-## Answer to your direct questions
-
-- **"Is all new stuff automatically stored in R2?"** — Right now: only the 3 rows marked ✅. After this fix: **yes, everything.**
-- **"Do I have to do it manually?"** — No. Mirror-on-upload is invisible. For pre-existing files, one click on Super Admin → R2 Migration → Scan/Run.
-- **"Can you just do it for me?"** — Yes, that's what this plan does.
-
-## Technical details
-- Edge-function mirror uses `supabase.functions.invoke("migrate-to-r2", { action: "copy-path", bucket, path, contentType, size })` — same path as the client helper, no new infra.
-- Making `prek-word-tts` public: `supabase--storage_update_bucket(name="prek-word-tts", public=true)`. Client switches from `createSignedUrl` to `getPublicUrl` + `rewriteToCdn`. Existing cached MP3s keep working (signed URLs still valid until TTL expires; new reads use CDN).
-- All mirror calls are fire-and-forget; a mirror failure never blocks the upload — HEAD fallback still catches it.
+### Files touched
+- `src/pages/superadmin/SuperAdminDashboard.tsx` — add R2 Migration card
+- `src/pages/superadmin/BennyVoicePrewarm.tsx` — storage probe on scan, Force regenerate toggle
+- `supabase/functions/prek-word-tts/index.ts` — new prompts, slower voice settings, `v2` path, optional `force` flag
