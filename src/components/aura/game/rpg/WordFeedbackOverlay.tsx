@@ -1,7 +1,9 @@
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Volume2, Check, RefreshCw } from "lucide-react";
+import { X, Volume2, Check, RefreshCw, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+
 
 interface WordFeedbackOverlayProps {
   isVisible: boolean;
