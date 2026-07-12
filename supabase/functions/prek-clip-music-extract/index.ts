@@ -258,23 +258,20 @@ async function ensureMusicClip(
   admin: ReturnType<typeof createClient>,
   args: { levelId: string; sceneKey: string; storagePath: string },
 ) {
-  const { data: existingTrack } = await admin
+  // Idempotent track upsert — safe when parallel workers race for the same
+  // (level, track_index). ignoreDuplicates skips if the track already exists.
+  await admin
     .from("prek_level_audio_tracks")
-    .select("id, track_index")
-    .eq("level_id", args.levelId)
-    .eq("track_index", MUSIC_TRACK_INDEX)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (!existingTrack) {
-    await admin.from("prek_level_audio_tracks").insert({
-      level_id: args.levelId,
-      track_index: MUSIC_TRACK_INDEX,
-      name: MUSIC_TRACK_NAME,
-      volume: 0.8,
-      muted: false,
-    });
-  }
+    .upsert(
+      {
+        level_id: args.levelId,
+        track_index: MUSIC_TRACK_INDEX,
+        name: MUSIC_TRACK_NAME,
+        volume: 0.8,
+        muted: false,
+      },
+      { onConflict: "level_id,track_index", ignoreDuplicates: true },
+    );
 
   const { data: existingClip } = await admin
     .from("prek_level_audio_clips")
