@@ -222,8 +222,12 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                   </Button>
                 )}
                 {redubUrl && (
-                  <Badge variant="secondary" className="h-7 text-[10px] gap-1">
-                    <Layers className="h-3 w-3"/> Layered
+                  <Badge
+                    variant="secondary"
+                    className="h-7 text-[10px] gap-1"
+                    title="Auto-placed on the Benny (Redub) track (index 90). Source video audio is muted so this is what plays in-game."
+                  >
+                    <Layers className="h-3 w-3"/> On timeline · track 90 · src muted
                   </Badge>
                 )}
                 <Button
