@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
-import { speakBenny } from "@/lib/bennyVoice";
+import { speakBenny, stopBenny } from "@/lib/bennyVoice";
 import { teachWord, stopBennyTeach } from "@/lib/bennyTeach";
 
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
@@ -191,6 +191,7 @@ export const RPGWordReader = ({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const targetArmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pronunciationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Response time tracking for patent-critical speed-based damage
   const wordDisplayTimestampRef = useRef<number>(0);
@@ -217,6 +218,15 @@ export const RPGWordReader = ({
   useEffect(() => { wordsRef.current = words; }, [words]);
   useEffect(() => { batchSizeRef.current = batchSize; }, [batchSize]);
 
+  const stopInstructionAudio = useCallback(() => {
+    if (pronunciationTimeoutRef.current) {
+      clearTimeout(pronunciationTimeoutRef.current);
+      pronunciationTimeoutRef.current = null;
+    }
+    stopBennyTeach();
+    stopBenny();
+  }, []);
+
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -229,6 +239,7 @@ export const RPGWordReader = ({
     if (prevWordsKeyRef.current !== wordsKey) {
       console.log('[RPGWordReader] Words changed, resetting. Old:', prevWordsKeyRef.current.substring(0, 50), 'New:', wordsKey.substring(0, 50));
       prevWordsKeyRef.current = wordsKey;
+      stopInstructionAudio();
       wordGenerationRef.current += 1;
       setCurrentIndex(0);
       currentIndexRef.current = 0;
@@ -280,7 +291,7 @@ export const RPGWordReader = ({
         }, WORD_TRANSITION_ARM_MS_NORMAL + 120);
       }
     }
-  }, [wordsKey]);
+  }, [wordsKey, stopInstructionAudio]);
 
   // Get current batch - memoized for stability
   const currentBatch = useMemo(() => {
@@ -338,6 +349,10 @@ export const RPGWordReader = ({
     if (targetArmTimeoutRef.current) {
       clearTimeout(targetArmTimeoutRef.current);
       targetArmTimeoutRef.current = null;
+    }
+    if (pronunciationTimeoutRef.current) {
+      clearTimeout(pronunciationTimeoutRef.current);
+      pronunciationTimeoutRef.current = null;
     }
   }, []);
 
@@ -648,12 +663,6 @@ export const RPGWordReader = ({
     setEchoCountdown(0);
     soundEffects.incorrectWord();
     
-    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
-    setTimeout(() => {
-      speakBenny(expectedWord, { mode: "say" }).catch(() => playCorrectPronunciation(expectedWord));
-    }, 300);
-
-    
     // IMMEDIATELY report the first miss for accuracy tracking (before user decides Try Again or Continue).
     // A failed retry is the same word's second attempt, so it must not double-count wordsRead.
     if (countMiss) {
@@ -665,6 +674,12 @@ export const RPGWordReader = ({
     setRecognitionState('waiting_action');
     setPendingIncorrectWord({ word: expectedWord, spoken: spokenWord, index: wordIndex });
     setShowFeedbackOverlay(true);
+    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
+    if (pronunciationTimeoutRef.current) clearTimeout(pronunciationTimeoutRef.current);
+    pronunciationTimeoutRef.current = setTimeout(() => {
+      pronunciationTimeoutRef.current = null;
+      speakBenny(expectedWord, { mode: "say", volume: 1 }).catch(() => playCorrectPronunciation(expectedWord));
+    }, 300);
     
     // DO NOT call onResult yet - wait for user to choose Continue (which triggers enemy attack)
   }, [stopRecognitionSession, onMiss]);
@@ -674,6 +689,7 @@ export const RPGWordReader = ({
   
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
+    stopInstructionAudio();
 
     // Kill any stale Web Speech instance first. Browser recognition.stop() ends
     // asynchronously; starting a new session in the same tick can be ignored by
@@ -708,7 +724,7 @@ export const RPGWordReader = ({
     // doesn't reject the retry transcript as "target not armed".
     const retryIndex = currentIndexRef.current;
     const retryTarget = currentBatch[retryIndex]?.replace(/[^a-zA-Z']/g, '') || '';
-    const restartDelayMs = mode === 'fast' ? RETRY_RESTART_DELAY_MS_FAST : RETRY_RESTART_DELAY_MS_NORMAL;
+    const restartDelayMs = mode === 'fast' ? 260 : 420;
     const tokenId = speechTargetTokenRef.current.id + 1;
     speechTargetTokenRef.current = {
       id: tokenId,
@@ -737,7 +753,7 @@ export const RPGWordReader = ({
         startRecognitionRef.current?.();
       }
     }, restartDelayMs);
-  }, [pendingIncorrectWord, currentBatch, mode]);
+  }, [pendingIncorrectWord, currentBatch, mode, stopInstructionAudio]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
@@ -824,6 +840,7 @@ export const RPGWordReader = ({
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
     if (!pendingIncorrectWord) return;
+    stopInstructionAudio();
     
     const { spoken, index } = pendingIncorrectWord;
     
@@ -864,7 +881,7 @@ export const RPGWordReader = ({
       currentIndexRef.current = 0;
       setRecognitionState('idle');
     }
-  }, [pendingIncorrectWord, onResult, words, batchSize, wordResults, onBatchComplete]);
+  }, [pendingIncorrectWord, onResult, words, batchSize, wordResults, onBatchComplete, stopInstructionAudio]);
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -1319,6 +1336,7 @@ export const RPGWordReader = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopInstructionAudio();
       speechSessionIdRef.current += 1;
       shouldBeListeningRef.current = false;
       clearAllTimeouts();
@@ -1332,7 +1350,7 @@ export const RPGWordReader = ({
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
     };
-  }, [clearAllTimeouts]);
+  }, [clearAllTimeouts, stopInstructionAudio]);
 
   // Force-stop recognition the moment `disabled` flips true (e.g. while a
   // PvP RPC is in flight). Without this, an already-running recognition
@@ -1340,6 +1358,7 @@ export const RPGWordReader = ({
   // double submissions or stale word advancement.
   useEffect(() => {
     if (!disabled) return;
+    stopInstructionAudio();
     speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
@@ -1352,7 +1371,7 @@ export const RPGWordReader = ({
     isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
     setRecognitionState('idle');
-  }, [disabled, clearAllTimeouts]);
+  }, [disabled, clearAllTimeouts, stopInstructionAudio]);
 
   // Control functions
   const startReading = useCallback(() => {
@@ -1376,9 +1395,10 @@ export const RPGWordReader = ({
 
 
   const pauseReading = useCallback(() => {
+    stopInstructionAudio();
     stopRecognitionSession();
     setRecognitionState('paused');
-  }, [stopRecognitionSession]);
+  }, [stopRecognitionSession, stopInstructionAudio]);
 
   const resumeReading = useCallback(() => {
     startRecognitionSession();
@@ -1386,9 +1406,10 @@ export const RPGWordReader = ({
 
   const hearWord = useCallback(() => {
     if (cleanWord) {
-      playCorrectPronunciation(cleanWord);
+      stopInstructionAudio();
+      speakBenny(cleanWord, { mode: "say", volume: 1 }).catch(() => playCorrectPronunciation(cleanWord));
     }
-  }, [cleanWord]);
+  }, [cleanWord, stopInstructionAudio]);
 
   // Safety check
   if (!currentBatch || currentBatch.length === 0) {
@@ -1718,8 +1739,18 @@ export const RPGWordReader = ({
         canRetry={canRetry}
         onContinue={handleContinueAfterMiss}
         onTryAgain={handleTryAgain}
-        onPlayAudio={() => { stopBennyTeach(); pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" }); }}
-        onTeachPhonics={() => pendingIncorrectWord?.word && teachWord(pendingIncorrectWord.word)}
+        onPlayAudio={() => {
+          stopInstructionAudio();
+          pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say", volume: 1 });
+        }}
+        onTeachPhonics={() => {
+          const word = pendingIncorrectWord?.word;
+          if (!word) return;
+          stopRecognitionSession();
+          setRecognitionState('waiting_action');
+          stopInstructionAudio();
+          teachWord(word).catch(() => playCorrectPronunciation(word));
+        }}
       />
     </div>
   );

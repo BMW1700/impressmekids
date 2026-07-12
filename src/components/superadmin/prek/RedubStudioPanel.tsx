@@ -6,7 +6,7 @@
 // by scene key; the student player picks it up automatically.
 
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,8 +96,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
-          <p><strong>How it works:</strong> Each clip is first run through ElevenLabs <em>Voice Isolator</em> (strips music, background noise, secondary voices), then the clean Benny stem is fed into Speech-to-Speech, which re-voices it in your cloned Benny voice while preserving cadence so mouth movements still match. Redub MP3s are auto-placed on a "Benny (Redub)" track in the timeline and the source video audio is muted, so students hear only the clean redub.</p>
-          <p><strong>Tip:</strong> Use <strong>Iso only</strong> on a couple of scenes first (free of STS credits) to sanity-check isolation quality. If Benny sounds clean, hit <strong>Redub entire level</strong>.</p>
+          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the "Benny (Redub)" timeline track and source video audio is muted.</p>
+          <p><strong>Workflow:</strong> Use <strong>Final Audio</strong> as the approval preview. Isolation test stays available as an advanced check, but the redub is the final student-facing audio.</p>
           <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio + isolation minutes.</p>
         </div>
 
@@ -217,36 +217,31 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     <AlertCircle className="inline h-3 w-3 mr-0.5"/>{state?.errorMessage}
                   </span>
                 )}
-                {isoUrl && (
-                  <Button
-                    size="sm" variant="outline"
-                    className="h-7 px-2 text-[10px]"
-                    onClick={() => togglePlay("iso", isoUrl)}
-                    title="Preview Voice Isolator output (Benny only, music/other voices removed)"
-                  >
-                    {isPlaying("iso") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Iso
-                  </Button>
-                )}
                 {redubUrl && (
                   <Button
                     size="sm" variant="outline"
-                    className="h-7 px-2 text-[10px]"
+                    className="h-7 px-2 text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
                     onClick={() => togglePlay("redub", redubUrl)}
-                    title="Preview redubbed Benny audio"
+                    title="Preview final redubbed Benny audio"
                   >
-                    {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Redub
+                    {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Final Audio
                   </Button>
+                )}
+                {redubUrl && (
+                  <Badge variant="secondary" className="h-7 text-[10px] gap-1">
+                    <Layers className="h-3 w-3"/> Layered
+                  </Badge>
                 )}
                 <Button
                   size="sm" variant="ghost"
                   disabled={status === "running" || !!redub.batchProgress}
                   onClick={() => handlePreviewIsolation(s)}
-                  title="Preview isolation only (no STS credits spent) — check that Benny's voice comes through cleanly before redubbing."
+                  title={isoUrl ? "Re-run isolation test only (advanced)" : "Isolation test only (advanced; no STS credits spent)"}
                   className="h-7 px-2 text-[10px]"
                 >
                   {status === "running" && !state?.signedUrl
                     ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : "Iso only"}
+                    : isoUrl ? "Retest iso" : "Iso test"}
                 </Button>
                 <Button
                   size="sm" variant="ghost"

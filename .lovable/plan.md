@@ -1,69 +1,68 @@
-# Benny Redub + Editor Fix — Simple Plan (v4)
+## Brutally honest audit
 
-**Brutal honest recommendation: drop Fly.io/Inngest.** You don't need them. Your bottleneck isn't infrastructure — it's that we were rushing clips through ElevenLabs in parallel. Fix the pacing and the quality problem disappears. One vendor (ElevenLabs), one Edge Function, done.
+The current failures are not one single bug. There are three separate issues:
 
-If you ever hit a wall (e.g. redubbing 50 worlds in one night), we add a worker later. Not now.
+1. **Benny Teach audio is too aggressive and overlapping**
+   - The game calls the segmented Teach flow, but the client currently fetches every segment at once.
+   - The prewarm tool also runs multiple generation workers at once.
+   - That is risky for short child-facing phonics clips because cached/generated segments can arrive under load while the user taps Hear/Teach/Retry, making playback feel garbled or repeated.
 
----
+2. **The Retry/Hear/Teach buttons are fighting microphone + audio state**
+   - After a wrong answer, the overlay pauses the mic, but Teach/Hear playback is not consistently stopped before Retry.
+   - Retry starts the mic again very quickly after stopping the old recognition session. On Chrome/Safari this can silently fail, which looks exactly like “Reading…” but nothing is actually processed.
 
-## What I'll build
+3. **Redub Studio UI is showing too many technical outputs**
+   - “Iso”, “Redub”, and “Iso only” are all valid internal pipeline steps, but for workflow they are confusing.
+   - The final useful thing is the redubbed audio. That should be the main preview/play button.
+   - The backend already auto-places successful redubs on a Benny (Redub) timeline track; the UI should make that obvious and provide a clean layer/refresh action.
 
-### 1. Redub pipeline — slow & perfect
-Inside the existing `prek-clip-redub` Edge Function:
-- **Serial processing**: one clip at a time, never parallel. No rate-limit collisions.
-- **Auto-split long clips**: anything over ~20s gets split at natural silences, redubbed in pieces, and stitched back. Prevents ElevenLabs quality drop.
-- **Fixed pipeline order** (what you described exactly):
-  1. Original audio → ElevenLabs **Voice Isolator** (strips background noise/music)
-  2. Isolated audio → ElevenLabs **Speech-to-Speech** in Benny's locked voice
-  3. Result → saved back to R2 + linked to the level
-- **"Redub entire world" button**: fans out across all levels in a world, still serial, with live progress + per-clip status.
-- **Retry-on-fail**: any single clip that comes back weird gets one automatic retry before being flagged.
+## Plan
 
-### 2. Benny voice — locked
-- You give me the ElevenLabs voice ID → I hardcode it as `BENNY_VOICE_ID` in the function.
-- Swapping later = change one constant + click "Redub entire world" again. No lock-in fear.
+### 1. Make Teach playback serial and non-overlapping
+- Update `src/lib/bennyTeach.ts` so Teach fetches and plays one segment at a time instead of firing all segment requests in parallel.
+- Add a single active Teach controller so tapping Teach again cancels the previous lesson cleanly.
+- Ensure `stopBennyTeach()` fully aborts pending segment playback, not only the current audio element.
+- Keep the default Teach pace slow for Pre-K.
 
-### 3. Editor — bi-directional crop + splice (the real fix)
-Root cause of the "can't drag crop back out" bug: the code clamps the trim handle against the *already-cropped* visible edge instead of the *raw* audio duration. Fix:
-- Store `source_duration_seconds` on the clip when uploaded (currently missing — this is why the math breaks).
-- Left/right trim handles clamp against **raw** duration, not visible duration. You can crop tight, then drag back out to reveal the original audio. Effortless, matches the cinematic timeline behavior.
-- **Splice** = split clip at playhead (or at where you click). Produces two independent clips you can trim/move/delete separately.
-- Keyboard: `S` = split at playhead, `Delete` = remove selected, `Cmd+Z` = undo.
+### 2. Remove the repeating/garbled Teach sequence
+- Update `src/lib/phonicsSegmenter.ts` so short words do not say the whole word at the beginning and end.
+- New flow for short Pre-K words:
+  - “Let’s sound it out.”
+  - isolated phoneme sounds one by one
+  - blended sound-out
+  - final whole word
+- This removes the “word repeats word repeats word” feeling while still following phonics/science-of-reading style instruction.
 
-### 4. Teach / Hear — the ELLO killer
-- **Hear** button: plays the whole word in Benny's locked voice (cached MP3, instant).
-- **Teach** button: plays phoneme-by-phoneme → blend → whole word → used-in-sentence. Each segment is a pre-generated ElevenLabs clip cached in R2, so it plays instantly and sounds identical every time.
-- Pre-warmed on level publish so kids never wait.
-- No mid-word interruption bug: the "Hear" button won't hijack an in-progress "Teach" sequence.
+### 3. Make Benny Voice Prewarm safe-quality instead of fast-but-risky
+- Change `src/pages/superadmin/BennyVoicePrewarm.tsx` from concurrency 4 to serial generation by default.
+- Stop generating the deprecated legacy `teach` MP3s, because the app now uses segmented Teach and those legacy full-lesson clips are the ones most likely to sound awful.
+- Keep `say` MP3s and segmented phonics MP3s.
+- Update totals/progress labels so the dashboard reflects the actual generation work.
 
----
+### 4. Fix Retry/Hear/Teach button reliability in the game
+- Update `src/components/aura/game/rpg/RPGWordReader.tsx` so:
+  - Retry always stops Benny Teach and Benny word audio first.
+  - Hear always stops Teach before playing the final word audio.
+  - Teach always stops the mic and previous audio before starting the lesson.
+  - Retry waits slightly longer before restarting speech recognition so the old browser mic session is truly gone.
+  - The overlay remains stable after Hear/Teach; the Retry button does not disappear or become dead.
 
-## What I'm explicitly NOT doing (and why)
+### 5. Simplify Redub Studio to final audio first
+- Update `src/components/superadmin/prek/RedubStudioPanel.tsx` so each row primarily shows:
+  - **Final Audio** play button when redub exists.
+  - **Redub / Regenerate** action.
+  - **Layered** status indicating it has been placed on the Benny (Redub) track.
+- Hide the separate “Iso” preview by default to avoid confusion.
+- Keep “isolation test” available as a smaller advanced action, since it is still useful before spending Speech-to-Speech credits.
 
-| Skipped | Why |
-|---|---|
-| Fly.io worker | Edge Function handles it if we go serial. Adds a whole second system to debug. |
-| Inngest queue | Same — overkill for your volume. |
-| New vendors | ElevenLabs does isolation + STS + TTS. That's the whole pipeline. |
-| BKT / SoR evidence schema | Separate initiative. Doesn't block audio quality. Revisit after Benny sounds perfect. |
-| Voice A/B registry | You said lock it. I'll hardcode. Swappable in one line if you change your mind. |
+### 6. Verify the real failure paths
+- Check recent backend function logs for `prek-word-tts` and `prek-clip-redub` after the changes.
+- Test the Teach/Hear/Retry UI flow in the browser preview.
+- Deploy the edited backend function only if backend function code changes are needed.
 
----
+## Expected result
 
-## Order of work
-
-1. **Editor fix first** (crop bi-directional + splice + undo) — unblocks you today, zero backend risk.
-2. **Redub pipeline rewrite** (serial + auto-split + isolator→STS chain) — makes the "Redub world" button actually sound good.
-3. **Teach/Hear polish** — pre-generate and cache segments, fix the interruption bug.
-
----
-
-## Technical notes (for reference)
-
-- Files touched: `TimelineCanvas.tsx`, `AudioMixEditor.tsx`, `preKClipMath.ts`, `usePreKAudioMix.ts`, `supabase/functions/prek-clip-redub/index.ts`, `RPGWordReader.tsx`, `bennyVoice.ts`.
-- One migration: add `source_duration_seconds numeric` to `prek_level_audio_clips`, backfilled from existing `duration_seconds`.
-- Concurrency = 1. Per-clip timeout = 90s. Auto-split threshold = 18s. Silence detection via simple RMS threshold in the function (no ffmpeg needed for MP3 slicing at silence — we use ElevenLabs' own word timestamps from a quick STT pass to find split points).
-
----
-
-**Approve this and I'll start with the editor fix so your content team is unblocked within the hour.** Then the redub rewrite. Then Teach/Hear.
+- The child hears clear, separated phonics instruction instead of garbled/repeated audio.
+- Hear, Teach, and Retry no longer break each other.
+- Retry restarts actual listening, not just the visual “Reading…” state.
+- Redub Studio becomes simple: generate final audio, preview final audio, and use the auto-layered Benny track in the timeline.

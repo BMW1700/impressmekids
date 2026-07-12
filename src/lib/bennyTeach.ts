@@ -39,6 +39,7 @@ export function setBennyPace(p: Pace) {
 
 const urlCache = new Map<string, string>();
 let currentAudio: HTMLAudioElement | null = null;
+let activeController: AbortController | null = null;
 
 function segKey(kind: SegKind, text: string, voiceId: string | undefined) {
   return `${voiceId ?? ""}::${kind}::${text}`;
@@ -69,6 +70,10 @@ async function fetchSegmentUrl(
 }
 
 export function stopBennyTeach() {
+  if (activeController) {
+    try { activeController.abort(); } catch {}
+    activeController = null;
+  }
   if (currentAudio) {
     try {
       currentAudio.pause();
@@ -128,20 +133,29 @@ export async function teachWord(word: string, opts: TeachWordOptions = {}): Prom
   const gapMult = PACE_GAP_MULT[pace];
 
   stopBennyTeach();
+  const controller = new AbortController();
+  activeController = controller;
+  const abortSignal = controller.signal;
+  const shouldStop = () => abortSignal.aborted || opts.signal?.aborted;
 
-  // Fire off every fetch in parallel — most will be $0 cache hits.
-  const urlPromises = segs.map((s) => fetchSegmentUrl(s.kind, s.text, opts.voiceId));
-
-  for (let i = 0; i < segs.length; i++) {
-    if (opts.signal?.aborted) break;
-    const seg = segs[i];
-    opts.onSegmentStart?.(seg, i);
-    const url = await urlPromises[i];
-    if (url) {
-      await playUrl(url, opts.signal);
+  try {
+    for (let i = 0; i < segs.length; i++) {
+      if (shouldStop()) break;
+      const seg = segs[i];
+      opts.onSegmentStart?.(seg, i);
+      // Fetch serially. These are tiny cache-first requests; serial playback is
+      // much safer for Pre-K because it prevents overlapping requests/audio when
+      // a child taps Hear, Teach, and Retry quickly.
+      const url = await fetchSegmentUrl(seg.kind, seg.text, opts.voiceId);
+      if (shouldStop()) break;
+      if (url) {
+        await playUrl(url, abortSignal);
+      }
+      if (shouldStop()) break;
+      await delay(seg.gapAfterMs * gapMult, abortSignal);
     }
-    if (opts.signal?.aborted) break;
-    await delay(seg.gapAfterMs * gapMult, opts.signal);
+  } finally {
+    if (activeController === controller) activeController = null;
+    if (!shouldStop()) opts.onDone?.();
   }
-  opts.onDone?.();
 }

@@ -1,6 +1,6 @@
 // phonicsSegmenter — turn a word into an ordered list of TTS segments so the
-// Teach flow plays "cat → C → A → T → cuh…aaa…tuh → cat" with real pauses
-// between each piece instead of ElevenLabs mumbling everything in one take.
+// Teach flow plays tiny, controlled phoneme chunks with real pauses between
+// each piece instead of ElevenLabs mumbling everything in one take.
 
 export type SegKind =
   | "whole"      // the whole word, spoken naturally
@@ -119,23 +119,22 @@ export function segmentWord(rawWord: string): Segment[] {
   const isShort = tokens.length <= 4 && splitSyllables(clean).length <= 1;
 
   const segs: Segment[] = [];
-  // 1) whole word
-  segs.push({ kind: "whole", text: clean, gapAfterMs: 800 });
-  // 2) narrator lead-in
+  // 1) narrator lead-in. Do not say the whole word first: the word is already
+  // on screen, and saying it at both ends made Teach sound repetitive.
   segs.push({ kind: "narration", text: NARRATION, gapAfterMs: 500 });
 
   if (isShort) {
-    // 3) letter names, one at a time
-    tokens.forEach((tok, i) => {
+    // 2) isolated phoneme sounds, one at a time
+    soundTokens.forEach((tok, i) => {
       segs.push({
-        kind: "letter",
-        text: letterName(tok),
-        gapAfterMs: i === tokens.length - 1 ? 700 : 550,
+        kind: "sound",
+        text: tokenSound(tok, silentE),
+        gapAfterMs: i === soundTokens.length - 1 ? 700 : 600,
       });
     });
-    // 4) sound-out (all phonemes together with em dashes = natural pauses)
+    // 3) blend the phonemes together
     const soundText = soundTokens.map((t) => tokenSound(t, silentE)).join(" — ");
-    segs.push({ kind: "sound", text: soundText, gapAfterMs: 700 });
+    segs.push({ kind: "blend", text: soundText, gapAfterMs: 700 });
   } else {
     // multi-syllable path
     const syls = splitSyllables(clean);
