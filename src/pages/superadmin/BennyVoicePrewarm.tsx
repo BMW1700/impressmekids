@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { segmentCacheEntries, type SegKind } from "@/lib/phonicsSegmenter";
 import { teachWord } from "@/lib/bennyTeach";
 
-const LEGACY_VERSION = "v2";
-const CACHE_VERSION = "v3";
+// Bumped from v2/v3 → v3/v4 to invalidate the garbled ElevenLabs cache.
+// Anything under v2/* or v3/* is treated as poisoned and never read;
+// the "Purge poisoned cache" button below deletes those prefixes.
+const LEGACY_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const SEG_KINDS: SegKind[] = ["whole", "narration", "letter", "sound", "syllable", "blend"];
 
 interface WordItem { word: string; }
