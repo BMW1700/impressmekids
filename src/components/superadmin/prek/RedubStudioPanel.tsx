@@ -79,11 +79,6 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
   };
 
-  const handlePreviewIsolation = async (scene: RedubSceneInput) => {
-    toast.info(`Isolating Benny's voice on ${scene.label}…`);
-    const ok = await redub.redubScene(scene, { isolateOnly: true });
-    if (ok) toast.success(`Isolation ready — hit "Iso" to preview.`);
-  };
 
 
   return (
@@ -96,8 +91,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
-          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the "Benny (Redub)" timeline track and source video audio is muted.</p>
-          <p><strong>Workflow:</strong> Use <strong>Final Audio</strong> as the approval preview. Isolation test stays available as an advanced check, but the redub is the final student-facing audio.</p>
+          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the <strong>Benny (Redub)</strong> timeline track at the same start time as the original clip, and source video audio is muted for you.</p>
+          <p><strong>Workflow:</strong> Hit <strong>Redub</strong> per clip → preview <strong>Final Audio</strong> → approve or re-run. Every approved redub is already placed on the timeline lip-to-lip with the video.</p>
           <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio + isolation minutes.</p>
         </div>
 
@@ -193,9 +188,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
           {scenes.map((s) => {
             const state = redub.states[s.sceneKey];
             const existingRedub = redub.signedRedubUrls[s.sceneKey];
-            const existingIso = redub.signedIsolatedUrls[s.sceneKey];
             const redubUrl = state?.signedUrl ?? existingRedub;
-            const isoUrl = state?.isolatedSignedUrl ?? existingIso;
+
             
             const status = state?.status ?? (existingRedub ? "done" : "idle");
             const previewKeyFor = (kind: "src" | "iso" | "redub") => `${s.sceneKey}::${kind}`;
@@ -235,23 +229,13 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                 <Button
                   size="sm" variant="ghost"
                   disabled={status === "running" || !!redub.batchProgress}
-                  onClick={() => handlePreviewIsolation(s)}
-                  title={isoUrl ? "Re-run isolation test only (advanced)" : "Isolation test only (advanced; no STS credits spent)"}
-                  className="h-7 px-2 text-[10px]"
-                >
-                  {status === "running" && !state?.signedUrl
-                    ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : isoUrl ? "Retest iso" : "Iso test"}
-                </Button>
-                <Button
-                  size="sm" variant="ghost"
-                  disabled={status === "running" || !!redub.batchProgress}
                   onClick={() => handleRedubOne(s)}
-                  title="Isolate → redub → auto-place clip on Benny (Redub) track"
+                  title={existingRedub ? "Re-run: isolate → redub → re-place clip on Benny (Redub) track" : "Isolate → redub → auto-place clip on Benny (Redub) track"}
+                  className="h-7"
                 >
                   {status === "running"
-                    ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : existingRedub ? <RotateCw className="h-3 w-3"/> : <Wand2 className="h-3 w-3"/>}
+                    ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
+                    : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
               </div>
             );

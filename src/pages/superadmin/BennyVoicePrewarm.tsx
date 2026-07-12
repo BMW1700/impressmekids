@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,13 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { segmentCacheEntries, type SegKind } from "@/lib/phonicsSegmenter";
 import { teachWord } from "@/lib/bennyTeach";
 
-const LEGACY_VERSION = "v2";
-const CACHE_VERSION = "v3";
+// Bumped from v2/v3 → v3/v4 to invalidate the garbled ElevenLabs cache.
+// Anything under v2/* or v3/* is treated as poisoned and never read;
+// the "Purge poisoned cache" button below deletes those prefixes.
+const LEGACY_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const SEG_KINDS: SegKind[] = ["whole", "narration", "letter", "sound", "syllable", "blend"];
 
 interface WordItem { word: string; }
@@ -275,6 +283,30 @@ const BennyVoicePrewarm = () => {
     catch { toast.error("Teach preview failed"); }
   };
 
+  const [purgeConfirm, setPurgeConfirm] = useState("");
+  const [purging, setPurging] = useState(false);
+
+  const handlePurge = async () => {
+    if (purgeConfirm !== "DELETE") {
+      toast.error('Type DELETE to confirm.');
+      return;
+    }
+    setPurging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("prek-word-tts", {
+        body: { mode: "purge", voiceId: voiceId || undefined },
+      });
+      if (error) throw error;
+      toast.success(`Purged ${data?.purged ?? 0} poisoned files. Prewarm to rebuild.`);
+      setRows({});
+      setPurgeConfirm("");
+    } catch (e: any) {
+      toast.error(`Purge failed: ${e?.message ?? e}`);
+    } finally {
+      setPurging(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -351,6 +383,41 @@ const BennyVoicePrewarm = () => {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Purge poisoned cache */}
+            <div className="rounded border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <Trash2 className="h-4 w-4 text-destructive mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-sm text-destructive">Purge poisoned cache (v2 + v3)</div>
+                  <p className="text-xs text-muted-foreground">
+                    Deletes every garbled MP3 from the old cache prefixes for this voice ID. The new v3/v4 layout is untouched.
+                    Use this once, then Prewarm to rebuild with the new isolated multilingual_v2 pipeline.
+                  </p>
+                </div>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={purging || !voiceId}>
+                    {purging ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Purging…</> : <><Trash2 className="h-3 w-3 mr-1" /> Nuke poisoned cache</>}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete every cached MP3 under v2/ and v3/?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Voice ID: <span className="font-mono">{voiceId || "(default)"}</span>. This cannot be undone.
+                      Type <b>DELETE</b> to confirm.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Input value={purgeConfirm} onChange={(e) => setPurgeConfirm(e.target.value)} placeholder="Type DELETE" />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPurgeConfirm("")}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handlePurge} disabled={purgeConfirm !== "DELETE"}>Purge now</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>
