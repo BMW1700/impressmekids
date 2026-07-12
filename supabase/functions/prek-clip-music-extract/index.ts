@@ -93,52 +93,59 @@ Deno.serve(async (req) => {
       return json({ error: "Missing required fields" }, 400);
     }
 
-    // 1. Download source.
-    const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
-    if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
-    const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
+    let fileId: string;
 
-    // 2. Upload to LALAL.AI (with retry on transient errors).
-    const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
-      method: "POST",
-      headers: {
-        "Authorization": `license ${apiKey}`,
-        "Content-Disposition": `attachment; filename="source.mp4"`,
-        "Content-Type": "application/octet-stream",
-      },
-      body: srcBytes,
-    }, "LALAL upload");
-    if (!upResp.ok) {
-      const t = await upResp.text();
-      console.error(`LALAL upload [${upResp.status}]: ${t}`);
-      return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
-    }
-    const upJson = await upResp.json();
-    if (upJson.status !== "success" || !upJson.id) {
-      return json({ error: "LALAL upload response invalid", details: upJson }, 500);
-    }
-    const fileId: string = upJson.id;
+    if (body.resumeJobId) {
+      // Resuming an in-flight LALAL job — skip upload + split.
+      fileId = body.resumeJobId;
+    } else {
+      // 1. Download source.
+      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
+      const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
 
-    // 3. Start split (phoenix splitter, vocals target → back_track = music+sfx).
-    const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
-    const splitForm = new URLSearchParams();
-    splitForm.set("params", JSON.stringify(splitParams));
-    const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
-      method: "POST",
-      headers: {
-        "Authorization": `license ${apiKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: splitForm.toString(),
-    }, "LALAL split");
-    if (!splitResp.ok) {
-      const t = await splitResp.text();
-      console.error(`LALAL split [${splitResp.status}]: ${t}`);
-      return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
-    }
-    const splitJson = await splitResp.json();
-    if (splitJson.status !== "success") {
-      return json({ error: "LALAL split rejected", details: splitJson }, 500);
+      // 2. Upload to LALAL.AI (with retry on transient errors).
+      const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `license ${apiKey}`,
+          "Content-Disposition": `attachment; filename="source.mp4"`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: srcBytes,
+      }, "LALAL upload");
+      if (!upResp.ok) {
+        const t = await upResp.text();
+        console.error(`LALAL upload [${upResp.status}]: ${t}`);
+        return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
+      }
+      const upJson = await upResp.json();
+      if (upJson.status !== "success" || !upJson.id) {
+        return json({ error: "LALAL upload response invalid", details: upJson }, 500);
+      }
+      fileId = upJson.id;
+
+      // 3. Start split (phoenix splitter, vocals target → back_track = music+sfx).
+      const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
+      const splitForm = new URLSearchParams();
+      splitForm.set("params", JSON.stringify(splitParams));
+      const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `license ${apiKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: splitForm.toString(),
+      }, "LALAL split");
+      if (!splitResp.ok) {
+        const t = await splitResp.text();
+        console.error(`LALAL split [${splitResp.status}]: ${t}`);
+        return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
+      }
+      const splitJson = await splitResp.json();
+      if (splitJson.status !== "success") {
+        return json({ error: "LALAL split rejected", details: splitJson }, 500);
+      }
     }
 
     // 4. Poll for completion.
