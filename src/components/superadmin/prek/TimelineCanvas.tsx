@@ -358,13 +358,16 @@ export function TimelineCanvas({
             ? Math.max(0, Math.min(lanes.length - 1, drag.rowIndex + Math.round(drag.dy / (TRACK_HEIGHT + TRACK_GAP))))
             : -1;
           const isDropTarget = targetRowIdx === rowIdx;
+          const isRedubLane = !isNew && t!.track_index === REDUB_TRACK_INDEX;
           return (
             <div
               key={isNew ? "__new" : t!.id}
               className={`absolute left-0 right-1 rounded-md transition-colors ${
                 isNew
                   ? `border-2 border-dashed ${isDropTarget ? "border-primary bg-primary/10" : "border-muted-foreground/30 bg-transparent"}`
-                  : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
+                  : isRedubLane
+                    ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-purple-500/60 bg-purple-500/5"}`
+                    : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
               }`}
               style={{ top, height: TRACK_HEIGHT }}
             >
@@ -374,8 +377,15 @@ export function TimelineCanvas({
                 </div>
               )}
               {!isNew && (
-                <div className="absolute left-2 top-1 text-[10px] text-muted-foreground pointer-events-none z-[1]">
-                  {t!.name}
+                <div className="absolute left-2 top-1 text-[10px] pointer-events-none z-[1] flex items-center gap-1">
+                  <span className={isRedubLane ? "text-purple-700 dark:text-purple-300 font-semibold" : "text-muted-foreground"}>
+                    {t!.name}
+                  </span>
+                  {isRedubLane && (
+                    <span className="rounded-sm bg-purple-500/15 border border-purple-500/40 text-purple-700 dark:text-purple-200 px-1 text-[9px] leading-none">
+                      🔒 aligned to source
+                    </span>
+                  )}
                 </div>
               )}
               {!isNew && clips
