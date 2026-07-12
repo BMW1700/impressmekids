@@ -240,12 +240,18 @@ export function TimelineCanvas({
   };
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
-  // Pin the auto-generated "Benny (Redub)" track (index 90) directly beneath
-  // the Video lane so redub waveforms line up visually with their source.
+  // Pin the auto-generated "Benny (Redub)" (index 90) and "Benny (Music)"
+  // (index 89) tracks directly beneath the Video lane so redub + extracted
+  // music waveforms line up visually with their source scenes.
   const REDUB_TRACK_INDEX = 90;
+  const MUSIC_TRACK_INDEX = 89;
   const redubTrack = tracks.find((t) => t.track_index === REDUB_TRACK_INDEX) ?? null;
-  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX);
-  const orderedTracks: PreKAudioTrack[] = redubTrack ? [redubTrack, ...otherTracks] : otherTracks;
+  const musicTrack = tracks.find((t) => t.track_index === MUSIC_TRACK_INDEX) ?? null;
+  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX && t.track_index !== MUSIC_TRACK_INDEX);
+  const pinned: PreKAudioTrack[] = [];
+  if (redubTrack) pinned.push(redubTrack);
+  if (musicTrack) pinned.push(musicTrack);
+  const orderedTracks: PreKAudioTrack[] = [...pinned, ...otherTracks];
   const lanes = [...orderedTracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const videoLaneTop = HEADER_HEIGHT + 4;
   const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
