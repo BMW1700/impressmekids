@@ -292,8 +292,15 @@ Deno.serve(async (req) => {
       return json({ purged: totalDeleted, voiceId, prefixes: POISONED_PREFIXES });
     }
 
-    const mode: "say" | "teach" | "teach-segment" =
-      rawMode === "teach-segment" || rawMode === "teach" ? rawMode : "say";
+    // Legacy stitched "teach" mode is retired — it produced garbled single-file
+    // pronunciations. Segmented phonics is served exclusively via "teach-segment".
+    if (rawMode === "teach") {
+      return json(
+        { error: "legacy_teach_mode_removed", message: "Use mode: 'teach-segment' instead." },
+        400,
+      );
+    }
+    const mode: "say" | "teach-segment" = rawMode === "teach-segment" ? rawMode : "say";
 
     // --------------- teach-segment ---------------
     if (mode === "teach-segment") {
