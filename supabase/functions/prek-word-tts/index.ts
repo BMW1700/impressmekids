@@ -173,7 +173,20 @@ async function generateAndStore(
     return { ok: false, status: ttsRes.status, details: errText };
   }
   let audioBytes = new Uint8Array(await ttsRes.arrayBuffer());
-  if (args.isolate) audioBytes = await isolateAudioIfPossible(apiKey, audioBytes);
+  let wasIsolated = false;
+  if (args.isolate) {
+    const iso = await isolateAudioIfPossible(apiKey, audioBytes);
+    if (!iso.isolated && args.requireIsolation) {
+      return {
+        ok: false,
+        status: 502,
+        code: "isolation_unavailable",
+        details: iso.error ?? "Audio isolation failed and requireIsolation=true",
+      };
+    }
+    audioBytes = iso.bytes;
+    wasIsolated = iso.isolated;
+  }
 
   const uploadRes = await admin.storage.from(BUCKET).upload(args.objectPath, audioBytes, {
     contentType: "audio/mpeg",
@@ -197,7 +210,7 @@ async function generateAndStore(
 
   const signed = await admin.storage.from(BUCKET).createSignedUrl(args.objectPath, SIGNED_URL_TTL);
   if (!signed.data?.signedUrl) return { ok: false, status: 500, details: "Signing failed" };
-  return { ok: true, signedUrl: signed.data.signedUrl };
+  return { ok: true, signedUrl: signed.data.signedUrl, isolated: wasIsolated };
 }
 
 Deno.serve(async (req) => {
