@@ -218,6 +218,15 @@ export const RPGWordReader = ({
   useEffect(() => { wordsRef.current = words; }, [words]);
   useEffect(() => { batchSizeRef.current = batchSize; }, [batchSize]);
 
+  const stopInstructionAudio = useCallback(() => {
+    if (pronunciationTimeoutRef.current) {
+      clearTimeout(pronunciationTimeoutRef.current);
+      pronunciationTimeoutRef.current = null;
+    }
+    stopBennyTeach();
+    stopBenny();
+  }, []);
+
   // Keep refs in sync
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -345,15 +354,6 @@ export const RPGWordReader = ({
       clearTimeout(pronunciationTimeoutRef.current);
       pronunciationTimeoutRef.current = null;
     }
-  }, []);
-
-  const stopInstructionAudio = useCallback(() => {
-    if (pronunciationTimeoutRef.current) {
-      clearTimeout(pronunciationTimeoutRef.current);
-      pronunciationTimeoutRef.current = null;
-    }
-    stopBennyTeach();
-    stopBenny();
   }, []);
 
   const abortActiveRecognitionForBatchTransition = useCallback(() => {
