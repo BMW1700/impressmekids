@@ -349,12 +349,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    const prompt = mode === "teach" ? buildLegacyTeachPrompt(word) : buildSayPrompt(word);
+    const prompt = buildSayPrompt(word);
     const settings = {
-      stability: mode === "teach" ? 0.75 : 0.70,
+      stability: 0.70,
       similarity_boost: 0.90,
-      style: mode === "teach" ? 0.15 : 0.10,
-      speed: mode === "teach" ? 0.80 : 0.90,
+      style: 0.10,
+      speed: 0.90,
     };
 
     const result = await generateAndStore(admin, apiKey, {
