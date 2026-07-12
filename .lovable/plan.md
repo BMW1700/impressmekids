@@ -1,45 +1,75 @@
-## Brutally honest audit
 
-**Redub pipeline (backend):** Solid. `prek-clip-redub` isolates → STS → uploads MP3 → merges into `redub_audio_paths` → auto-creates the "Benny (Redub)" track (index 90) → upserts a clip anchored to the scene with `duration_mode: "fill-scene"` and `anchor_offset_seconds: 0` → mutes source video audio. That means every successful redub is *already* placed on the timeline aligned to the original clip's start.
+# One-Click Benny: Redub + Music Bed
 
-**What's actually broken vs. what you asked for:**
+## The Suno reality check (read this first)
 
-1. **"Beneath the original with waves showing, lined up perfectly"** — Half-working. The clip lands on track index 90, which sorts to the *bottom* of the lane list (because tracks render in order), not immediately below the Video lane. The waveform IS drawn (via `ClipWaveform` + `signedUrls`), but visually it's buried under any manual tracks the editor created first. That's why it doesn't feel "lined up beneath the original."
-2. **Whole-level redub** — Works (`redubAll` iterates serially). No progress bar per-clip on the timeline itself, only in the Redub Studio panel.
-3. **Prewarm / teach / hear** — Backend is correct after the last pass (isolation-required, legacy `teach` mode rejected, `v3`/`v4` cache namespaces, wake lock, verify-10). Only risk left: if a cached MP3 was generated before the isolation-required patch, it's still poisoned — the Nuke + re-prewarm has to actually be run.
-4. **Retry button in Benny levels** — Code path is correct (`stopInstructionAudio` → abort stale recognition → re-arm target token → restart mic + `showFeedbackOverlay` guard). No known bug in source, but I have not been able to verify it end-to-end in a real mic session — Playwright can't spoof `SpeechRecognition` results meaningfully.
-5. **Redub Studio UI** — Preview + "On timeline · track 90 · src muted" badge exist, but there's no inline waveform in the Studio panel itself; you have to switch to the Audio Mix tab to see the wave. That's a UX gap given your ask.
+Suno's public API only does **music generation from a prompt**. It does not expose a stem-separation / voice-removal endpoint — what you did in their UI is not something we can call from a backend. If we wire "Suno" into our automation, every scene would get *brand-new AI music that doesn't match the original clip*, which is the opposite of what you want.
 
-## What I'll build
+To automate exactly what you did by hand (strip voice → keep music + little SFX), we need a real stem-separation API. The two production-grade options:
 
-### A. Pin the Redub track directly under the Video lane
-- In `TimelineCanvas.tsx`, split rendering: render the "Benny (Redub)" track (track_index 90) as a **fixed lane immediately below the Video lane**, before all other user tracks. Everything else keeps its current order.
-- Redub clips get a distinct violet/emerald color and a "🔒 Auto-aligned to source" chip so it's obvious they're locked to the scene start.
-- The waveform (`ClipWaveform`) already renders — the fix is purely lane-ordering + styling so it visually sits beneath its source video clip at exactly the same left/width.
+| Service | Fit for us | Notes |
+|---|---|---|
+| **LALAL.AI** | Best fit | Documented REST API, splits into `vocals` + `no_vocals` (music + SFX preserved — matches what you described). Pay-per-minute credits, no seat cost. |
+| **AudioShake** | Also good | Higher quality on dialogue-heavy sources, enterprise pricing, requires sales contact. |
+| Suno API | ❌ won't work | Generation only, no separation endpoint. |
 
-### B. Per-clip + whole-level redub visible on the timeline
-- Add a small floating **"Redub this clip"** action on hover of any Video-lane block → invokes `redubScene` for that scene, spinner shows in-place, wave appears in the pinned Redub lane on completion.
-- Add **"Redub entire level"** button in the timeline toolbar (mirrors the Studio panel). Progress renders as a subtle overlay on each Video block (`n / total`).
+**Recommendation:** ship on LALAL.AI. Same connector pattern as ElevenLabs (API key in Supabase secrets, called from an edge function). If you later get an AudioShake contract, we swap the provider inside one edge function — the timeline, DB, and UI don't change.
 
-### C. Redub Studio panel gets inline waveforms
-- In `RedubStudioPanel.tsx`, render a `ClipWaveform` beside each row for the final redub MP3 (using existing signed URL). No new backend calls.
+I'll ask you to paste a `LALAL_API_KEY` once the plan is approved.
 
-### D. Cache-safety guard so "garble" can't come back
-- Add a one-time boot check in `BennyVoicePrewarm.tsx`: if any cached file is < 4 KB, surface a red banner "Poisoned cache detected — Nuke required" and disable prewarm until Nuke is run. Prevents accidentally shipping garble to production.
+---
 
-### E. Retry button — belt-and-suspenders
-- In `RPGWordReader.tsx`, add explicit `stopBenny()` + `stopSegmentedTeach()` calls at the very top of the retry handler (before re-arming recognition), so no stray audio leaks into the mic. Also add a console log line `[retry] rearmed target=<word>` so if it ever fails again in real use, we can diagnose in one message.
+## What gets built
 
-### F. What I will NOT claim
-- I cannot promise "perfect" ElevenLabs output — that depends on their model + your source audio quality. But with isolation-required + serial concurrency, it's as good as their API allows.
-- I can't unit-test the mic-driven retry path headlessly. If it misbehaves on a real device, send the console line above and I'll fix in one turn.
+### 1. New edge function: `prek-clip-music-extract`
+Mirrors `prek-clip-redub` exactly:
+- Auth gate (super_admin / content_editor).
+- Downloads the source MP4 from `prek-level-videos`.
+- POSTs to LALAL.AI split endpoint, polls until `no_vocals` stem is ready, downloads the MP3.
+- Uploads to `prek-level-audio` at `music/<levelId>/<sceneKey>-<ts>.mp3`, mirrors to R2.
+- Writes path into a new `prek_levels.music_audio_paths jsonb` column.
+- Auto-creates a **"Benny (Music)"** track at `track_index = 89` (one below redub's 90) and upserts a `source_kind='music'` clip anchored to the scene — same "fill-scene, aligned to source" behavior as redub.
 
-### Technical touchpoints
-```text
-src/components/superadmin/prek/TimelineCanvas.tsx   — pin Redub lane, hover redub button
-src/components/superadmin/prek/RedubStudioPanel.tsx — inline waveforms
-src/pages/superadmin/BennyVoicePrewarm.tsx          — poisoned-cache boot check
-src/components/aura/game/rpg/RPGWordReader.tsx      — retry hardening + log
+### 2. Timeline lane pinning
+In `TimelineCanvas.tsx`, extend the pinned-lane ordering so the layout becomes:
 ```
+Video (source)
+Benny (Redub)   ← track 90, locked, aligned
+Benny (Music)   ← track 89, locked, aligned  ← NEW
+… user tracks …
+```
+Both pinned lanes get the purple "🔒 aligned to source" chip. Existing split + drag-trim handles work on the music clips with zero extra code.
 
-No schema changes. No new Edge Functions. No new secrets.
+### 3. Redub Studio panel — one button, both stems
+- Add a "Music" column next to "Redub" showing status + inline `ClipWaveform` for each scene.
+- Add a top-level **"Full auto: Redub + Music (this level)"** button that, per scene, runs redub → music extract in parallel (independent API calls, no shared state) and updates progress.
+- Per-clip: hover action gets a second button **"Extract music"** alongside the existing "Redub this clip".
+
+### 4. Data + hook wiring
+- New migration: `alter table prek_levels add column music_audio_paths jsonb not null default '{}'::jsonb;` (no new grants needed — table already granted).
+- Extend `useBennyRedub.ts` → rename internally to `useBennyStems` (keeps the same public surface plus `musicAudioPaths`, `signedMusicUrls`, `extractMusic(scene)`, `extractMusicAll()`, `runFullAuto()`).
+- `usePreKAudioMix` already renders any clip on any track — the new track shows up automatically once the edge function inserts it.
+
+### 5. Playback
+`usePreKRedubPlayback` already mutes source video audio when the redub track has clips. No change needed — the music lane plays as a normal audio clip through the existing mix engine.
+
+---
+
+## What we are *not* changing
+- Splice / trim / delete / drag-to-extend tools — you said current handles are enough.
+- ElevenLabs redub pipeline — untouched.
+- Prewarm, teach engine, retry-button logic — untouched.
+
+---
+
+## Rollout order once approved
+1. You paste `LALAL_API_KEY` when I request it.
+2. Migration adds `music_audio_paths`.
+3. Edge function `prek-clip-music-extract` deploys.
+4. UI: pinned Music lane + Redub Studio "Music" column + "Full auto" button.
+5. Smoke test on one Pre-K level: click Full Auto → confirm both lanes populate under the video with waveforms aligned.
+
+---
+
+## Open confirmation before I build
+- **Go with LALAL.AI?** (Fastest path. If you'd rather I try to reverse-engineer Suno's web app, I'll flag that as brittle and against their ToS — not recommended for production.)
