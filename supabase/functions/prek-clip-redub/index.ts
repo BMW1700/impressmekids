@@ -111,11 +111,11 @@ Deno.serve(async (req) => {
     if (isolate) {
       const isoForm = new FormData();
       isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
-      const isoResp = await fetch("https://api.elevenlabs.io/v1/audio-isolation", {
+      const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
         method: "POST",
         headers: { "xi-api-key": apiKey },
         body: isoForm,
-      });
+      }, "ElevenLabs Isolation");
       if (!isoResp.ok) {
         const errText = await isoResp.text();
         console.error(`ElevenLabs Isolation [${isoResp.status}]: ${errText}`);
