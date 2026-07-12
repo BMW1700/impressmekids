@@ -166,7 +166,7 @@ const BennyVoicePrewarm = () => {
   const errorCount = Object.values(rows).reduce(
     (n, r) => n + (r.say === "error" ? 1 : 0) + r.segError, 0,
   );
-  const progress = totalCalls > 0 ? Math.round(((doneCount + errorCount) / totalCalls) * 100) : 0;
+  const progress = totalCalls > 0 ? Math.min(100, Math.round(((doneCount + errorCount) / totalCalls) * 100)) : 0;
 
   const callLegacy = async (word: string, mode: "say" | "teach"): Promise<"cached" | "generated" | "error"> => {
     try {
@@ -203,7 +203,7 @@ const BennyVoicePrewarm = () => {
       for (const w of uniqueWords) {
         const plan = segPlan.get(w) ?? [];
         const r = next[w] ?? {
-          word: w, say: "pending" as Cell, teach: "pending" as Cell,
+          word: w, say: "pending" as Cell, teach: "cached" as Cell,
           segments: "pending" as Cell, segTotal: plan.length, segDone: 0, segError: 0,
         };
         const alreadySay = r.say === "cached" || r.say === "generated";
@@ -215,6 +215,8 @@ const BennyVoicePrewarm = () => {
         if (stillNeeded > 0) {
           // Enqueue every plan entry when force; else enqueue all (probe already marked cached ones — but we can't know which). Safe: rely on `cached: true` return from function.
           for (const p of plan) queue.push({ kind: "seg", word: w, segKind: p.kind, text: p.text, slug: p.slug });
+          r.segDone = 0;
+          r.segError = 0;
           r.segments = "pending";
         }
         next[w] = r;
