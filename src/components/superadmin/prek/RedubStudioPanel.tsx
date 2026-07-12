@@ -96,8 +96,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
-          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the "Benny (Redub)" timeline track and source video audio is muted.</p>
-          <p><strong>Workflow:</strong> Use <strong>Final Audio</strong> as the approval preview. Isolation test stays available as an advanced check, but the redub is the final student-facing audio.</p>
+          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the <strong>Benny (Redub)</strong> timeline track at the same start time as the original clip, and source video audio is muted for you.</p>
+          <p><strong>Workflow:</strong> Hit <strong>Redub</strong> per clip → preview <strong>Final Audio</strong> → approve or re-run. Every approved redub is already placed on the timeline lip-to-lip with the video.</p>
           <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio + isolation minutes.</p>
         </div>
 
