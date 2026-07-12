@@ -37,6 +37,29 @@ interface Body {
   isolateOnly?: boolean; // default false — skip STS
 }
 
+// Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  label: string,
+  attempts = 2,
+): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      const resp = await fetch(url, init);
+      if (resp.ok || (resp.status >= 400 && resp.status < 500)) return resp;
+      lastErr = new Error(`${label} HTTP ${resp.status}`);
+      console.warn(`[${label}] attempt ${i + 1} got ${resp.status}, retrying…`);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[${label}] attempt ${i + 1} network error:`, (e as Error).message);
+    }
+    if (i < attempts) await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${label} failed`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
