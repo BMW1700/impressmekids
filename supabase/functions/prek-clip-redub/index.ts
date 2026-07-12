@@ -18,7 +18,7 @@
 //   8) Return { storagePath, signedUrl, isolatedStoragePath, isolatedSignedUrl }.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const ELEVENLABS_STS_MODEL = "eleven_multilingual_sts_v2";
 const VIDEO_BUCKET = "prek-level-videos";
@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       }
       const isolatedBytes = new Uint8Array(await isoResp.arrayBuffer());
 
-      isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated.mp3`;
+      isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated-${Date.now()}.mp3`;
       const isoUp = await admin.storage.from(AUDIO_BUCKET).upload(isolatedStoragePath, isolatedBytes, {
         contentType: "audio/mpeg", upsert: true,
       });
@@ -307,6 +307,7 @@ function mirrorToR2Async(
     try {
       await admin.functions.invoke("migrate-to-r2", {
         body: { action: "copy-path", bucket, path, contentType, size },
+        headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
       });
     } catch (e) {
       console.warn(`[prek-clip-redub] R2 mirror failed for ${bucket}/${path}:`, e);

@@ -24,12 +24,16 @@ const MUSIC_TRACK_NAME = "Benny (Music)";
 const MUSIC_TRACK_INDEX = 89; // sits directly below Redub (index 90)
 
 const LALAL_BASE = "https://www.lalal.ai";
-const POLL_DEADLINE_MS = 8 * 60 * 1000; // 8 min
+// Cap in-function polling well under Supabase Edge Function wall-clock
+// (~150s free / 400s paid). If LALAL isn't done, return {status:"pending", jobId}
+// and let the client resume by re-invoking with { resumeJobId }.
+const POLL_DEADLINE_MS = 90 * 1000;
 
 interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+  resumeJobId?: string;
 }
 
 // Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
@@ -89,52 +93,59 @@ Deno.serve(async (req) => {
       return json({ error: "Missing required fields" }, 400);
     }
 
-    // 1. Download source.
-    const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
-    if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
-    const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
+    let fileId: string;
 
-    // 2. Upload to LALAL.AI (with retry on transient errors).
-    const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
-      method: "POST",
-      headers: {
-        "Authorization": `license ${apiKey}`,
-        "Content-Disposition": `attachment; filename="source.mp4"`,
-        "Content-Type": "application/octet-stream",
-      },
-      body: srcBytes,
-    }, "LALAL upload");
-    if (!upResp.ok) {
-      const t = await upResp.text();
-      console.error(`LALAL upload [${upResp.status}]: ${t}`);
-      return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
-    }
-    const upJson = await upResp.json();
-    if (upJson.status !== "success" || !upJson.id) {
-      return json({ error: "LALAL upload response invalid", details: upJson }, 500);
-    }
-    const fileId: string = upJson.id;
+    if (body.resumeJobId) {
+      // Resuming an in-flight LALAL job — skip upload + split.
+      fileId = body.resumeJobId;
+    } else {
+      // 1. Download source.
+      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
+      const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
 
-    // 3. Start split (phoenix splitter, vocals target → back_track = music+sfx).
-    const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
-    const splitForm = new URLSearchParams();
-    splitForm.set("params", JSON.stringify(splitParams));
-    const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
-      method: "POST",
-      headers: {
-        "Authorization": `license ${apiKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: splitForm.toString(),
-    }, "LALAL split");
-    if (!splitResp.ok) {
-      const t = await splitResp.text();
-      console.error(`LALAL split [${splitResp.status}]: ${t}`);
-      return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
-    }
-    const splitJson = await splitResp.json();
-    if (splitJson.status !== "success") {
-      return json({ error: "LALAL split rejected", details: splitJson }, 500);
+      // 2. Upload to LALAL.AI (with retry on transient errors).
+      const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `license ${apiKey}`,
+          "Content-Disposition": `attachment; filename="source.mp4"`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: srcBytes,
+      }, "LALAL upload");
+      if (!upResp.ok) {
+        const t = await upResp.text();
+        console.error(`LALAL upload [${upResp.status}]: ${t}`);
+        return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
+      }
+      const upJson = await upResp.json();
+      if (upJson.status !== "success" || !upJson.id) {
+        return json({ error: "LALAL upload response invalid", details: upJson }, 500);
+      }
+      fileId = upJson.id;
+
+      // 3. Start split (phoenix splitter, vocals target → back_track = music+sfx).
+      const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
+      const splitForm = new URLSearchParams();
+      splitForm.set("params", JSON.stringify(splitParams));
+      const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `license ${apiKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: splitForm.toString(),
+      }, "LALAL split");
+      if (!splitResp.ok) {
+        const t = await splitResp.text();
+        console.error(`LALAL split [${splitResp.status}]: ${t}`);
+        return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
+      }
+      const splitJson = await splitResp.json();
+      if (splitJson.status !== "success") {
+        return json({ error: "LALAL split rejected", details: splitJson }, 500);
+      }
     }
 
     // 4. Poll for completion.
@@ -186,11 +197,15 @@ Deno.serve(async (req) => {
       }
     }
     if (!backTrackUrl) {
+      // Not done yet — hand the jobId back so the client can resume without
+      // re-uploading + re-splitting. HTTP 200 so supabase.functions.invoke
+      // treats it as a normal response.
+      console.log(`[LALAL] ${fileId} still processing after ${POLL_DEADLINE_MS}ms — returning pending`);
       return json({
-        error: "LALAL processing timed out",
-        timeoutMs: POLL_DEADLINE_MS,
+        status: "pending",
+        jobId: fileId,
         lastEntry,
-      }, 504);
+      });
     }
 
     // 5. Download the music stem.
@@ -316,6 +331,7 @@ function mirrorToR2Async(
     try {
       await admin.functions.invoke("migrate-to-r2", {
         body: { action: "copy-path", bucket, path, contentType, size },
+        headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
       });
     } catch (e) {
       console.warn(`[prek-clip-music-extract] R2 mirror failed for ${bucket}/${path}:`, e);
