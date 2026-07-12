@@ -182,18 +182,34 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
+            onClick={handleFullAuto}
+            disabled={!!redub.autoProgress || !!redub.batchProgress || scenes.length === 0}
+            className="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-700 hover:to-emerald-700 text-white"
+          >
+            {redub.autoProgress
+              ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Full auto {redub.autoProgress.done}/{redub.autoProgress.total}…</>
+              : <><Zap className="h-3 w-3 mr-1"/> Full auto: Redub + Music ({scenes.length} clips)</>
+            }
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={handleRedubAll}
-            disabled={!!redub.batchProgress || scenes.length === 0}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            disabled={!!redub.batchProgress || !!redub.autoProgress || scenes.length === 0}
           >
             {redub.batchProgress
               ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing {redub.batchProgress.done}/{redub.batchProgress.total}…</>
-              : <><Sparkles className="h-3 w-3 mr-1"/> Redub entire level ({scenes.length} clips)</>
+              : <><Sparkles className="h-3 w-3 mr-1"/> Redub only</>
             }
           </Button>
           {redub.settings.generatedAt && (
             <Badge variant="outline" className="text-[10px]">
               Last redub: {new Date(redub.settings.generatedAt).toLocaleString()}
+            </Badge>
+          )}
+          {redub.settings.musicGeneratedAt && (
+            <Badge variant="outline" className="text-[10px]">
+              Last music: {new Date(redub.settings.musicGeneratedAt).toLocaleString()}
             </Badge>
           )}
         </div>
