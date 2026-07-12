@@ -28,6 +28,13 @@ export interface RedubState {
   isolatedSignedUrl?: string;
 }
 
+export interface MusicState {
+  status: RedubStatus;
+  errorMessage?: string;
+  storagePath?: string;
+  signedUrl?: string;
+}
+
 export interface LevelRedubSettings {
   voiceId: string;              // effective voice ID (level override or world default)
   levelVoiceId: string;         // raw level override (may be empty)
@@ -37,7 +44,9 @@ export interface LevelRedubSettings {
   similarityBoost: number;
   audioPaths: Record<string, string>;
   isolatedPaths: Record<string, string>;
+  musicPaths: Record<string, string>;
   generatedAt: string | null;
+  musicGeneratedAt: string | null;
 }
 
 export function useBennyRedub(levelId: string | null) {
