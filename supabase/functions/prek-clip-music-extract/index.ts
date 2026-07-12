@@ -197,11 +197,15 @@ Deno.serve(async (req) => {
       }
     }
     if (!backTrackUrl) {
+      // Not done yet — hand the jobId back so the client can resume without
+      // re-uploading + re-splitting. HTTP 200 so supabase.functions.invoke
+      // treats it as a normal response.
+      console.log(`[LALAL] ${fileId} still processing after ${POLL_DEADLINE_MS}ms — returning pending`);
       return json({
-        error: "LALAL processing timed out",
-        timeoutMs: POLL_DEADLINE_MS,
+        status: "pending",
+        jobId: fileId,
         lastEntry,
-      }, 504);
+      });
     }
 
     // 5. Download the music stem.
