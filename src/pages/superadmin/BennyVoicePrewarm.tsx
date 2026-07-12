@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Volume2, Play, CheckCircle2, AlertCircle, Loader2, Trash2, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,23 +18,23 @@ import { toast } from "sonner";
 import { segmentCacheEntries, type SegKind } from "@/lib/phonicsSegmenter";
 import { teachWord } from "@/lib/bennyTeach";
 
-// Bumped from v2/v3 → v3/v4 to invalidate the garbled ElevenLabs cache.
-// Anything under v2/* or v3/* is treated as poisoned and never read;
-// the "Purge poisoned cache" button below deletes those prefixes.
+// v3 = legacy say cache. v4 = segment cache. Older prefixes (v2, v3-segments)
+// are treated as poisoned and never read — use "Nuke poisoned cache" first.
 const LEGACY_VERSION = "v3";
 const CACHE_VERSION = "v4";
 const SEG_KINDS: SegKind[] = ["whole", "narration", "letter", "sound", "syllable", "blend"];
+const MIN_ISOLATED_BYTES = 4 * 1024; // <4KB after isolation ≈ silence/broken
 
 interface WordItem { word: string; }
 type Cell = "pending" | "running" | "cached" | "generated" | "error";
 interface RowState {
   word: string;
   say: Cell;
-  teach: Cell;
-  segments: Cell; // aggregate of per-kind segment jobs
+  segments: Cell;
   segTotal: number;
   segDone: number;
   segError: number;
+  isolated?: boolean; // last-observed isolation status from the edge fn
   error?: string;
 }
 
@@ -44,14 +44,25 @@ function normalizeWord(raw: string): string {
   return raw.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").trim().replace(/\s+/g, " ");
 }
 
+function slugifyWord(w: string) {
+  return w.toLowerCase().replace(/[^a-z0-9']+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+}
+
 const BennyVoicePrewarm = () => {
   const [voiceId, setVoiceId] = useState("");
   const [scanLoading, setScanLoading] = useState(true);
   const [items, setItems] = useState<WordItem[]>([]);
   const [rows, setRows] = useState<Record<string, RowState>>({});
   const [running, setRunning] = useState(false);
-  const [cancelFlag, setCancelFlag] = useState(false);
   const [force, setForce] = useState(false);
+  const [segByKind, setSegByKind] = useState<Record<SegKind, Set<string>>>(() =>
+    SEG_KINDS.reduce((acc, k) => { acc[k] = new Set(); return acc; }, {} as Record<SegKind, Set<string>>)
+  );
+  const [saySet, setSaySet] = useState<Set<string>>(new Set());
+
+  // Refs so workers see live values without stale-closure bugs.
+  const cancelRef = useRef(false);
+  const wakeLockRef = useRef<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -81,9 +92,7 @@ const BennyVoicePrewarm = () => {
       for (const w of words ?? []) {
         const norm = normalizeWord(w.word ?? "");
         if (!norm) continue;
-        for (const token of norm.split(" ")) {
-          if (token) collected.push({ word: token });
-        }
+        for (const token of norm.split(" ")) if (token) collected.push({ word: token });
       }
       setItems(collected);
       setScanLoading(false);
@@ -100,67 +109,66 @@ const BennyVoicePrewarm = () => {
     return Array.from(s).sort();
   }, [items]);
 
-  // Segment plan per word (deterministic).
   const segPlan = useMemo(() => {
     const map = new Map<string, Array<{ kind: SegKind; text: string; slug: string }>>();
     for (const w of uniqueWords) map.set(w, segmentCacheEntries(w));
     return map;
   }, [uniqueWords]);
 
-  // Probe storage on load so prior progress shows up as ✓.
-  useEffect(() => {
+  // Probe storage: build authoritative sets of what's cached RIGHT NOW.
+  const probeStorage = async () => {
     if (uniqueWords.length === 0 || !voiceId) return;
-    let cancelled = false;
-    (async () => {
-      const listAll = async (prefix: string): Promise<Set<string>> => {
-        const out = new Set<string>();
-        let offset = 0;
-        for (;;) {
-          const { data, error } = await supabase.storage
-            .from("prek-word-tts")
-            .list(prefix, { limit: 1000, offset });
-          if (error || !data || data.length === 0) break;
-          for (const f of data) if (f.name.endsWith(".mp3")) out.add(f.name.replace(/\.mp3$/, ""));
-          if (data.length < 1000) break;
-          offset += 1000;
-        }
-        return out;
-      };
-      const slugify = (w: string) =>
-        w.toLowerCase().replace(/[^a-z0-9']+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
-
-      const [saySet, ...segSets] = await Promise.all([
-        listAll(`${voiceId}/${LEGACY_VERSION}/say`),
-        ...SEG_KINDS.map((k) => listAll(`${voiceId}/${CACHE_VERSION}/${k}`)),
-      ]);
-      if (cancelled) return;
-      const segByKind: Record<SegKind, Set<string>> = SEG_KINDS.reduce((acc, k, i) => {
-        acc[k] = segSets[i]; return acc;
-      }, {} as Record<SegKind, Set<string>>);
-
-      const seed: Record<string, RowState> = {};
-      for (const w of uniqueWords) {
-        const slug = slugify(w);
-        const plan = segPlan.get(w) ?? [];
-        let segDone = 0;
-        for (const s of plan) if (segByKind[s.kind]?.has(s.slug)) segDone++;
-        seed[w] = {
-          word: w,
-          say: saySet.has(slug) ? "cached" : "pending",
-          teach: "cached",
-          segments: plan.length > 0 && segDone === plan.length ? "cached" : "pending",
-          segTotal: plan.length,
-          segDone,
-          segError: 0,
-        };
+    const listAll = async (prefix: string): Promise<Set<string>> => {
+      const out = new Set<string>();
+      let offset = 0;
+      for (;;) {
+        const { data, error } = await supabase.storage
+          .from("prek-word-tts")
+          .list(prefix, { limit: 1000, offset });
+        if (error || !data || data.length === 0) break;
+        for (const f of data) if (f.name.endsWith(".mp3")) out.add(f.name.replace(/\.mp3$/, ""));
+        if (data.length < 1000) break;
+        offset += 1000;
       }
-      setRows(seed);
-    })().catch((e) => console.warn("[prewarm] storage probe failed", e));
-    return () => { cancelled = true; };
+      return out;
+    };
+    const [saySetLocal, ...segSets] = await Promise.all([
+      listAll(`${voiceId}/${LEGACY_VERSION}/say`),
+      ...SEG_KINDS.map((k) => listAll(`${voiceId}/${CACHE_VERSION}/${k}`)),
+    ]);
+    const segByKindLocal: Record<SegKind, Set<string>> = SEG_KINDS.reduce((acc, k, i) => {
+      acc[k] = segSets[i]; return acc;
+    }, {} as Record<SegKind, Set<string>>);
+    setSaySet(saySetLocal);
+    setSegByKind(segByKindLocal);
+
+    const seed: Record<string, RowState> = {};
+    for (const w of uniqueWords) {
+      const slug = slugifyWord(w);
+      const plan = segPlan.get(w) ?? [];
+      let segDone = 0;
+      for (const s of plan) if (segByKindLocal[s.kind]?.has(s.slug)) segDone++;
+      seed[w] = {
+        word: w,
+        say: saySetLocal.has(slug) ? "cached" : "pending",
+        segments: plan.length > 0 && segDone === plan.length ? "cached" : "pending",
+        segTotal: plan.length,
+        segDone,
+        segError: 0,
+      };
+    }
+    setRows(seed);
+  };
+
+  useEffect(() => {
+    probeStorage().catch((e) => console.warn("[prewarm] storage probe failed", e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uniqueWords, voiceId, segPlan]);
 
-  // Totals
-  const segTotalAll = useMemo(() => Array.from(segPlan.values()).reduce((n, arr) => n + arr.length, 0), [segPlan]);
+  const segTotalAll = useMemo(
+    () => Array.from(segPlan.values()).reduce((n, arr) => n + arr.length, 0),
+    [segPlan],
+  );
   const totalCalls = uniqueWords.length + segTotalAll;
   const creditEstimate = totalCalls * 3;
   const usdEstimate = (creditEstimate / 1000).toFixed(2);
@@ -176,82 +184,107 @@ const BennyVoicePrewarm = () => {
   );
   const progress = totalCalls > 0 ? Math.min(100, Math.round(((doneCount + errorCount) / totalCalls) * 100)) : 0;
 
-  const callLegacy = async (word: string, mode: "say" | "teach"): Promise<"cached" | "generated" | "error"> => {
+  const callLegacy = async (word: string, mode: "say" | "teach"): Promise<{ result: Cell; isolated?: boolean; err?: string }> => {
     try {
       const { data, error } = await supabase.functions.invoke("prek-word-tts", {
-        body: { word, mode, voiceId: voiceId || undefined, force },
+        body: { word, mode, voiceId: voiceId || undefined, force, requireIsolation: true },
       });
-      if (error || !data?.signedUrl) return "error";
-      return data.cached ? "cached" : "generated";
-    } catch { return "error"; }
+      if (error) {
+        const details = (error as any)?.context ? await (error as any).context.text().catch(() => "") : (error as any).message;
+        return { result: "error", err: details || "unknown" };
+      }
+      if (!data?.signedUrl) return { result: "error", err: "no signedUrl" };
+      return { result: data.cached ? "cached" : "generated", isolated: data.isolated };
+    } catch (e: any) {
+      return { result: "error", err: e?.message ?? "threw" };
+    }
   };
 
-  const callSegment = async (kind: SegKind, text: string): Promise<"cached" | "generated" | "error"> => {
+  const callSegment = async (kind: SegKind, text: string): Promise<{ result: Cell; isolated?: boolean; err?: string }> => {
     try {
       const { data, error } = await supabase.functions.invoke("prek-word-tts", {
-        body: { mode: "teach-segment", segmentKind: kind, segmentText: text, voiceId: voiceId || undefined, force },
+        body: { mode: "teach-segment", segmentKind: kind, segmentText: text, voiceId: voiceId || undefined, force, requireIsolation: true },
       });
-      if (error || !data?.signedUrl) return "error";
-      return data.cached ? "cached" : "generated";
-    } catch { return "error"; }
+      if (error) {
+        const details = (error as any)?.context ? await (error as any).context.text().catch(() => "") : (error as any).message;
+        return { result: "error", err: details || "unknown" };
+      }
+      if (!data?.signedUrl) return { result: "error", err: "no signedUrl" };
+      return { result: data.cached ? "cached" : "generated", isolated: data.isolated };
+    } catch (e: any) {
+      return { result: "error", err: e?.message ?? "threw" };
+    }
+  };
+
+  const acquireWakeLock = async () => {
+    try {
+      const anyNav = navigator as any;
+      if (anyNav.wakeLock?.request) wakeLockRef.current = await anyNav.wakeLock.request("screen");
+    } catch (e) {
+      console.warn("[prewarm] wakeLock unavailable", e);
+    }
+  };
+  const releaseWakeLock = async () => {
+    try { await wakeLockRef.current?.release?.(); } catch {}
+    wakeLockRef.current = null;
   };
 
   const startPrewarm = async () => {
     if (running) return;
     setRunning(true);
-    setCancelFlag(false);
+    cancelRef.current = false;
+    await acquireWakeLock();
 
+    // Rebuild the queue from the AUTHORITATIVE storage probe so we never
+    // enqueue segments that are already cached (unless force=true).
     type Job =
-      | { kind: "legacy"; word: string; mode: "say" | "teach" }
+      | { kind: "legacy"; word: string; mode: "say" }
       | { kind: "seg"; word: string; segKind: SegKind; text: string; slug: string };
     const queue: Job[] = [];
 
-    setRows((cur) => {
-      const next = { ...cur };
-      for (const w of uniqueWords) {
-        const plan = segPlan.get(w) ?? [];
-        const r = next[w] ?? {
-          word: w, say: "pending" as Cell, teach: "cached" as Cell,
-          segments: "pending" as Cell, segTotal: plan.length, segDone: 0, segError: 0,
-        };
-        const alreadySay = r.say === "cached" || r.say === "generated";
-        if (force || !alreadySay) { queue.push({ kind: "legacy", word: w, mode: "say" }); r.say = "pending"; }
-        // segments — only enqueue missing
-        if (force) { r.segDone = 0; r.segError = 0; }
-        // Without probing again, assume seed segDone is accurate; enqueue plan.length - segDone
-        const stillNeeded = plan.length - (force ? 0 : r.segDone);
-        if (stillNeeded > 0) {
-          // Enqueue every plan entry when force; else enqueue all (probe already marked cached ones — but we can't know which). Safe: rely on `cached: true` return from function.
-          for (const p of plan) queue.push({ kind: "seg", word: w, segKind: p.kind, text: p.text, slug: p.slug });
-          r.segDone = 0;
-          r.segError = 0;
-          r.segments = "pending";
-        }
-        next[w] = r;
+    for (const w of uniqueWords) {
+      const slug = slugifyWord(w);
+      const saySkip = !force && saySet.has(slug);
+      if (!saySkip) queue.push({ kind: "legacy", word: w, mode: "say" });
+      const plan = segPlan.get(w) ?? [];
+      for (const p of plan) {
+        const already = !force && segByKind[p.kind]?.has(p.slug);
+        if (!already) queue.push({ kind: "seg", word: w, segKind: p.kind, text: p.text, slug: p.slug });
       }
-      return next;
-    });
+    }
 
     if (queue.length === 0) {
       setRunning(false);
+      await releaseWakeLock();
       toast.success("Every word is already cached — nothing to do.");
       return;
     }
 
+    toast.info(`Prewarming ${queue.length} files, serially, with isolation required. Keep this tab open.`);
+
+    let hardStopReason: string | null = null;
+
     let idx = 0;
-    const workers = Array.from({ length: CONCURRENCY }, async () => {
+    const worker = async () => {
       while (true) {
-        if (cancelFlag) return;
+        if (cancelRef.current || hardStopReason) return;
         const i = idx++;
         if (i >= queue.length) return;
         const job = queue[i];
         if (job.kind === "legacy") {
-          setRows((cur) => ({ ...cur, [job.word]: { ...cur[job.word], [job.mode]: "running" } }));
-          const result = await callLegacy(job.word, job.mode);
-          setRows((cur) => ({ ...cur, [job.word]: { ...cur[job.word], [job.mode]: result } }));
+          setRows((cur) => ({ ...cur, [job.word]: { ...cur[job.word], say: "running" } }));
+          const { result, isolated, err } = await callLegacy(job.word, job.mode);
+          setRows((cur) => ({
+            ...cur,
+            [job.word]: { ...cur[job.word], say: result, isolated, error: err },
+          }));
+          if (result === "error" && err && err.includes("isolation_unavailable")) {
+            hardStopReason = "ElevenLabs key is missing the audio_isolation scope. Enable it and rerun.";
+            return;
+          }
         } else {
           setRows((cur) => ({ ...cur, [job.word]: { ...cur[job.word], segments: "running" } }));
-          const result = await callSegment(job.segKind, job.text);
+          const { result, isolated, err } = await callSegment(job.segKind, job.text);
           setRows((cur) => {
             const r = cur[job.word]; if (!r) return cur;
             const segDone = r.segDone + (result === "cached" || result === "generated" ? 1 : 0);
@@ -259,19 +292,37 @@ const BennyVoicePrewarm = () => {
             const segments: Cell =
               segError > 0 && segDone + segError >= r.segTotal ? "error" :
               segDone >= r.segTotal ? "cached" : "running";
-            return { ...cur, [job.word]: { ...r, segDone, segError, segments } };
+            return { ...cur, [job.word]: { ...r, segDone, segError, segments, isolated: isolated ?? r.isolated, error: err ?? r.error } };
           });
+          if (result === "error" && err && err.includes("isolation_unavailable")) {
+            hardStopReason = "ElevenLabs key is missing the audio_isolation scope. Enable it and rerun.";
+            return;
+          }
         }
       }
-    });
-    await Promise.all(workers);
+    };
+    await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+    await releaseWakeLock();
     setRunning(false);
-    toast.success(`Benny voice prewarm complete — ${queue.length} calls attempted`);
+    if (hardStopReason) {
+      toast.error(hardStopReason, { duration: 12000 });
+    } else if (cancelRef.current) {
+      toast.warning("Prewarm cancelled.");
+    } else {
+      toast.success(`Benny voice prewarm complete — ${queue.length} calls attempted`);
+      // Re-probe so seed matches truth.
+      probeStorage().catch(() => {});
+    }
   };
 
-  const previewLegacy = async (word: string, mode: "say" | "teach") => {
+  const cancelPrewarm = () => {
+    cancelRef.current = true;
+    toast.info("Stopping after current file…");
+  };
+
+  const previewLegacy = async (word: string) => {
     const { data, error } = await supabase.functions.invoke("prek-word-tts", {
-      body: { word, mode, voiceId: voiceId || undefined },
+      body: { word, mode: "say", voiceId: voiceId || undefined },
     });
     if (error || !data?.signedUrl) { toast.error("Preview failed"); return; }
     const a = new Audio(data.signedUrl);
@@ -283,14 +334,11 @@ const BennyVoicePrewarm = () => {
     catch { toast.error("Teach preview failed"); }
   };
 
+  // ---- Purge ----
   const [purgeConfirm, setPurgeConfirm] = useState("");
   const [purging, setPurging] = useState(false);
-
   const handlePurge = async () => {
-    if (purgeConfirm !== "DELETE") {
-      toast.error('Type DELETE to confirm.');
-      return;
-    }
+    if (purgeConfirm !== "DELETE") { toast.error('Type DELETE to confirm.'); return; }
     setPurging(true);
     try {
       const { data, error } = await supabase.functions.invoke("prek-word-tts", {
@@ -300,10 +348,74 @@ const BennyVoicePrewarm = () => {
       toast.success(`Purged ${data?.purged ?? 0} poisoned files. Prewarm to rebuild.`);
       setRows({});
       setPurgeConfirm("");
+      probeStorage().catch(() => {});
     } catch (e: any) {
       toast.error(`Purge failed: ${e?.message ?? e}`);
     } finally {
       setPurging(false);
+    }
+  };
+
+  // ---- Verify sample ----
+  const [verifying, setVerifying] = useState(false);
+  const [verifyReport, setVerifyReport] = useState<string | null>(null);
+  const verifySample = async () => {
+    if (uniqueWords.length === 0) return;
+    setVerifying(true);
+    setVerifyReport(null);
+    try {
+      const pickN = <T,>(arr: T[], n: number) => {
+        const copy = [...arr];
+        const picked: T[] = [];
+        while (picked.length < n && copy.length > 0) {
+          picked.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
+        }
+        return picked;
+      };
+      const wordPicks = pickN(uniqueWords, 5);
+      const allSegs: Array<{ word: string; kind: SegKind; text: string; slug: string }> = [];
+      for (const w of uniqueWords) {
+        for (const p of segPlan.get(w) ?? []) allSegs.push({ word: w, ...p });
+      }
+      const segPicks = pickN(allSegs, 5);
+
+      const results: string[] = [];
+      for (const w of wordPicks) {
+        const { data } = await supabase.functions.invoke("prek-word-tts", {
+          body: { word: w, mode: "say", voiceId: voiceId || undefined },
+        });
+        const url = data?.signedUrl as string | undefined;
+        if (!url) { results.push(`❌ say "${w}" — no signed URL`); continue; }
+        try {
+          const res = await fetch(url);
+          const buf = await res.arrayBuffer();
+          const ok = buf.byteLength >= MIN_ISOLATED_BYTES;
+          results.push(`${ok ? "✅" : "⚠️"} say "${w}" — ${(buf.byteLength / 1024).toFixed(1)} KB`);
+        } catch (e: any) {
+          results.push(`❌ say "${w}" — ${e?.message}`);
+        }
+      }
+      for (const s of segPicks) {
+        const { data } = await supabase.functions.invoke("prek-word-tts", {
+          body: { mode: "teach-segment", segmentKind: s.kind, segmentText: s.text, voiceId: voiceId || undefined },
+        });
+        const url = data?.signedUrl as string | undefined;
+        if (!url) { results.push(`❌ ${s.kind} "${s.text}" — no signed URL`); continue; }
+        try {
+          const res = await fetch(url);
+          const buf = await res.arrayBuffer();
+          const ok = buf.byteLength >= MIN_ISOLATED_BYTES;
+          results.push(`${ok ? "✅" : "⚠️"} ${s.kind} "${s.text}" — ${(buf.byteLength / 1024).toFixed(1)} KB`);
+        } catch (e: any) {
+          results.push(`❌ ${s.kind} "${s.text}" — ${e?.message}`);
+        }
+      }
+      setVerifyReport(results.join("\n"));
+      const failed = results.filter((r) => r.startsWith("❌") || r.startsWith("⚠️")).length;
+      if (failed === 0) toast.success("All 10 sample files look healthy.");
+      else toast.warning(`${failed}/10 samples flagged — see report.`);
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -323,9 +435,10 @@ const BennyVoicePrewarm = () => {
           <CardHeader>
             <CardTitle>Cache every word in Benny's voice — once</CardTitle>
             <CardDescription>
-              Generates the final-word MP3 and every phonics segment used by the
-              segmented Teach flow. Legacy full-lesson Teach files are skipped so
-              Benny never uses the garbled/repeating cache.
+              Serial, one-file-at-a-time. Every clip is generated with
+              <b> eleven_multilingual_v2</b> and passed through Voice Isolation.
+              If isolation isn't available on your ElevenLabs key, the run
+              hard-fails on file #1 so nothing garbled ever hits the cache.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -369,13 +482,16 @@ const BennyVoicePrewarm = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <Button size="lg" onClick={startPrewarm} disabled={running || scanLoading || uniqueWords.length === 0}>
                 {running ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Prewarming…</>) : (<>Prewarm all {uniqueWords.length} words</>)}
               </Button>
-              {running && <Button variant="outline" onClick={() => setCancelFlag(true)}>Cancel</Button>}
+              {running && <Button variant="outline" onClick={cancelPrewarm}>Cancel</Button>}
+              <Button variant="outline" onClick={verifySample} disabled={verifying || uniqueWords.length === 0}>
+                {verifying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Verifying…</> : <>Verify 10 random files</>}
+              </Button>
               {totalCalls > 0 && (
-                <div className="flex-1">
+                <div className="flex-1 min-w-[200px]">
                   <Progress value={progress} />
                   <div className="text-xs text-muted-foreground mt-1">
                     {doneCount} / {totalCalls} cached
@@ -384,6 +500,10 @@ const BennyVoicePrewarm = () => {
                 </div>
               )}
             </div>
+
+            {verifyReport && (
+              <pre className="text-xs bg-muted p-3 rounded whitespace-pre-wrap max-h-72 overflow-auto">{verifyReport}</pre>
+            )}
 
             {/* Purge poisoned cache */}
             <div className="rounded border border-destructive/40 bg-destructive/5 p-3 space-y-2">
@@ -438,11 +558,15 @@ const BennyVoicePrewarm = () => {
                   const r = rows[w];
                   return (
                     <div key={w} className="flex items-center justify-between rounded border p-2 text-sm">
-                      <span className="font-mono font-semibold">{w}</span>
+                      <span className="font-mono font-semibold flex items-center gap-2">
+                        {w}
+                        {r?.isolated === true && <ShieldCheck className="h-3 w-3 text-green-500" aria-label="isolated" />}
+                        {r?.isolated === false && <ShieldAlert className="h-3 w-3 text-amber-500" aria-label="not isolated" />}
+                      </span>
                       <div className="flex items-center gap-1">
                         <StatusBadge label="Say" state={r?.say ?? "pending"} />
                         <SegBadge state={r?.segments ?? "pending"} done={r?.segDone ?? 0} total={r?.segTotal ?? 0} />
-                        <Button size="sm" variant="ghost" onClick={() => previewLegacy(w, "say")} title="Preview say">
+                        <Button size="sm" variant="ghost" onClick={() => previewLegacy(w)} title="Preview say">
                           <Play className="h-3 w-3" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => previewSegmented(w)} title="Preview segmented teach">

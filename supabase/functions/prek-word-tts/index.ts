@@ -99,14 +99,15 @@ function json(body: unknown, status = 200) {
 
 /**
  * Run the raw ElevenLabs TTS bytes through the Voice Isolator so background
- * hiss / breath artifacts / repeated-syllable ghosts get stripped. If the key
- * lacks the audio_isolation scope OR isolation returns a non-2xx, we quietly
- * fall through to the un-isolated bytes so the child still hears something.
+ * hiss / breath artifacts / repeated-syllable ghosts get stripped.
+ * Returns { bytes, isolated } — `isolated=false` means the API rejected the
+ * request (usually missing scope) and we fell back to the raw TTS bytes.
+ * Callers decide whether to accept that fallback or hard-fail.
  */
 async function isolateAudioIfPossible(
   apiKey: string,
   mp3Bytes: Uint8Array,
-): Promise<Uint8Array> {
+): Promise<{ bytes: Uint8Array; isolated: boolean; error?: string }> {
   try {
     const form = new FormData();
     form.append("audio", new Blob([mp3Bytes], { type: "audio/mpeg" }), "tts.mp3");
@@ -117,14 +118,17 @@ async function isolateAudioIfPossible(
     });
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
-      console.warn(`[prek-word-tts] isolation ${res.status}: ${errText}. Falling back to raw TTS.`);
-      return mp3Bytes;
+      console.warn(`[prek-word-tts] isolation ${res.status}: ${errText}`);
+      return { bytes: mp3Bytes, isolated: false, error: `isolation_${res.status}: ${errText.slice(0, 400)}` };
     }
     const isolated = new Uint8Array(await res.arrayBuffer());
-    return isolated.byteLength > 0 ? isolated : mp3Bytes;
+    if (isolated.byteLength === 0) {
+      return { bytes: mp3Bytes, isolated: false, error: "isolation_empty_response" };
+    }
+    return { bytes: isolated, isolated: true };
   } catch (err) {
-    console.warn("[prek-word-tts] isolation threw, using raw bytes:", err);
-    return mp3Bytes;
+    console.warn("[prek-word-tts] isolation threw:", err);
+    return { bytes: mp3Bytes, isolated: false, error: `isolation_threw: ${(err as Error).message}` };
   }
 }
 
@@ -139,8 +143,12 @@ async function generateAndStore(
       stability: number; similarity_boost: number; style: number; speed: number;
     };
     isolate: boolean;
+    requireIsolation: boolean;
   },
-): Promise<{ ok: true; signedUrl: string } | { ok: false; status: number; details: string }> {
+): Promise<
+  | { ok: true; signedUrl: string; isolated: boolean }
+  | { ok: false; status: number; details: string; code?: string }
+> {
   const ttsRes = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${args.voiceId}?output_format=mp3_44100_128`,
     {
@@ -165,7 +173,20 @@ async function generateAndStore(
     return { ok: false, status: ttsRes.status, details: errText };
   }
   let audioBytes = new Uint8Array(await ttsRes.arrayBuffer());
-  if (args.isolate) audioBytes = await isolateAudioIfPossible(apiKey, audioBytes);
+  let wasIsolated = false;
+  if (args.isolate) {
+    const iso = await isolateAudioIfPossible(apiKey, audioBytes);
+    if (!iso.isolated && args.requireIsolation) {
+      return {
+        ok: false,
+        status: 502,
+        code: "isolation_unavailable",
+        details: iso.error ?? "Audio isolation failed and requireIsolation=true",
+      };
+    }
+    audioBytes = iso.bytes;
+    wasIsolated = iso.isolated;
+  }
 
   const uploadRes = await admin.storage.from(BUCKET).upload(args.objectPath, audioBytes, {
     contentType: "audio/mpeg",
@@ -189,7 +210,7 @@ async function generateAndStore(
 
   const signed = await admin.storage.from(BUCKET).createSignedUrl(args.objectPath, SIGNED_URL_TTL);
   if (!signed.data?.signedUrl) return { ok: false, status: 500, details: "Signing failed" };
-  return { ok: true, signedUrl: signed.data.signedUrl };
+  return { ok: true, signedUrl: signed.data.signedUrl, isolated: wasIsolated };
 }
 
 Deno.serve(async (req) => {
@@ -205,12 +226,14 @@ Deno.serve(async (req) => {
       segmentKind?: SegKind;
       segmentText?: string;
       force?: boolean;
-      isolate?: boolean; // per-request override; default true
+      isolate?: boolean;           // per-request override; default true
+      requireIsolation?: boolean;  // if true: hard-fail when isolation unavailable
     };
     const rawMode = body.mode ?? "say";
     const voiceId = (body.voiceId && body.voiceId.trim()) || DEFAULT_VOICE_ID;
     const force = body.force === true;
-    const isolate = body.isolate !== false; // default ON
+    const isolate = body.isolate !== false;               // default ON
+    const requireIsolation = body.requireIsolation === true; // default OFF (game-safe fallback)
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -299,9 +322,10 @@ Deno.serve(async (req) => {
         voiceId, objectPath, prompt,
         voiceSettings: settings,
         isolate,
+        requireIsolation,
       });
-      if (!result.ok) return json({ error: "TTS failed", status: result.status, details: result.details }, result.status);
-      return json({ signedUrl: result.signedUrl, cached: false });
+      if (!result.ok) return json({ error: "TTS failed", status: result.status, code: result.code, details: result.details }, result.status);
+      return json({ signedUrl: result.signedUrl, cached: false, isolated: result.isolated });
     }
 
     // --------------- say / teach (legacy) ---------------
@@ -330,9 +354,10 @@ Deno.serve(async (req) => {
       voiceId, objectPath, prompt,
       voiceSettings: settings,
       isolate,
+      requireIsolation,
     });
-    if (!result.ok) return json({ error: "TTS failed", status: result.status, details: result.details }, result.status);
-    return json({ signedUrl: result.signedUrl, cached: false });
+    if (!result.ok) return json({ error: "TTS failed", status: result.status, code: result.code, details: result.details }, result.status);
+    return json({ signedUrl: result.signedUrl, cached: false, isolated: result.isolated });
   } catch (err) {
     console.error("[prek-word-tts] error:", err);
     return json({ error: (err as Error).message ?? "Unknown error" }, 500);
