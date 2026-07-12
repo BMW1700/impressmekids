@@ -130,11 +130,12 @@ Deno.serve(async (req) => {
       if (isoUp.error) return json({ error: `Isolated upload failed: ${isoUp.error.message}` }, 500);
       mirrorToR2Async(admin, AUDIO_BUCKET, isolatedStoragePath, "audio/mpeg", isolatedBytes.byteLength);
 
-      const { data: levelRow } = await admin
-        .from("prek_levels").select("redub_isolated_paths").eq("id", body.levelId).single();
-      const isoPaths = (levelRow?.redub_isolated_paths as Record<string, string> | null) ?? {};
-      isoPaths[body.sceneKey] = isolatedStoragePath;
-      await admin.from("prek_levels").update({ redub_isolated_paths: isoPaths }).eq("id", body.levelId);
+      // Atomic JSONB merge — safe under parallel Full Auto workers.
+      await admin.rpc("prek_merge_level_json" as any, {
+        _level_id: body.levelId,
+        _column: "redub_isolated_paths",
+        _patch: { [body.sceneKey]: isolatedStoragePath },
+      });
 
       const { data: isoSigned } = await admin.storage
         .from(AUDIO_BUCKET).createSignedUrl(isolatedStoragePath, 60 * 60 * 24 * 7);
