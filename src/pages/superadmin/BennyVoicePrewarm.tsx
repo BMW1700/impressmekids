@@ -283,6 +283,30 @@ const BennyVoicePrewarm = () => {
     catch { toast.error("Teach preview failed"); }
   };
 
+  const [purgeConfirm, setPurgeConfirm] = useState("");
+  const [purging, setPurging] = useState(false);
+
+  const handlePurge = async () => {
+    if (purgeConfirm !== "DELETE") {
+      toast.error('Type DELETE to confirm.');
+      return;
+    }
+    setPurging(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("prek-word-tts", {
+        body: { mode: "purge", voiceId: voiceId || undefined },
+      });
+      if (error) throw error;
+      toast.success(`Purged ${data?.purged ?? 0} poisoned files. Prewarm to rebuild.`);
+      setRows({});
+      setPurgeConfirm("");
+    } catch (e: any) {
+      toast.error(`Purge failed: ${e?.message ?? e}`);
+    } finally {
+      setPurging(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
