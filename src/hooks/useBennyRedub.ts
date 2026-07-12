@@ -241,17 +241,68 @@ export function useBennyRedub(levelId: string | null) {
     setBatchProgress(null);
   }, [redubScene]);
 
+  const extractMusic = useCallback(async (scene: RedubSceneInput): Promise<boolean> => {
+    if (!levelId) return false;
+    setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "running" } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("prek-clip-music-extract", {
+        body: {
+          levelId,
+          sceneKey: scene.sceneKey,
+          sourceStoragePath: scene.sourceStoragePath,
+        },
+      });
+      if (error) throw error;
+      const storagePath: string | undefined = data?.storagePath ?? undefined;
+      const signedUrl: string | undefined = data?.signedUrl ?? undefined;
+      setMusicStates((m) => ({
+        ...m,
+        [scene.sceneKey]: { status: "done", storagePath, signedUrl },
+      }));
+      if (storagePath) {
+        setSettings((s) => ({ ...s, musicPaths: { ...s.musicPaths, [scene.sceneKey]: storagePath } }));
+      }
+      if (signedUrl) {
+        setSignedMusicUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
+      }
+      return true;
+    } catch (e) {
+      const msg = (e as Error).message || "Unknown error";
+      setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: msg } }));
+      return false;
+    }
+  }, [levelId]);
+
+  // Full auto: for each scene, run redub + music extraction in PARALLEL.
+  // Scenes are processed sequentially so we don't overwhelm ElevenLabs / LALAL,
+  // but the two APIs for a single scene fire simultaneously.
+  const runFullAuto = useCallback(async (scenes: RedubSceneInput[]) => {
+    setAutoProgress({ done: 0, total: scenes.length });
+    let done = 0;
+    for (const s of scenes) {
+      await Promise.allSettled([redubScene(s), extractMusic(s)]);
+      done += 1;
+      setAutoProgress({ done, total: scenes.length });
+    }
+    setAutoProgress(null);
+  }, [redubScene, extractMusic]);
+
   return {
     loading,
     settings,
     signedRedubUrls,
     signedIsolatedUrls,
+    signedMusicUrls,
     states,
+    musicStates,
     batchProgress,
+    autoProgress,
     reload,
     saveVoiceSettings,
     saveWorldDefaultVoiceId,
     redubScene,
     redubAll,
+    extractMusic,
+    runFullAuto,
   };
 }
