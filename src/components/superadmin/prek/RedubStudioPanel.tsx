@@ -259,7 +259,6 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
               </div>
             );
           })}
-          })}
           {scenes.length === 0 && (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">
               No source videos uploaded yet.
