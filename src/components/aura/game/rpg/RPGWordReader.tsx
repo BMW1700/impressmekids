@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { isWordMatchLenient } from "@/lib/wordMatchingModes";
 import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlayer";
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
-import { speakBenny } from "@/lib/bennyVoice";
+import { speakBenny, stopBenny } from "@/lib/bennyVoice";
 import { teachWord, stopBennyTeach } from "@/lib/bennyTeach";
 
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
@@ -191,6 +191,7 @@ export const RPGWordReader = ({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const targetArmTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pronunciationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Response time tracking for patent-critical speed-based damage
   const wordDisplayTimestampRef = useRef<number>(0);
@@ -339,6 +340,19 @@ export const RPGWordReader = ({
       clearTimeout(targetArmTimeoutRef.current);
       targetArmTimeoutRef.current = null;
     }
+    if (pronunciationTimeoutRef.current) {
+      clearTimeout(pronunciationTimeoutRef.current);
+      pronunciationTimeoutRef.current = null;
+    }
+  }, []);
+
+  const stopInstructionAudio = useCallback(() => {
+    if (pronunciationTimeoutRef.current) {
+      clearTimeout(pronunciationTimeoutRef.current);
+      pronunciationTimeoutRef.current = null;
+    }
+    stopBennyTeach();
+    stopBenny();
   }, []);
 
   const abortActiveRecognitionForBatchTransition = useCallback(() => {
@@ -648,12 +662,6 @@ export const RPGWordReader = ({
     setEchoCountdown(0);
     soundEffects.incorrectWord();
     
-    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
-    setTimeout(() => {
-      speakBenny(expectedWord, { mode: "say" }).catch(() => playCorrectPronunciation(expectedWord));
-    }, 300);
-
-    
     // IMMEDIATELY report the first miss for accuracy tracking (before user decides Try Again or Continue).
     // A failed retry is the same word's second attempt, so it must not double-count wordsRead.
     if (countMiss) {
@@ -665,6 +673,12 @@ export const RPGWordReader = ({
     setRecognitionState('waiting_action');
     setPendingIncorrectWord({ word: expectedWord, spoken: spokenWord, index: wordIndex });
     setShowFeedbackOverlay(true);
+    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
+    if (pronunciationTimeoutRef.current) clearTimeout(pronunciationTimeoutRef.current);
+    pronunciationTimeoutRef.current = setTimeout(() => {
+      pronunciationTimeoutRef.current = null;
+      speakBenny(expectedWord, { mode: "say", volume: 1 }).catch(() => playCorrectPronunciation(expectedWord));
+    }, 300);
     
     // DO NOT call onResult yet - wait for user to choose Continue (which triggers enemy attack)
   }, [stopRecognitionSession, onMiss]);
@@ -674,6 +688,7 @@ export const RPGWordReader = ({
   
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
+    stopInstructionAudio();
 
     // Kill any stale Web Speech instance first. Browser recognition.stop() ends
     // asynchronously; starting a new session in the same tick can be ignored by
@@ -708,7 +723,7 @@ export const RPGWordReader = ({
     // doesn't reject the retry transcript as "target not armed".
     const retryIndex = currentIndexRef.current;
     const retryTarget = currentBatch[retryIndex]?.replace(/[^a-zA-Z']/g, '') || '';
-    const restartDelayMs = mode === 'fast' ? RETRY_RESTART_DELAY_MS_FAST : RETRY_RESTART_DELAY_MS_NORMAL;
+    const restartDelayMs = mode === 'fast' ? 260 : 420;
     const tokenId = speechTargetTokenRef.current.id + 1;
     speechTargetTokenRef.current = {
       id: tokenId,
@@ -737,7 +752,7 @@ export const RPGWordReader = ({
         startRecognitionRef.current?.();
       }
     }, restartDelayMs);
-  }, [pendingIncorrectWord, currentBatch, mode]);
+  }, [pendingIncorrectWord, currentBatch, mode, stopInstructionAudio]);
 
   // Handle retry success - mark as retried (YELLOW), no damage/coins, but heal HP
   const handleRetrySuccess = useCallback((spokenWord: string, wordIndex: number) => {
