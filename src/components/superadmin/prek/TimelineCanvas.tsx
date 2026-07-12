@@ -147,10 +147,8 @@ export function TimelineCanvas({
     e.stopPropagation();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
     onSelectClip(clip.id);
-    const rowIndex = (redubTrack && clip.track_index === REDUB_TRACK_INDEX)
-      ? 0
-      : (redubTrack ? 1 : 0) + otherTracks.findIndex((t) => t.track_index === clip.track_index);
-    setDrag({ clipId: clip.id, mode, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, rowIndex });
+    const rowIndex = orderedTracks.findIndex((t) => t.track_index === clip.track_index);
+    setDrag({ clipId: clip.id, mode, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, rowIndex: rowIndex >= 0 ? rowIndex : 0 });
   };
 
   const onPointerMove = (e: RPointerEvent) => {
@@ -240,12 +238,18 @@ export function TimelineCanvas({
   };
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
-  // Pin the auto-generated "Benny (Redub)" track (index 90) directly beneath
-  // the Video lane so redub waveforms line up visually with their source.
+  // Pin the auto-generated "Benny (Redub)" (index 90) and "Benny (Music)"
+  // (index 89) tracks directly beneath the Video lane so redub + extracted
+  // music waveforms line up visually with their source scenes.
   const REDUB_TRACK_INDEX = 90;
+  const MUSIC_TRACK_INDEX = 89;
   const redubTrack = tracks.find((t) => t.track_index === REDUB_TRACK_INDEX) ?? null;
-  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX);
-  const orderedTracks: PreKAudioTrack[] = redubTrack ? [redubTrack, ...otherTracks] : otherTracks;
+  const musicTrack = tracks.find((t) => t.track_index === MUSIC_TRACK_INDEX) ?? null;
+  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX && t.track_index !== MUSIC_TRACK_INDEX);
+  const pinned: PreKAudioTrack[] = [];
+  if (redubTrack) pinned.push(redubTrack);
+  if (musicTrack) pinned.push(musicTrack);
+  const orderedTracks: PreKAudioTrack[] = [...pinned, ...otherTracks];
   const lanes = [...orderedTracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const videoLaneTop = HEADER_HEIGHT + 4;
   const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
@@ -359,6 +363,7 @@ export function TimelineCanvas({
             : -1;
           const isDropTarget = targetRowIdx === rowIdx;
           const isRedubLane = !isNew && t!.track_index === REDUB_TRACK_INDEX;
+          const isMusicLane = !isNew && t!.track_index === MUSIC_TRACK_INDEX;
           return (
             <div
               key={isNew ? "__new" : t!.id}
@@ -367,7 +372,9 @@ export function TimelineCanvas({
                   ? `border-2 border-dashed ${isDropTarget ? "border-primary bg-primary/10" : "border-muted-foreground/30 bg-transparent"}`
                   : isRedubLane
                     ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-purple-500/60 bg-purple-500/5"}`
-                    : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
+                    : isMusicLane
+                      ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-blue-500/60 bg-blue-500/5"}`
+                      : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
               }`}
               style={{ top, height: TRACK_HEIGHT }}
             >

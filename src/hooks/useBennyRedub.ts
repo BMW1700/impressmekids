@@ -28,6 +28,13 @@ export interface RedubState {
   isolatedSignedUrl?: string;
 }
 
+export interface MusicState {
+  status: RedubStatus;
+  errorMessage?: string;
+  storagePath?: string;
+  signedUrl?: string;
+}
+
 export interface LevelRedubSettings {
   voiceId: string;              // effective voice ID (level override or world default)
   levelVoiceId: string;         // raw level override (may be empty)
@@ -37,7 +44,9 @@ export interface LevelRedubSettings {
   similarityBoost: number;
   audioPaths: Record<string, string>;
   isolatedPaths: Record<string, string>;
+  musicPaths: Record<string, string>;
   generatedAt: string | null;
+  musicGeneratedAt: string | null;
 }
 
 export function useBennyRedub(levelId: string | null) {
@@ -50,12 +59,17 @@ export function useBennyRedub(levelId: string | null) {
     similarityBoost: 0.85,
     audioPaths: {},
     isolatedPaths: {},
+    musicPaths: {},
     generatedAt: null,
+    musicGeneratedAt: null,
   });
   const [signedRedubUrls, setSignedRedubUrls] = useState<Record<string, string>>({});
   const [signedIsolatedUrls, setSignedIsolatedUrls] = useState<Record<string, string>>({});
+  const [signedMusicUrls, setSignedMusicUrls] = useState<Record<string, string>>({});
   const [states, setStates] = useState<Record<string, RedubState>>({});
+  const [musicStates, setMusicStates] = useState<Record<string, MusicState>>({});
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [autoProgress, setAutoProgress] = useState<{ done: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -63,11 +77,12 @@ export function useBennyRedub(levelId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("prek_levels")
-      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at")
+      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at, music_audio_paths, music_generated_at")
       .eq("id", levelId)
       .maybeSingle();
     const paths = ((data?.redub_audio_paths as Record<string, string> | null) ?? {});
     const isoPaths = (((data as any)?.redub_isolated_paths as Record<string, string> | null) ?? {});
+    const musicPaths = (((data as any)?.music_audio_paths as Record<string, string> | null) ?? {});
     const levelVoiceId = data?.redub_voice_id ?? "";
     const worldId = data?.world_id ?? null;
     let worldDefaultVoiceId = "";
@@ -88,10 +103,16 @@ export function useBennyRedub(levelId: string | null) {
       similarityBoost: data?.redub_similarity_boost != null ? Number(data.redub_similarity_boost) : 0.85,
       audioPaths: paths,
       isolatedPaths: isoPaths,
+      musicPaths,
       generatedAt: data?.redub_generated_at ?? null,
+      musicGeneratedAt: (data as any)?.music_generated_at ?? null,
     });
 
-    const allPaths = Array.from(new Set([...Object.values(paths), ...Object.values(isoPaths)].filter(Boolean)));
+    const allPaths = Array.from(new Set([
+      ...Object.values(paths),
+      ...Object.values(isoPaths),
+      ...Object.values(musicPaths),
+    ].filter(Boolean)));
     if (allPaths.length > 0) {
       const { data: signed } = await supabase.storage
         .from(PREK_AUDIO_BUCKET)
@@ -100,17 +121,23 @@ export function useBennyRedub(levelId: string | null) {
       (signed ?? []).forEach((s) => { if (s.path && s.signedUrl) map[s.path] = s.signedUrl; });
       const byScene: Record<string, string> = {};
       const byIsoScene: Record<string, string> = {};
+      const byMusicScene: Record<string, string> = {};
       for (const [sceneKey, storagePath] of Object.entries(paths)) {
         if (map[storagePath]) byScene[sceneKey] = map[storagePath];
       }
       for (const [sceneKey, storagePath] of Object.entries(isoPaths)) {
         if (map[storagePath]) byIsoScene[sceneKey] = map[storagePath];
       }
+      for (const [sceneKey, storagePath] of Object.entries(musicPaths)) {
+        if (map[storagePath]) byMusicScene[sceneKey] = map[storagePath];
+      }
       setSignedRedubUrls(byScene);
       setSignedIsolatedUrls(byIsoScene);
+      setSignedMusicUrls(byMusicScene);
     } else {
       setSignedRedubUrls({});
       setSignedIsolatedUrls({});
+      setSignedMusicUrls({});
     }
     setLoading(false);
   }, [levelId]);
@@ -214,17 +241,68 @@ export function useBennyRedub(levelId: string | null) {
     setBatchProgress(null);
   }, [redubScene]);
 
+  const extractMusic = useCallback(async (scene: RedubSceneInput): Promise<boolean> => {
+    if (!levelId) return false;
+    setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "running" } }));
+    try {
+      const { data, error } = await supabase.functions.invoke("prek-clip-music-extract", {
+        body: {
+          levelId,
+          sceneKey: scene.sceneKey,
+          sourceStoragePath: scene.sourceStoragePath,
+        },
+      });
+      if (error) throw error;
+      const storagePath: string | undefined = data?.storagePath ?? undefined;
+      const signedUrl: string | undefined = data?.signedUrl ?? undefined;
+      setMusicStates((m) => ({
+        ...m,
+        [scene.sceneKey]: { status: "done", storagePath, signedUrl },
+      }));
+      if (storagePath) {
+        setSettings((s) => ({ ...s, musicPaths: { ...s.musicPaths, [scene.sceneKey]: storagePath } }));
+      }
+      if (signedUrl) {
+        setSignedMusicUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
+      }
+      return true;
+    } catch (e) {
+      const msg = (e as Error).message || "Unknown error";
+      setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: msg } }));
+      return false;
+    }
+  }, [levelId]);
+
+  // Full auto: for each scene, run redub + music extraction in PARALLEL.
+  // Scenes are processed sequentially so we don't overwhelm ElevenLabs / LALAL,
+  // but the two APIs for a single scene fire simultaneously.
+  const runFullAuto = useCallback(async (scenes: RedubSceneInput[]) => {
+    setAutoProgress({ done: 0, total: scenes.length });
+    let done = 0;
+    for (const s of scenes) {
+      await Promise.allSettled([redubScene(s), extractMusic(s)]);
+      done += 1;
+      setAutoProgress({ done, total: scenes.length });
+    }
+    setAutoProgress(null);
+  }, [redubScene, extractMusic]);
+
   return {
     loading,
     settings,
     signedRedubUrls,
     signedIsolatedUrls,
+    signedMusicUrls,
     states,
+    musicStates,
     batchProgress,
+    autoProgress,
     reload,
     saveVoiceSettings,
     saveWorldDefaultVoiceId,
     redubScene,
     redubAll,
+    extractMusic,
+    runFullAuto,
   };
 }

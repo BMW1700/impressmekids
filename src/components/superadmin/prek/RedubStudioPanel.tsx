@@ -6,7 +6,7 @@
 // by scene key; the student player picks it up automatically.
 
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers } from "lucide-react";
+import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers, Music2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,6 +78,20 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     const ok = await redub.redubScene(scene);
     if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
+  };
+
+  const handleExtractMusic = async (scene: RedubSceneInput) => {
+    const ok = await redub.extractMusic(scene);
+    if (ok) toast.success(`Music extracted for ${scene.label} → placed on "Benny (Music)" track`);
+  };
+
+  const handleFullAuto = async () => {
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (scenes.length === 0) { toast.error("No source videos found."); return; }
+    toast.info(`Full auto: redubbing voice + extracting music for ${scenes.length} clips…`);
+    await redub.runFullAuto(scenes);
+    toast.success("Full auto complete — voice on Redub lane, music on Music lane.");
   };
 
 
@@ -168,18 +182,34 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
         <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
+            onClick={handleFullAuto}
+            disabled={!!redub.autoProgress || !!redub.batchProgress || scenes.length === 0}
+            className="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-700 hover:to-emerald-700 text-white"
+          >
+            {redub.autoProgress
+              ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Full auto {redub.autoProgress.done}/{redub.autoProgress.total}…</>
+              : <><Zap className="h-3 w-3 mr-1"/> Full auto: Redub + Music ({scenes.length} clips)</>
+            }
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
             onClick={handleRedubAll}
-            disabled={!!redub.batchProgress || scenes.length === 0}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            disabled={!!redub.batchProgress || !!redub.autoProgress || scenes.length === 0}
           >
             {redub.batchProgress
               ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing {redub.batchProgress.done}/{redub.batchProgress.total}…</>
-              : <><Sparkles className="h-3 w-3 mr-1"/> Redub entire level ({scenes.length} clips)</>
+              : <><Sparkles className="h-3 w-3 mr-1"/> Redub only</>
             }
           </Button>
           {redub.settings.generatedAt && (
             <Badge variant="outline" className="text-[10px]">
               Last redub: {new Date(redub.settings.generatedAt).toLocaleString()}
+            </Badge>
+          )}
+          {redub.settings.musicGeneratedAt && (
+            <Badge variant="outline" className="text-[10px]">
+              Last music: {new Date(redub.settings.musicGeneratedAt).toLocaleString()}
             </Badge>
           )}
         </div>
@@ -190,19 +220,22 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
             const state = redub.states[s.sceneKey];
             const existingRedub = redub.signedRedubUrls[s.sceneKey];
             const redubUrl = state?.signedUrl ?? existingRedub;
+            const musicState = redub.musicStates[s.sceneKey];
+            const existingMusic = redub.signedMusicUrls[s.sceneKey];
+            const musicUrl = musicState?.signedUrl ?? existingMusic;
 
-            
             const status = state?.status ?? (existingRedub ? "done" : "idle");
-            const previewKeyFor = (kind: "src" | "iso" | "redub") => `${s.sceneKey}::${kind}`;
-            const isPlaying = (kind: "src" | "iso" | "redub") => previewingKey === previewKeyFor(kind);
-            const togglePlay = (kind: "src" | "iso" | "redub", u: string) => {
+            const musicStatus = musicState?.status ?? (existingMusic ? "done" : "idle");
+            const previewKeyFor = (kind: "src" | "iso" | "redub" | "music") => `${s.sceneKey}::${kind}`;
+            const isPlaying = (kind: "src" | "iso" | "redub" | "music") => previewingKey === previewKeyFor(kind);
+            const togglePlay = (kind: "src" | "iso" | "redub" | "music", u: string) => {
               const k = previewKeyFor(kind);
               if (previewingKey === k) stopPreview();
               else { stopPreview(); startPreview(k, u); }
             };
             return (
               <div key={s.sceneKey} className="px-3 py-2 space-y-1.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="text-sm truncate">{s.label}</div>
                     <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
@@ -220,29 +253,55 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     onClick={() => togglePlay("redub", redubUrl)}
                     title="Preview final redubbed Benny audio"
                   >
-                    {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Final Audio
+                    {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Voice
                   </Button>
                 )}
-                {redubUrl && (
+                {musicUrl && (
+                  <Button
+                    size="sm" variant="outline"
+                    className="h-7 px-2 text-[10px] border-blue-500/40 text-blue-700 dark:text-blue-300"
+                    onClick={() => togglePlay("music", musicUrl)}
+                    title="Preview extracted music/SFX stem"
+                  >
+                    {isPlaying("music") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Music
+                  </Button>
+                )}
+                {(redubUrl || musicUrl) && (
                   <Badge
                     variant="secondary"
                     className="h-7 text-[10px] gap-1"
-                    title="Auto-placed on the Benny (Redub) track (index 90). Source video audio is muted so this is what plays in-game."
+                    title="Auto-placed on timeline. Voice on Redub track (90), music on Music track (89), source video audio muted."
                   >
-                    <Layers className="h-3 w-3"/> On timeline · track 90 · src muted
+                    <Layers className="h-3 w-3"/> lanes 90/89 · src muted
                   </Badge>
                 )}
                 <Button
                   size="sm" variant="ghost"
-                  disabled={status === "running" || !!redub.batchProgress}
+                  disabled={status === "running" || !!redub.batchProgress || !!redub.autoProgress}
                   onClick={() => handleRedubOne(s)}
-                  title={existingRedub ? "Re-run: isolate → redub → re-place clip on Benny (Redub) track" : "Isolate → redub → auto-place clip on Benny (Redub) track"}
+                  title={existingRedub ? "Re-run redub" : "Isolate → redub → place on Benny (Redub) track"}
                   className="h-7"
                 >
                   {status === "running"
-                    ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
-                    : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
+                    ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Voice…</>
+                    : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redub</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
+                <Button
+                  size="sm" variant="ghost"
+                  disabled={musicStatus === "running" || !!redub.autoProgress}
+                  onClick={() => handleExtractMusic(s)}
+                  title={existingMusic ? "Re-run music extraction" : "Extract music+SFX via LALAL.AI → place on Benny (Music) track"}
+                  className="h-7"
+                >
+                  {musicStatus === "running"
+                    ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Music…</>
+                    : existingMusic ? <><RotateCw className="h-3 w-3 mr-1"/> Music</> : <><Music2 className="h-3 w-3 mr-1"/> Music</>}
+                </Button>
+                {musicStatus === "error" && (
+                  <span className="text-[10px] text-red-500 truncate max-w-[200px]" title={musicState?.errorMessage}>
+                    <AlertCircle className="inline h-3 w-3 mr-0.5"/>{musicState?.errorMessage}
+                  </span>
+                )}
                 </div>
                 {redubUrl && (
                   <div className="rounded-sm bg-purple-500/5 border border-purple-500/30 px-2 py-1 overflow-hidden">
@@ -251,6 +310,18 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                       widthPx={640}
                       heightPx={32}
                       colorClass="text-purple-700 dark:text-purple-300"
+                      normalize
+                      gain={0.9}
+                    />
+                  </div>
+                )}
+                {musicUrl && (
+                  <div className="rounded-sm bg-blue-500/5 border border-blue-500/30 px-2 py-1 overflow-hidden">
+                    <ClipWaveform
+                      url={musicUrl}
+                      widthPx={640}
+                      heightPx={32}
+                      colorClass="text-blue-700 dark:text-blue-300"
                       normalize
                       gain={0.9}
                     />
