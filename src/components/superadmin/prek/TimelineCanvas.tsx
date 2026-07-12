@@ -238,7 +238,13 @@ export function TimelineCanvas({
   };
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
-  const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
+  // Pin the auto-generated "Benny (Redub)" track (index 90) directly beneath
+  // the Video lane so redub waveforms line up visually with their source.
+  const REDUB_TRACK_INDEX = 90;
+  const redubTrack = tracks.find((t) => t.track_index === REDUB_TRACK_INDEX) ?? null;
+  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX);
+  const orderedTracks: PreKAudioTrack[] = redubTrack ? [redubTrack, ...otherTracks] : otherTracks;
+  const lanes = [...orderedTracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const videoLaneTop = HEADER_HEIGHT + 4;
   const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
   const canvasHeight = tracksTopOffset + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
