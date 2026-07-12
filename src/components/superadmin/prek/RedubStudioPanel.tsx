@@ -80,6 +80,20 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
   };
 
+  const handleExtractMusic = async (scene: RedubSceneInput) => {
+    const ok = await redub.extractMusic(scene);
+    if (ok) toast.success(`Music extracted for ${scene.label} → placed on "Benny (Music)" track`);
+  };
+
+  const handleFullAuto = async () => {
+    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    if (scenes.length === 0) { toast.error("No source videos found."); return; }
+    toast.info(`Full auto: redubbing voice + extracting music for ${scenes.length} clips…`);
+    await redub.runFullAuto(scenes);
+    toast.success("Full auto complete — voice on Redub lane, music on Music lane.");
+  };
+
 
 
   return (
