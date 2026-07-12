@@ -1,33 +1,50 @@
-## One-Click "Redub + Music" Automation
+## Fixes to the Redub + Music automation
 
-Ship a single button that, for any Benny clip, runs redub (ElevenLabs voice) and music extraction (LALAL.AI) in parallel and drops both results onto the timeline — voice on the Redub lane, clean music/SFX on a new lane directly below it.
+### 1. Music clip should not pause on word cards
+In `supabase/functions/prek-clip-music-extract/index.ts` inside `ensureMusicClip`, change:
+```ts
+pause_on_word_card: true,
+```
+to
+```ts
+pause_on_word_card: false,
+```
+Background music/SFX should keep playing under word cards; only the redubbed voice should duck. Also backfill any existing music clips already inserted:
+```sql
+UPDATE prek_level_audio_clips
+SET pause_on_word_card = false
+WHERE source_kind = 'music';
+```
 
-### 1. Database
-- Add `music_audio_paths jsonb` to `prek_levels` (mirrors `redub_audio_paths`).
-- Add `music_job_id`, `music_status`, `music_error` columns to `prek_redub_jobs` (or a sibling `prek_music_jobs` table — one row per clip, same shape as redub jobs).
+### 2. LALAL polling: longer deadline + real error surfacing
+In `prek-clip-music-extract`:
+- Bump poll deadline from `5 * 60 * 1000` to `8 * 60 * 1000`.
+- On timeout, include the last `entry` JSON in the error response so we can see whether LALAL was stuck in `progress`, silently missing `back_track`, or in an unknown state.
+- On non-terminal states, log `state` + `progress` every ~20s (not every 4s) so logs stay readable.
 
-### 2. Edge function: `prek-clip-music-extract`
-- Input: `{ levelId, clipIndex, sourceUrl }`.
-- Uploads the clip to LALAL.AI (`/api/upload/`), starts a split with `splitter=phoenix`, `stem=vocals` (we keep the **inverse** — the `back_track` URL = music + SFX minus voice).
-- Polls `/api/check/` until `state=success`.
-- Downloads `back_track` URL, uploads to storage at `prek-audio/{levelId}/music/{clipIndex}.mp3`.
-- Writes path into `prek_levels.music_audio_paths[clipIndex]` and updates job row.
-- Uses `LALAL_API_KEY` (already saved), full CORS, JWT verified in code.
+### 3. Basic retry on transient upstream errors
+Wrap the ElevenLabs Isolation, STS, and LALAL upload/split/check `fetch` calls with a small retry (2 attempts, 1.5s backoff) only on 5xx / network errors. 4xx stays fatal.
 
-### 3. Redub pipeline hardening
-- Before ElevenLabs voice-changer step, run the clip through **ElevenLabs Voice Isolator** (`/v1/audio-isolation`) so the redub track contains ONLY Benny's new voice — no bleed of original music. Store isolated stem as the source for voice-change.
-- Result: Redub lane = clean dubbed voice, Music lane = clean instrumental/SFX. Layering reconstructs the scene.
+### 4. Unify CORS import (cosmetic)
+`prek-clip-music-extract` currently uses `npm:@supabase/supabase-js@2/cors`. Change to:
+```ts
+import { corsHeaders } from "../_shared/cors.ts";
+```
+to match `prek-clip-redub` and the rest of the codebase.
 
-### 4. Hook + UI
-- Extend `useBennyRedub` with `runFullAuto(levelId)` that fires both edge functions in parallel per clip, tracks combined progress, and refreshes level data when both complete.
-- `RedubStudioPanel.tsx`: add **"Full Auto: Redub + Music"** button next to existing redub button. Shows dual progress bars (Voice / Music) per clip.
-- `TimelineCanvas.tsx`: add pinned **Track 89 "Benny (Music)"** lane immediately under Track 90 "Redub". Reads from `music_audio_paths`. Same split/drag-trim/extend handles as other audio clips (already implemented — no new editor code).
+### 5. Deploy
+Redeploy `prek-clip-music-extract` after the edits so the running function picks up the new pause/poll/retry behavior.
 
-### 5. Safety
-- Both pipelines are fully independent (different APIs, different storage paths, different DB columns) — running them in one button cannot cross-contaminate audio.
-- If one side fails, the other still lands; failed side shows retry button per clip.
+### Not doing (call out explicitly)
+- **Not** deduping the raw-MP4 download across the two functions. Small waste, not worth the coordination complexity.
+- **Not** switching to an async job pattern for LALAL yet. Only needed once clip length regularly exceeds ~5 min.
+- **Not** parallelizing scenes in `runFullAuto`. Serial keeps you off ElevenLabs/LALAL rate limits.
 
-### Technical notes
-- LALAL.AI `phoenix` splitter chosen for highest music-preservation quality on voice-dominant clips.
-- Voice Isolator + Voice Changer chain adds ~2–4s per clip but eliminates background bleed in redub.
-- `music_audio_paths` and `redub_audio_paths` are indexed by clip index so timeline reassembly is O(1).
+### Verification after implementation
+1. Run **Full auto** on a level with 2+ clips.
+2. Confirm:
+   - Redub clip appears on track 90, music clip appears on track 89 directly beneath it.
+   - Source video audio auto-muted.
+   - Word card mid-scene: **redub pauses, music keeps playing** underneath.
+   - Both waveforms render in the RedubStudioPanel rows.
+3. Force a failure (temporarily bad LALAL key) and confirm the row shows the real LALAL error, not "timed out."
