@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useBennyRedub, type RedubSceneInput } from "@/hooks/useBennyRedub";
 import { SCENE_KEYS, isVideoScene, type SceneGraph } from "@/lib/preKSceneGraph";
+import { ClipWaveform } from "./ClipWaveform";
 
 interface Props {
   levelId: string;
