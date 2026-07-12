@@ -322,9 +322,10 @@ Deno.serve(async (req) => {
         voiceId, objectPath, prompt,
         voiceSettings: settings,
         isolate,
+        requireIsolation,
       });
-      if (!result.ok) return json({ error: "TTS failed", status: result.status, details: result.details }, result.status);
-      return json({ signedUrl: result.signedUrl, cached: false });
+      if (!result.ok) return json({ error: "TTS failed", status: result.status, code: result.code, details: result.details }, result.status);
+      return json({ signedUrl: result.signedUrl, cached: false, isolated: result.isolated });
     }
 
     // --------------- say / teach (legacy) ---------------
