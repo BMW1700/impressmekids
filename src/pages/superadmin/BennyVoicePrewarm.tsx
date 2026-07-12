@@ -30,7 +30,7 @@ interface RowState {
   error?: string;
 }
 
-const CONCURRENCY = 4;
+const CONCURRENCY = 1;
 
 function normalizeWord(raw: string): string {
   return raw.toLowerCase().replace(/[^a-z0-9' ]+/g, " ").trim().replace(/\s+/g, " ");
@@ -121,9 +121,8 @@ const BennyVoicePrewarm = () => {
       const slugify = (w: string) =>
         w.toLowerCase().replace(/[^a-z0-9']+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 
-      const [saySet, teachSet, ...segSets] = await Promise.all([
+      const [saySet, ...segSets] = await Promise.all([
         listAll(`${voiceId}/${LEGACY_VERSION}/say`),
-        listAll(`${voiceId}/${LEGACY_VERSION}/teach`),
         ...SEG_KINDS.map((k) => listAll(`${voiceId}/${CACHE_VERSION}/${k}`)),
       ]);
       if (cancelled) return;
@@ -140,7 +139,7 @@ const BennyVoicePrewarm = () => {
         seed[w] = {
           word: w,
           say: saySet.has(slug) ? "cached" : "pending",
-          teach: teachSet.has(slug) ? "cached" : "pending",
+          teach: "cached",
           segments: plan.length > 0 && segDone === plan.length ? "cached" : "pending",
           segTotal: plan.length,
           segDone,
@@ -154,19 +153,18 @@ const BennyVoicePrewarm = () => {
 
   // Totals
   const segTotalAll = useMemo(() => Array.from(segPlan.values()).reduce((n, arr) => n + arr.length, 0), [segPlan]);
-  const totalCalls = uniqueWords.length * 2 + segTotalAll;
+  const totalCalls = uniqueWords.length + segTotalAll;
   const creditEstimate = totalCalls * 3;
   const usdEstimate = (creditEstimate / 1000).toFixed(2);
 
   const doneCount = Object.values(rows).reduce((n, r) => {
     let d = 0;
     if (r.say === "cached" || r.say === "generated") d++;
-    if (r.teach === "cached" || r.teach === "generated") d++;
     d += r.segDone;
     return n + d;
   }, 0);
   const errorCount = Object.values(rows).reduce(
-    (n, r) => n + (r.say === "error" ? 1 : 0) + (r.teach === "error" ? 1 : 0) + r.segError, 0,
+    (n, r) => n + (r.say === "error" ? 1 : 0) + r.segError, 0,
   );
   const progress = totalCalls > 0 ? Math.round(((doneCount + errorCount) / totalCalls) * 100) : 0;
 
@@ -208,10 +206,8 @@ const BennyVoicePrewarm = () => {
           word: w, say: "pending" as Cell, teach: "pending" as Cell,
           segments: "pending" as Cell, segTotal: plan.length, segDone: 0, segError: 0,
         };
-        (["say", "teach"] as const).forEach((mode) => {
-          const already = r[mode] === "cached" || r[mode] === "generated";
-          if (force || !already) { queue.push({ kind: "legacy", word: w, mode }); r[mode] = "pending"; }
-        });
+        const alreadySay = r.say === "cached" || r.say === "generated";
+        if (force || !alreadySay) { queue.push({ kind: "legacy", word: w, mode: "say" }); r.say = "pending"; }
         // segments — only enqueue missing
         if (force) { r.segDone = 0; r.segError = 0; }
         // Without probing again, assume seed segDone is accurate; enqueue plan.length - segDone
@@ -293,9 +289,9 @@ const BennyVoicePrewarm = () => {
           <CardHeader>
             <CardTitle>Cache every word in Benny's voice — once</CardTitle>
             <CardDescription>
-              Generates the "say it" MP3, the legacy "teach" MP3, AND every phonics
-              segment (letter, sound, syllable, blend) used by the new segmented
-              Teach flow. Every future playback is a $0 cache hit.
+              Generates the final-word MP3 and every phonics segment used by the
+              segmented Teach flow. Legacy full-lesson Teach files are skipped so
+              Benny never uses the garbled/repeating cache.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -376,7 +372,6 @@ const BennyVoicePrewarm = () => {
                       <span className="font-mono font-semibold">{w}</span>
                       <div className="flex items-center gap-1">
                         <StatusBadge label="Say" state={r?.say ?? "pending"} />
-                        <StatusBadge label="Teach" state={r?.teach ?? "pending"} />
                         <SegBadge state={r?.segments ?? "pending"} done={r?.segDone ?? 0} total={r?.segTotal ?? 0} />
                         <Button size="sm" variant="ghost" onClick={() => previewLegacy(w, "say")} title="Preview say">
                           <Play className="h-3 w-3" />
