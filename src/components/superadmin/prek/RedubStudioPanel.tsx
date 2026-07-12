@@ -6,7 +6,7 @@
 // by scene key; the student player picks it up automatically.
 
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers } from "lucide-react";
+import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers, Music2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
