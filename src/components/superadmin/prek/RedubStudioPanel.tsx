@@ -243,16 +243,6 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
                     : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
-                <Button
-                  size="sm" variant="ghost"
-                  disabled={status === "running" || !!redub.batchProgress}
-                  onClick={() => handleRedubOne(s)}
-                  title="Isolate → redub → auto-place clip on Benny (Redub) track"
-                >
-                  {status === "running"
-                    ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : existingRedub ? <RotateCw className="h-3 w-3"/> : <Wand2 className="h-3 w-3"/>}
-                </Button>
               </div>
             );
           })}
