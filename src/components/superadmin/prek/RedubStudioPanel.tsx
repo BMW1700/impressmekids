@@ -243,8 +243,22 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
                     : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
+                </div>
+                {redubUrl && (
+                  <div className="rounded-sm bg-purple-500/5 border border-purple-500/30 px-2 py-1 overflow-hidden">
+                    <ClipWaveform
+                      url={redubUrl}
+                      widthPx={640}
+                      heightPx={32}
+                      colorClass="text-purple-700 dark:text-purple-300"
+                      normalize
+                      gain={0.9}
+                    />
+                  </div>
+                )}
               </div>
             );
+          })}
           })}
           {scenes.length === 0 && (
             <div className="px-3 py-4 text-xs text-muted-foreground text-center">
