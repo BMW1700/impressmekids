@@ -363,6 +363,7 @@ export function TimelineCanvas({
             : -1;
           const isDropTarget = targetRowIdx === rowIdx;
           const isRedubLane = !isNew && t!.track_index === REDUB_TRACK_INDEX;
+          const isMusicLane = !isNew && t!.track_index === MUSIC_TRACK_INDEX;
           return (
             <div
               key={isNew ? "__new" : t!.id}
@@ -371,7 +372,9 @@ export function TimelineCanvas({
                   ? `border-2 border-dashed ${isDropTarget ? "border-primary bg-primary/10" : "border-muted-foreground/30 bg-transparent"}`
                   : isRedubLane
                     ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-purple-500/60 bg-purple-500/5"}`
-                    : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
+                    : isMusicLane
+                      ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-blue-500/60 bg-blue-500/5"}`
+                      : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
               }`}
               style={{ top, height: TRACK_HEIGHT }}
             >
