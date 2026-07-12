@@ -1739,8 +1739,18 @@ export const RPGWordReader = ({
         canRetry={canRetry}
         onContinue={handleContinueAfterMiss}
         onTryAgain={handleTryAgain}
-        onPlayAudio={() => { stopBennyTeach(); pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say" }); }}
-        onTeachPhonics={() => pendingIncorrectWord?.word && teachWord(pendingIncorrectWord.word)}
+        onPlayAudio={() => {
+          stopInstructionAudio();
+          pendingIncorrectWord?.word && speakBenny(pendingIncorrectWord.word, { mode: "say", volume: 1 });
+        }}
+        onTeachPhonics={() => {
+          const word = pendingIncorrectWord?.word;
+          if (!word) return;
+          stopRecognitionSession();
+          setRecognitionState('waiting_action');
+          stopInstructionAudio();
+          teachWord(word).catch(() => playCorrectPronunciation(word));
+        }}
       />
     </div>
   );
