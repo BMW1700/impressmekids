@@ -201,11 +201,12 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
               else { stopPreview(); startPreview(k, u); }
             };
             return (
-              <div key={s.sceneKey} className="flex items-center gap-2 px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{s.label}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
-                </div>
+              <div key={s.sceneKey} className="px-3 py-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{s.label}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
+                  </div>
                 {status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0"/>}
                 {status === "error" && (
                   <span className="text-[10px] text-red-500 truncate max-w-[200px]" title={state?.errorMessage}>
