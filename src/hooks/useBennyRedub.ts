@@ -244,28 +244,52 @@ export function useBennyRedub(levelId: string | null) {
   const extractMusic = useCallback(async (scene: RedubSceneInput): Promise<boolean> => {
     if (!levelId) return false;
     setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "running" } }));
+
+    // LALAL can take a few minutes; the edge function caps its own poll at ~90s
+    // and returns { status: "pending", jobId } if not done. Resume from client.
+    const CLIENT_MAX_MS = 10 * 60 * 1000;
+    const startedAt = Date.now();
+    let resumeJobId: string | undefined;
+
     try {
-      const { data, error } = await supabase.functions.invoke("prek-clip-music-extract", {
-        body: {
-          levelId,
-          sceneKey: scene.sceneKey,
-          sourceStoragePath: scene.sourceStoragePath,
-        },
-      });
-      if (error) throw error;
-      const storagePath: string | undefined = data?.storagePath ?? undefined;
-      const signedUrl: string | undefined = data?.signedUrl ?? undefined;
-      setMusicStates((m) => ({
-        ...m,
-        [scene.sceneKey]: { status: "done", storagePath, signedUrl },
-      }));
-      if (storagePath) {
-        setSettings((s) => ({ ...s, musicPaths: { ...s.musicPaths, [scene.sceneKey]: storagePath } }));
+      while (true) {
+        const { data, error } = await supabase.functions.invoke("prek-clip-music-extract", {
+          body: {
+            levelId,
+            sceneKey: scene.sceneKey,
+            sourceStoragePath: scene.sourceStoragePath,
+            resumeJobId,
+          },
+        });
+        if (error) throw error;
+
+        if (data?.status === "pending" && data?.jobId) {
+          resumeJobId = data.jobId as string;
+          if (Date.now() - startedAt > CLIENT_MAX_MS) {
+            throw new Error("Music extraction timed out (client-side cap)");
+          }
+          setMusicStates((m) => ({
+            ...m,
+            [scene.sceneKey]: { status: "running", errorMessage: "Separating stems…" },
+          }));
+          await new Promise((r) => setTimeout(r, 15000));
+          continue;
+        }
+
+        const storagePath: string | undefined = data?.storagePath ?? undefined;
+        const signedUrl: string | undefined = data?.signedUrl ?? undefined;
+        setMusicStates((m) => ({
+          ...m,
+          [scene.sceneKey]: { status: "done", storagePath, signedUrl },
+        }));
+        if (storagePath) {
+          setSettings((s) => ({ ...s, musicPaths: { ...s.musicPaths, [scene.sceneKey]: storagePath } }));
+        }
+        if (signedUrl) {
+          setSignedMusicUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
+        }
+        return true;
       }
-      if (signedUrl) {
-        setSignedMusicUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
-      }
-      return true;
     } catch (e) {
       const msg = (e as Error).message || "Unknown error";
       setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: msg } }));
@@ -274,16 +298,23 @@ export function useBennyRedub(levelId: string | null) {
   }, [levelId]);
 
   // Full auto: for each scene, run redub + music extraction in PARALLEL.
-  // Scenes are processed sequentially so we don't overwhelm ElevenLabs / LALAL,
-  // but the two APIs for a single scene fire simultaneously.
+  // Scenes flow through a small worker pool so we get concurrency without
+  // hammering ElevenLabs / LALAL.
   const runFullAuto = useCallback(async (scenes: RedubSceneInput[]) => {
+    const CONCURRENCY = 3;
     setAutoProgress({ done: 0, total: scenes.length });
+    const queue = [...scenes];
     let done = 0;
-    for (const s of scenes) {
-      await Promise.allSettled([redubScene(s), extractMusic(s)]);
-      done += 1;
-      setAutoProgress({ done, total: scenes.length });
-    }
+    const workers = Array.from({ length: Math.min(CONCURRENCY, scenes.length) }, async () => {
+      while (queue.length) {
+        const s = queue.shift();
+        if (!s) return;
+        await Promise.allSettled([redubScene(s), extractMusic(s)]);
+        done += 1;
+        setAutoProgress({ done, total: scenes.length });
+      }
+    });
+    await Promise.all(workers);
     setAutoProgress(null);
   }, [redubScene, extractMusic]);
 
