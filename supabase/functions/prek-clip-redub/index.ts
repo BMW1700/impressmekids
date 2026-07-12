@@ -165,9 +165,10 @@ Deno.serve(async (req) => {
       similarity_boost: body.similarityBoost ?? 0.85,
     }));
 
-    const stsResp = await fetch(
+    const stsResp = await fetchWithRetry(
       `https://api.elevenlabs.io/v1/speech-to-speech/${body.voiceId}?output_format=mp3_44100_128`,
       { method: "POST", headers: { "xi-api-key": apiKey }, body: stsForm },
+      "ElevenLabs STS",
     );
     if (!stsResp.ok) {
       const errText = await stsResp.text();
