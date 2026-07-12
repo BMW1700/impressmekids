@@ -230,6 +230,7 @@ export const RPGWordReader = ({
     if (prevWordsKeyRef.current !== wordsKey) {
       console.log('[RPGWordReader] Words changed, resetting. Old:', prevWordsKeyRef.current.substring(0, 50), 'New:', wordsKey.substring(0, 50));
       prevWordsKeyRef.current = wordsKey;
+      stopInstructionAudio();
       wordGenerationRef.current += 1;
       setCurrentIndex(0);
       currentIndexRef.current = 0;
@@ -281,7 +282,7 @@ export const RPGWordReader = ({
         }, WORD_TRANSITION_ARM_MS_NORMAL + 120);
       }
     }
-  }, [wordsKey]);
+  }, [wordsKey, stopInstructionAudio]);
 
   // Get current batch - memoized for stability
   const currentBatch = useMemo(() => {
@@ -839,6 +840,7 @@ export const RPGWordReader = ({
   // Handle "Continue" (Skip) - accept miss and trigger enemy attack
   const handleContinueAfterMiss = useCallback(() => {
     if (!pendingIncorrectWord) return;
+    stopInstructionAudio();
     
     const { spoken, index } = pendingIncorrectWord;
     
@@ -879,7 +881,7 @@ export const RPGWordReader = ({
       currentIndexRef.current = 0;
       setRecognitionState('idle');
     }
-  }, [pendingIncorrectWord, onResult, words, batchSize, wordResults, onBatchComplete]);
+  }, [pendingIncorrectWord, onResult, words, batchSize, wordResults, onBatchComplete, stopInstructionAudio]);
 
   // Start echo retry mode
   const startEchoRetry = useCallback((spokenWord: string, expectedWord: string, wordIndex: number) => {
@@ -1334,6 +1336,7 @@ export const RPGWordReader = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopInstructionAudio();
       speechSessionIdRef.current += 1;
       shouldBeListeningRef.current = false;
       clearAllTimeouts();
@@ -1347,7 +1350,7 @@ export const RPGWordReader = ({
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
     };
-  }, [clearAllTimeouts]);
+  }, [clearAllTimeouts, stopInstructionAudio]);
 
   // Force-stop recognition the moment `disabled` flips true (e.g. while a
   // PvP RPC is in flight). Without this, an already-running recognition
@@ -1355,6 +1358,7 @@ export const RPGWordReader = ({
   // double submissions or stale word advancement.
   useEffect(() => {
     if (!disabled) return;
+    stopInstructionAudio();
     speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
@@ -1367,7 +1371,7 @@ export const RPGWordReader = ({
     isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
     setRecognitionState('idle');
-  }, [disabled, clearAllTimeouts]);
+  }, [disabled, clearAllTimeouts, stopInstructionAudio]);
 
   // Control functions
   const startReading = useCallback(() => {
@@ -1391,9 +1395,10 @@ export const RPGWordReader = ({
 
 
   const pauseReading = useCallback(() => {
+    stopInstructionAudio();
     stopRecognitionSession();
     setRecognitionState('paused');
-  }, [stopRecognitionSession]);
+  }, [stopRecognitionSession, stopInstructionAudio]);
 
   const resumeReading = useCallback(() => {
     startRecognitionSession();
@@ -1401,9 +1406,10 @@ export const RPGWordReader = ({
 
   const hearWord = useCallback(() => {
     if (cleanWord) {
-      playCorrectPronunciation(cleanWord);
+      stopInstructionAudio();
+      speakBenny(cleanWord, { mode: "say", volume: 1 }).catch(() => playCorrectPronunciation(cleanWord));
     }
-  }, [cleanWord]);
+  }, [cleanWord, stopInstructionAudio]);
 
   // Safety check
   if (!currentBatch || currentBatch.length === 0) {
