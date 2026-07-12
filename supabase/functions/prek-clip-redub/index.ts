@@ -224,24 +224,20 @@ async function ensureRedubClip(
   admin: ReturnType<typeof createClient>,
   args: { levelId: string; sceneKey: string; storagePath: string },
 ) {
-  // 1. Ensure the redub track exists for this level.
-  const { data: existingTrack } = await admin
+  // 1. Idempotent track upsert — safe under parallel workers racing the same
+  // (level_id, track_index). ignoreDuplicates skips if a track already exists.
+  await admin
     .from("prek_level_audio_tracks")
-    .select("id, track_index")
-    .eq("level_id", args.levelId)
-    .eq("track_index", REDUB_TRACK_INDEX)
-    .is("deleted_at", null)
-    .maybeSingle();
-
-  if (!existingTrack) {
-    await admin.from("prek_level_audio_tracks").insert({
-      level_id: args.levelId,
-      track_index: REDUB_TRACK_INDEX,
-      name: REDUB_TRACK_NAME,
-      volume: 1.0,
-      muted: false,
-    });
-  }
+    .upsert(
+      {
+        level_id: args.levelId,
+        track_index: REDUB_TRACK_INDEX,
+        name: REDUB_TRACK_NAME,
+        volume: 1.0,
+        muted: false,
+      },
+      { onConflict: "level_id,track_index", ignoreDuplicates: true },
+    );
 
   // 2. Upsert the redub clip for this scene (unique per (level, track, scene) when source_kind='redub').
   const { data: existingClip } = await admin
