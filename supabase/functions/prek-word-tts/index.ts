@@ -226,12 +226,14 @@ Deno.serve(async (req) => {
       segmentKind?: SegKind;
       segmentText?: string;
       force?: boolean;
-      isolate?: boolean; // per-request override; default true
+      isolate?: boolean;           // per-request override; default true
+      requireIsolation?: boolean;  // if true: hard-fail when isolation unavailable
     };
     const rawMode = body.mode ?? "say";
     const voiceId = (body.voiceId && body.voiceId.trim()) || DEFAULT_VOICE_ID;
     const force = body.force === true;
-    const isolate = body.isolate !== false; // default ON
+    const isolate = body.isolate !== false;               // default ON
+    const requireIsolation = body.requireIsolation === true; // default OFF (game-safe fallback)
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
