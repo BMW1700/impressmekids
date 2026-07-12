@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       }
       const isolatedBytes = new Uint8Array(await isoResp.arrayBuffer());
 
-      isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated.mp3`;
+      isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated-${Date.now()}.mp3`;
       const isoUp = await admin.storage.from(AUDIO_BUCKET).upload(isolatedStoragePath, isolatedBytes, {
         contentType: "audio/mpeg", upsert: true,
       });
