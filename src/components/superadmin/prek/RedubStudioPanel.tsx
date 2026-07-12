@@ -188,9 +188,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
           {scenes.map((s) => {
             const state = redub.states[s.sceneKey];
             const existingRedub = redub.signedRedubUrls[s.sceneKey];
-            const existingIso = redub.signedIsolatedUrls[s.sceneKey];
             const redubUrl = state?.signedUrl ?? existingRedub;
-            const isoUrl = state?.isolatedSignedUrl ?? existingIso;
+
             
             const status = state?.status ?? (existingRedub ? "done" : "idle");
             const previewKeyFor = (kind: "src" | "iso" | "redub") => `${s.sceneKey}::${kind}`;
