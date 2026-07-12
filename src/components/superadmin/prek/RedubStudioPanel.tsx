@@ -79,11 +79,6 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
   };
 
-  const handlePreviewIsolation = async (scene: RedubSceneInput) => {
-    toast.info(`Isolating Benny's voice on ${scene.label}…`);
-    const ok = await redub.redubScene(scene, { isolateOnly: true });
-    if (ok) toast.success(`Isolation ready — hit "Iso" to preview.`);
-  };
 
 
   return (
