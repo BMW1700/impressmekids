@@ -207,11 +207,11 @@ export function TimelineCanvas({
       const newStartSec = Math.max(0, Math.min(graph.nominalDurationTotal - 0.1, pxToSec(startPx + d.dx)));
       const rowDelta = Math.round(d.dy / (TRACK_HEIGHT + TRACK_GAP));
       const newRow = d.rowIndex + rowDelta;
-      if (newRow >= tracks.length) {
+      if (newRow >= orderedTracks.length) {
         onDropOnNewTrack(clip, newStartSec);
       } else {
-        const clampedRow = Math.max(0, Math.min(tracks.length - 1, newRow));
-        onMoveClipStart(clip, newStartSec, tracks[clampedRow].track_index);
+        const clampedRow = Math.max(0, Math.min(orderedTracks.length - 1, newRow));
+        onMoveClipStart(clip, newStartSec, orderedTracks[clampedRow].track_index);
       }
     }
     setDrag(null);
