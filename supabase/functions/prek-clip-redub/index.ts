@@ -18,7 +18,7 @@
 //   8) Return { storagePath, signedUrl, isolatedStoragePath, isolatedSignedUrl }.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const ELEVENLABS_STS_MODEL = "eleven_multilingual_sts_v2";
 const VIDEO_BUCKET = "prek-level-videos";
