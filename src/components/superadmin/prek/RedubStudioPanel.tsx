@@ -235,13 +235,13 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                 <Button
                   size="sm" variant="ghost"
                   disabled={status === "running" || !!redub.batchProgress}
-                  onClick={() => handlePreviewIsolation(s)}
-                  title={isoUrl ? "Re-run isolation test only (advanced)" : "Isolation test only (advanced; no STS credits spent)"}
-                  className="h-7 px-2 text-[10px]"
+                  onClick={() => handleRedubOne(s)}
+                  title={existingRedub ? "Re-run: isolate → redub → re-place clip on Benny (Redub) track" : "Isolate → redub → auto-place clip on Benny (Redub) track"}
+                  className="h-7"
                 >
-                  {status === "running" && !state?.signedUrl
-                    ? <Loader2 className="h-3 w-3 animate-spin"/>
-                    : isoUrl ? "Retest iso" : "Iso test"}
+                  {status === "running"
+                    ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
+                    : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
                 <Button
                   size="sm" variant="ghost"
