@@ -5222,6 +5222,7 @@ export type Database = {
           id: string
           is_published: boolean
           level_number: number
+          music_audio_paths: Json
           mute_source_video_audio: boolean
           opening_trim_in_seconds: number | null
           opening_trim_out_seconds: number | null
@@ -5252,6 +5253,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           level_number: number
+          music_audio_paths?: Json
           mute_source_video_audio?: boolean
           opening_trim_in_seconds?: number | null
           opening_trim_out_seconds?: number | null
@@ -5282,6 +5284,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           level_number?: number
+          music_audio_paths?: Json
           mute_source_video_audio?: boolean
           opening_trim_in_seconds?: number | null
           opening_trim_out_seconds?: number | null
