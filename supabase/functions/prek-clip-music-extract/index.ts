@@ -24,12 +24,16 @@ const MUSIC_TRACK_NAME = "Benny (Music)";
 const MUSIC_TRACK_INDEX = 89; // sits directly below Redub (index 90)
 
 const LALAL_BASE = "https://www.lalal.ai";
-const POLL_DEADLINE_MS = 8 * 60 * 1000; // 8 min
+// Cap in-function polling well under Supabase Edge Function wall-clock
+// (~150s free / 400s paid). If LALAL isn't done, return {status:"pending", jobId}
+// and let the client resume by re-invoking with { resumeJobId }.
+const POLL_DEADLINE_MS = 90 * 1000;
 
 interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+  resumeJobId?: string;
 }
 
 // Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
