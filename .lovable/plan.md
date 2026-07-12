@@ -1,90 +1,105 @@
-## Brutal audit — what's actually wrong
+## Brutal audit result
 
-I re-read both deployed edge functions and the orchestrator. Most of the pipeline is solid: auth + role check, isolation → STS chain, LALAL upload → phoenix split → back_track download, DB merges into `redub_audio_paths` / `redub_isolated_paths` / `music_audio_paths`, timeline auto-place with UNIQUE(level_id, track_index) protecting against duplicate tracks, retries on 5xx, music no longer pausing on word cards, source video auto-muted.
-
-Three real problems remain. One is a **ticking time bomb** on longer clips.
-
-### 🔴 Critical — LALAL 8-minute poll will die inside the edge function
-
-`prek-clip-music-extract` polls LALAL for up to **8 minutes** in a single HTTP request. Supabase Edge Functions have a **~150s wall-clock limit** (400s on higher tiers). Any clip that LALAL takes >2 min to split will:
-
-- kill the function mid-poll with a 546/worker-timeout,
-- lose the `fileId` (never persisted anywhere),
-- leave the client stuck on "running" forever,
-- burn LALAL credits with no output.
-
-Most short Benny clips finish in 20–60s, so this hasn't bitten yet. It **will** bite on longer scenes.
-
-**Fix:** persist the LALAL job to `prek_redub_jobs` (already exists), cap in-function polling to ~90s, and if still processing return `{ status: "pending", jobId }`. Client re-invokes with `{ resumeJobId }` to continue polling. No credits wasted, no ghost states.
-
-### 🟠 Moderate — Full Auto is fully serial across scenes
-
-`runFullAuto` does `for (const s of scenes) await Promise.allSettled([redub, music])`. A 15-scene level with 45s per scene = 11+ minutes of thumb-twiddling. Redub + music for the *same* scene run in parallel (good), but scenes queue one at a time.
-
-**Fix:** run 3 scenes concurrently with a small worker pool. LALAL and ElevenLabs both handle it; this cuts total time ~3×.
-
-### 🟡 Minor — CORS import mismatch + R2 mirror silently fails
-
-- `prek-clip-redub` still imports CORS from `npm:@supabase/supabase-js@2/cors`; `prek-clip-music-extract` uses `../_shared/cors.ts`. Same headers, but I claimed "unified" last turn — it isn't. Point both at `../_shared/cors.ts`.
-- `mirrorToR2Async` calls `admin.functions.invoke("migrate-to-r2")` with no Authorization header. If that function verifies JWT, every mirror silently fails and files sit only in Supabase Storage (still playable, just no CDN offload). Pass the service-role JWT explicitly.
-
-### Everything else I checked and it's fine
-
-- `prek_level_audio_tracks` has `UNIQUE(level_id, track_index)` → no duplicate track race.
-- Redub + music update disjoint JSON columns on `prek_levels` → concurrent updates safe.
-- `music_audio_paths`, `music_generated_at`, `redub_isolated_paths`, `mute_source_video_audio` all exist.
-- STS gets the isolated stem, not raw MP4 → redub track is clean vocals only. ✅
-- LALAL back_track = full mix − vocals → music + SFX preserved. ✅
-- `pause_on_word_card = false` for music, `= true` for redub → word cards duck the voice but keep the score playing. ✅
+The per-scene edge functions are correct in isolation. The parallel worker pool in `runFullAuto` (CONCURRENCY=3) exposes **two real bugs** in the write paths. They will not throw loudly; they will silently drop data. Both must be fixed before "Full auto" is trustworthy on a multi-scene level.
 
 ---
 
-## Plan — three fixes, in this order
+### 🔴 Bug 1 — Lost-update race on `prek_levels` path maps
 
-### 1. Resumable LALAL poll (critical)
+Both `prek-clip-redub` and `prek-clip-music-extract` do this pattern:
 
-**`supabase/functions/prek-clip-music-extract/index.ts`**
-- Accept `resumeJobId?: string` in body. When present, skip upload/split and jump straight to polling that job.
-- Cap in-function polling at `MAX_POLL_MS = 90_000` (well under edge wall-clock).
-- After starting split, insert a row into `prek_redub_jobs` with `{ level_id, scene_key, kind: 'music', external_job_id: fileId, status: 'processing' }`.
-- If poll times out with no `back_track` yet, return `{ status: "pending", jobId: fileId }` (HTTP 202). Don't error.
-- On success, mark the job row `status: 'done'` and proceed with download/upload/DB merge as today.
+```text
+SELECT redub_audio_paths FROM prek_levels WHERE id = :level
+merge one { sceneKey → storagePath }
+UPDATE prek_levels SET redub_audio_paths = merged
+```
 
-**`src/hooks/useBennyRedub.ts` — `extractMusic`**
-- If response has `status: "pending"`, wait 15s and re-invoke with `{ resumeJobId: jobId }`. Loop up to 10 minutes total on the client side. Update `musicStates[sceneKey]` with a "polling…" substate so the UI shows progress.
+When two workers finish scenes A and B for the **same level** at roughly the same time, both read the pre-merge dict, each adds its own key, each writes the whole dict back. The later write wipes the earlier scene's entry.
 
-**`prek_redub_jobs`** already exists (checked in table list), so no migration needed — just verify columns fit (`kind`, `external_job_id`, `status`).
+Affected columns:
+- `prek_levels.redub_audio_paths`
+- `prek_levels.redub_isolated_paths`
+- `prek_levels.music_audio_paths`
 
-### 2. Concurrent Full Auto (moderate)
+Symptom: the timeline `prek_level_audio_clips` rows are fine (they're inserted per-row and protected by UNIQUE), but `useBennyRedub.reload()` reads from `prek_levels` — so the "generated ✓" indicator, signed-URL preview, and any future regenerate-only-missing logic will show scenes as "not done" even though the MP3 exists in storage.
 
-**`src/hooks/useBennyRedub.ts` — `runFullAuto`**
-- Replace serial loop with a 3-worker pool:
-  ```ts
-  const CONCURRENCY = 3;
-  const queue = [...scenes];
-  const workers = Array.from({ length: CONCURRENCY }, async () => {
-    while (queue.length) {
-      const s = queue.shift()!;
-      await Promise.allSettled([redubScene(s), extractMusic(s)]);
-      done += 1; setAutoProgress({ done, total: scenes.length });
-    }
-  });
-  await Promise.all(workers);
-  ```
+**Fix:** replace the read-modify-write with an atomic JSONB merge via a `SECURITY DEFINER` RPC:
 
-### 3. Hygiene (minor)
+```sql
+create or replace function public.prek_merge_level_json(
+  _level_id uuid,
+  _column text,
+  _patch jsonb
+) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if _column not in ('redub_audio_paths','redub_isolated_paths','music_audio_paths') then
+    raise exception 'invalid column';
+  end if;
+  execute format(
+    'update public.prek_levels set %I = coalesce(%I, ''{}''::jsonb) || $1 where id = $2',
+    _column, _column
+  ) using _patch, _level_id;
+end $$;
 
-- Change `prek-clip-redub` CORS import to `../_shared/cors.ts` (matches music-extract).
-- In both functions, pass `Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}` when invoking `migrate-to-r2` so the mirror actually runs.
-- Timestamp the isolated MP3 path (`-isolated-<ts>.mp3`) so regenerations don't collide with stale CDN caches.
+grant execute on function public.prek_merge_level_json(uuid, text, jsonb) to service_role;
+```
 
-### Technical notes
+Then in both edge functions:
 
-- No DB migration needed; `prek_redub_jobs` and every column referenced above already exist.
-- No UI change beyond a "polling…" status string; existing status pills already handle the states.
-- After edits, deploy `prek-clip-music-extract` + `prek-clip-redub` and hit **Full auto** on a real level to verify.
+```ts
+await admin.rpc("prek_merge_level_json", {
+  _level_id: body.levelId,
+  _column: "redub_audio_paths",
+  _patch: { [body.sceneKey]: outPath },
+});
+```
 
-### Out of scope (deliberately)
+### 🔴 Bug 2 — Track-insert race trips UNIQUE(level_id, track_index)
 
-- Splitting music into finer stems (vocals/drums/bass) — LALAL supports it, but you asked for "music + SFX minus voice" which is exactly `back_track`.
-- Background job queue (pg-boss/inngest) — the resumable pattern above is enough; a real queue is overkill until you're batching hundreds of levels.
+`ensureRedubClip` / `ensureMusicClip` do "SELECT track → if missing INSERT". Two parallel workers for the same level both see no track, both try to INSERT track_index 89 (or 90), one hits `duplicate key value violates unique constraint`, the whole scene errors out even though the redub/music MP3 uploaded fine.
+
+**Fix:** replace the check-then-insert with an idempotent upsert:
+
+```ts
+await admin
+  .from("prek_level_audio_tracks")
+  .upsert(
+    { level_id: args.levelId, track_index: MUSIC_TRACK_INDEX, name: MUSIC_TRACK_NAME, volume: 0.8, muted: false },
+    { onConflict: "level_id,track_index", ignoreDuplicates: true },
+  );
+```
+
+Same for the redub track (index 90).
+
+### 🟡 Nit — `mute_source_video_audio` write is also a lost update in theory
+
+`prek-clip-redub` sets `mute_source_video_audio: true` per scene. It's idempotent (always the same value), so parallel writes are safe. No fix needed.
+
+---
+
+## Everything else I checked and it's clean
+
+- ✅ Auth + role check on both functions.
+- ✅ LALAL 90s cap + client resume loop with 10 min ceiling.
+- ✅ 5xx retry helper on all upstream calls.
+- ✅ Isolated path timestamped to bust CDN.
+- ✅ `pause_on_word_card: false` for music, `true` for redub.
+- ✅ `source_kind` check constraint includes `'music'`.
+- ✅ Partial UNIQUE index on `(level_id, track_index, anchor_scene_key)` WHERE source_kind='music' / 'redub' guarantees one clip per scene per lane.
+- ✅ `mute_source_video_audio` auto-flips on first redub so original Benny audio doesn't fight the redub.
+- ✅ R2 mirror is fire-and-forget with Service Role JWT; CDN HEAD fallback catches misses.
+- ✅ Both functions use `../_shared/cors.ts` — CORS is consistent.
+
+---
+
+## What I'll ship on approval
+
+1. **New migration** creating `public.prek_merge_level_json(uuid, text, jsonb)` with `service_role` execute grant.
+2. **`prek-clip-redub`** — swap both `SELECT → merge → UPDATE` blocks (redub_audio_paths, redub_isolated_paths) for `rpc("prek_merge_level_json", …)`; convert track insert to idempotent upsert.
+3. **`prek-clip-music-extract`** — same treatment for `music_audio_paths`; convert track insert to idempotent upsert.
+4. **Redeploy** both edge functions.
+
+No UI changes. No hook changes. Concurrency stays at 3.
+
+After that, Full Auto is safe to hammer on a 15-scene level without corrupting `prek_levels` or randomly failing a scene on the track-insert race.

@@ -9592,6 +9592,10 @@ export type Database = {
         Returns: boolean
       }
       peek_classroom_join_code: { Args: { p_join_code: string }; Returns: Json }
+      prek_merge_level_json: {
+        Args: { _column: string; _level_id: string; _patch: Json }
+        Returns: undefined
+      }
       purchase_castle_hero_level: {
         Args: { p_cost: number; p_grade_mode: string; p_hero_id: string }
         Returns: Json
