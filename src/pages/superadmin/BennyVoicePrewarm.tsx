@@ -384,6 +384,41 @@ const BennyVoicePrewarm = () => {
                 </div>
               )}
             </div>
+
+            {/* Purge poisoned cache */}
+            <div className="rounded border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <Trash2 className="h-4 w-4 text-destructive mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-sm text-destructive">Purge poisoned cache (v2 + v3)</div>
+                  <p className="text-xs text-muted-foreground">
+                    Deletes every garbled MP3 from the old cache prefixes for this voice ID. The new v3/v4 layout is untouched.
+                    Use this once, then Prewarm to rebuild with the new isolated multilingual_v2 pipeline.
+                  </p>
+                </div>
+              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={purging || !voiceId}>
+                    {purging ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Purging…</> : <><Trash2 className="h-3 w-3 mr-1" /> Nuke poisoned cache</>}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete every cached MP3 under v2/ and v3/?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Voice ID: <span className="font-mono">{voiceId || "(default)"}</span>. This cannot be undone.
+                      Type <b>DELETE</b> to confirm.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Input value={purgeConfirm} onChange={(e) => setPurgeConfirm(e.target.value)} placeholder="Type DELETE" />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setPurgeConfirm("")}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handlePurge} disabled={purgeConfirm !== "DELETE"}>Purge now</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </CardContent>
         </Card>
 
