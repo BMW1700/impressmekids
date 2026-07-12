@@ -59,12 +59,17 @@ export function useBennyRedub(levelId: string | null) {
     similarityBoost: 0.85,
     audioPaths: {},
     isolatedPaths: {},
+    musicPaths: {},
     generatedAt: null,
+    musicGeneratedAt: null,
   });
   const [signedRedubUrls, setSignedRedubUrls] = useState<Record<string, string>>({});
   const [signedIsolatedUrls, setSignedIsolatedUrls] = useState<Record<string, string>>({});
+  const [signedMusicUrls, setSignedMusicUrls] = useState<Record<string, string>>({});
   const [states, setStates] = useState<Record<string, RedubState>>({});
+  const [musicStates, setMusicStates] = useState<Record<string, MusicState>>({});
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [autoProgress, setAutoProgress] = useState<{ done: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
@@ -72,11 +77,12 @@ export function useBennyRedub(levelId: string | null) {
     setLoading(true);
     const { data } = await supabase
       .from("prek_levels")
-      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at")
+      .select("world_id, redub_voice_id, redub_stability, redub_similarity_boost, redub_audio_paths, redub_isolated_paths, redub_generated_at, music_audio_paths, music_generated_at")
       .eq("id", levelId)
       .maybeSingle();
     const paths = ((data?.redub_audio_paths as Record<string, string> | null) ?? {});
     const isoPaths = (((data as any)?.redub_isolated_paths as Record<string, string> | null) ?? {});
+    const musicPaths = (((data as any)?.music_audio_paths as Record<string, string> | null) ?? {});
     const levelVoiceId = data?.redub_voice_id ?? "";
     const worldId = data?.world_id ?? null;
     let worldDefaultVoiceId = "";
@@ -97,10 +103,16 @@ export function useBennyRedub(levelId: string | null) {
       similarityBoost: data?.redub_similarity_boost != null ? Number(data.redub_similarity_boost) : 0.85,
       audioPaths: paths,
       isolatedPaths: isoPaths,
+      musicPaths,
       generatedAt: data?.redub_generated_at ?? null,
+      musicGeneratedAt: (data as any)?.music_generated_at ?? null,
     });
 
-    const allPaths = Array.from(new Set([...Object.values(paths), ...Object.values(isoPaths)].filter(Boolean)));
+    const allPaths = Array.from(new Set([
+      ...Object.values(paths),
+      ...Object.values(isoPaths),
+      ...Object.values(musicPaths),
+    ].filter(Boolean)));
     if (allPaths.length > 0) {
       const { data: signed } = await supabase.storage
         .from(PREK_AUDIO_BUCKET)
@@ -109,17 +121,23 @@ export function useBennyRedub(levelId: string | null) {
       (signed ?? []).forEach((s) => { if (s.path && s.signedUrl) map[s.path] = s.signedUrl; });
       const byScene: Record<string, string> = {};
       const byIsoScene: Record<string, string> = {};
+      const byMusicScene: Record<string, string> = {};
       for (const [sceneKey, storagePath] of Object.entries(paths)) {
         if (map[storagePath]) byScene[sceneKey] = map[storagePath];
       }
       for (const [sceneKey, storagePath] of Object.entries(isoPaths)) {
         if (map[storagePath]) byIsoScene[sceneKey] = map[storagePath];
       }
+      for (const [sceneKey, storagePath] of Object.entries(musicPaths)) {
+        if (map[storagePath]) byMusicScene[sceneKey] = map[storagePath];
+      }
       setSignedRedubUrls(byScene);
       setSignedIsolatedUrls(byIsoScene);
+      setSignedMusicUrls(byMusicScene);
     } else {
       setSignedRedubUrls({});
       setSignedIsolatedUrls({});
+      setSignedMusicUrls({});
     }
     setLoading(false);
   }, [levelId]);
