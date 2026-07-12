@@ -224,13 +224,14 @@ Deno.serve(async (req) => {
     if (up.error) return json({ error: `Upload failed: ${up.error.message}` }, 500);
     mirrorToR2Async(admin, AUDIO_BUCKET, outPath, "audio/mpeg", stemBytes.byteLength);
 
-    // 7. Merge into prek_levels.music_audio_paths.
-    const { data: levelRow } = await admin
-      .from("prek_levels").select("music_audio_paths").eq("id", body.levelId).single();
-    const paths = ((levelRow as any)?.music_audio_paths as Record<string, string> | null) ?? {};
-    paths[body.sceneKey] = outPath;
+    // 7. Atomic JSONB merge into prek_levels.music_audio_paths — safe under
+    // parallel Full Auto workers (no read-modify-write race).
+    await admin.rpc("prek_merge_level_json" as any, {
+      _level_id: body.levelId,
+      _column: "music_audio_paths",
+      _patch: { [body.sceneKey]: outPath },
+    });
     await admin.from("prek_levels").update({
-      music_audio_paths: paths,
       music_generated_at: new Date().toISOString(),
     } as any).eq("id", body.levelId);
 
