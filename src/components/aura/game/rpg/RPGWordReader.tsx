@@ -690,6 +690,9 @@ export const RPGWordReader = ({
   const handleTryAgain = useCallback(() => {
     if (!pendingIncorrectWord) return;
     stopInstructionAudio();
+    // stopInstructionAudio() already calls stopBennyTeach + stopBenny, so no
+    // residual Benny audio leaks into the mic on retry. Log for field diagnosis.
+    console.log('[RPGWordReader] retry re-arming target=', pendingIncorrectWord.word, 'index=', currentIndexRef.current);
 
     // Kill any stale Web Speech instance first. Browser recognition.stop() ends
     // asynchronously; starting a new session in the same tick can be ignored by
