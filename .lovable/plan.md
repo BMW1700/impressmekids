@@ -1,43 +1,57 @@
-## Goal
-Guarantee that a single "Prewarm all" click produces a fully isolated, multilingual_v2, correctly-cached MP3 for every word and every phonics segment — no silent fallbacks, no tab-death, no wasted round-trips.
+## Brutally honest audit — Benny voice, prewarm, teach/hear, retry, redub
 
-## Fix 1 — Fail loud if isolation isn't available (critical)
-`supabase/functions/prek-word-tts/index.ts`
-- Add a preflight `POST /v1/audio-isolation` probe at server start (cached in a module-level `let isolationVerified: boolean | null`).
-- New request field `requireIsolation: boolean` (default **true** for prewarm, false for on-demand game calls).
-- When `requireIsolation === true` and isolation returns non-2xx OR falls back, respond `502 { error: "isolation_unavailable", details }` **instead of silently shipping raw bytes**. The prewarm UI marks that row `error` with the real reason so you know before playing 800 files.
-- Keep the graceful-fallback path for live game calls so a child never hears silence if isolation is briefly down.
+### 1. Prewarm — 95% perfect
 
-## Fix 2 — Keep the run alive & make cancel work
-`src/pages/superadmin/BennyVoicePrewarm.tsx`
-- Request `navigator.wakeLock.request("screen")` when prewarm starts, release on finish/error. Prevents laptop-sleep from killing the run.
-- Replace the broken `cancelFlag` state read inside workers with a `useRef<boolean>` so Cancel actually stops the loop.
-- Persist queue progress to `localStorage` after each job so a hard tab crash can be resumed from the same row instead of restarting.
-- Show live "isolated ✓" badge per row (from function response) so you can see mid-run that isolation is actually running.
+**What actually works (verified in code):**
+- `CONCURRENCY = 1` — truly serial. No overlapping ElevenLabs requests. No quality degradation from parallel STS.
+- Every request sends `requireIsolation: true`. `prek-word-tts` returns `502 isolation_unavailable` on file #1 if the ElevenLabs key lacks the `audio_isolation` scope — nothing garbled ever enters the cache.
+- `eleven_multilingual_v2` (not turbo), per-kind voice_settings tuned for a 4-year-old's ear (higher stability, speaker_boost on).
+- Wake lock acquired on start, released on finish/cancel/error. Laptop won't sleep mid-run.
+- Cancel uses `useRef` — actually stops the loop, no stale-state bug.
+- Storage probe rebuilds the queue from the **actual** contents of the `prek-word-tts` bucket. Cached files are skipped unless `force=true`. Re-probes after finish.
+- Verify sample downloads 10 random MP3s and flags any <4 KB as broken silence.
+- Purge action nukes both `v2/*` and `v3/*` poisoned prefixes for super_admins only.
 
-## Fix 3 — Stop re-enqueuing cached segments
-`src/pages/superadmin/BennyVoicePrewarm.tsx`
-- Reuse the on-load storage probe (`segByKind` sets) as the source of truth for which segments to enqueue.
-- Enqueue only `plan entries where !segByKind[kind].has(slug)` (or all of them when `force` is on).
-- Correct `segDone` seeding so progress %, totals, and "done" match reality.
+**One real gap:**
+- The edge function still has a **legacy `mode: "teach"` code path** that builds a single stitched sentence ("A... buh... at!"). Nothing in the current app calls it — `bennyTeach.ts` uses segments and `bennyVoice.ts` uses `mode: "say"`. But it's live, cache-key `v3/teach/*`, and any old client that survives will silently create new poisoned files. Remove it and reject the mode server-side.
 
-## Fix 4 — Verify with a smoke test after purge → prewarm
-Add a "Verify 5 random files" button that:
-- Picks 5 words + 5 random segments from cache.
-- Downloads each MP3, checks `Content-Length > 4 KB` (isolation strips silence so tiny files = broken) and plays them back-to-back.
-- Reports pass/fail per file. This is the empirical proof that the run actually worked before you approve for kids.
+### 2. Teach & Hear in-game — perfect *if* prewarm succeeded
 
-## Order of operations after build
-1. Nuke poisoned cache.
-2. Click "Prewarm all" (wake-lock engages, tab can stay backgrounded but not slept).
-3. Let it run — if isolation scope is missing, it fails on file #1 with a clear message instead of poisoning 800 files.
-4. When it finishes, hit "Verify 5 random files."
-5. Test `hear` + `teach` in the live game.
+- `bennyVoice.ts` (Hear): cache-first signed URL from edge function, falls back to Web Speech only on error. No overlapping playback (`stopBenny` before each play).
+- `bennyTeach.ts` (Teach): **serial** segment fetch + playback (parent complaint was overlaps — fixed). Code-controlled gaps per pace toggle. Abort controller stops mid-run.
+- `stopInstructionAudio()` in `RPGWordReader` calls **both** `stopBennyTeach()` and `stopBenny()`. It runs at the top of `handleTryAgain`, `handleContinueAfterMiss`, and mic restart paths. Teach can't leak into the mic after Retry.
 
-## What this does NOT change
-- ElevenLabs credits usage (same or lower — we stop re-hitting cached segments).
-- The redub studio pipeline (already routes through the same isolation, unaffected).
-- Game-side `bennyVoice.ts` / `bennyTeach.ts` (they already read from the edge function; no client changes needed).
+The catch: none of the above matters if the cache is still poisoned. Order is non-negotiable: **Nuke → Prewarm → Verify → then test in-game.**
 
-## Straight answer to your question
-As it stands right now: **No, I cannot guarantee it will be perfect** — because of the silent isolation fallback. After these four fixes: **yes**, because the run will either produce fully isolated multilingual_v2 audio for every file, or fail loudly on file #1 with the exact reason. No middle ground, no surprise garbage in the cache.
+### 3. Retry button — the code path is correct
+
+Traced `handleTryAgain` end-to-end (RPGWordReader.tsx:690–756):
+1. `stopInstructionAudio()` — kills any playing Hear/Teach audio.
+2. Aborts stale `SpeechRecognition` instance (fix for Chrome/Safari's async `.stop()` race).
+3. Clears the feedback overlay, resets `isProcessingRef`, `batchCompletedRef`, `processedFinalsRef`.
+4. **Re-arms the speech target token** for the same word index — previously the old token was still marked "consumed" and the retry transcript was rejected as "target not armed". This is fixed.
+5. Restarts the mic after 260–420 ms (pace-dependent) so Chrome accepts the new session.
+
+I still want a real-browser verification pass because this is the exact bug the user has been burned by twice. Playwright will drive: read word → force miss → click Try Again → verify mic goes green and a new transcript is processed.
+
+### 4. Redub — perfect for the pipeline, quiet gap in the UI
+
+Verified in `supabase/functions/prek-clip-redub/index.ts`:
+- Isolate → STS → upload isolated stem AND final MP3 → merge into `redub_audio_paths` → **auto-create the "Benny (Redub)" track (index 90)** → **upsert one redub clip per scene** → auto-enable `mute_source_video_audio`.
+- Layering "just happens" — every redubbed scene lands on the same top-priority track, source video audio gets muted the same call. No manual timeline work needed.
+
+Gap: `RedubStudioPanel` shows the final MP3 preview but doesn't explicitly surface "this clip is now on the timeline at track 90" — the user's complaint that layering is "mostly decorative" was actually a UI communication gap, not a data gap. Fix is a small badge/toast.
+
+### Fixes to ship
+
+1. **Edge function** — remove the dead `mode: "teach"` branch from `prek-word-tts/index.ts`, return `400 legacy_teach_mode_removed`. Prevents any future poisoning at `v3/teach/*`.
+2. **Prewarm UI** — after purge, also invalidate the in-memory `saySet` / `segByKind` immediately (currently only after re-probe finishes; brief window where "cached" rows still show).
+3. **Retry verification** — Playwright script: load a Pre-K level as a real signed-in super_admin, force a miscue, click Try Again, assert (a) `[RPGWordReader]` retry log line appears, (b) mic state transitions `waiting_action → listening`, (c) a fresh transcript is processed within 5 s. Fail loudly if any step misses.
+4. **Redub panel** — show a small `On timeline · track 90 · source audio muted` confirmation next to the Final Audio preview after a successful redub, so you can see layering happened without opening the timeline.
+
+### Straight answer to your question
+
+- **Prewarm perfect?** Yes, provided the ElevenLabs key has `audio_isolation` scoped. If not, it hard-fails on file #1 with a red toast — no garbage enters cache. After fix #1 there's no other silent poisoning path.
+- **Teach + Hear will sound perfect?** Yes, once you Nuke → Prewarm → Verify shows 10/10 ✅ with reasonable KB sizes. The code that plays them is already correct.
+- **Retry will work?** The code says yes and I'll prove it with a Playwright run before I claim done. If the Playwright pass fails, I fix whatever it exposes in the same turn.
+- **Redub perfect?** The pipeline is. UI-wise you'll get the missing "layered on track 90" confirmation.

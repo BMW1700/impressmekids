@@ -345,9 +345,13 @@ const BennyVoicePrewarm = () => {
         body: { mode: "purge", voiceId: voiceId || undefined },
       });
       if (error) throw error;
-      toast.success(`Purged ${data?.purged ?? 0} poisoned files. Prewarm to rebuild.`);
+      // Invalidate in-memory truth immediately so the table stops showing
+      // "cached" rows during the ~1s window before re-probe completes.
+      setSaySet(new Set());
+      setSegByKind(SEG_KINDS.reduce((acc, k) => { acc[k] = new Set(); return acc; }, {} as Record<SegKind, Set<string>>));
       setRows({});
       setPurgeConfirm("");
+      toast.success(`Purged ${data?.purged ?? 0} poisoned files. Prewarm to rebuild.`);
       probeStorage().catch(() => {});
     } catch (e: any) {
       toast.error(`Purge failed: ${e?.message ?? e}`);
