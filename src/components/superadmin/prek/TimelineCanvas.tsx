@@ -147,7 +147,9 @@ export function TimelineCanvas({
     e.stopPropagation();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
     onSelectClip(clip.id);
-    const rowIndex = tracks.findIndex((t) => t.track_index === clip.track_index);
+    const rowIndex = (redubTrack && clip.track_index === REDUB_TRACK_INDEX)
+      ? 0
+      : (redubTrack ? 1 : 0) + otherTracks.findIndex((t) => t.track_index === clip.track_index);
     setDrag({ clipId: clip.id, mode, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, rowIndex });
   };
 
