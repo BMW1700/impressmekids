@@ -186,13 +186,13 @@ Deno.serve(async (req) => {
     if (up.error) return json({ error: `Upload failed: ${up.error.message}` }, 500);
     mirrorToR2Async(admin, AUDIO_BUCKET, outPath, "audio/mpeg", mp3Bytes.byteLength);
 
-    // 5. Merge into prek_levels.redub_audio_paths.
-    const { data: levelRow2 } = await admin
-      .from("prek_levels").select("redub_audio_paths").eq("id", body.levelId).single();
-    const paths = (levelRow2?.redub_audio_paths as Record<string, string> | null) ?? {};
-    paths[body.sceneKey] = outPath;
+    // 5. Atomic JSONB merge into redub_audio_paths, plus scalar metadata.
+    await admin.rpc("prek_merge_level_json" as any, {
+      _level_id: body.levelId,
+      _column: "redub_audio_paths",
+      _patch: { [body.sceneKey]: outPath },
+    });
     await admin.from("prek_levels").update({
-      redub_audio_paths: paths,
       redub_voice_id: body.voiceId,
       redub_stability: body.stability ?? null,
       redub_similarity_boost: body.similarityBoost ?? null,
