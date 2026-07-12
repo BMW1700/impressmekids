@@ -16,7 +16,7 @@
 //   8) Return { storagePath, signedUrl }.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { corsHeaders } from "../_shared/cors.ts";
 
 const VIDEO_BUCKET = "prek-level-videos";
 const AUDIO_BUCKET = "prek-level-audio";
@@ -24,11 +24,35 @@ const MUSIC_TRACK_NAME = "Benny (Music)";
 const MUSIC_TRACK_INDEX = 89; // sits directly below Redub (index 90)
 
 const LALAL_BASE = "https://www.lalal.ai";
+const POLL_DEADLINE_MS = 8 * 60 * 1000; // 8 min
 
 interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+}
+
+// Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  label: string,
+  attempts = 2,
+): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      const resp = await fetch(url, init);
+      if (resp.ok || (resp.status >= 400 && resp.status < 500)) return resp;
+      lastErr = new Error(`${label} HTTP ${resp.status}`);
+      console.warn(`[${label}] attempt ${i + 1} got ${resp.status}, retrying…`);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[${label}] attempt ${i + 1} network error:`, (e as Error).message);
+    }
+    if (i < attempts) await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${label} failed`);
 }
 
 Deno.serve(async (req) => {
@@ -70,8 +94,8 @@ Deno.serve(async (req) => {
     if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
     const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
 
-    // 2. Upload to LALAL.AI.
-    const upResp = await fetch(`${LALAL_BASE}/api/upload/`, {
+    // 2. Upload to LALAL.AI (with retry on transient errors).
+    const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
       method: "POST",
       headers: {
         "Authorization": `license ${apiKey}`,
@@ -79,7 +103,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/octet-stream",
       },
       body: srcBytes,
-    });
+    }, "LALAL upload");
     if (!upResp.ok) {
       const t = await upResp.text();
       console.error(`LALAL upload [${upResp.status}]: ${t}`);
@@ -95,14 +119,14 @@ Deno.serve(async (req) => {
     const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
     const splitForm = new URLSearchParams();
     splitForm.set("params", JSON.stringify(splitParams));
-    const splitResp = await fetch(`${LALAL_BASE}/api/split/`, {
+    const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
       method: "POST",
       headers: {
         "Authorization": `license ${apiKey}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: splitForm.toString(),
-    });
+    }, "LALAL split");
     if (!splitResp.ok) {
       const t = await splitResp.text();
       console.error(`LALAL split [${splitResp.status}]: ${t}`);
@@ -113,21 +137,29 @@ Deno.serve(async (req) => {
       return json({ error: "LALAL split rejected", details: splitJson }, 500);
     }
 
-    // 4. Poll for completion (up to ~5 min).
+    // 4. Poll for completion.
     let backTrackUrl: string | null = null;
-    const deadline = Date.now() + 5 * 60 * 1000;
+    let lastEntry: unknown = null;
+    let lastLogAt = 0;
+    const deadline = Date.now() + POLL_DEADLINE_MS;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 4000));
       const checkForm = new URLSearchParams();
       checkForm.set("id", fileId);
-      const checkResp = await fetch(`${LALAL_BASE}/api/check/`, {
-        method: "POST",
-        headers: {
-          "Authorization": `license ${apiKey}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: checkForm.toString(),
-      });
+      let checkResp: Response;
+      try {
+        checkResp = await fetchWithRetry(`${LALAL_BASE}/api/check/`, {
+          method: "POST",
+          headers: {
+            "Authorization": `license ${apiKey}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: checkForm.toString(),
+        }, "LALAL check");
+      } catch (e) {
+        console.warn(`LALAL check transient error: ${(e as Error).message}`);
+        continue;
+      }
       if (!checkResp.ok) {
         const t = await checkResp.text();
         console.warn(`LALAL check [${checkResp.status}]: ${t}`);
@@ -135,20 +167,34 @@ Deno.serve(async (req) => {
       }
       const checkJson = await checkResp.json();
       const entry = checkJson?.result?.[fileId];
-      const task = entry?.task ?? entry?.split;
-      const state = task?.state ?? entry?.task?.state;
+      lastEntry = entry;
+      const task = entry?.task;
+      const state = task?.state;
       if (state === "error" || state === "cancelled") {
         return json({ error: "LALAL processing failed", details: task?.error ?? entry }, 500);
       }
       if (state === "success" || entry?.split?.back_track) {
         backTrackUrl = entry?.split?.back_track ?? null;
         if (backTrackUrl) break;
+        // success but no back_track — bail with full entry so we can diagnose
+        return json({ error: "LALAL reported success but no back_track URL", details: entry }, 500);
+      }
+      // Log progress every ~20s to keep logs readable.
+      if (Date.now() - lastLogAt > 20000) {
+        console.log(`[LALAL] ${fileId} state=${state ?? "unknown"} progress=${task?.progress ?? "?"}`);
+        lastLogAt = Date.now();
       }
     }
-    if (!backTrackUrl) return json({ error: "LALAL processing timed out" }, 504);
+    if (!backTrackUrl) {
+      return json({
+        error: "LALAL processing timed out",
+        timeoutMs: POLL_DEADLINE_MS,
+        lastEntry,
+      }, 504);
+    }
 
     // 5. Download the music stem.
-    const stemResp = await fetch(backTrackUrl);
+    const stemResp = await fetchWithRetry(backTrackUrl, {}, "LALAL stem download");
     if (!stemResp.ok) {
       const t = await stemResp.text();
       return json({ error: "Stem download failed", status: stemResp.status, details: t }, 500);
@@ -237,7 +283,9 @@ async function ensureMusicClip(
     fade_in_seconds: 0,
     fade_out_seconds: 0,
     loop_clip: false,
-    pause_on_word_card: true,
+    // Background music should keep playing UNDER word cards — only the redubbed
+    // voice should duck. Word cards mute video + redub; music bed continues.
+    pause_on_word_card: false,
     trim_start_seconds: 0,
     playback_rate: 1.0,
     source_kind: "music" as const,

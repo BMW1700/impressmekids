@@ -37,6 +37,29 @@ interface Body {
   isolateOnly?: boolean; // default false — skip STS
 }
 
+// Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
+async function fetchWithRetry(
+  url: string,
+  init: RequestInit,
+  label: string,
+  attempts = 2,
+): Promise<Response> {
+  let lastErr: unknown = null;
+  for (let i = 0; i <= attempts; i++) {
+    try {
+      const resp = await fetch(url, init);
+      if (resp.ok || (resp.status >= 400 && resp.status < 500)) return resp;
+      lastErr = new Error(`${label} HTTP ${resp.status}`);
+      console.warn(`[${label}] attempt ${i + 1} got ${resp.status}, retrying…`);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[${label}] attempt ${i + 1} network error:`, (e as Error).message);
+    }
+    if (i < attempts) await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`${label} failed`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -88,11 +111,11 @@ Deno.serve(async (req) => {
     if (isolate) {
       const isoForm = new FormData();
       isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
-      const isoResp = await fetch("https://api.elevenlabs.io/v1/audio-isolation", {
+      const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
         method: "POST",
         headers: { "xi-api-key": apiKey },
         body: isoForm,
-      });
+      }, "ElevenLabs Isolation");
       if (!isoResp.ok) {
         const errText = await isoResp.text();
         console.error(`ElevenLabs Isolation [${isoResp.status}]: ${errText}`);
@@ -142,9 +165,10 @@ Deno.serve(async (req) => {
       similarity_boost: body.similarityBoost ?? 0.85,
     }));
 
-    const stsResp = await fetch(
+    const stsResp = await fetchWithRetry(
       `https://api.elevenlabs.io/v1/speech-to-speech/${body.voiceId}?output_format=mp3_44100_128`,
       { method: "POST", headers: { "xi-api-key": apiKey }, body: stsForm },
+      "ElevenLabs STS",
     );
     if (!stsResp.ok) {
       const errText = await stsResp.text();
