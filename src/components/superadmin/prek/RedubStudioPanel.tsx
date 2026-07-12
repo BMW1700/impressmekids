@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useBennyRedub, type RedubSceneInput } from "@/hooks/useBennyRedub";
 import { SCENE_KEYS, isVideoScene, type SceneGraph } from "@/lib/preKSceneGraph";
+import { ClipWaveform } from "./ClipWaveform";
 
 interface Props {
   levelId: string;
@@ -200,11 +201,12 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
               else { stopPreview(); startPreview(k, u); }
             };
             return (
-              <div key={s.sceneKey} className="flex items-center gap-2 px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{s.label}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
-                </div>
+              <div key={s.sceneKey} className="px-3 py-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{s.label}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono truncate">{s.sceneKey}</div>
+                  </div>
                 {status === "done" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0"/>}
                 {status === "error" && (
                   <span className="text-[10px] text-red-500 truncate max-w-[200px]" title={state?.errorMessage}>
@@ -241,6 +243,19 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing…</>
                     : existingRedub ? <><RotateCw className="h-3 w-3 mr-1"/> Redo</> : <><Wand2 className="h-3 w-3 mr-1"/> Redub</>}
                 </Button>
+                </div>
+                {redubUrl && (
+                  <div className="rounded-sm bg-purple-500/5 border border-purple-500/30 px-2 py-1 overflow-hidden">
+                    <ClipWaveform
+                      url={redubUrl}
+                      widthPx={640}
+                      heightPx={32}
+                      colorClass="text-purple-700 dark:text-purple-300"
+                      normalize
+                      gain={0.9}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}

@@ -1,57 +1,45 @@
-## Brutally honest audit — Benny voice, prewarm, teach/hear, retry, redub
+## Brutally honest audit
 
-### 1. Prewarm — 95% perfect
+**Redub pipeline (backend):** Solid. `prek-clip-redub` isolates → STS → uploads MP3 → merges into `redub_audio_paths` → auto-creates the "Benny (Redub)" track (index 90) → upserts a clip anchored to the scene with `duration_mode: "fill-scene"` and `anchor_offset_seconds: 0` → mutes source video audio. That means every successful redub is *already* placed on the timeline aligned to the original clip's start.
 
-**What actually works (verified in code):**
-- `CONCURRENCY = 1` — truly serial. No overlapping ElevenLabs requests. No quality degradation from parallel STS.
-- Every request sends `requireIsolation: true`. `prek-word-tts` returns `502 isolation_unavailable` on file #1 if the ElevenLabs key lacks the `audio_isolation` scope — nothing garbled ever enters the cache.
-- `eleven_multilingual_v2` (not turbo), per-kind voice_settings tuned for a 4-year-old's ear (higher stability, speaker_boost on).
-- Wake lock acquired on start, released on finish/cancel/error. Laptop won't sleep mid-run.
-- Cancel uses `useRef` — actually stops the loop, no stale-state bug.
-- Storage probe rebuilds the queue from the **actual** contents of the `prek-word-tts` bucket. Cached files are skipped unless `force=true`. Re-probes after finish.
-- Verify sample downloads 10 random MP3s and flags any <4 KB as broken silence.
-- Purge action nukes both `v2/*` and `v3/*` poisoned prefixes for super_admins only.
+**What's actually broken vs. what you asked for:**
 
-**One real gap:**
-- The edge function still has a **legacy `mode: "teach"` code path** that builds a single stitched sentence ("A... buh... at!"). Nothing in the current app calls it — `bennyTeach.ts` uses segments and `bennyVoice.ts` uses `mode: "say"`. But it's live, cache-key `v3/teach/*`, and any old client that survives will silently create new poisoned files. Remove it and reject the mode server-side.
+1. **"Beneath the original with waves showing, lined up perfectly"** — Half-working. The clip lands on track index 90, which sorts to the *bottom* of the lane list (because tracks render in order), not immediately below the Video lane. The waveform IS drawn (via `ClipWaveform` + `signedUrls`), but visually it's buried under any manual tracks the editor created first. That's why it doesn't feel "lined up beneath the original."
+2. **Whole-level redub** — Works (`redubAll` iterates serially). No progress bar per-clip on the timeline itself, only in the Redub Studio panel.
+3. **Prewarm / teach / hear** — Backend is correct after the last pass (isolation-required, legacy `teach` mode rejected, `v3`/`v4` cache namespaces, wake lock, verify-10). Only risk left: if a cached MP3 was generated before the isolation-required patch, it's still poisoned — the Nuke + re-prewarm has to actually be run.
+4. **Retry button in Benny levels** — Code path is correct (`stopInstructionAudio` → abort stale recognition → re-arm target token → restart mic + `showFeedbackOverlay` guard). No known bug in source, but I have not been able to verify it end-to-end in a real mic session — Playwright can't spoof `SpeechRecognition` results meaningfully.
+5. **Redub Studio UI** — Preview + "On timeline · track 90 · src muted" badge exist, but there's no inline waveform in the Studio panel itself; you have to switch to the Audio Mix tab to see the wave. That's a UX gap given your ask.
 
-### 2. Teach & Hear in-game — perfect *if* prewarm succeeded
+## What I'll build
 
-- `bennyVoice.ts` (Hear): cache-first signed URL from edge function, falls back to Web Speech only on error. No overlapping playback (`stopBenny` before each play).
-- `bennyTeach.ts` (Teach): **serial** segment fetch + playback (parent complaint was overlaps — fixed). Code-controlled gaps per pace toggle. Abort controller stops mid-run.
-- `stopInstructionAudio()` in `RPGWordReader` calls **both** `stopBennyTeach()` and `stopBenny()`. It runs at the top of `handleTryAgain`, `handleContinueAfterMiss`, and mic restart paths. Teach can't leak into the mic after Retry.
+### A. Pin the Redub track directly under the Video lane
+- In `TimelineCanvas.tsx`, split rendering: render the "Benny (Redub)" track (track_index 90) as a **fixed lane immediately below the Video lane**, before all other user tracks. Everything else keeps its current order.
+- Redub clips get a distinct violet/emerald color and a "🔒 Auto-aligned to source" chip so it's obvious they're locked to the scene start.
+- The waveform (`ClipWaveform`) already renders — the fix is purely lane-ordering + styling so it visually sits beneath its source video clip at exactly the same left/width.
 
-The catch: none of the above matters if the cache is still poisoned. Order is non-negotiable: **Nuke → Prewarm → Verify → then test in-game.**
+### B. Per-clip + whole-level redub visible on the timeline
+- Add a small floating **"Redub this clip"** action on hover of any Video-lane block → invokes `redubScene` for that scene, spinner shows in-place, wave appears in the pinned Redub lane on completion.
+- Add **"Redub entire level"** button in the timeline toolbar (mirrors the Studio panel). Progress renders as a subtle overlay on each Video block (`n / total`).
 
-### 3. Retry button — the code path is correct
+### C. Redub Studio panel gets inline waveforms
+- In `RedubStudioPanel.tsx`, render a `ClipWaveform` beside each row for the final redub MP3 (using existing signed URL). No new backend calls.
 
-Traced `handleTryAgain` end-to-end (RPGWordReader.tsx:690–756):
-1. `stopInstructionAudio()` — kills any playing Hear/Teach audio.
-2. Aborts stale `SpeechRecognition` instance (fix for Chrome/Safari's async `.stop()` race).
-3. Clears the feedback overlay, resets `isProcessingRef`, `batchCompletedRef`, `processedFinalsRef`.
-4. **Re-arms the speech target token** for the same word index — previously the old token was still marked "consumed" and the retry transcript was rejected as "target not armed". This is fixed.
-5. Restarts the mic after 260–420 ms (pace-dependent) so Chrome accepts the new session.
+### D. Cache-safety guard so "garble" can't come back
+- Add a one-time boot check in `BennyVoicePrewarm.tsx`: if any cached file is < 4 KB, surface a red banner "Poisoned cache detected — Nuke required" and disable prewarm until Nuke is run. Prevents accidentally shipping garble to production.
 
-I still want a real-browser verification pass because this is the exact bug the user has been burned by twice. Playwright will drive: read word → force miss → click Try Again → verify mic goes green and a new transcript is processed.
+### E. Retry button — belt-and-suspenders
+- In `RPGWordReader.tsx`, add explicit `stopBenny()` + `stopSegmentedTeach()` calls at the very top of the retry handler (before re-arming recognition), so no stray audio leaks into the mic. Also add a console log line `[retry] rearmed target=<word>` so if it ever fails again in real use, we can diagnose in one message.
 
-### 4. Redub — perfect for the pipeline, quiet gap in the UI
+### F. What I will NOT claim
+- I cannot promise "perfect" ElevenLabs output — that depends on their model + your source audio quality. But with isolation-required + serial concurrency, it's as good as their API allows.
+- I can't unit-test the mic-driven retry path headlessly. If it misbehaves on a real device, send the console line above and I'll fix in one turn.
 
-Verified in `supabase/functions/prek-clip-redub/index.ts`:
-- Isolate → STS → upload isolated stem AND final MP3 → merge into `redub_audio_paths` → **auto-create the "Benny (Redub)" track (index 90)** → **upsert one redub clip per scene** → auto-enable `mute_source_video_audio`.
-- Layering "just happens" — every redubbed scene lands on the same top-priority track, source video audio gets muted the same call. No manual timeline work needed.
+### Technical touchpoints
+```text
+src/components/superadmin/prek/TimelineCanvas.tsx   — pin Redub lane, hover redub button
+src/components/superadmin/prek/RedubStudioPanel.tsx — inline waveforms
+src/pages/superadmin/BennyVoicePrewarm.tsx          — poisoned-cache boot check
+src/components/aura/game/rpg/RPGWordReader.tsx      — retry hardening + log
+```
 
-Gap: `RedubStudioPanel` shows the final MP3 preview but doesn't explicitly surface "this clip is now on the timeline at track 90" — the user's complaint that layering is "mostly decorative" was actually a UI communication gap, not a data gap. Fix is a small badge/toast.
-
-### Fixes to ship
-
-1. **Edge function** — remove the dead `mode: "teach"` branch from `prek-word-tts/index.ts`, return `400 legacy_teach_mode_removed`. Prevents any future poisoning at `v3/teach/*`.
-2. **Prewarm UI** — after purge, also invalidate the in-memory `saySet` / `segByKind` immediately (currently only after re-probe finishes; brief window where "cached" rows still show).
-3. **Retry verification** — Playwright script: load a Pre-K level as a real signed-in super_admin, force a miscue, click Try Again, assert (a) `[RPGWordReader]` retry log line appears, (b) mic state transitions `waiting_action → listening`, (c) a fresh transcript is processed within 5 s. Fail loudly if any step misses.
-4. **Redub panel** — show a small `On timeline · track 90 · source audio muted` confirmation next to the Final Audio preview after a successful redub, so you can see layering happened without opening the timeline.
-
-### Straight answer to your question
-
-- **Prewarm perfect?** Yes, provided the ElevenLabs key has `audio_isolation` scoped. If not, it hard-fails on file #1 with a red toast — no garbage enters cache. After fix #1 there's no other silent poisoning path.
-- **Teach + Hear will sound perfect?** Yes, once you Nuke → Prewarm → Verify shows 10/10 ✅ with reasonable KB sizes. The code that plays them is already correct.
-- **Retry will work?** The code says yes and I'll prove it with a Playwright run before I claim done. If the Playwright pass fails, I fix whatever it exposes in the same turn.
-- **Redub perfect?** The pipeline is. UI-wise you'll get the missing "layered on track 90" confirmation.
+No schema changes. No new Edge Functions. No new secrets.

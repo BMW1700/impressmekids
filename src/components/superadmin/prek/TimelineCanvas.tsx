@@ -147,7 +147,9 @@ export function TimelineCanvas({
     e.stopPropagation();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* ignore */ }
     onSelectClip(clip.id);
-    const rowIndex = tracks.findIndex((t) => t.track_index === clip.track_index);
+    const rowIndex = (redubTrack && clip.track_index === REDUB_TRACK_INDEX)
+      ? 0
+      : (redubTrack ? 1 : 0) + otherTracks.findIndex((t) => t.track_index === clip.track_index);
     setDrag({ clipId: clip.id, mode, startX: e.clientX, startY: e.clientY, dx: 0, dy: 0, rowIndex });
   };
 
@@ -205,11 +207,11 @@ export function TimelineCanvas({
       const newStartSec = Math.max(0, Math.min(graph.nominalDurationTotal - 0.1, pxToSec(startPx + d.dx)));
       const rowDelta = Math.round(d.dy / (TRACK_HEIGHT + TRACK_GAP));
       const newRow = d.rowIndex + rowDelta;
-      if (newRow >= tracks.length) {
+      if (newRow >= orderedTracks.length) {
         onDropOnNewTrack(clip, newStartSec);
       } else {
-        const clampedRow = Math.max(0, Math.min(tracks.length - 1, newRow));
-        onMoveClipStart(clip, newStartSec, tracks[clampedRow].track_index);
+        const clampedRow = Math.max(0, Math.min(orderedTracks.length - 1, newRow));
+        onMoveClipStart(clip, newStartSec, orderedTracks[clampedRow].track_index);
       }
     }
     setDrag(null);
@@ -238,7 +240,13 @@ export function TimelineCanvas({
   };
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
-  const lanes = [...tracks, null as PreKAudioTrack | null]; // null lane = "create new track"
+  // Pin the auto-generated "Benny (Redub)" track (index 90) directly beneath
+  // the Video lane so redub waveforms line up visually with their source.
+  const REDUB_TRACK_INDEX = 90;
+  const redubTrack = tracks.find((t) => t.track_index === REDUB_TRACK_INDEX) ?? null;
+  const otherTracks = tracks.filter((t) => t.track_index !== REDUB_TRACK_INDEX);
+  const orderedTracks: PreKAudioTrack[] = redubTrack ? [redubTrack, ...otherTracks] : otherTracks;
+  const lanes = [...orderedTracks, null as PreKAudioTrack | null]; // null lane = "create new track"
   const videoLaneTop = HEADER_HEIGHT + 4;
   const tracksTopOffset = videoLaneTop + VIDEO_LANE_HEIGHT + TRACK_GAP;
   const canvasHeight = tracksTopOffset + lanes.length * (TRACK_HEIGHT + TRACK_GAP);
@@ -350,13 +358,16 @@ export function TimelineCanvas({
             ? Math.max(0, Math.min(lanes.length - 1, drag.rowIndex + Math.round(drag.dy / (TRACK_HEIGHT + TRACK_GAP))))
             : -1;
           const isDropTarget = targetRowIdx === rowIdx;
+          const isRedubLane = !isNew && t!.track_index === REDUB_TRACK_INDEX;
           return (
             <div
               key={isNew ? "__new" : t!.id}
               className={`absolute left-0 right-1 rounded-md transition-colors ${
                 isNew
                   ? `border-2 border-dashed ${isDropTarget ? "border-primary bg-primary/10" : "border-muted-foreground/30 bg-transparent"}`
-                  : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
+                  : isRedubLane
+                    ? `border-2 ${isDropTarget ? "border-primary bg-primary/5" : "border-purple-500/60 bg-purple-500/5"}`
+                    : `border ${isDropTarget ? "border-primary bg-primary/5" : "border-border/50 bg-background/40"}`
               }`}
               style={{ top, height: TRACK_HEIGHT }}
             >
@@ -366,8 +377,15 @@ export function TimelineCanvas({
                 </div>
               )}
               {!isNew && (
-                <div className="absolute left-2 top-1 text-[10px] text-muted-foreground pointer-events-none z-[1]">
-                  {t!.name}
+                <div className="absolute left-2 top-1 text-[10px] pointer-events-none z-[1] flex items-center gap-1">
+                  <span className={isRedubLane ? "text-purple-700 dark:text-purple-300 font-semibold" : "text-muted-foreground"}>
+                    {t!.name}
+                  </span>
+                  {isRedubLane && (
+                    <span className="rounded-sm bg-purple-500/15 border border-purple-500/40 text-purple-700 dark:text-purple-200 px-1 text-[9px] leading-none">
+                      🔒 aligned to source
+                    </span>
+                  )}
                 </div>
               )}
               {!isNew && clips
