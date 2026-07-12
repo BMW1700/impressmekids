@@ -307,6 +307,7 @@ function mirrorToR2Async(
     try {
       await admin.functions.invoke("migrate-to-r2", {
         body: { action: "copy-path", bucket, path, contentType, size },
+        headers: { Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
       });
     } catch (e) {
       console.warn(`[prek-clip-redub] R2 mirror failed for ${bucket}/${path}:`, e);
