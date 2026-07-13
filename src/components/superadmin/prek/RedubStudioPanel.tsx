@@ -190,7 +190,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
           <Button
             size="sm"
             onClick={handleFullAuto}
-            disabled={!!redub.autoProgress || !!redub.batchProgress || scenes.length === 0}
+            disabled={!!redub.autoProgress || !!redub.batchProgress || !!redub.musicBatchProgress || scenes.length === 0}
             className="bg-gradient-to-r from-purple-600 to-emerald-600 hover:from-purple-700 hover:to-emerald-700 text-white"
           >
             {redub.autoProgress
