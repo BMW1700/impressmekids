@@ -183,30 +183,65 @@ export function useBennyRedub(levelId: string | null) {
   ): Promise<boolean> => {
     if (!levelId) return false;
     const isolateOnly = overrides?.isolateOnly === true;
+    const isolate = overrides?.isolate !== false;
     const voiceId = overrides?.voiceId ?? settings.voiceId;
     if (!isolateOnly && !voiceId) {
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Benny voice ID first." } }));
       return false;
     }
-    setStates((m) => ({ ...m, [scene.sceneKey]: { status: "running" } }));
+    setStates((m) => ({ ...m, [scene.sceneKey]: { status: "running", progressMessage: isolate ? "Isolating voice…" : "Redubbing…" } }));
+
+    const baseBody = {
+      levelId,
+      sceneKey: scene.sceneKey,
+      sourceStoragePath: scene.sourceStoragePath,
+      voiceId,
+      stability: overrides?.stability ?? settings.stability,
+      similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,
+    };
+
     try {
-      const { data, error } = await supabase.functions.invoke("prek-clip-redub", {
-        body: {
-          levelId,
-          sceneKey: scene.sceneKey,
-          sourceStoragePath: scene.sourceStoragePath,
-          voiceId,
-          stability: overrides?.stability ?? settings.stability,
-          similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,
-          isolate: overrides?.isolate !== false,
-          isolateOnly,
-        },
-      });
+      let isolatedStoragePath: string | undefined;
+      let isolatedSignedUrl: string | undefined;
+
+      // Phase A — isolation only (kept separate to stay under edge function
+      // 150s wall-clock on long clips). Skipped entirely when isolate=false.
+      if (isolate) {
+        const { data: isoData, error: isoError } = await supabase.functions.invoke("prek-clip-redub", {
+          body: { ...baseBody, stage: "isolate", isolate: true, isolateOnly: false },
+        });
+        if (isoError) throw isoError;
+        isolatedStoragePath = isoData?.isolatedStoragePath ?? undefined;
+        isolatedSignedUrl = isoData?.isolatedSignedUrl ?? undefined;
+        if (isolatedStoragePath) {
+          setSettings((s) => ({ ...s, isolatedPaths: { ...s.isolatedPaths, [scene.sceneKey]: isolatedStoragePath! } }));
+        }
+        if (isolatedSignedUrl) {
+          setSignedIsolatedUrls((m) => ({ ...m, [scene.sceneKey]: isolatedSignedUrl! }));
+        }
+        if (isolateOnly) {
+          setStates((m) => ({
+            ...m,
+            [scene.sceneKey]: { status: "done", isolatedStoragePath, isolatedSignedUrl },
+          }));
+          return true;
+        }
+      }
+
+      setStates((m) => ({
+        ...m,
+        [scene.sceneKey]: { status: "running", progressMessage: "Swapping voice…", isolatedStoragePath, isolatedSignedUrl },
+      }));
+
+      // Phase B — STS. If isolation ran, feed the isolated MP3 directly; else
+      // fall back to legacy single-shot pipeline (no isolation).
+      const stsBody = isolate
+        ? { ...baseBody, stage: "sts" as const, isolatedStoragePath }
+        : { ...baseBody, isolate: false, isolateOnly: false };
+      const { data, error } = await supabase.functions.invoke("prek-clip-redub", { body: stsBody });
       if (error) throw error;
       const storagePath: string | undefined = data?.storagePath ?? undefined;
       const signedUrl: string | undefined = data?.signedUrl ?? undefined;
-      const isolatedStoragePath: string | undefined = data?.isolatedStoragePath ?? undefined;
-      const isolatedSignedUrl: string | undefined = data?.isolatedSignedUrl ?? undefined;
 
       setStates((m) => ({
         ...m,
@@ -215,14 +250,8 @@ export function useBennyRedub(levelId: string | null) {
       if (storagePath) {
         setSettings((s) => ({ ...s, audioPaths: { ...s.audioPaths, [scene.sceneKey]: storagePath } }));
       }
-      if (isolatedStoragePath) {
-        setSettings((s) => ({ ...s, isolatedPaths: { ...s.isolatedPaths, [scene.sceneKey]: isolatedStoragePath } }));
-      }
       if (signedUrl) {
         setSignedRedubUrls((m) => ({ ...m, [scene.sceneKey]: signedUrl }));
-      }
-      if (isolatedSignedUrl) {
-        setSignedIsolatedUrls((m) => ({ ...m, [scene.sceneKey]: isolatedSignedUrl }));
       }
       return true;
     } catch (e) {
