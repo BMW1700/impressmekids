@@ -179,11 +179,12 @@ export function useBennyRedub(levelId: string | null) {
 
   const redubScene = useCallback(async (
     scene: RedubSceneInput,
-    overrides?: { voiceId?: string; stability?: number; similarityBoost?: number; isolate?: boolean; isolateOnly?: boolean },
+    overrides?: { voiceId?: string; stability?: number; similarityBoost?: number; isolate?: boolean; isolateOnly?: boolean; forceReisolate?: boolean },
   ): Promise<boolean> => {
     if (!levelId) return false;
     const isolateOnly = overrides?.isolateOnly === true;
     const isolate = overrides?.isolate !== false;
+    const forceReisolate = overrides?.forceReisolate === true;
     const voiceId = overrides?.voiceId ?? settings.voiceId;
     if (!isolateOnly && !voiceId) {
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Benny voice ID first." } }));
@@ -201,12 +202,14 @@ export function useBennyRedub(levelId: string | null) {
     };
 
     try {
-      let isolatedStoragePath: string | undefined;
-      let isolatedSignedUrl: string | undefined;
+      let isolatedStoragePath: string | undefined = settings.isolatedPaths[scene.sceneKey];
+      let isolatedSignedUrl: string | undefined = signedIsolatedUrls[scene.sceneKey];
 
-      // Phase A — isolation only (kept separate to stay under edge function
-      // 150s wall-clock on long clips). Skipped entirely when isolate=false.
-      if (isolate) {
+      // Phase A — isolation. Skipped if isolate=false, if forceReisolate is
+      // off and we already have a stored isolated stem (retry-friendly:
+      // don't re-pay ElevenLabs when Phase B failed but Phase A succeeded).
+      const needsPhaseA = isolate && (forceReisolate || !isolatedStoragePath);
+      if (needsPhaseA) {
         const { data: isoData, error: isoError } = await supabase.functions.invoke("prek-clip-redub", {
           body: { ...baseBody, stage: "isolate", isolate: true, isolateOnly: false },
         });
@@ -219,13 +222,14 @@ export function useBennyRedub(levelId: string | null) {
         if (isolatedSignedUrl) {
           setSignedIsolatedUrls((m) => ({ ...m, [scene.sceneKey]: isolatedSignedUrl! }));
         }
-        if (isolateOnly) {
-          setStates((m) => ({
-            ...m,
-            [scene.sceneKey]: { status: "done", isolatedStoragePath, isolatedSignedUrl },
-          }));
-          return true;
-        }
+      }
+
+      if (isolateOnly) {
+        setStates((m) => ({
+          ...m,
+          [scene.sceneKey]: { status: "done", isolatedStoragePath, isolatedSignedUrl },
+        }));
+        return true;
       }
 
       setStates((m) => ({
@@ -233,9 +237,9 @@ export function useBennyRedub(levelId: string | null) {
         [scene.sceneKey]: { status: "running", progressMessage: "Swapping voice…", isolatedStoragePath, isolatedSignedUrl },
       }));
 
-      // Phase B — STS. If isolation ran, feed the isolated MP3 directly; else
-      // fall back to legacy single-shot pipeline (no isolation).
-      const stsBody = isolate
+      // Phase B — STS. If isolation ran or was reused, feed the isolated MP3;
+      // else fall back to legacy single-shot pipeline (no isolation).
+      const stsBody = isolate && isolatedStoragePath
         ? { ...baseBody, stage: "sts" as const, isolatedStoragePath }
         : { ...baseBody, isolate: false, isolateOnly: false };
       const { data, error } = await supabase.functions.invoke("prek-clip-redub", { body: stsBody });
@@ -259,7 +263,7 @@ export function useBennyRedub(levelId: string | null) {
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: msg } }));
       return false;
     }
-  }, [levelId, settings.voiceId, settings.stability, settings.similarityBoost]);
+  }, [levelId, settings.voiceId, settings.stability, settings.similarityBoost, settings.isolatedPaths, signedIsolatedUrls]);
 
   const redubAll = useCallback(async (scenes: RedubSceneInput[]) => {
     setBatchProgress({ done: 0, total: scenes.length });
