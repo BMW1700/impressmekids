@@ -35,6 +35,12 @@ interface Body {
   similarityBoost?: number;
   isolate?: boolean;     // default true
   isolateOnly?: boolean; // default false — skip STS
+  // Two-phase mode to stay under Supabase Edge Function 150s wall-clock on
+  // long clips: "isolate" runs Voice Isolator only; "sts" consumes an already
+  // isolated MP3 path from AUDIO_BUCKET and only runs Speech-to-Speech.
+  // Omit to run the legacy single-shot pipeline (isolation + STS in one call).
+  stage?: "isolate" | "sts";
+  isolatedStoragePath?: string; // required when stage === "sts"
 }
 
 // Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
@@ -95,59 +101,79 @@ Deno.serve(async (req) => {
     }
     const isolate = body.isolate !== false;
     const isolateOnly = body.isolateOnly === true;
-    if (!isolateOnly && !body.voiceId) {
+    const stage = body.stage; // "isolate" | "sts" | undefined
+    const doIsolatePhase = stage === "isolate" || (stage === undefined && isolate);
+    const doStsPhase = stage === "sts" || (stage === undefined && !isolateOnly);
+    if (doStsPhase && !body.voiceId) {
       return json({ error: "voiceId is required unless isolateOnly=true" }, 400);
     }
+    if (stage === "sts" && !body.isolatedStoragePath) {
+      return json({ error: "isolatedStoragePath is required for stage=sts" }, 400);
+    }
 
-    // 1. Download source video bytes.
-    const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
-    if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
-    let audioBytes = new Uint8Array(await dl.data.arrayBuffer());
-    let audioMime = "video/mp4";
+    let audioBytes: Uint8Array;
+    let audioMime = "audio/mpeg";
     let isolatedStoragePath: string | null = null;
     let isolatedSignedUrl: string | null = null;
 
-    // 2. Voice isolation (removes music, secondary voices, room noise → clean Benny stem).
-    if (isolate) {
-      const isoForm = new FormData();
-      isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
-      const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
-        method: "POST",
-        headers: { "xi-api-key": apiKey },
-        body: isoForm,
-      }, "ElevenLabs Isolation");
-      if (!isoResp.ok) {
-        const errText = await isoResp.text();
-        console.error(`ElevenLabs Isolation [${isoResp.status}]: ${errText}`);
-        return json({ error: "Voice Isolation failed", status: isoResp.status, details: errText }, isoResp.status);
-      }
-      const isolatedBytes = new Uint8Array(await isoResp.arrayBuffer());
-
-      isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated-${Date.now()}.mp3`;
-      const isoUp = await admin.storage.from(AUDIO_BUCKET).upload(isolatedStoragePath, isolatedBytes, {
-        contentType: "audio/mpeg", upsert: true,
-      });
-      if (isoUp.error) return json({ error: `Isolated upload failed: ${isoUp.error.message}` }, 500);
-      mirrorToR2Async(admin, AUDIO_BUCKET, isolatedStoragePath, "audio/mpeg", isolatedBytes.byteLength);
-
-      // Atomic JSONB merge — safe under parallel Full Auto workers.
-      await admin.rpc("prek_merge_level_json" as any, {
-        _level_id: body.levelId,
-        _column: "redub_isolated_paths",
-        _patch: { [body.sceneKey]: isolatedStoragePath },
-      });
-
-      const { data: isoSigned } = await admin.storage
-        .from(AUDIO_BUCKET).createSignedUrl(isolatedStoragePath, 60 * 60 * 24 * 7);
-      isolatedSignedUrl = isoSigned?.signedUrl ?? null;
-
-      // Feed the isolated stem into STS instead of the raw MP4.
-      audioBytes = isolatedBytes;
+    if (stage === "sts") {
+      // Phase B — load previously isolated MP3 directly from storage.
+      isolatedStoragePath = body.isolatedStoragePath!;
+      const dl = await admin.storage.from(AUDIO_BUCKET).download(isolatedStoragePath);
+      if (dl.error || !dl.data) return json({ error: `Isolated download failed: ${dl.error?.message}` }, 500);
+      audioBytes = new Uint8Array(await dl.data.arrayBuffer());
       audioMime = "audio/mpeg";
+    } else {
+      // 1. Download source video bytes (Phase A, or legacy single-shot).
+      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
+      audioBytes = new Uint8Array(await dl.data.arrayBuffer());
+      audioMime = "video/mp4";
+
+      // 2. Voice isolation (removes music, secondary voices, room noise → clean Benny stem).
+      if (doIsolatePhase) {
+        const isoForm = new FormData();
+        isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
+        const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
+          method: "POST",
+          headers: { "xi-api-key": apiKey },
+          body: isoForm,
+        }, "ElevenLabs Isolation");
+        if (!isoResp.ok) {
+          const errText = await isoResp.text();
+          console.error(`ElevenLabs Isolation [${isoResp.status}]: ${errText}`);
+          return json({ error: "Voice Isolation failed", status: isoResp.status, details: errText }, isoResp.status);
+        }
+        const isolatedBytes = new Uint8Array(await isoResp.arrayBuffer());
+
+        isolatedStoragePath = `redub/${body.levelId}/${body.sceneKey}-isolated-${Date.now()}.mp3`;
+        const isoUp = await admin.storage.from(AUDIO_BUCKET).upload(isolatedStoragePath, isolatedBytes, {
+          contentType: "audio/mpeg", upsert: true,
+        });
+        if (isoUp.error) return json({ error: `Isolated upload failed: ${isoUp.error.message}` }, 500);
+        mirrorToR2Async(admin, AUDIO_BUCKET, isolatedStoragePath, "audio/mpeg", isolatedBytes.byteLength);
+
+        // Atomic JSONB merge — safe under parallel Full Auto workers.
+        await admin.rpc("prek_merge_level_json" as any, {
+          _level_id: body.levelId,
+          _column: "redub_isolated_paths",
+          _patch: { [body.sceneKey]: isolatedStoragePath },
+        });
+
+        const { data: isoSigned } = await admin.storage
+          .from(AUDIO_BUCKET).createSignedUrl(isolatedStoragePath, 60 * 60 * 24 * 7);
+        isolatedSignedUrl = isoSigned?.signedUrl ?? null;
+
+        // Feed the isolated stem into STS instead of the raw MP4.
+        audioBytes = isolatedBytes;
+        audioMime = "audio/mpeg";
+      }
     }
 
-    if (isolateOnly) {
+    // Stage A only — return early so caller can invoke Phase B separately.
+    if (stage === "isolate" || isolateOnly) {
       return json({
+        status: "isolated",
         storagePath: null,
         signedUrl: null,
         isolatedStoragePath,
@@ -155,9 +181,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (!doStsPhase) {
+      // Defensive — shouldn't reach here.
+      return json({ error: "No work to do" }, 400);
+    }
+
+
     // 3. Speech-to-Speech — swap voice identity, preserve cadence for lip-sync.
     const stsForm = new FormData();
-    const stsFilename = isolate ? "source.mp3" : "source.mp4";
+    const stsFilename = audioMime === "audio/mpeg" ? "source.mp3" : "source.mp4";
     stsForm.append("audio", new Blob([audioBytes], { type: audioMime }), stsFilename);
     stsForm.append("model_id", ELEVENLABS_STS_MODEL);
     stsForm.append("output_format", "mp3_44100_128");
