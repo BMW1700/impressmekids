@@ -347,7 +347,9 @@ export function useBennyRedub(levelId: string | null) {
     });
     await Promise.all(workers);
     setAutoProgress(null);
-  }, [redubScene, extractMusic]);
+    // Refresh from DB so generated_at + any late writes are authoritative.
+    await reload();
+  }, [redubScene, extractMusic, reload]);
 
   return {
     loading,
