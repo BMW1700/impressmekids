@@ -367,6 +367,31 @@ export function useBennyRedub(levelId: string | null) {
     await reload();
   }, [redubScene, extractMusic, reload]);
 
+  // Bulk LALAL music extraction with 3-worker concurrency.
+  const runMusicAll = useCallback(async (scenes: RedubSceneInput[]) => {
+    const CONCURRENCY = 3;
+    setMusicStates((m) => {
+      const next = { ...m };
+      for (const s of scenes) next[s.sceneKey] = { status: "idle" };
+      return next;
+    });
+    setMusicBatchProgress({ done: 0, total: scenes.length });
+    const queue = [...scenes];
+    let done = 0;
+    const workers = Array.from({ length: Math.min(CONCURRENCY, scenes.length) }, async () => {
+      while (queue.length) {
+        const s = queue.shift();
+        if (!s) return;
+        await extractMusic(s);
+        done += 1;
+        setMusicBatchProgress({ done, total: scenes.length });
+      }
+    });
+    await Promise.all(workers);
+    setMusicBatchProgress(null);
+    await reload();
+  }, [extractMusic, reload]);
+
   return {
     loading,
     settings,
@@ -376,6 +401,7 @@ export function useBennyRedub(levelId: string | null) {
     states,
     musicStates,
     batchProgress,
+    musicBatchProgress,
     autoProgress,
     reload,
     saveVoiceSettings,
@@ -383,6 +409,7 @@ export function useBennyRedub(levelId: string | null) {
     redubScene,
     redubAll,
     extractMusic,
+    runMusicAll,
     runFullAuto,
   };
 }
