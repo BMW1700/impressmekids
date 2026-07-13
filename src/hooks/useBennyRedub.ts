@@ -71,6 +71,7 @@ export function useBennyRedub(levelId: string | null) {
   const [states, setStates] = useState<Record<string, RedubState>>({});
   const [musicStates, setMusicStates] = useState<Record<string, MusicState>>({});
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [musicBatchProgress, setMusicBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [autoProgress, setAutoProgress] = useState<{ done: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
