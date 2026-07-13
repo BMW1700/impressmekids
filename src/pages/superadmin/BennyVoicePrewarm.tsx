@@ -523,7 +523,7 @@ const BennyVoicePrewarm = () => {
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={purging || !voiceId}>
+                  <Button variant="destructive" size="sm" disabled={purging}>
                     {purging ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Purging…</> : <><Trash2 className="h-3 w-3 mr-1" /> Nuke poisoned cache</>}
                   </Button>
                 </AlertDialogTrigger>
