@@ -29,6 +29,9 @@ const LALAL_BASE = "https://www.lalal.ai/api/v1";
 // and let the client resume by re-invoking with { resumeJobId }.
 const POLL_DEADLINE_MS = 90 * 1000;
 
+const PREMIUM_REQUIRED_COPY =
+  "LALAL API access is blocked: Premium license required to access this feature. Upgrade/replace LALAL_API_KEY with a Pro/API-enabled license.";
+
 interface Body {
   levelId: string;
   sceneKey: string;
@@ -109,6 +112,31 @@ Deno.serve(async (req) => {
       // Resuming an in-flight LALAL job — skip upload + split.
       taskId = body.resumeJobId;
     } else {
+      // 0. Preflight the LALAL license before uploading media. This catches
+      // account/plan problems immediately and prevents per-scene mystery fails.
+      const preflightResp = await fetchWithRetry(`${LALAL_BASE}/limits/minutes_left/`, {
+        method: "POST",
+        headers: { "X-License-Key": apiKey },
+      }, "LALAL license preflight", 1);
+      if (!preflightResp.ok) {
+        const t = await preflightResp.text();
+        console.error(`LALAL preflight [${preflightResp.status}]: ${t}`);
+        return json({
+          error: "LALAL license preflight failed",
+          status: preflightResp.status,
+          details: simplifyLalalError(t),
+        }, preflightResp.status);
+      }
+      const preflightJson = await preflightResp.json().catch(() => null);
+      const minutesLeft = Number(preflightJson?.minutes_left);
+      if (Number.isFinite(minutesLeft) && minutesLeft <= 0) {
+        return json({
+          error: "LALAL account has no processing minutes left",
+          status: 402,
+          details: "Add LALAL processing minutes or upgrade the LALAL account tied to LALAL_API_KEY.",
+        }, 402);
+      }
+
       // 1. Download source.
       const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
       if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
@@ -127,7 +155,7 @@ Deno.serve(async (req) => {
       if (!upResp.ok) {
         const t = await upResp.text();
         console.error(`LALAL upload [${upResp.status}]: ${t}`);
-        return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
+        return json({ error: "LALAL upload failed", status: upResp.status, details: simplifyLalalError(t) }, upResp.status);
       }
       const upJson = await upResp.json();
       const sourceId = upJson?.id as string | undefined;
@@ -155,7 +183,7 @@ Deno.serve(async (req) => {
       if (!splitResp.ok) {
         const t = await splitResp.text();
         console.error(`LALAL split [${splitResp.status}]: ${t}`);
-        return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
+        return json({ error: "LALAL split failed", status: splitResp.status, details: simplifyLalalError(t) }, splitResp.status);
       }
       const splitJson = await splitResp.json();
       taskId = splitJson?.task_id as string | undefined;
@@ -337,6 +365,19 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function simplifyLalalError(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    const detail = parsed?.detail ?? parsed?.error ?? parsed?.message;
+    const text = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : raw;
+    if (text.toLowerCase().includes("premium license required")) return PREMIUM_REQUIRED_COPY;
+    return text;
+  } catch {
+    if (raw.toLowerCase().includes("premium license required")) return PREMIUM_REQUIRED_COPY;
+    return raw;
+  }
 }
 
 function mirrorToR2Async(

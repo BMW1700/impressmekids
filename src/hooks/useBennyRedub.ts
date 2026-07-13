@@ -45,7 +45,7 @@ async function getFunctionErrorMessage(error: unknown): Promise<string> {
       try {
         const parsed = JSON.parse(details);
         const detailText = typeof parsed.details === "string"
-          ? parsed.details
+          ? normalizeProviderDetail(parsed.details)
           : parsed.details
             ? JSON.stringify(parsed.details)
             : "";
@@ -59,6 +59,18 @@ async function getFunctionErrorMessage(error: unknown): Promise<string> {
     }
   }
   return error instanceof Error ? error.message : "Unknown error";
+}
+
+function normalizeProviderDetail(value: string): string {
+  try {
+    const parsed = JSON.parse(value);
+    const detail = parsed?.detail ?? parsed?.error ?? parsed?.message;
+    if (typeof detail === "string") return detail;
+    if (detail) return JSON.stringify(detail);
+  } catch {
+    // Not JSON; keep original text.
+  }
+  return value;
 }
 
 export interface LevelRedubSettings {
