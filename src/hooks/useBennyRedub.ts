@@ -301,7 +301,7 @@ export function useBennyRedub(levelId: string | null) {
           }
           setMusicStates((m) => ({
             ...m,
-            [scene.sceneKey]: { status: "running", errorMessage: "Separating stems…" },
+            [scene.sceneKey]: { status: "running", progressMessage: "Separating stems…" },
           }));
           await new Promise((r) => setTimeout(r, 15000));
           continue;
