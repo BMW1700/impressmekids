@@ -22,6 +22,7 @@ export interface RedubSceneInput {
 export interface RedubState {
   status: RedubStatus;
   errorMessage?: string;
+  progressMessage?: string;
   storagePath?: string;
   signedUrl?: string;
   isolatedStoragePath?: string;
@@ -31,6 +32,7 @@ export interface RedubState {
 export interface MusicState {
   status: RedubStatus;
   errorMessage?: string;
+  progressMessage?: string;
   storagePath?: string;
   signedUrl?: string;
 }
