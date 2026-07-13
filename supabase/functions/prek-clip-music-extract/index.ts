@@ -3,12 +3,12 @@
 // Pipeline:
 //   1) Verify caller is authenticated + content_editor / super_admin.
 //   2) Download source MP4 audio bytes from prek-level-videos.
-//   3) POST bytes to LALAL.AI /api/upload/ → returns file id.
-//   4) POST /api/split/ with splitter=phoenix, stem=vocals.
-//      (Vocals stem is used only as the target; we keep the inverse "back_track"
+//   3) POST bytes to LALAL.AI /api/v1/upload/ → returns source_id.
+//   4) POST /api/v1/split/stem_separator/ with splitter=phoenix, stem=vocals.
+//      (Vocals stem is used only as the target; we keep the inverse "back" track
 //      which contains music + SFX minus the voice.)
-//   5) Poll /api/check/ until state=success.
-//   6) Download back_track_url, upload to prek-level-audio at
+//   5) Poll /api/v1/check/ until status=success.
+//   6) Download the back/no_vocals URL, upload to prek-level-audio at
 //      music/<levelId>/<sceneKey>-<ts>.mp3, merge into
 //      prek_levels.music_audio_paths.
 //   7) Ensure a "Benny (Music)" track (index 89) exists and upsert a
@@ -23,7 +23,7 @@ const AUDIO_BUCKET = "prek-level-audio";
 const MUSIC_TRACK_NAME = "Benny (Music)";
 const MUSIC_TRACK_INDEX = 89; // sits directly below Redub (index 90)
 
-const LALAL_BASE = "https://www.lalal.ai";
+const LALAL_BASE = "https://www.lalal.ai/api/v1";
 // Cap in-function polling well under Supabase Edge Function wall-clock
 // (~150s free / 400s paid). If LALAL isn't done, return {status:"pending", jobId}
 // and let the client resume by re-invoking with { resumeJobId }.
@@ -103,11 +103,11 @@ Deno.serve(async (req) => {
       return json({ error: "Missing required fields" }, 400);
     }
 
-    let fileId: string;
+    let taskId: string;
 
     if (body.resumeJobId) {
       // Resuming an in-flight LALAL job — skip upload + split.
-      fileId = body.resumeJobId;
+      taskId = body.resumeJobId;
     } else {
       // 1. Download source.
       const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
@@ -115,10 +115,10 @@ Deno.serve(async (req) => {
       const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
 
       // 2. Upload to LALAL.AI (with retry on transient errors).
-      const upResp = await fetchWithRetry(`${LALAL_BASE}/api/upload/`, {
+      const upResp = await fetchWithRetry(`${LALAL_BASE}/upload/`, {
         method: "POST",
         headers: {
-          "Authorization": `license ${apiKey}`,
+          "X-License-Key": apiKey,
           "Content-Disposition": `attachment; filename="source.mp4"`,
           "Content-Type": "application/octet-stream",
         },
@@ -130,22 +130,27 @@ Deno.serve(async (req) => {
         return json({ error: "LALAL upload failed", status: upResp.status, details: t }, upResp.status);
       }
       const upJson = await upResp.json();
-      if (upJson.status !== "success" || !upJson.id) {
+      const sourceId = upJson?.id as string | undefined;
+      if (!sourceId) {
         return json({ error: "LALAL upload response invalid", details: upJson }, 500);
       }
-      fileId = upJson.id;
 
-      // 3. Start split (phoenix splitter, vocals target → back_track = music+sfx).
-      const splitParams = [{ id: fileId, stem: "vocals", splitter: "phoenix" }];
-      const splitForm = new URLSearchParams();
-      splitForm.set("params", JSON.stringify(splitParams));
-      const splitResp = await fetchWithRetry(`${LALAL_BASE}/api/split/`, {
+      // 3. Start split (phoenix splitter, vocals target → back/no_vocals = music+sfx).
+      const splitResp = await fetchWithRetry(`${LALAL_BASE}/split/stem_separator/`, {
         method: "POST",
         headers: {
-          "Authorization": `license ${apiKey}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "X-License-Key": apiKey,
+          "Content-Type": "application/json",
         },
-        body: splitForm.toString(),
+        body: JSON.stringify({
+          source_id: sourceId,
+          presets: {
+            stem: "vocals",
+            splitter: "phoenix",
+            extraction_level: "deep_extraction",
+            encoder_format: "mp3",
+          },
+        }),
       }, "LALAL split");
       if (!splitResp.ok) {
         const t = await splitResp.text();
@@ -153,7 +158,8 @@ Deno.serve(async (req) => {
         return json({ error: "LALAL split failed", status: splitResp.status, details: t }, splitResp.status);
       }
       const splitJson = await splitResp.json();
-      if (splitJson.status !== "success") {
+      taskId = splitJson?.task_id as string | undefined;
+      if (!taskId) {
         return json({ error: "LALAL split rejected", details: splitJson }, 500);
       }
     }
@@ -165,17 +171,15 @@ Deno.serve(async (req) => {
     const deadline = Date.now() + POLL_DEADLINE_MS;
     while (Date.now() < deadline) {
       await new Promise((r) => setTimeout(r, 4000));
-      const checkForm = new URLSearchParams();
-      checkForm.set("id", fileId);
       let checkResp: Response;
       try {
-        checkResp = await fetchWithRetry(`${LALAL_BASE}/api/check/`, {
+        checkResp = await fetchWithRetry(`${LALAL_BASE}/check/`, {
           method: "POST",
           headers: {
-            "Authorization": `license ${apiKey}`,
-            "Content-Type": "application/x-www-form-urlencoded",
+            "X-License-Key": apiKey,
+            "Content-Type": "application/json",
           },
-          body: checkForm.toString(),
+          body: JSON.stringify({ task_ids: [taskId] }),
         }, "LALAL check");
       } catch (e) {
         console.warn(`LALAL check transient error: ${(e as Error).message}`);
@@ -187,22 +191,25 @@ Deno.serve(async (req) => {
         continue;
       }
       const checkJson = await checkResp.json();
-      const entry = checkJson?.result?.[fileId];
+      const entry = checkJson?.result?.[taskId];
       lastEntry = entry;
-      const task = entry?.task;
-      const state = task?.state;
-      if (state === "error" || state === "cancelled") {
-        return json({ error: "LALAL processing failed", details: task?.error ?? entry }, 500);
+      const state = entry?.status;
+      if (state === "error" || state === "cancelled" || state === "server_error") {
+        return json({ error: "LALAL processing failed", details: entry?.error ?? entry }, 500);
       }
-      if (state === "success" || entry?.split?.back_track) {
-        backTrackUrl = entry?.split?.back_track ?? null;
+      if (state === "success") {
+        const tracks = Array.isArray(entry?.result?.tracks) ? entry.result.tracks : [];
+        const backTrack = tracks.find((track: { type?: string; label?: string; url?: string }) => track?.type === "back")
+          ?? tracks.find((track: { type?: string; label?: string; url?: string }) => String(track?.label ?? "").toLowerCase().includes("no_vocals"))
+          ?? tracks.find((track: { type?: string; label?: string; url?: string }) => String(track?.label ?? "").toLowerCase().includes("music"));
+        backTrackUrl = backTrack?.url ?? null;
         if (backTrackUrl) break;
-        // success but no back_track — bail with full entry so we can diagnose
-        return json({ error: "LALAL reported success but no back_track URL", details: entry }, 500);
+        // success but no back/no_vocals track — bail with full entry so we can diagnose
+        return json({ error: "LALAL reported success but no music/SFX URL", details: entry }, 500);
       }
       // Log progress every ~20s to keep logs readable.
       if (Date.now() - lastLogAt > 20000) {
-        console.log(`[LALAL] ${fileId} state=${state ?? "unknown"} progress=${task?.progress ?? "?"}`);
+        console.log(`[LALAL] ${taskId} state=${state ?? "unknown"} progress=${entry?.progress ?? "?"}`);
         lastLogAt = Date.now();
       }
     }
@@ -210,10 +217,10 @@ Deno.serve(async (req) => {
       // Not done yet — hand the jobId back so the client can resume without
       // re-uploading + re-splitting. HTTP 200 so supabase.functions.invoke
       // treats it as a normal response.
-      console.log(`[LALAL] ${fileId} still processing after ${POLL_DEADLINE_MS}ms — returning pending`);
+      console.log(`[LALAL] ${taskId} still processing after ${POLL_DEADLINE_MS}ms — returning pending`);
       return json({
         status: "pending",
-        jobId: fileId,
+        jobId: taskId,
         lastEntry,
       });
     }
