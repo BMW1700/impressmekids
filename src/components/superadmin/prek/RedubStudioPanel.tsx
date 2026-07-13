@@ -94,6 +94,13 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     toast.success("Full auto complete — voice on Redub lane, music on Music lane.");
   };
 
+  const handleMusicAll = async () => {
+    if (scenes.length === 0) { toast.error("No source videos found."); return; }
+    toast.info(`Extracting music/SFX from ${scenes.length} clips via LALAL.AI…`);
+    await redub.runMusicAll(scenes);
+    toast.success("Music extraction complete — placed on Benny (Music) lane.");
+  };
+
 
 
   return (
