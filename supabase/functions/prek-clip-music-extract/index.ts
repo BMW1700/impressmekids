@@ -319,6 +319,10 @@ async function ensureMusicClip(
   } else {
     await admin.from("prek_level_audio_clips").insert(clipPatch);
   }
+
+  // Music-only runs still need the source MP4 audio muted, otherwise the
+  // original (un-swapped) Benny voice plays underneath the separated music.
+  await admin.from("prek_levels").update({ mute_source_video_audio: true }).eq("id", args.levelId);
 }
 
 function json(body: unknown, status = 200) {
