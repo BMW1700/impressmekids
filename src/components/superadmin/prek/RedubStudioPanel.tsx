@@ -202,11 +202,22 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
             size="sm"
             variant="outline"
             onClick={handleRedubAll}
-            disabled={!!redub.batchProgress || !!redub.autoProgress || scenes.length === 0}
+            disabled={!!redub.batchProgress || !!redub.musicBatchProgress || !!redub.autoProgress || scenes.length === 0}
           >
             {redub.batchProgress
               ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Redubbing {redub.batchProgress.done}/{redub.batchProgress.total}…</>
               : <><Sparkles className="h-3 w-3 mr-1"/> Redub only</>
+            }
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleMusicAll}
+            disabled={!!redub.batchProgress || !!redub.musicBatchProgress || !!redub.autoProgress || scenes.length === 0}
+          >
+            {redub.musicBatchProgress
+              ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Extracting music {redub.musicBatchProgress.done}/{redub.musicBatchProgress.total}…</>
+              : <><Music2 className="h-3 w-3 mr-1"/> Music only</>
             }
           </Button>
           {redub.settings.generatedAt && (
