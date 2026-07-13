@@ -35,6 +35,12 @@ interface Body {
   similarityBoost?: number;
   isolate?: boolean;     // default true
   isolateOnly?: boolean; // default false — skip STS
+  // Two-phase mode to stay under Supabase Edge Function 150s wall-clock on
+  // long clips: "isolate" runs Voice Isolator only; "sts" consumes an already
+  // isolated MP3 path from AUDIO_BUCKET and only runs Speech-to-Speech.
+  // Omit to run the legacy single-shot pipeline (isolation + STS in one call).
+  stage?: "isolate" | "sts";
+  isolatedStoragePath?: string; // required when stage === "sts"
 }
 
 // Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
