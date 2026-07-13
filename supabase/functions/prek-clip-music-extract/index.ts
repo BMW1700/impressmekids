@@ -36,25 +36,35 @@ interface Body {
   resumeJobId?: string;
 }
 
-// Retry helper: retries only on network errors or 5xx. 4xx returns immediately.
+// Retry helper: retries on network errors, 5xx, and 429 rate limits.
+// Honors Retry-After when present (capped at 15s). 4xx (non-429) returns immediately.
 async function fetchWithRetry(
   url: string,
   init: RequestInit,
   label: string,
-  attempts = 2,
+  attempts = 3,
 ): Promise<Response> {
   let lastErr: unknown = null;
   for (let i = 0; i <= attempts; i++) {
+    let waitMs = Math.min(1500 * Math.pow(2, i), 15000);
     try {
       const resp = await fetch(url, init);
-      if (resp.ok || (resp.status >= 400 && resp.status < 500)) return resp;
+      if (resp.ok) return resp;
+      if (resp.status !== 429 && resp.status >= 400 && resp.status < 500) return resp;
+      if (resp.status === 429) {
+        const ra = resp.headers.get("retry-after");
+        const raSec = ra ? Number(ra) : NaN;
+        if (Number.isFinite(raSec) && raSec > 0) waitMs = Math.min(raSec * 1000, 15000);
+        console.warn(`[${label}] attempt ${i + 1} 429, waiting ${waitMs}ms`);
+      } else {
+        console.warn(`[${label}] attempt ${i + 1} got ${resp.status}, retrying…`);
+      }
       lastErr = new Error(`${label} HTTP ${resp.status}`);
-      console.warn(`[${label}] attempt ${i + 1} got ${resp.status}, retrying…`);
     } catch (e) {
       lastErr = e;
       console.warn(`[${label}] attempt ${i + 1} network error:`, (e as Error).message);
     }
-    if (i < attempts) await new Promise((r) => setTimeout(r, 1500));
+    if (i < attempts) await new Promise((r) => setTimeout(r, waitMs));
   }
   throw lastErr instanceof Error ? lastErr : new Error(`${label} failed`);
 }
