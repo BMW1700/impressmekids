@@ -49,9 +49,10 @@ async function getFunctionErrorMessage(error: unknown): Promise<string> {
           : parsed.details
             ? JSON.stringify(parsed.details)
             : "";
-        return [parsed.error, parsed.status ? `status ${parsed.status}` : "", detailText]
+        const message = [parsed.error, parsed.status ? `status ${parsed.status}` : "", detailText]
           .filter(Boolean)
           .join(" — ");
+        return message || error.message;
       } catch {
         return details;
       }
