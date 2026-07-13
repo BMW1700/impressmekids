@@ -274,7 +274,7 @@ export function useBennyRedub(levelId: string | null) {
 
   const extractMusic = useCallback(async (scene: RedubSceneInput): Promise<boolean> => {
     if (!levelId) return false;
-    setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "running" } }));
+    setMusicStates((m) => ({ ...m, [scene.sceneKey]: { status: "running", progressMessage: "Uploading to LALAL.AI…" } }));
 
     // LALAL can take a few minutes; the edge function caps its own poll at ~90s
     // and returns { status: "pending", jobId } if not done. Resume from client.
