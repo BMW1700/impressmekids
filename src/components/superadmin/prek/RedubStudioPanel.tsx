@@ -315,12 +315,13 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Music…</>
                     : existingMusic ? <><RotateCw className="h-3 w-3 mr-1"/> Music</> : <><Music2 className="h-3 w-3 mr-1"/> Music</>}
                 </Button>
-                {musicStatus === "error" && (
-                  <span className="text-[10px] text-red-500 truncate max-w-[200px]" title={musicState?.errorMessage}>
-                    <AlertCircle className="inline h-3 w-3 mr-0.5"/>{musicState?.errorMessage}
-                  </span>
-                )}
                 </div>
+                {musicStatus === "error" && (
+                  <div className="flex items-start gap-1 rounded-sm border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] leading-snug text-red-600 dark:text-red-300">
+                    <AlertCircle className="mt-0.5 h-3 w-3 shrink-0"/>
+                    <span className="break-words">{musicState?.errorMessage}</span>
+                  </div>
+                )}
                 {redubUrl && (
                   <div className="rounded-sm bg-purple-500/5 border border-purple-500/30 px-2 py-1 overflow-hidden">
                     <ClipWaveform
