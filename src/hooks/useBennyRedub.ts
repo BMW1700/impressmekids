@@ -337,6 +337,17 @@ export function useBennyRedub(levelId: string | null) {
   // hammering ElevenLabs / LALAL.
   const runFullAuto = useCallback(async (scenes: RedubSceneInput[]) => {
     const CONCURRENCY = 3;
+    // Clear stale per-scene status so previous run's errors don't linger.
+    setStates((m) => {
+      const next = { ...m };
+      for (const s of scenes) next[s.sceneKey] = { status: "idle" };
+      return next;
+    });
+    setMusicStates((m) => {
+      const next = { ...m };
+      for (const s of scenes) next[s.sceneKey] = { status: "idle" };
+      return next;
+    });
     setAutoProgress({ done: 0, total: scenes.length });
     const queue = [...scenes];
     let done = 0;
