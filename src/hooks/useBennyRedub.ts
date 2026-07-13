@@ -8,6 +8,7 @@
 //     UI can immediately preview the newly generated MP3.
 
 import { useCallback, useEffect, useState } from "react";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
 
@@ -35,6 +36,28 @@ export interface MusicState {
   progressMessage?: string;
   storagePath?: string;
   signedUrl?: string;
+}
+
+async function getFunctionErrorMessage(error: unknown): Promise<string> {
+  if (error instanceof FunctionsHttpError) {
+    const details = await error.context.text().catch(() => "");
+    if (details) {
+      try {
+        const parsed = JSON.parse(details);
+        const detailText = typeof parsed.details === "string"
+          ? parsed.details
+          : parsed.details
+            ? JSON.stringify(parsed.details)
+            : "";
+        return [parsed.error, parsed.status ? `status ${parsed.status}` : "", detailText]
+          .filter(Boolean)
+          .join(" — ");
+      } catch {
+        return details;
+      }
+    }
+  }
+  return error instanceof Error ? error.message : "Unknown error";
 }
 
 export interface LevelRedubSettings {
@@ -214,7 +237,7 @@ export function useBennyRedub(levelId: string | null) {
         const { data: isoData, error: isoError } = await supabase.functions.invoke("prek-clip-redub", {
           body: { ...baseBody, stage: "isolate", isolate: true, isolateOnly: false },
         });
-        if (isoError) throw isoError;
+        if (isoError) throw new Error(await getFunctionErrorMessage(isoError));
         isolatedStoragePath = isoData?.isolatedStoragePath ?? undefined;
         isolatedSignedUrl = isoData?.isolatedSignedUrl ?? undefined;
         if (isolatedStoragePath) {
@@ -244,7 +267,7 @@ export function useBennyRedub(levelId: string | null) {
         ? { ...baseBody, stage: "sts" as const, isolatedStoragePath }
         : { ...baseBody, isolate: false, isolateOnly: false };
       const { data, error } = await supabase.functions.invoke("prek-clip-redub", { body: stsBody });
-      if (error) throw error;
+      if (error) throw new Error(await getFunctionErrorMessage(error));
       const storagePath: string | undefined = data?.storagePath ?? undefined;
       const signedUrl: string | undefined = data?.signedUrl ?? undefined;
 
@@ -297,7 +320,7 @@ export function useBennyRedub(levelId: string | null) {
             resumeJobId,
           },
         });
-        if (error) throw error;
+        if (error) throw new Error(await getFunctionErrorMessage(error));
 
         if (data?.status === "pending" && data?.jobId) {
           resumeJobId = data.jobId as string;
