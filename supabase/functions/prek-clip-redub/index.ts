@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 
     // 3. Speech-to-Speech — swap voice identity, preserve cadence for lip-sync.
     const stsForm = new FormData();
-    const stsFilename = isolate ? "source.mp3" : "source.mp4";
+    const stsFilename = audioMime === "audio/mpeg" ? "source.mp3" : "source.mp4";
     stsForm.append("audio", new Blob([audioBytes], { type: audioMime }), stsFilename);
     stsForm.append("model_id", ELEVENLABS_STS_MODEL);
     stsForm.append("output_format", "mp3_44100_128");
