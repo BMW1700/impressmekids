@@ -41,6 +41,7 @@ interface Body {
   // Omit to run the legacy single-shot pipeline (isolation + STS in one call).
   stage?: "isolate" | "sts";
   isolatedStoragePath?: string; // required when stage === "sts"
+  sceneDurationSeconds?: number; // fallback clip length until exact MP3 metadata is available
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
@@ -246,6 +247,7 @@ Deno.serve(async (req) => {
       levelId: body.levelId,
       sceneKey: body.sceneKey,
       storagePath: outPath,
+      sceneDurationSeconds: body.sceneDurationSeconds,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -264,7 +266,7 @@ Deno.serve(async (req) => {
 
 async function ensureRedubClip(
   admin: ReturnType<typeof createClient>,
-  args: { levelId: string; sceneKey: string; storagePath: string },
+  args: { levelId: string; sceneKey: string; storagePath: string; sceneDurationSeconds?: number },
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
   // (level_id, track_index). ignoreDuplicates skips if a track already exists.
@@ -300,7 +302,10 @@ async function ensureRedubClip(
     anchor_scene_key: args.sceneKey,
     anchor_edge: "start" as const,
     anchor_offset_seconds: 0,
-    duration_mode: "fill-scene" as const,
+    duration_mode: "fixed" as const,
+    duration_seconds: Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+      ? Number(args.sceneDurationSeconds)
+      : null,
     volume: 1.0,
     fade_in_seconds: 0,
     fade_out_seconds: 0,

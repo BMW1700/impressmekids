@@ -18,6 +18,7 @@ export interface RedubSceneInput {
   sceneKey: string;
   sourceStoragePath: string; // relative path in prek-level-videos
   label: string;             // for display
+  sceneDurationSeconds?: number;
 }
 
 export interface RedubState {
@@ -233,6 +234,7 @@ export function useBennyRedub(levelId: string | null) {
       levelId,
       sceneKey: scene.sceneKey,
       sourceStoragePath: scene.sourceStoragePath,
+      sceneDurationSeconds: scene.sceneDurationSeconds,
       voiceId,
       stability: overrides?.stability ?? settings.stability,
       similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,

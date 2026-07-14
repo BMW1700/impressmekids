@@ -43,6 +43,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
       sceneKey: s.key,
       sourceStoragePath: sourcePathsByScene[s.key] ?? "",
       label: s.label,
+      sceneDurationSeconds: s.timelineDurationSeconds,
     })).filter((s) => !!s.sourceStoragePath);
   }, [sceneGraph, sourcePathsByScene]);
 
