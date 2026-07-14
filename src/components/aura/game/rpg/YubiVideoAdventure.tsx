@@ -118,7 +118,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const emitScene = useCallback((sceneKey: string, edge: "start" | "end") => {
     setSceneEvent({ sceneKey, edge, isWordCard: sceneKey.endsWith("-card") });
   }, []);
-  usePreKAudioMixerRuntime({
+  const mixerHandle = usePreKAudioMixerRuntime({
     tracks: mix.tracks,
     clips: mix.clips,
     signedUrls: mix.signedUrls,
@@ -126,10 +126,14 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     enabled: !!dbLevelId,
     event: sceneEvent,
   });
-  const redub = usePreKRedubPlayback({ levelId: dbLevelId ?? null, event: sceneEvent, enabled: !!dbLevelId });
-  // When a redub track exists, always mute the source video's audio so Benny's
-  // new voice isn't fighting the original take.
-  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || redub.hasRedub;
+  // Whenever an audio clip is anchored to a scene (redub track 90 or music
+  // track 89), we mute the source video's audio so the redub voice isn't
+  // fighting the original take.
+  const hasOverlayAudio = useMemo(
+    () => mix.clips.some((c) => c.track_index === 89 || c.track_index === 90),
+    [mix.clips]
+  );
+  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
 
 
   const [stepIndex, setStepIndex] = useState(0);
