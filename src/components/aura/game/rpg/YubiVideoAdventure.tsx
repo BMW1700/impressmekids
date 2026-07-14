@@ -183,9 +183,13 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   }, [adventure?.id]);
 
   // ── Scene-event emission for the audio overlay mixer ─────────────────────
-  // We emit `end` for the previous scene + `start` for the new scene whenever
-  // the active step changes (and on tap-to-begin → opening start).
+  // We emit `end` for the previous scene when stepIndex changes so fill-scene
+  // and fill-level clips can fade out. The corresponding `start` event is
+  // fired later from handleVideoPlaying — only once the swapped-in <video>
+  // actually paints its first frame — so the redub audio cannot drift ahead
+  // of the video by the crossfade / decode latency (200–800 ms per swap).
   const prevSceneRef = useRef<string | null>(null);
+  const pendingSceneStartRef = useRef<string | null>(null);
   useEffect(() => {
     if (!dbLevelId) return;
     if (phase === "tap-to-begin") return;
@@ -193,7 +197,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (prevSceneRef.current === sceneKey) return;
     if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
     prevSceneRef.current = sceneKey;
-    emitScene(sceneKey, "start");
+    pendingSceneStartRef.current = sceneKey;
   }, [stepIndex, phase, dbLevelId, wordCount, emitScene]);
 
   // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
@@ -203,6 +207,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (prevSceneRef.current) {
       emitScene(prevSceneRef.current, "end");
       prevSceneRef.current = null;
+      pendingSceneStartRef.current = null;
     }
   }, [phase, dbLevelId, emitScene]);
 
