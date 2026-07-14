@@ -308,10 +308,13 @@ async function ensureRedubClip(
     .is("deleted_at", null)
     .maybeSingle();
 
+  const trimmedDuration = Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+    ? Number(args.sceneDurationSeconds)
+    : null;
   const rawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
     ? Number(args.sourceRawDurationSeconds)
-    : Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
-      ? Number(args.sceneDurationSeconds)
+    : trimmedDuration != null
+      ? Number(args.sourceTrimStartSeconds || 0) + trimmedDuration
       : null;
   const trimStart = Number.isFinite(args.sourceTrimStartSeconds) && Number(args.sourceTrimStartSeconds) > 0
     ? Number(args.sourceTrimStartSeconds)
@@ -350,9 +353,24 @@ async function ensureRedubClip(
   };
 
   if (existingClip?.id) {
-    await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", existingClip.id);
+    const { error } = await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", existingClip.id);
+    if (error) throw new Error(`Failed to update redub clip: ${error.message}`);
   } else {
-    await admin.from("prek_level_audio_clips").insert(clipPatch);
+    const { error } = await admin.from("prek_level_audio_clips").insert(clipPatch);
+    if (error) {
+      const { data: racedClip, error: racedReadError } = await admin
+        .from("prek_level_audio_clips")
+        .select("id")
+        .eq("level_id", args.levelId)
+        .eq("track_index", REDUB_TRACK_INDEX)
+        .eq("anchor_scene_key", args.sceneKey)
+        .eq("source_kind", "redub")
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (racedReadError || !racedClip?.id) throw new Error(`Failed to insert redub clip: ${error.message}`);
+      const { error: retryError } = await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", racedClip.id);
+      if (retryError) throw new Error(`Failed to repair raced redub clip: ${retryError.message}`);
+    }
   }
 
   // 3. Auto-enable "mute source video audio" so the redub isn't fighting the original.
