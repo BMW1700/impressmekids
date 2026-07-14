@@ -26,6 +26,12 @@ const FADE_RAMP_SEC = 0.03;
 const CARD_FADE_SEC = 0.15;
 const SCENE_END_FADE_SEC = 0.2;
 const STOP_FADE_SEC = 0.05;
+// How long a voice-like `fixed` clip is allowed to run past the end of the
+// scene it's anchored to. Uploaded voice can be arbitrarily long; without
+// this tail-cutoff it bleeds into the following word card and freezes the
+// video for the full HOLD_CAP. Matches the 2-second tail baked into
+// server-trimmed redub clips.
+const FIXED_SCENE_TAIL_SEC = 2.0;
 
 type SceneEdge = "start" | "end";
 
