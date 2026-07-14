@@ -319,6 +319,14 @@ async function ensureRedubClip(
   const trimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
     ? Number(args.sourceTrimEndSeconds)
     : null;
+  // Keep trim-in for lip sync, but don't hard-cut exactly at source trim-out.
+  // ElevenLabs can add a small sentence tail; the runtime already freeze-holds
+  // the last frame while fixed redub audio finishes.
+  const redubTrimEnd = trimEnd != null && rawDuration != null
+    ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
+      ? null
+      : Math.min(rawDuration, trimEnd + 2)
+    : null;
 
   const clipPatch = {
     level_id: args.levelId,
@@ -336,7 +344,7 @@ async function ensureRedubClip(
     loop_clip: false,
     pause_on_word_card: true,
     trim_start_seconds: trimStart,
-    trim_end_seconds: trimEnd,
+    trim_end_seconds: redubTrimEnd,
     playback_rate: 1.0,
     source_kind: "redub" as const,
   };

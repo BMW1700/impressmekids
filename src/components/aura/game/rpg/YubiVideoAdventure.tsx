@@ -135,8 +135,8 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   );
   const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
   const overlayAudioReady = useMemo(
-    () => !dbLevelId || (!mix.loading && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
-    [dbLevelId, mix.clips, mix.loading, mix.signedUrls]
+    () => !dbLevelId || (!mix.loading && mixerHandle.ready && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
+    [dbLevelId, mix.clips, mix.loading, mix.signedUrls, mixerHandle.ready]
   );
 
 

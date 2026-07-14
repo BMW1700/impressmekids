@@ -39,17 +39,21 @@ export function resolveTimelineFrame(
       continue;
     }
     if (t < end || i === graph.scenes.length - 1) {
+      const trimIn = Math.max(0, Number(s.sourceTrimInSeconds ?? 0));
+      const trimOut = typeof s.sourceTrimOutSeconds === "number" && s.sourceTrimOutSeconds > 0
+        ? s.sourceTrimOutSeconds
+        : null;
+      const localTime = trimIn + Math.max(0, t - cursor);
       return {
         sceneKey: s.key,
         isCard: false,
         src: videoUrls[s.key] ?? null,
-        localTime: Math.max(0, t - cursor),
+        localTime: trimOut == null ? localTime : Math.min(trimOut, localTime),
         posterUrl: null,
       };
     }
     cursor = end;
   }
   void lastVideoKey;
-  return { sceneKey: graph.scenes[0]?.key ?? "", isCard: false, src: null, localTime: 0, posterUrl: null };
   return { sceneKey: graph.scenes[0]?.key ?? "", isCard: false, src: null, localTime: 0, posterUrl: null };
 }

@@ -19,7 +19,7 @@
 // **Mutual exclusivity**: starting any clip first stops every other clip on
 // the same track_index (DAW semantics). Use a new track for overlap.
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 
 const FADE_RAMP_SEC = 0.03;
@@ -85,6 +85,7 @@ export function usePreKAudioMixerRuntime({
   const masterMultiplierRef = useRef<number>(masterVolume);
   const activeSceneKeyRef = useRef<string | null>(null);
   const eventGenerationRef = useRef(0);
+  const [readyVersion, setReadyVersion] = useState(0);
 
   const ensureCtx = (): AudioContext | null => {
     if (typeof window === "undefined") return null;
@@ -204,10 +205,44 @@ export function usePreKAudioMixerRuntime({
       durationMode: clip.duration_mode,
       generation: 0,
     };
-    el.addEventListener("loadeddata", () => { if (st) st.loaded = true; });
+    const markLoaded = () => {
+      if (!st || st.loaded) return;
+      st.loaded = true;
+      setReadyVersion((n) => n + 1);
+    };
+    el.addEventListener("loadedmetadata", markLoaded);
+    el.addEventListener("canplay", markLoaded);
+    el.addEventListener("canplaythrough", markLoaded);
+    el.addEventListener("loadeddata", markLoaded);
+    el.addEventListener("error", markLoaded);
     clipStatesRef.current.set(clip.id, st);
+    try { el.load(); } catch { /* noop */ }
     return st;
   };
+
+  // Preload every overlay MP3 before the tap gate opens. If a redub MP3 is
+  // first created/loaded at scene-start, Safari/iOS can begin the video while
+  // audio metadata arrives seconds late, making published playback drift.
+  useEffect(() => {
+    if (!enabled) return;
+    for (const clip of clips) {
+      if (!signedUrls[clip.storage_path]) continue;
+      ensureClipState(clip);
+    }
+    setReadyVersion((n) => n + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, clips, signedUrls]);
+
+  const ready = useMemo(() => {
+    void readyVersion;
+    if (!enabled) return true;
+    for (const clip of clips) {
+      if (!signedUrls[clip.storage_path]) return false;
+      const st = clipStatesRef.current.get(clip.id);
+      if (!st?.loaded) return false;
+    }
+    return true;
+  }, [clips, enabled, readyVersion, signedUrls]);
 
   const fadeOutAndPause = (st: ClipState, durSec: number) => {
     const generation = st.generation;
@@ -422,11 +457,11 @@ export function usePreKAudioMixerRuntime({
   // Stable handle. stopAll closes over refs so identity can stay constant.
   const handleRef = useRef<PreKAudioMixerHandle | null>(null);
   if (!handleRef.current) {
-    handleRef.current = { ready: enabled, stopAll, isSceneAudioBusy };
+    handleRef.current = { ready, stopAll, isSceneAudioBusy };
   } else {
-    handleRef.current.ready = enabled;
+    handleRef.current.ready = ready;
     handleRef.current.stopAll = stopAll;
     handleRef.current.isSceneAudioBusy = isSceneAudioBusy;
   }
-  return useMemo(() => handleRef.current!, [enabled]);
+  return useMemo(() => handleRef.current!, [ready]);
 }
