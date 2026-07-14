@@ -67,6 +67,7 @@ function audioBoundsForClip(clip: PreKAudioClip) {
 export interface PreKAudioMixerHandle {
   ready: boolean;
   stopAll: () => void;
+  isSceneAudioBusy: (sceneKey: string) => boolean;
 }
 
 export function usePreKAudioMixerRuntime({
