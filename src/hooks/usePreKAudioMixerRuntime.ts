@@ -54,6 +54,7 @@ interface ClipState {
   trackIndex: number;
   trackVolume: number; // mirror for fallback path
   anchorSceneKey: string;
+  endAnchorSceneKey: string | null;
   durationMode: PreKAudioClip["duration_mode"];
   generation: number;
 }
@@ -175,6 +176,7 @@ export function usePreKAudioMixerRuntime({
       // element was created (for example redub repair: fill-scene → fixed).
       st.trackIndex = clip.track_index;
       st.anchorSceneKey = clip.anchor_scene_key;
+      st.endAnchorSceneKey = clip.end_anchor_scene_key;
       st.durationMode = clip.duration_mode;
       return st;
     }
@@ -202,6 +204,7 @@ export function usePreKAudioMixerRuntime({
       trackIndex: clip.track_index,
       trackVolume: trackVolumesRef.current.get(clip.track_index) ?? 1,
       anchorSceneKey: clip.anchor_scene_key,
+      endAnchorSceneKey: clip.end_anchor_scene_key,
       durationMode: clip.duration_mode,
       generation: 0,
     };
@@ -447,8 +450,7 @@ export function usePreKAudioMixerRuntime({
   // (fixed-mode clip on track 90) finishes past the video's natural end.
   const isSceneAudioBusy = (sceneKey: string): boolean => {
     for (const [, st] of clipStatesRef.current) {
-      if (st.anchorSceneKey !== sceneKey) continue;
-      if (st.durationMode !== "fixed") continue;
+      if (st.anchorSceneKey !== sceneKey && st.endAnchorSceneKey !== sceneKey) continue;
       if (!st.el.paused && st.el.currentTime < (st.el.duration || Infinity) - 0.02) return true;
     }
     return false;
