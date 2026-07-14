@@ -28,7 +28,6 @@ import type { CampaignWorld } from "@/lib/campaignData";
 import type { CampaignLevel } from "./RPGLevelSelect";
 import { usePreKAudioMix } from "@/hooks/usePreKAudioMix";
 import { usePreKAudioMixerRuntime, type PreKAudioMixerEvent } from "@/hooks/usePreKAudioMixerRuntime";
-import { usePreKRedubPlayback } from "@/hooks/usePreKRedubPlayback";
 import { sceneKeyForStep, SCENE_KEYS } from "@/lib/preKSceneGraph";
 
 interface Props {
@@ -119,7 +118,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const emitScene = useCallback((sceneKey: string, edge: "start" | "end") => {
     setSceneEvent({ sceneKey, edge, isWordCard: sceneKey.endsWith("-card") });
   }, []);
-  usePreKAudioMixerRuntime({
+  const mixerHandle = usePreKAudioMixerRuntime({
     tracks: mix.tracks,
     clips: mix.clips,
     signedUrls: mix.signedUrls,
@@ -127,10 +126,14 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     enabled: !!dbLevelId,
     event: sceneEvent,
   });
-  const redub = usePreKRedubPlayback({ levelId: dbLevelId ?? null, event: sceneEvent, enabled: !!dbLevelId });
-  // When a redub track exists, always mute the source video's audio so Benny's
-  // new voice isn't fighting the original take.
-  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || redub.hasRedub;
+  // Whenever an audio clip is anchored to a scene (redub track 90 or music
+  // track 89), we mute the source video's audio so the redub voice isn't
+  // fighting the original take.
+  const hasOverlayAudio = useMemo(
+    () => mix.clips.some((c) => c.track_index === 89 || c.track_index === 90),
+    [mix.clips]
+  );
+  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
 
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -180,9 +183,13 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   }, [adventure?.id]);
 
   // ── Scene-event emission for the audio overlay mixer ─────────────────────
-  // We emit `end` for the previous scene + `start` for the new scene whenever
-  // the active step changes (and on tap-to-begin → opening start).
+  // We emit `end` for the previous scene when stepIndex changes so fill-scene
+  // and fill-level clips can fade out. The corresponding `start` event is
+  // fired later from handleVideoPlaying — only once the swapped-in <video>
+  // actually paints its first frame — so the redub audio cannot drift ahead
+  // of the video by the crossfade / decode latency (200–800 ms per swap).
   const prevSceneRef = useRef<string | null>(null);
+  const pendingSceneStartRef = useRef<string | null>(null);
   useEffect(() => {
     if (!dbLevelId) return;
     if (phase === "tap-to-begin") return;
@@ -190,7 +197,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (prevSceneRef.current === sceneKey) return;
     if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
     prevSceneRef.current = sceneKey;
-    emitScene(sceneKey, "start");
+    pendingSceneStartRef.current = sceneKey;
   }, [stepIndex, phase, dbLevelId, wordCount, emitScene]);
 
   // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
@@ -200,6 +207,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (prevSceneRef.current) {
       emitScene(prevSceneRef.current, "end");
       prevSceneRef.current = null;
+      pendingSceneStartRef.current = null;
     }
   }, [phase, dbLevelId, emitScene]);
 
@@ -571,9 +579,12 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
-  const handleClipEnded = (slot: Slot) => {
-    // Only react to the active slot ending. (Old, faded-out slot can also fire
-    // ended after a swap; ignore those.)
+  // If the redub audio anchored to this scene still has an unplayed tail,
+  // freeze on the last video frame until the audio finishes. This is what
+  // makes the last word/syllable always play out instead of getting chopped
+  // when the source video's cut lands earlier than the redub's end.
+  const holdAdvanceTimerRef = useRef<number | null>(null);
+  const advanceAfterClip = (slot: Slot) => {
     if (slot !== activeSlotRef.current) return;
     if (!current || current.kind !== "clip") return;
     const next = stepIndex + 1;
@@ -585,10 +596,47 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setStepIndex(next);
     setPhase(nextStep.kind === "word" ? "ask" : "clip");
   };
+  const handleClipEnded = (slot: Slot) => {
+    // Only react to the active slot ending. (Old, faded-out slot can also fire
+    // ended after a swap; ignore those.)
+    if (slot !== activeSlotRef.current) return;
+    if (!current || current.kind !== "clip") return;
+
+    const sceneKey = prevSceneRef.current;
+    const HOLD_CAP_MS = 3000;
+    const started = Date.now();
+    const tryAdvance = () => {
+      const busy = sceneKey ? mixerHandle.isSceneAudioBusy(sceneKey) : false;
+      const elapsed = Date.now() - started;
+      if (busy && elapsed < HOLD_CAP_MS) {
+        // Freeze on last frame: pause the active video (it's already at end)
+        // and re-check shortly.
+        const v = videoRefs.current[slot];
+        if (v) { try { v.pause(); } catch { /* noop */ } }
+        holdAdvanceTimerRef.current = window.setTimeout(tryAdvance, 120);
+        return;
+      }
+      holdAdvanceTimerRef.current = null;
+      advanceAfterClip(slot);
+    };
+    tryAdvance();
+  };
+  useEffect(() => () => {
+    if (holdAdvanceTimerRef.current) window.clearTimeout(holdAdvanceTimerRef.current);
+  }, []);
 
   // ── Crossfade trigger: incoming slot just painted its first frame ─────────
   const handleVideoPlaying = (slot: Slot) => {
     setPlayBlocked(false);
+    // Fire the pending scene-start now — only once the video is actually
+    // producing frames. This guarantees the redub audio starts exactly when
+    // the paired video frame is on screen, eliminating the 3–4 s drift that
+    // came from firing scene-start on the React step-change effect.
+    if (pendingSceneStartRef.current && slot === (incomingSlotRef.current ?? activeSlotRef.current)) {
+      const sceneKey = pendingSceneStartRef.current;
+      pendingSceneStartRef.current = null;
+      emitScene(sceneKey, "start");
+    }
     // If this is the slot we're crossfading IN to, kick off the dissolve.
     if (incomingSlotRef.current === slot) {
       incomingSlotRef.current = null;

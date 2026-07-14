@@ -53,6 +53,8 @@ interface ClipState {
   loaded: boolean;
   trackIndex: number;
   trackVolume: number; // mirror for fallback path
+  anchorSceneKey: string;
+  durationMode: PreKAudioClip["duration_mode"];
 }
 
 function audioBoundsForClip(clip: PreKAudioClip) {
@@ -65,6 +67,7 @@ function audioBoundsForClip(clip: PreKAudioClip) {
 export interface PreKAudioMixerHandle {
   ready: boolean;
   stopAll: () => void;
+  isSceneAudioBusy: (sceneKey: string) => boolean;
 }
 
 export function usePreKAudioMixerRuntime({
@@ -191,6 +194,8 @@ export function usePreKAudioMixerRuntime({
       el, node, clipGain, loaded: false,
       trackIndex: clip.track_index,
       trackVolume: trackVolumesRef.current.get(clip.track_index) ?? 1,
+      anchorSceneKey: clip.anchor_scene_key,
+      durationMode: clip.duration_mode,
     };
     el.addEventListener("loadeddata", () => { if (st) st.loaded = true; });
     clipStatesRef.current.set(clip.id, st);
@@ -377,13 +382,26 @@ export function usePreKAudioMixerRuntime({
     };
   }, []);
 
+  // Whether any clip anchored to `sceneKey` is still audibly playing. Used by
+  // the runtime video player to hold the last frame while a redub tail
+  // (fixed-mode clip on track 90) finishes past the video's natural end.
+  const isSceneAudioBusy = (sceneKey: string): boolean => {
+    for (const [, st] of clipStatesRef.current) {
+      if (st.anchorSceneKey !== sceneKey) continue;
+      if (st.durationMode !== "fixed") continue;
+      if (!st.el.paused && st.el.currentTime < (st.el.duration || Infinity) - 0.02) return true;
+    }
+    return false;
+  };
+
   // Stable handle. stopAll closes over refs so identity can stay constant.
   const handleRef = useRef<PreKAudioMixerHandle | null>(null);
   if (!handleRef.current) {
-    handleRef.current = { ready: enabled, stopAll };
+    handleRef.current = { ready: enabled, stopAll, isSceneAudioBusy };
   } else {
     handleRef.current.ready = enabled;
     handleRef.current.stopAll = stopAll;
+    handleRef.current.isSceneAudioBusy = isSceneAudioBusy;
   }
   return useMemo(() => handleRef.current!, [enabled]);
 }

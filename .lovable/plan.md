@@ -1,62 +1,60 @@
-## Brutally honest audit result
+## The emergency — diagnosed
 
-The music pipeline is not failing because of timeline placement, R2, track 89, or the frontend button.
+Both problems come from the **same root cause**: published playback and editor preview use **two different audio systems** that don't agree on when a redub starts or ends.
 
-The backend is now reaching LALAL correctly, and LALAL is rejecting the split with this exact live log:
+### System A — editor preview (looks and sounds perfect)
+Reads `prek_level_audio_clips` on tracks 89/90 with proper `anchor_scene_key`, `trim_start`, `trim_end`, `duration_mode`. Plays via `usePreKAudioTimelineTransport` locked to the timeline playhead. Trims are honored, tails play out naturally, scene changes don't chop audio.
 
-```text
-LALAL split [400]: {"detail": "Premium license required to access this feature."}
-```
+### System B — published/runtime playback (drifts + cuts last word)
+`YubiVideoAdventure` runs **two hooks in parallel**:
+1. `usePreKAudioMixerRuntime` — correctly reads clips from tracks 89/90.
+2. `usePreKRedubPlayback` — a **separate legacy hook** that reads `prek_levels.redub_audio_paths` (scene → single URL) and does `new Audio(url).play()` the instant the scene-start event fires, then `pause()` the instant scene-end fires.
 
-So the actual blocker is the saved `LALAL_API_KEY`: it is not a LALAL license/key with API stem separation access. LALAL's pricing page shows API Access is Pro-only, and their API docs require `X-License-Key` for `/api/v1/split/stem_separator/`.
+Hook #2 is what's destroying you:
 
-## What needs fixing right now
+- **3–4 second drift**: `emitScene("start")` fires from a React `useEffect` when `stepIndex` changes — **not** when the swapped video slot actually starts rendering frames. In the editor preview there is one controlled `<video>` scrubbed by the playhead, so audio and video line up. In the runtime crossfade player, `onPlaying` for the incoming slot can arrive 200–800 ms after the effect runs (buffering, decode, network). Hook #2 has already started the redub audio by then. Over 5–7 scenes that compounds into the 3–4 s offset you're seeing.
+- **Last word cut before/after a word box**: Hook #2 also **hard-pauses** the audio on `emitScene("end")`. That fires the moment `onEnded` fires on the source video — but the redub's final syllable often has 150–500 ms of tail past the video's cut. The mixer (Hook #1) would let a `fixed`-mode clip play to its natural `trim_end`; Hook #2 overrides that by killing the element. This also explains why even the preview sometimes clips the final word — Hook #2 runs there too.
 
-1. **Replace/upgrade the LALAL key**
-   - Use a LALAL account/license that includes API Access, likely Pro or business/API access.
-   - Save the new value into the existing `LALAL_API_KEY` secret.
-   - No code change can bypass this provider-side license block.
+## The fix — one audio system, gated on real video playback
 
-2. **Improve the app message so we stop flying blind**
-   - Update the Music error UI/parser to display the full provider message clearly:
-     - `LALAL split failed — Premium license required to access this feature.`
-   - Right now the screenshot truncates the JSON after `{...`, which makes it look like the app is still broken instead of showing the provider/account issue.
+### 1. Delete `usePreKRedubPlayback` entirely
+- Remove the hook file and every import/usage in `YubiVideoAdventure.tsx`.
+- Runtime audio (redub + music) is served exclusively by `usePreKAudioMixerRuntime` reading `prek_level_audio_clips`. Preview and production then use the **same data + same trims + same timing rules**.
+- `muteSourceVideo` will now key off `mix.settings.mute_source_video_audio` plus the presence of any track-90 clip for the scene (small helper in the mix hook).
 
-3. **Add a backend preflight check before a Music run**
-   - Have `prek-clip-music-extract` call LALAL `/limits/minutes_left/` before upload/split.
-   - If the key lacks API access or minutes, fail immediately with a clear message before uploading any media.
-   - This avoids burning time and makes future errors obvious.
+### 2. Gate scene-start events on the video actually playing
+In `YubiVideoAdventure.tsx`:
+- Remove the `useEffect` at line 186 that emits `("start")` on step-change.
+- Emit `("start")` from `handleVideoPlaying(slot)` — i.e., only after the swapped-in `<video>` actually fires `onPlaying`. The mixer only starts the redub clip when the corresponding video frame is on screen. Drift → gone.
+- Keep `("end")` emission on `onEnded` **but** stop using it to interrupt `fixed` clips (see #3).
 
-4. **Optional safety fallback**
-   - If the key is not premium/API-enabled, disable or label Music buttons with a clear admin-facing error state instead of letting every scene fail one by one.
+### 3. Never hard-cut a `fixed`-mode clip on scene end
+In `usePreKAudioMixerRuntime.ts`:
+- On `edge === "end"`, only fade `fill-scene` / `fill-level` / `span-videos` clips. Leave `fixed` clips (which is what redub and short SFX are) to finish on their own `trim_end` timer that `playClip` already schedules.
+- Result: the redub's final syllable always plays to the end of `trim_end_seconds`, regardless of whether the source video already cut.
 
-## Technical details
+### 4. Auto-hold the last video frame while a redub tail is still playing
+In `YubiVideoAdventure.tsx`:
+- When a clip's `onEnded` fires, check whether any `fixed` clip anchored to that scene on track 90 still has unplayed audio (mixer exposes an `isSceneAudioBusy(sceneKey)` helper — cheap: it's just "is there a clip element still playing whose `anchor_scene_key === sceneKey`?").
+- If busy, freeze on the last frame (pause the video, keep it visible) until the audio finishes, then advance. Matches the "extend bar" behavior you already have in the editor.
 
-- The function source currently calls:
-  - `POST https://www.lalal.ai/api/v1/upload/`
-  - `POST https://www.lalal.ai/api/v1/split/stem_separator/`
-  - `POST https://www.lalal.ai/api/v1/check/`
-- The live log confirms the failure is at the split step, after upload/auth reached LALAL.
-- The exact failed provider response is HTTP 400 with:
+### 5. Small mixer helper for parity
+Add `isSceneAudioBusy(sceneKey: string): boolean` on `PreKAudioMixerHandle`. Uses the existing `clipStatesRef` to check if any element bound to a clip whose `anchor_scene_key` matches is currently `!paused`.
 
-```json
-{"detail":"Premium license required to access this feature."}
-```
+## Files touched
 
-## Not the problem
+- `src/hooks/usePreKRedubPlayback.ts` — **delete**
+- `src/components/aura/game/rpg/YubiVideoAdventure.tsx` — remove hook import + usage, move `emitScene("start")` into `handleVideoPlaying`, add "hold last frame while audio busy" branch in `handleClipEnded`
+- `src/hooks/usePreKAudioMixerRuntime.ts` — skip `fixed` clips in the `edge === "end"` fade loop, expose `isSceneAudioBusy` on the handle
 
-- Track 89 placement is not the current failure.
-- Redub/ElevenLabs is not the current failure.
-- R2 storage is not the current failure.
-- The client polling loop is not the current failure.
-- The LALAL endpoint shape is now correct enough to reach the provider's license gate.
+## What this does NOT touch
 
-## After approval
+- LALAL / ElevenLabs pipelines (Pro key still required for music).
+- Editor UI, splicing tools, drag-to-crop bar, track lanes.
+- Database schema.
+- Any Pre-K level content, cards, or scene graph.
 
-I will implement the app-side improvements only:
+## Expected outcome
 
-- clearer Music error display,
-- LALAL license/minutes preflight in the backend function,
-- and deploy the updated function.
-
-Then you still need to replace/upgrade the `LALAL_API_KEY`; once that key has API stem separation access, the Music track should generate and auto-land on Track 89.
+- Published playback matches the editor preview frame-for-frame because both now read the exact same clip data and only start audio once the paired video frame is on screen.
+- The redub's final word always plays because `fixed` clips terminate on their own `trim_end`, and the video holds its last frame if the audio hasn't finished — so you'll never again hear a word land after a cut.
