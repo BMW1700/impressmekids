@@ -196,10 +196,11 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (!dbLevelId) return;
     if (phase === "tap-to-begin") return;
     const sceneKey = sceneKeyForStep(stepIndex, wordCount);
+    const stepForScene = steps[stepIndex];
     if (prevSceneRef.current === sceneKey) return;
     if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
     prevSceneRef.current = sceneKey;
-    if (current?.kind === "clip") {
+    if (stepForScene?.kind === "clip") {
       pendingSceneStartRef.current = sceneKey;
       emittedSceneStartsRef.current.delete(sceneKey);
     } else {
@@ -209,7 +210,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         emitScene(sceneKey, "start");
       }
     }
-  }, [stepIndex, phase, dbLevelId, wordCount, emitScene, current]);
+  }, [stepIndex, phase, dbLevelId, wordCount, emitScene, steps]);
 
   // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
   useEffect(() => {
