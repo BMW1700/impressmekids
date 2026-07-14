@@ -108,22 +108,18 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
       audio_master_volume: Number((lv as { audio_master_volume?: number }).audio_master_volume ?? 1),
       mute_source_video_audio: Boolean((lv as { mute_source_video_audio?: boolean }).mute_source_video_audio ?? false),
     });
-    // Preserve existing signed URLs for paths we've already signed. Re-signing
-    // creates brand-new URL strings, which forces every <ClipWaveform> to
-    // re-fetch + re-decode and the preview <video> to reload — making the
-    // editor flash/reset on every edit. Only sign the genuinely-new paths.
-    setSignedUrls((prev) => {
-      const needed = clipsRows.map((c) => c.storage_path);
-      const missing = needed.filter((p) => !prev[p]);
-      if (missing.length === 0) return prev;
-      void signMany(missing).then((fresh) => {
-        if (Object.keys(fresh).length === 0) return;
-        setSignedUrls((cur) => ({ ...cur, ...fresh }));
-      });
-      return prev;
-    });
+    // Preserve existing signed URLs for paths we've already signed, but await
+    // genuinely-new paths before marking the mix loaded. The runtime player
+    // fires scene-start once; if loading flips false before URLs exist, the
+    // first redub/music clip can be silently missed.
+    const needed = clipsRows.map((c) => c.storage_path);
+    const missing = needed.filter((p) => !signedUrls[p]);
+    const fresh = missing.length > 0 ? await signMany(missing) : {};
+    if (Object.keys(fresh).length > 0) {
+      setSignedUrls((prev) => ({ ...prev, ...fresh }));
+    }
     setLoading(false);
-  }, [levelId]);
+  }, [levelId, signedUrls]);
 
   useEffect(() => { void reload(); }, [reload]);
 

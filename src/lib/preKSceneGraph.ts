@@ -21,6 +21,12 @@ export interface Scene {
   label: string;
   /** Fixed for videos, nominal for cards. Used for legacy wall-clock previews. */
   nominalDurationSeconds: number;
+  /** Raw source-video duration before non-destructive trim; video scenes only. */
+  sourceRawDurationSeconds?: number;
+  /** Non-destructive source trim-in used by the runtime video element. */
+  sourceTrimInSeconds?: number;
+  /** Non-destructive source trim-out used by the runtime video element. */
+  sourceTrimOutSeconds?: number | null;
   /**
    * Effective duration the editor timeline uses for layout & playhead math.
    * Word-card scenes are zero-width "skip notches": audio teleports from the
@@ -78,23 +84,28 @@ export function buildSceneGraph(
     }
   >,
 ): SceneGraph {
-  const effective = (
+  const normalizeVideoTiming = (
     rawDur: number | null | undefined,
     tIn: number | null | undefined,
     tOut: number | null | undefined,
     fallback: number,
-  ): number => {
+  ) => {
     const dur = Number(rawDur) || fallback;
     const lo = Math.max(0, Number(tIn ?? 0));
     const hi = Math.min(dur, Number(tOut ?? dur));
-    return Math.max(0.1, hi - lo);
+    return {
+      raw: dur,
+      trimIn: lo,
+      trimOut: tOut == null ? null : hi,
+      effective: Math.max(0.1, hi - lo),
+    };
   };
 
   const scenes: Scene[] = [];
   const videoTimeline: VideoTimelineEntry[] = [];
   let videoCursor = 0;
 
-  const openingDur = effective(
+  const openingTiming = normalizeVideoTiming(
     level.opening_video_duration_seconds,
     level.opening_trim_in_seconds,
     level.opening_trim_out_seconds,
@@ -104,23 +115,26 @@ export function buildSceneGraph(
     key: SCENE_KEYS.opening,
     kind: "opening",
     label: "Opening",
-    nominalDurationSeconds: openingDur,
-    timelineDurationSeconds: openingDur,
+    nominalDurationSeconds: openingTiming.effective,
+    sourceRawDurationSeconds: openingTiming.raw,
+    sourceTrimInSeconds: openingTiming.trimIn,
+    sourceTrimOutSeconds: openingTiming.trimOut,
+    timelineDurationSeconds: openingTiming.effective,
   });
-  videoTimeline.push({ sceneKey: SCENE_KEYS.opening, startSec: videoCursor, endSec: videoCursor + openingDur });
-  videoCursor += openingDur;
+  videoTimeline.push({ sceneKey: SCENE_KEYS.opening, startSec: videoCursor, endSec: videoCursor + openingTiming.effective });
+  videoCursor += openingTiming.effective;
 
   const sorted = [...words].sort((a, b) => a.sort_order - b.sort_order);
   sorted.forEach((w, idx) => {
     const i = idx + 1;
-    const firstDur = effective(
+    const firstTiming = normalizeVideoTiming(
       w.first_video_duration_seconds,
       w.first_trim_in_seconds,
       w.first_trim_out_seconds,
       DEFAULT_VIDEO_SECONDS,
     );
     const cardDur = Number(w.word_hold_seconds) || DEFAULT_CARD_SECONDS;
-    const secondDur = effective(
+    const secondTiming = normalizeVideoTiming(
       w.second_video_duration_seconds,
       w.second_trim_in_seconds,
       w.second_trim_out_seconds,
@@ -135,11 +149,14 @@ export function buildSceneGraph(
       wordIndex: i,
       wordRowId: w.id,
       label: `Word ${i} — first clip${wordLabel ? ` (${wordLabel})` : ""}`,
-      nominalDurationSeconds: firstDur,
-      timelineDurationSeconds: firstDur,
+      nominalDurationSeconds: firstTiming.effective,
+      sourceRawDurationSeconds: firstTiming.raw,
+      sourceTrimInSeconds: firstTiming.trimIn,
+      sourceTrimOutSeconds: firstTiming.trimOut,
+      timelineDurationSeconds: firstTiming.effective,
     });
-    videoTimeline.push({ sceneKey: SCENE_KEYS.wordFirst(i), startSec: videoCursor, endSec: videoCursor + firstDur });
-    videoCursor += firstDur;
+    videoTimeline.push({ sceneKey: SCENE_KEYS.wordFirst(i), startSec: videoCursor, endSec: videoCursor + firstTiming.effective });
+    videoCursor += firstTiming.effective;
 
     scenes.push({
       key: SCENE_KEYS.wordCard(i),
@@ -158,14 +175,17 @@ export function buildSceneGraph(
       wordIndex: i,
       wordRowId: w.id,
       label: `Word ${i} — second clip${wordLabel ? ` (${wordLabel})` : ""}`,
-      nominalDurationSeconds: secondDur,
-      timelineDurationSeconds: secondDur,
+      nominalDurationSeconds: secondTiming.effective,
+      sourceRawDurationSeconds: secondTiming.raw,
+      sourceTrimInSeconds: secondTiming.trimIn,
+      sourceTrimOutSeconds: secondTiming.trimOut,
+      timelineDurationSeconds: secondTiming.effective,
     });
-    videoTimeline.push({ sceneKey: SCENE_KEYS.wordSecond(i), startSec: videoCursor, endSec: videoCursor + secondDur });
-    videoCursor += secondDur;
+    videoTimeline.push({ sceneKey: SCENE_KEYS.wordSecond(i), startSec: videoCursor, endSec: videoCursor + secondTiming.effective });
+    videoCursor += secondTiming.effective;
   });
 
-  const closingDur = effective(
+  const closingTiming = normalizeVideoTiming(
     level.closing_video_duration_seconds,
     level.closing_trim_in_seconds,
     level.closing_trim_out_seconds,
@@ -175,11 +195,14 @@ export function buildSceneGraph(
     key: SCENE_KEYS.closing,
     kind: "closing",
     label: "Closing",
-    nominalDurationSeconds: closingDur,
-    timelineDurationSeconds: closingDur,
+    nominalDurationSeconds: closingTiming.effective,
+    sourceRawDurationSeconds: closingTiming.raw,
+    sourceTrimInSeconds: closingTiming.trimIn,
+    sourceTrimOutSeconds: closingTiming.trimOut,
+    timelineDurationSeconds: closingTiming.effective,
   });
-  videoTimeline.push({ sceneKey: SCENE_KEYS.closing, startSec: videoCursor, endSec: videoCursor + closingDur });
-  videoCursor += closingDur;
+  videoTimeline.push({ sceneKey: SCENE_KEYS.closing, startSec: videoCursor, endSec: videoCursor + closingTiming.effective });
+  videoCursor += closingTiming.effective;
 
   const nominalDurationTotal = scenes.reduce((s, sc) => s + sc.timelineDurationSeconds, 0);
 

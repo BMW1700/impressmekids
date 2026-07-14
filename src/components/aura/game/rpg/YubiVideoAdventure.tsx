@@ -134,6 +134,10 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     [mix.clips]
   );
   const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
+  const overlayAudioReady = useMemo(
+    () => !dbLevelId || (!mix.loading && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
+    [dbLevelId, mix.clips, mix.loading, mix.signedUrls]
+  );
 
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -184,21 +188,33 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // ── Scene-event emission for the audio overlay mixer ─────────────────────
   // We emit `end` for the previous scene when stepIndex changes so fill-scene
-  // and fill-level clips can fade out. The corresponding `start` event is
-  // fired later from handleVideoPlaying — only once the swapped-in <video>
-  // actually paints its first frame — so the redub audio cannot drift ahead
-  // of the video by the crossfade / decode latency (200–800 ms per swap).
+  // and fill-level clips can fade out. Video-scene `start` is deferred until
+  // handleVideoPlaying — only once the swapped-in <video> actually paints.
+  // Word-card scenes have no video onPlaying event, so they must start
+  // immediately; otherwise a stale card key can fire on the next clip and make
+  // redub audio seem muted, late, or out of order.
   const prevSceneRef = useRef<string | null>(null);
   const pendingSceneStartRef = useRef<string | null>(null);
+  const emittedSceneStartsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!dbLevelId) return;
     if (phase === "tap-to-begin") return;
     const sceneKey = sceneKeyForStep(stepIndex, wordCount);
+    const stepForScene = steps[stepIndex];
     if (prevSceneRef.current === sceneKey) return;
     if (prevSceneRef.current) emitScene(prevSceneRef.current, "end");
     prevSceneRef.current = sceneKey;
-    pendingSceneStartRef.current = sceneKey;
-  }, [stepIndex, phase, dbLevelId, wordCount, emitScene]);
+    if (stepForScene?.kind === "clip") {
+      pendingSceneStartRef.current = sceneKey;
+      emittedSceneStartsRef.current.delete(sceneKey);
+    } else {
+      pendingSceneStartRef.current = null;
+      if (!emittedSceneStartsRef.current.has(sceneKey)) {
+        emittedSceneStartsRef.current.add(sceneKey);
+        emitScene(sceneKey, "start");
+      }
+    }
+  }, [stepIndex, phase, dbLevelId, wordCount, emitScene, steps]);
 
   // Emit a final closing-end when we reach the ending phase, so fill-* clips fade.
   useEffect(() => {
@@ -208,6 +224,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       emitScene(prevSceneRef.current, "end");
       prevSceneRef.current = null;
       pendingSceneStartRef.current = null;
+      emittedSceneStartsRef.current.clear();
     }
   }, [phase, dbLevelId, emitScene]);
 
@@ -512,7 +529,14 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
+    if (!overlayAudioReady) return;
     getCtx();
+    if (dbLevelId && steps[0]?.kind === "clip") {
+      const sceneKey = sceneKeyForStep(0, wordCount);
+      prevSceneRef.current = sceneKey;
+      pendingSceneStartRef.current = sceneKey;
+      emittedSceneStartsRef.current.delete(sceneKey);
+    }
     const v = videoRefs.current[activeSlotRef.current];
     if (v) {
       try {
@@ -634,8 +658,12 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     // came from firing scene-start on the React step-change effect.
     if (pendingSceneStartRef.current && slot === (incomingSlotRef.current ?? activeSlotRef.current)) {
       const sceneKey = pendingSceneStartRef.current;
+      const expectedSceneKey = sceneKeyForStep(stepIndex, wordCount);
       pendingSceneStartRef.current = null;
-      emitScene(sceneKey, "start");
+      if (current?.kind === "clip" && sceneKey === expectedSceneKey) {
+        emittedSceneStartsRef.current.add(sceneKey);
+        emitScene(sceneKey, "start");
+      }
     }
     // If this is the slot we're crossfading IN to, kick off the dissolve.
     if (incomingSlotRef.current === slot) {
@@ -819,7 +847,9 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-800">
               {adventure.goal}
             </div>
-            <div className="mt-4 text-base font-bold text-rose-600">Tap to begin →</div>
+            <div className="mt-4 text-base font-bold text-rose-600">
+              {overlayAudioReady ? "Tap to begin →" : "Loading audio…"}
+            </div>
           </div>
         </button>
       )}

@@ -55,6 +55,7 @@ interface ClipState {
   trackVolume: number; // mirror for fallback path
   anchorSceneKey: string;
   durationMode: PreKAudioClip["duration_mode"];
+  generation: number;
 }
 
 function audioBoundsForClip(clip: PreKAudioClip) {
@@ -82,6 +83,8 @@ export function usePreKAudioMixerRuntime({
   const activeSpanClipsRef = useRef<Set<string>>(new Set());
   const scheduledTimersRef = useRef<number[]>([]);
   const masterMultiplierRef = useRef<number>(masterVolume);
+  const activeSceneKeyRef = useRef<string | null>(null);
+  const eventGenerationRef = useRef(0);
 
   const ensureCtx = (): AudioContext | null => {
     if (typeof window === "undefined") return null;
@@ -167,8 +170,11 @@ export function usePreKAudioMixerRuntime({
     const ctx = ensureCtx(); if (!ctx) return null;
     let st = clipStatesRef.current.get(clip.id);
     if (st) {
-      // Keep trackIndex in sync if the clip was moved between tracks
+      // Keep runtime mirrors in sync if the clip was edited after this audio
+      // element was created (for example redub repair: fill-scene → fixed).
       st.trackIndex = clip.track_index;
+      st.anchorSceneKey = clip.anchor_scene_key;
+      st.durationMode = clip.duration_mode;
       return st;
     }
     const url = signedUrls[clip.storage_path]; if (!url) return null;
@@ -196,6 +202,7 @@ export function usePreKAudioMixerRuntime({
       trackVolume: trackVolumesRef.current.get(clip.track_index) ?? 1,
       anchorSceneKey: clip.anchor_scene_key,
       durationMode: clip.duration_mode,
+      generation: 0,
     };
     el.addEventListener("loadeddata", () => { if (st) st.loaded = true; });
     clipStatesRef.current.set(clip.id, st);
@@ -203,8 +210,10 @@ export function usePreKAudioMixerRuntime({
   };
 
   const fadeOutAndPause = (st: ClipState, durSec: number) => {
+    const generation = st.generation;
     setClipTargetVolume(st, 0, durSec);
     const tid = window.setTimeout(() => {
+      if (st.generation !== generation) return;
       try { st.el.pause(); } catch { /* noop */ }
       if (st.node === null) { try { st.el.volume = 0; } catch { /* noop */ } }
     }, Math.max(20, durSec * 1000 + 20));
@@ -227,6 +236,8 @@ export function usePreKAudioMixerRuntime({
     scheduledTimersRef.current.forEach((id) => window.clearTimeout(id));
     scheduledTimersRef.current = [];
     activeSpanClipsRef.current.clear();
+    activeSceneKeyRef.current = null;
+    eventGenerationRef.current += 1;
     for (const [, st] of clipStatesRef.current) {
       if (!st.el.paused) fadeOutAndPause(st, STOP_FADE_SEC);
       else if (st.node === null) { try { st.el.volume = 0; } catch { /* noop */ } }
@@ -242,6 +253,8 @@ export function usePreKAudioMixerRuntime({
     const bounds = audioBoundsForClip(clip);
     const rate = Math.max(0.05, clip.playback_rate || 1);
     const shouldLoop = !!opts.loop || clip.loop_clip;
+    st.generation += 1;
+    const generation = st.generation;
     st.el.loop = false;
     st.el.ontimeupdate = shouldLoop && bounds.finite
       ? () => {
@@ -264,6 +277,7 @@ export function usePreKAudioMixerRuntime({
     setClipTargetVolume(st, clip.volume, clip.fade_in_seconds || FADE_RAMP_SEC);
     if (!shouldLoop && bounds.finite) {
       const tid = window.setTimeout(() => {
+        if (st.generation !== generation) return;
         fadeOutAndPause(st, clip.fade_out_seconds || STOP_FADE_SEC);
       }, Math.max(20, (bounds.length / rate) * 1000));
       scheduledTimersRef.current.push(tid);
@@ -275,6 +289,10 @@ export function usePreKAudioMixerRuntime({
     if (!enabled || !event) return;
     const ctx = ensureCtx(); if (!ctx) return;
     const { sceneKey, edge, isWordCard } = event;
+    eventGenerationRef.current += 1;
+    const eventGeneration = eventGenerationRef.current;
+    if (edge === "start") activeSceneKeyRef.current = sceneKey;
+    if (edge === "end" && activeSceneKeyRef.current === sceneKey) activeSceneKeyRef.current = null;
 
     if (sceneKey === "opening" && edge === "start") {
       for (const clip of clips.filter((c) => c.duration_mode === "fill-level")) {
@@ -310,6 +328,7 @@ export function usePreKAudioMixerRuntime({
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "start") continue;
         const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
         const fire = () => {
+          if (eventGenerationRef.current !== eventGeneration || activeSceneKeyRef.current !== sceneKey) return;
           if (clip.duration_mode === "span-videos") {
             activeSpanClipsRef.current.add(clip.id);
             playClip(clip);
@@ -327,6 +346,7 @@ export function usePreKAudioMixerRuntime({
         if (clip.duration_mode !== "span-videos") continue;
         if (clip.end_anchor_scene_key !== sceneKey || clip.end_anchor_edge !== "start") continue;
         const fire = () => {
+          if (eventGenerationRef.current !== eventGeneration || activeSceneKeyRef.current !== sceneKey) return;
           activeSpanClipsRef.current.delete(clip.id);
           const st = clipStatesRef.current.get(clip.id); if (!st) return;
           fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
@@ -347,7 +367,10 @@ export function usePreKAudioMixerRuntime({
       for (const clip of clips) {
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "end") continue;
         const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
-        const fire = () => { if (clip.duration_mode === "fixed") playClip(clip); };
+        const fire = () => {
+          if (eventGenerationRef.current !== eventGeneration) return;
+          if (clip.duration_mode === "fixed") playClip(clip);
+        };
         if (delayMs === 0) fire();
         else { const tid = window.setTimeout(fire, delayMs); scheduledTimersRef.current.push(tid); }
       }
@@ -374,6 +397,8 @@ export function usePreKAudioMixerRuntime({
       }
       clipStatesRef.current.clear();
       activeSpanClipsRef.current.clear();
+      activeSceneKeyRef.current = null;
+      eventGenerationRef.current += 1;
       try { ctxRef.current?.close(); } catch { /* noop */ }
       ctxRef.current = null;
       masterGainRef.current = null;
