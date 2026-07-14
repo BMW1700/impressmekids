@@ -194,6 +194,8 @@ export function usePreKAudioMixerRuntime({
       el, node, clipGain, loaded: false,
       trackIndex: clip.track_index,
       trackVolume: trackVolumesRef.current.get(clip.track_index) ?? 1,
+      anchorSceneKey: clip.anchor_scene_key,
+      durationMode: clip.duration_mode,
     };
     el.addEventListener("loadeddata", () => { if (st) st.loaded = true; });
     clipStatesRef.current.set(clip.id, st);
