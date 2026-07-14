@@ -62,6 +62,7 @@ interface ClipState {
   anchorSceneKey: string;
   endAnchorSceneKey: string | null;
   durationMode: PreKAudioClip["duration_mode"];
+  sourceKind: string | null;
   generation: number;
 }
 
@@ -184,6 +185,7 @@ export function usePreKAudioMixerRuntime({
       st.anchorSceneKey = clip.anchor_scene_key;
       st.endAnchorSceneKey = clip.end_anchor_scene_key;
       st.durationMode = clip.duration_mode;
+      st.sourceKind = clip.source_kind ?? null;
       return st;
     }
     const url = signedUrls[clip.storage_path]; if (!url) return null;
@@ -212,6 +214,7 @@ export function usePreKAudioMixerRuntime({
       anchorSceneKey: clip.anchor_scene_key,
       endAnchorSceneKey: clip.end_anchor_scene_key,
       durationMode: clip.duration_mode,
+      sourceKind: clip.source_kind ?? null,
       generation: 0,
     };
     const markLoaded = () => {
@@ -346,7 +349,7 @@ export function usePreKAudioMixerRuntime({
 
     if (edge === "start") {
       if (isWordCard) {
-        for (const clip of clips.filter((c) => c.duration_mode === "fill-level" && c.pause_on_word_card)) {
+        for (const clip of clips.filter((c) => c.pause_on_word_card)) {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           fadeOutAndPause(st, CARD_FADE_SEC);
         }
@@ -466,11 +469,12 @@ export function usePreKAudioMixerRuntime({
     };
   }, []);
 
-  // Whether any clip anchored to `sceneKey` is still audibly playing. Used by
-  // the runtime video player to hold the last frame while a redub tail
-  // (fixed-mode clip on track 90) finishes past the video's natural end.
+  // Whether any voice-like clip anchored to `sceneKey` is still audibly playing.
+  // Track 89 music/background stems must never hold/freeze video advancement;
+  // they are stopped by scene/word-card events instead.
   const isSceneAudioBusy = (sceneKey: string): boolean => {
     for (const [, st] of clipStatesRef.current) {
+      if (st.sourceKind === "music" || st.trackIndex === 89) continue;
       if (st.anchorSceneKey !== sceneKey && st.endAnchorSceneKey !== sceneKey) continue;
       if (!st.el.paused && st.el.currentTime < (st.el.duration || Infinity) - 0.02) return true;
     }

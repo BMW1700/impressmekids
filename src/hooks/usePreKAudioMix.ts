@@ -45,6 +45,7 @@ export interface PreKAudioClip {
   trim_end_seconds: number | null;
 
   playback_rate: number;
+  source_kind?: string | null;
 }
 
 export interface PreKLevelAudioSettings {

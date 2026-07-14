@@ -36,6 +36,10 @@ interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+  sceneDurationSeconds?: number;
+  sourceRawDurationSeconds?: number;
+  sourceTrimStartSeconds?: number;
+  sourceTrimEndSeconds?: number;
   resumeJobId?: string;
 }
 
@@ -285,6 +289,10 @@ Deno.serve(async (req) => {
       levelId: body.levelId,
       sceneKey: body.sceneKey,
       storagePath: outPath,
+      sceneDurationSeconds: body.sceneDurationSeconds,
+      sourceRawDurationSeconds: body.sourceRawDurationSeconds,
+      sourceTrimStartSeconds: body.sourceTrimStartSeconds,
+      sourceTrimEndSeconds: body.sourceTrimEndSeconds,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -301,7 +309,15 @@ Deno.serve(async (req) => {
 
 async function ensureMusicClip(
   admin: ReturnType<typeof createClient>,
-  args: { levelId: string; sceneKey: string; storagePath: string },
+  args: {
+    levelId: string;
+    sceneKey: string;
+    storagePath: string;
+    sceneDurationSeconds?: number;
+    sourceRawDurationSeconds?: number;
+    sourceTrimStartSeconds?: number;
+    sourceTrimEndSeconds?: number;
+  },
 ) {
   // Idempotent track upsert — safe when parallel workers race for the same
   // (level, track_index). ignoreDuplicates skips if the track already exists.
@@ -328,6 +344,23 @@ async function ensureMusicClip(
     .is("deleted_at", null)
     .maybeSingle();
 
+  const trimmedDuration = Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+    ? Number(args.sceneDurationSeconds)
+    : null;
+  const rawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
+    ? Number(args.sourceRawDurationSeconds)
+    : trimmedDuration != null
+      ? Number(args.sourceTrimStartSeconds || 0) + trimmedDuration
+      : null;
+  const trimStart = Number.isFinite(args.sourceTrimStartSeconds) && Number(args.sourceTrimStartSeconds) > 0
+    ? Number(args.sourceTrimStartSeconds)
+    : 0;
+  const trimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
+    ? Number(args.sourceTrimEndSeconds)
+    : trimmedDuration != null
+      ? trimStart + trimmedDuration
+      : null;
+
   const clipPatch = {
     level_id: args.levelId,
     track_index: MUSIC_TRACK_INDEX,
@@ -336,15 +369,18 @@ async function ensureMusicClip(
     anchor_scene_key: args.sceneKey,
     anchor_edge: "start" as const,
     anchor_offset_seconds: 0,
-    duration_mode: "fill-scene" as const,
+    // Music/SFX stems must behave like the redub lane: one scene-bounded
+    // one-shot directly under Track 90, never a looping bed that can bleed
+    // into word cards or hold/freeze the video.
+    duration_mode: "fixed" as const,
+    duration_seconds: rawDuration,
     volume: 0.8,
     fade_in_seconds: 0,
     fade_out_seconds: 0,
     loop_clip: false,
-    // Background music should keep playing UNDER word cards — only the redubbed
-    // voice should duck. Word cards mute video + redub; music bed continues.
-    pause_on_word_card: false,
-    trim_start_seconds: 0,
+    pause_on_word_card: true,
+    trim_start_seconds: trimStart,
+    trim_end_seconds: trimEnd,
     playback_rate: 1.0,
     source_kind: "music" as const,
   };

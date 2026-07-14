@@ -634,7 +634,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (!current || current.kind !== "clip") return;
 
     const sceneKey = prevSceneRef.current;
-    const HOLD_CAP_MS = 3000;
+    const HOLD_CAP_MS = 2000;
     const started = Date.now();
     const tryAdvance = () => {
       const busy = sceneKey ? mixerHandle.isSceneAudioBusy(sceneKey) : false;

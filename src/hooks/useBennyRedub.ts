@@ -338,6 +338,10 @@ export function useBennyRedub(levelId: string | null) {
             levelId,
             sceneKey: scene.sceneKey,
             sourceStoragePath: scene.sourceStoragePath,
+            sceneDurationSeconds: scene.sceneDurationSeconds,
+            sourceRawDurationSeconds: scene.sourceRawDurationSeconds,
+            sourceTrimStartSeconds: scene.sourceTrimStartSeconds,
+            sourceTrimEndSeconds: scene.sourceTrimEndSeconds,
             resumeJobId,
           },
         });
