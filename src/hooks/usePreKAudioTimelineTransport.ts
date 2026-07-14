@@ -117,7 +117,9 @@ export function usePreKAudioTimelineTransport({
       return;
     }
 
-    let desired: { clip: PreKAudioClip; startSec: number; endSec: number } | null = null;
+    // Per-track winner: allow every track to play its topmost active clip in
+    // parallel (Redub on track 90 + Music on track 89 must both be audible).
+    const desiredByTrack = new Map<number, { clip: PreKAudioClip; startSec: number; endSec: number }>();
 
     for (const clip of clips) {
       const track = tracksByIndex.get(clip.track_index);
@@ -128,31 +130,31 @@ export function usePreKAudioTimelineTransport({
       const resolved = resolveClip(clip, graph);
       if (playheadSec < resolved.startSec || playheadSec >= resolved.endSec) continue;
 
-      const current = desired;
+      const current = desiredByTrack.get(clip.track_index);
       if (
         !current ||
         resolved.startSec > current.startSec ||
         (resolved.startSec === current.startSec && clip.sort_order > current.clip.sort_order)
       ) {
-        desired = { clip, startSec: resolved.startSec, endSec: resolved.endSec };
+        desiredByTrack.set(clip.track_index, { clip, startSec: resolved.startSec, endSec: resolved.endSec });
       }
     }
 
-    const desiredIds = new Set(desired ? [desired.clip.id] : []);
+    const desiredIds = new Set<string>();
+    for (const w of desiredByTrack.values()) desiredIds.add(w.clip.id);
 
     for (const id of Array.from(activeRef.current)) {
       if (!desiredIds.has(id)) hardStopClip(id, true);
     }
 
-    if (desired) {
-      const { clip, startSec } = desired;
+    for (const { clip, startSec } of desiredByTrack.values()) {
       const track = tracksByIndex.get(clip.track_index);
       const st = ensureState(clip);
-      if (!track || !st) return;
+      if (!track || !st) continue;
       if (!st.loaded) {
         // Do not play until metadata exists. Browsers can ignore currentTime on
         // fresh audio elements, which starts redubs at 0 instead of trim-in.
-        return;
+        continue;
       }
 
       const rate = Math.max(0.05, clip.playback_rate || 1);
@@ -163,7 +165,7 @@ export function usePreKAudioTimelineTransport({
         targetAudioTime = bounds.start + ((targetAudioTime - bounds.start) % bounds.length);
       } else if (!loopsWithinWindow && targetAudioTime >= bounds.end) {
         hardStopClip(clip.id, true);
-        return;
+        continue;
       }
       const targetVolume = clamp01((clip.volume ?? 1) * (track.volume ?? 1) * masterVolume);
 
