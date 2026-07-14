@@ -579,9 +579,12 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
 
   // ── clip onEnded → next step ───────────────────────────────────────────────
-  const handleClipEnded = (slot: Slot) => {
-    // Only react to the active slot ending. (Old, faded-out slot can also fire
-    // ended after a swap; ignore those.)
+  // If the redub audio anchored to this scene still has an unplayed tail,
+  // freeze on the last video frame until the audio finishes. This is what
+  // makes the last word/syllable always play out instead of getting chopped
+  // when the source video's cut lands earlier than the redub's end.
+  const holdAdvanceTimerRef = useRef<number | null>(null);
+  const advanceAfterClip = (slot: Slot) => {
     if (slot !== activeSlotRef.current) return;
     if (!current || current.kind !== "clip") return;
     const next = stepIndex + 1;
@@ -593,6 +596,34 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setStepIndex(next);
     setPhase(nextStep.kind === "word" ? "ask" : "clip");
   };
+  const handleClipEnded = (slot: Slot) => {
+    // Only react to the active slot ending. (Old, faded-out slot can also fire
+    // ended after a swap; ignore those.)
+    if (slot !== activeSlotRef.current) return;
+    if (!current || current.kind !== "clip") return;
+
+    const sceneKey = prevSceneRef.current;
+    const HOLD_CAP_MS = 3000;
+    const started = Date.now();
+    const tryAdvance = () => {
+      const busy = sceneKey ? mixerHandle.isSceneAudioBusy(sceneKey) : false;
+      const elapsed = Date.now() - started;
+      if (busy && elapsed < HOLD_CAP_MS) {
+        // Freeze on last frame: pause the active video (it's already at end)
+        // and re-check shortly.
+        const v = videoRefs.current[slot];
+        if (v) { try { v.pause(); } catch { /* noop */ } }
+        holdAdvanceTimerRef.current = window.setTimeout(tryAdvance, 120);
+        return;
+      }
+      holdAdvanceTimerRef.current = null;
+      advanceAfterClip(slot);
+    };
+    tryAdvance();
+  };
+  useEffect(() => () => {
+    if (holdAdvanceTimerRef.current) window.clearTimeout(holdAdvanceTimerRef.current);
+  }, []);
 
   // ── Crossfade trigger: incoming slot just painted its first frame ─────────
   const handleVideoPlaying = (slot: Slot) => {
