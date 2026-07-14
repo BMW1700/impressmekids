@@ -403,9 +403,24 @@ export function usePreKAudioMixerRuntime({
 
     if (edge === "end") {
       for (const clip of clips) {
-        if (clip.duration_mode === "fill-scene" && clip.anchor_scene_key === sceneKey) {
+        if (clip.anchor_scene_key !== sceneKey) continue;
+        if (clip.duration_mode === "fill-scene") {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
+        } else if (clip.duration_mode === "fixed" && clip.anchor_edge === "start") {
+          // Unified voice-cutoff: any `fixed` clip anchored to this scene's
+          // start is treated like a voice line — allow a short tail past
+          // scene-end, then fade out. This stops uploaded voice from bleeding
+          // into the following word card. Redub clips are already server-
+          // trimmed to scene+tail so this is a no-op for them.
+          const st = clipStatesRef.current.get(clip.id); if (!st) continue;
+          if (st.el.paused) continue;
+          const generation = st.generation;
+          const tid = window.setTimeout(() => {
+            if (st.generation !== generation) return;
+            fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
+          }, Math.round(FIXED_SCENE_TAIL_SEC * 1000));
+          scheduledTimersRef.current.push(tid);
         }
       }
       for (const clip of clips) {
