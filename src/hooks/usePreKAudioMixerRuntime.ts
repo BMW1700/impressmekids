@@ -170,8 +170,11 @@ export function usePreKAudioMixerRuntime({
     const ctx = ensureCtx(); if (!ctx) return null;
     let st = clipStatesRef.current.get(clip.id);
     if (st) {
-      // Keep trackIndex in sync if the clip was moved between tracks
+      // Keep runtime mirrors in sync if the clip was edited after this audio
+      // element was created (for example redub repair: fill-scene → fixed).
       st.trackIndex = clip.track_index;
+      st.anchorSceneKey = clip.anchor_scene_key;
+      st.durationMode = clip.duration_mode;
       return st;
     }
     const url = signedUrls[clip.storage_path]; if (!url) return null;
