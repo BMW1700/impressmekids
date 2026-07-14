@@ -115,7 +115,9 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     const needed = clipsRows.map((c) => c.storage_path);
     const missing = needed.filter((p) => !signedUrls[p]);
     const fresh = missing.length > 0 ? await signMany(missing) : {};
-    setSignedUrls((prev) => ({ ...prev, ...fresh }));
+    if (Object.keys(fresh).length > 0) {
+      setSignedUrls((prev) => ({ ...prev, ...fresh }));
+    }
     setLoading(false);
   }, [levelId, signedUrls]);
 
