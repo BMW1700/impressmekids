@@ -1,53 +1,94 @@
-## Audit finding
+## Brutally honest audit
 
-The redub is working because it is a `fixed` clip with `pause_on_word_card: true` and server-side trim/tail behavior.
+**Do I know what the issue is? Yes.**
 
-The music/background stem is broken because the extractor creates it as:
+The LALAL music stem did **not** disappear. The stem files exist in backend storage. The problem is the **Track 89 timeline metadata** and the **runtime cutoff behavior**.
+
+### What is actually broken
+
+1. **The previous Track 89 repair was incomplete.**
+   - It changed music clips to `fixed`, no-loop, and pause-on-word-card.
+   - But it did **not** backfill correct clip duration/trim data.
+   - Result: existing music clips now behave like broken 1-second/unknown-length one-shots.
+
+2. **The editor compresses Music because duration is missing or wrong.**
+   - Current Track 89 database rows include music clips with `duration_seconds = null`.
+   - The timeline renderer treats missing fixed duration as `1 second`.
+   - One current music clip is explicitly `duration_seconds = 1` and `trim_end_seconds = 1`.
+   - That is why the blue Music blocks look tiny/disappeared instead of matching the redub/video scene width.
+
+3. **Published/runtime playback mutes because source video audio is muted and Track 89 is too short/badly bounded.**
+   - Source video audio is correctly muted so original Benny voice does not leak.
+   - But Track 89 is not correctly spanning the scene.
+   - So when the music clip ends instantly or gets cut early, there is no fallback audio, which sounds like the music was muted.
+
+4. **Redub should not be touched.**
+   - Track 90 redub is working.
+   - The fix must be isolated to Track 89 music/background stems and shared display/runtime safeguards.
+
+## Fix plan
+
+### 1. Repair all existing Track 89 music clips
+Backfill current music clips so they match the visible video scene:
+
+- Opening music uses opening video duration/trim.
+- Closing music uses closing video duration/trim.
+- `word-N-first` music uses that word's first video duration/trim.
+- `word-N-second` music uses that word's second video duration/trim.
+
+Each repaired Track 89 clip will be:
 
 ```text
-duration_mode: fill-scene
-pause_on_word_card: false
-fade_out_seconds: 0
+duration_mode: fixed
+source_kind: music
+track_index: 89
+loop_clip: false
+pause_on_word_card: true
+duration_seconds: source raw video duration
+trim_start_seconds: source video trim-in
+trim_end_seconds: source video trim-out, or raw duration if no trim-out
 ```
 
-That means the runtime treats music as a looping scene bed, not as a redub-aligned clip. When the video reaches the end, the player sees scene audio still active, holds/freezes the last frame, and the music/background stem can keep playing into the word card.
+This makes the Music lane visually line up under Redub again.
 
-## Plan
+### 2. Harden the Music extractor for future runs
+Update the music extraction function so new LALAL clips can never save null/1-second timeline metadata again:
 
-1. **Do not touch redub placement or redub generation.**
-   - Leave Track 90 redub logic alone.
-   - Leave the redub edge function behavior alone.
+- Always calculate a finite duration.
+- Always calculate a finite trim end.
+- If source raw duration is unavailable, fall back to scene duration.
+- Keep Track 89 directly below Track 90.
+- Keep source video muted after successful redub/music generation.
 
-2. **Change newly generated music/background clips to behave like the redub lane.**
-   - In the music extraction function, place Track 89 clips as scene-bounded one-shots instead of looping `fill-scene` beds.
-   - Set music/background clips to `fixed` mode.
-   - Set `pause_on_word_card: true`.
-   - Set no looping.
-   - Store the same source trim metadata used by redub so the stem aligns with the visible video scene.
+### 3. Make Track 89 stop at scene boundaries immediately
+Change runtime behavior only for music/background stems:
 
-3. **Make runtime word-card cutoff explicit for background stems.**
-   - On word-card start, fade/pause all non-level audio marked `pause_on_word_card`, including fixed music/background clips.
-   - Keep persistent level music untouched only if it is truly `fill-level` and not marked to pause.
+- On scene end, Track 89 fades/stops immediately.
+- On word-card start, Track 89 fades/stops immediately.
+- Track 89 never uses the redub 2-second voice tail.
+- Track 89 never causes freeze-hold.
 
-4. **Remove music/background from freeze-hold eligibility.**
-   - The video freeze hold should wait for voice-like redub tails, not for Track 89 background/music stems.
-   - `isSceneAudioBusy` will ignore `source_kind: music` / Track 89 so background noise can never force a frozen last frame.
-   - Redub can still use its tail hold exactly as it does now.
+Redub keeps its current tail behavior unchanged.
 
-5. **Lower the hard freeze cap from 3s to 2s.**
-   - This matches the redub tail policy and prevents long visible stalls if anything goes wrong.
+### 4. Add a defensive timeline display fallback
+Even if an old/bad Track 89 row ever has missing duration again, the editor should render it across the anchored scene instead of collapsing to a tiny 1-second block.
 
-6. **Repair existing already-generated music clips.**
-   - Add a safe backend repair step to update current Track 89 music clips from `fill-scene` / `pause_on_word_card: false` to redub-like `fixed` / `pause_on_word_card: true` / no loop.
-   - This matters because changing the extractor only fixes future music runs; your current broken clips need to be corrected too.
+### 5. Deploy and verify
+After implementation:
 
-## Files to change
-
-- `supabase/functions/prek-clip-music-extract/index.ts`
-- `src/hooks/usePreKAudioMixerRuntime.ts`
-- `src/components/aura/game/rpg/YubiVideoAdventure.tsx`
-- One backend repair query/migration for existing Track 89 music clips
+- Apply the backend repair.
+- Deploy the updated music extraction function.
+- Verify the current level's Track 89 rows have real durations/trims.
+- Confirm Track 89 is visible under Track 90 and no longer muted in runtime.
 
 ## Expected result
 
-Track 89 will sit under Track 90 visually, but behave like it operationally: when the redub stops/pauses for a word card, the background/music stem stops/pauses too. Track 89 will not keep playing over word boxes and will not cause video freeze holds.
+Track 89 will sit directly under Track 90, span the same scene window, play with the redub during video scenes, stop for word boxes, and never freeze the video.
+
+<presentation-actions>
+  <presentation-open-history>View History</presentation-open-history>
+</presentation-actions>
+
+<presentation-actions>
+<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
+</presentation-actions>
