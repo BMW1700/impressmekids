@@ -26,6 +26,12 @@ const FADE_RAMP_SEC = 0.03;
 const CARD_FADE_SEC = 0.15;
 const SCENE_END_FADE_SEC = 0.2;
 const STOP_FADE_SEC = 0.05;
+// How long a voice-like `fixed` clip is allowed to run past the end of the
+// scene it's anchored to. Uploaded voice can be arbitrarily long; without
+// this tail-cutoff it bleeds into the following word card and freezes the
+// video for the full HOLD_CAP. Matches the 2-second tail baked into
+// server-trimmed redub clips.
+const FIXED_SCENE_TAIL_SEC = 2.0;
 
 type SceneEdge = "start" | "end";
 
@@ -397,9 +403,24 @@ export function usePreKAudioMixerRuntime({
 
     if (edge === "end") {
       for (const clip of clips) {
-        if (clip.duration_mode === "fill-scene" && clip.anchor_scene_key === sceneKey) {
+        if (clip.anchor_scene_key !== sceneKey) continue;
+        if (clip.duration_mode === "fill-scene") {
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
+        } else if (clip.duration_mode === "fixed" && clip.anchor_edge === "start") {
+          // Unified voice-cutoff: any `fixed` clip anchored to this scene's
+          // start is treated like a voice line — allow a short tail past
+          // scene-end, then fade out. This stops uploaded voice from bleeding
+          // into the following word card. Redub clips are already server-
+          // trimmed to scene+tail so this is a no-op for them.
+          const st = clipStatesRef.current.get(clip.id); if (!st) continue;
+          if (st.el.paused) continue;
+          const generation = st.generation;
+          const tid = window.setTimeout(() => {
+            if (st.generation !== generation) return;
+            fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
+          }, Math.round(FIXED_SCENE_TAIL_SEC * 1000));
+          scheduledTimersRef.current.push(tid);
         }
       }
       for (const clip of clips) {
