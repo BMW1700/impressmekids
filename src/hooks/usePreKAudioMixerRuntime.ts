@@ -32,6 +32,7 @@ const STOP_FADE_SEC = 0.05;
 // video for the full HOLD_CAP. Matches the 2-second tail baked into
 // server-trimmed redub clips.
 const FIXED_SCENE_TAIL_SEC = 2.0;
+const MUSIC_TRACK_INDEX = 89;
 
 type SceneEdge = "start" | "end";
 
@@ -71,6 +72,10 @@ function audioBoundsForClip(clip: PreKAudioClip) {
   const rawEnd = clip.trim_end_seconds ?? clip.duration_seconds ?? Number.POSITIVE_INFINITY;
   const end = Math.max(start + 0.1, rawEnd);
   return { start, end, length: Math.max(0.1, end - start), finite: Number.isFinite(end) };
+}
+
+function isMusicStem(clip: PreKAudioClip): boolean {
+  return clip.source_kind === "music" || clip.track_index === MUSIC_TRACK_INDEX;
 }
 
 export interface PreKAudioMixerHandle {
@@ -418,6 +423,10 @@ export function usePreKAudioMixerRuntime({
           // trimmed to scene+tail so this is a no-op for them.
           const st = clipStatesRef.current.get(clip.id); if (!st) continue;
           if (st.el.paused) continue;
+          if (isMusicStem(clip)) {
+            fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
+            continue;
+          }
           const generation = st.generation;
           const tid = window.setTimeout(() => {
             if (st.generation !== generation) return;
@@ -474,7 +483,7 @@ export function usePreKAudioMixerRuntime({
   // they are stopped by scene/word-card events instead.
   const isSceneAudioBusy = (sceneKey: string): boolean => {
     for (const [, st] of clipStatesRef.current) {
-      if (st.sourceKind === "music" || st.trackIndex === 89) continue;
+      if (st.sourceKind === "music" || st.trackIndex === MUSIC_TRACK_INDEX) continue;
       if (st.anchorSceneKey !== sceneKey && st.endAnchorSceneKey !== sceneKey) continue;
       if (!st.el.paused && st.el.currentTime < (st.el.duration || Infinity) - 0.02) return true;
     }

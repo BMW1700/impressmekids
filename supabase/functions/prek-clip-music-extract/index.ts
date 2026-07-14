@@ -344,21 +344,33 @@ async function ensureMusicClip(
     .is("deleted_at", null)
     .maybeSingle();
 
-  const trimmedDuration = Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+  const sceneDuration = Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
     ? Number(args.sceneDurationSeconds)
     : null;
-  const rawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
-    ? Number(args.sourceRawDurationSeconds)
-    : trimmedDuration != null
-      ? Number(args.sourceTrimStartSeconds || 0) + trimmedDuration
-      : null;
   const trimStart = Number.isFinite(args.sourceTrimStartSeconds) && Number(args.sourceTrimStartSeconds) > 0
     ? Number(args.sourceTrimStartSeconds)
     : 0;
-  const trimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
+  const sourceTrimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
     ? Number(args.sourceTrimEndSeconds)
-    : trimmedDuration != null
-      ? trimStart + trimmedDuration
+    : null;
+  const sourceRawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
+    ? Number(args.sourceRawDurationSeconds)
+    : null;
+  const sourceWindowEnd = sourceTrimEnd ?? (sourceRawDuration != null ? sourceRawDuration : null);
+  const effectiveSourceWindow = sourceWindowEnd != null
+    ? Math.max(0.1, sourceWindowEnd - trimStart)
+    : sceneDuration;
+  const playableDuration = sceneDuration != null && effectiveSourceWindow != null
+    ? Math.max(sceneDuration, effectiveSourceWindow)
+    : sceneDuration ?? effectiveSourceWindow ?? sourceRawDuration ?? 1;
+  const trimEnd = trimStart + playableDuration;
+  const rawDuration = sourceRawDuration != null
+    ? Math.max(sourceRawDuration, trimEnd)
+    : trimEnd;
+  const visualDuration = sourceRawDuration != null
+    ? sourceRawDuration
+    : sceneDuration != null
+      ? trimStart + sceneDuration
       : null;
 
   const clipPatch = {
@@ -369,18 +381,18 @@ async function ensureMusicClip(
     anchor_scene_key: args.sceneKey,
     anchor_edge: "start" as const,
     anchor_offset_seconds: 0,
-    // Music/SFX stems must behave like the redub lane: one scene-bounded
-    // one-shot directly under Track 90, never a looping bed that can bleed
-    // into word cards or hold/freeze the video.
+    // Music/SFX stems are full separated scene stems. They sit directly under
+    // Track 90 and play as bounded one-shots, but they must NEVER inherit a
+    // 1-second source-video trim as their total audible length.
     duration_mode: "fixed" as const,
-    duration_seconds: rawDuration,
+    duration_seconds: visualDuration ?? rawDuration,
     volume: 0.8,
     fade_in_seconds: 0,
     fade_out_seconds: 0,
     loop_clip: false,
     pause_on_word_card: true,
     trim_start_seconds: trimStart,
-    trim_end_seconds: trimEnd,
+    trim_end_seconds: Math.min(rawDuration, trimEnd),
     playback_rate: 1.0,
     source_kind: "music" as const,
   };
