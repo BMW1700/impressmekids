@@ -382,13 +382,26 @@ export function usePreKAudioMixerRuntime({
     };
   }, []);
 
+  // Whether any clip anchored to `sceneKey` is still audibly playing. Used by
+  // the runtime video player to hold the last frame while a redub tail
+  // (fixed-mode clip on track 90) finishes past the video's natural end.
+  const isSceneAudioBusy = (sceneKey: string): boolean => {
+    for (const [, st] of clipStatesRef.current) {
+      if (st.anchorSceneKey !== sceneKey) continue;
+      if (st.durationMode !== "fixed") continue;
+      if (!st.el.paused && st.el.currentTime < (st.el.duration || Infinity) - 0.02) return true;
+    }
+    return false;
+  };
+
   // Stable handle. stopAll closes over refs so identity can stay constant.
   const handleRef = useRef<PreKAudioMixerHandle | null>(null);
   if (!handleRef.current) {
-    handleRef.current = { ready: enabled, stopAll };
+    handleRef.current = { ready: enabled, stopAll, isSceneAudioBusy };
   } else {
     handleRef.current.ready = enabled;
     handleRef.current.stopAll = stopAll;
+    handleRef.current.isSceneAudioBusy = isSceneAudioBusy;
   }
   return useMemo(() => handleRef.current!, [enabled]);
 }
