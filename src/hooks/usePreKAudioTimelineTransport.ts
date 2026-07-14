@@ -7,7 +7,7 @@
 // scrubs, restarts, and overlapping clip regions, even when clips sit on
 // different visual tracks.
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
@@ -28,6 +28,7 @@ interface ClipState {
   el: HTMLAudioElement;
   storagePath: string;
   playing: boolean;
+  loaded: boolean;
 }
 
 export interface PreKAudioTimelineTransportHandle {
@@ -62,6 +63,7 @@ export function usePreKAudioTimelineTransport({
 }: UseArgs): PreKAudioTimelineTransportHandle {
   const statesRef = useRef<Map<string, ClipState>>(new Map());
   const activeRef = useRef<Set<string>>(new Set());
+  const [loadVersion, setLoadVersion] = useState(0);
 
   const tracksByIndex = useMemo(() => new Map(tracks.map((t) => [t.track_index, t])), [tracks]);
 
@@ -94,8 +96,18 @@ export function usePreKAudioTimelineTransport({
     el.crossOrigin = "anonymous";
     el.preload = "auto";
     el.volume = 0;
-    st = { el, storagePath: clip.storage_path, playing: false };
+    st = { el, storagePath: clip.storage_path, playing: false, loaded: el.readyState >= 1 };
+    const markLoaded = () => {
+      const current = statesRef.current.get(clip.id);
+      if (!current || current.loaded) return;
+      current.loaded = true;
+      setLoadVersion((n) => n + 1);
+    };
+    el.addEventListener("loadedmetadata", markLoaded);
+    el.addEventListener("canplay", markLoaded);
+    el.addEventListener("loadeddata", markLoaded);
     statesRef.current.set(clip.id, st);
+    try { el.load(); } catch { /* noop */ }
     return st;
   }, [hardStopClip, signedUrls]);
 
@@ -137,6 +149,11 @@ export function usePreKAudioTimelineTransport({
       const track = tracksByIndex.get(clip.track_index);
       const st = ensureState(clip);
       if (!track || !st) return;
+      if (!st.loaded) {
+        // Do not play until metadata exists. Browsers can ignore currentTime on
+        // fresh audio elements, which starts redubs at 0 instead of trim-in.
+        return;
+      }
 
       const rate = Math.max(0.05, clip.playback_rate || 1);
       const bounds = audioBoundsForClip(clip);
@@ -168,7 +185,7 @@ export function usePreKAudioTimelineTransport({
         });
       }
     }
-  }, [clips, enabled, ensureState, graph, hardStopClip, masterVolume, muteAll, playheadSec, signedUrls, soloTrackIndex, stopAll, tracksByIndex]);
+  }, [clips, enabled, ensureState, graph, hardStopClip, loadVersion, masterVolume, muteAll, playheadSec, signedUrls, soloTrackIndex, stopAll, tracksByIndex]);
 
   useEffect(() => () => {
     for (const [, st] of statesRef.current) {
