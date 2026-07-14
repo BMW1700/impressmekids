@@ -53,6 +53,8 @@ interface ClipState {
   loaded: boolean;
   trackIndex: number;
   trackVolume: number; // mirror for fallback path
+  anchorSceneKey: string;
+  durationMode: PreKAudioClip["duration_mode"];
 }
 
 function audioBoundsForClip(clip: PreKAudioClip) {
