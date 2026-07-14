@@ -134,6 +134,10 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     [mix.clips]
   );
   const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
+  const overlayAudioReady = useMemo(
+    () => !dbLevelId || (!mix.loading && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
+    [dbLevelId, mix.clips, mix.loading, mix.signedUrls]
+  );
 
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -525,6 +529,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // ── tap-to-begin satisfies iOS autoplay restriction ────────────────────────
   const handleBegin = () => {
+    if (!overlayAudioReady) return;
     getCtx();
     if (dbLevelId && steps[0]?.kind === "clip") {
       const sceneKey = sceneKeyForStep(0, wordCount);
@@ -842,7 +847,9 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
             <div className="text-2xl sm:text-3xl font-extrabold text-slate-800">
               {adventure.goal}
             </div>
-            <div className="mt-4 text-base font-bold text-rose-600">Tap to begin →</div>
+            <div className="mt-4 text-base font-bold text-rose-600">
+              {overlayAudioReady ? "Tap to begin →" : "Loading audio…"}
+            </div>
           </div>
         </button>
       )}
