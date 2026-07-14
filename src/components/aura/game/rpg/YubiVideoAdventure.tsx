@@ -135,9 +135,16 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   );
   const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
   const overlayAudioReady = useMemo(
-    () => !dbLevelId || (!mix.loading && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
-    [dbLevelId, mix.clips, mix.loading, mix.signedUrls]
+    () => !dbLevelId || (!mix.loading && mixerHandle.ready && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
+    [dbLevelId, mix.clips, mix.loading, mix.signedUrls, mixerHandle.ready]
   );
+
+  useEffect(() => {
+    for (const slot of ["A", "B"] as const) {
+      const v = videoRefs.current[slot];
+      if (v) v.muted = muteSourceVideo;
+    }
+  }, [muteSourceVideo]);
 
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -660,9 +667,10 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       const sceneKey = pendingSceneStartRef.current;
       const expectedSceneKey = sceneKeyForStep(stepIndex, wordCount);
       pendingSceneStartRef.current = null;
-      if (current?.kind === "clip" && sceneKey === expectedSceneKey) {
-        emittedSceneStartsRef.current.add(sceneKey);
-        emitScene(sceneKey, "start");
+      if (current?.kind === "clip") {
+        const sceneToEmit = sceneKey === expectedSceneKey ? sceneKey : expectedSceneKey;
+        emittedSceneStartsRef.current.add(sceneToEmit);
+        emitScene(sceneToEmit, "start");
       }
     }
     // If this is the slot we're crossfading IN to, kick off the dissolve.

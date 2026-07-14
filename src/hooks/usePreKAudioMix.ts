@@ -1,7 +1,7 @@
 // Loads the per-level audio mix (tracks + clips + signed URLs + level settings).
 // Used by both the editor (with full reactivity) and the runtime mixer.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
 
@@ -80,6 +80,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
   const [tracks, setTracks] = useState<PreKAudioTrack[]>([]);
   const [clips, setClips] = useState<PreKAudioClip[]>([]);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const signedUrlsRef = useRef<Record<string, string>>({});
   const [settings, setSettings] = useState<PreKLevelAudioSettings>({
     audio_master_volume: 1,
     mute_source_video_audio: false,
@@ -88,6 +89,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
 
   const reload = useCallback(async () => {
     if (!levelId) {
+      signedUrlsRef.current = {};
       setTracks([]); setClips([]); setSignedUrls({}); setLoading(false);
       return;
     }
@@ -113,13 +115,14 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     // fires scene-start once; if loading flips false before URLs exist, the
     // first redub/music clip can be silently missed.
     const needed = clipsRows.map((c) => c.storage_path);
-    const missing = needed.filter((p) => !signedUrls[p]);
+    const missing = needed.filter((p) => !signedUrlsRef.current[p]);
     const fresh = missing.length > 0 ? await signMany(missing) : {};
     if (Object.keys(fresh).length > 0) {
-      setSignedUrls((prev) => ({ ...prev, ...fresh }));
+      signedUrlsRef.current = { ...signedUrlsRef.current, ...fresh };
+      setSignedUrls(signedUrlsRef.current);
     }
     setLoading(false);
-  }, [levelId, signedUrls]);
+  }, [levelId]);
 
   useEffect(() => { void reload(); }, [reload]);
 

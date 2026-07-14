@@ -308,16 +308,27 @@ async function ensureRedubClip(
     .is("deleted_at", null)
     .maybeSingle();
 
+  const trimmedDuration = Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+    ? Number(args.sceneDurationSeconds)
+    : null;
   const rawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
     ? Number(args.sourceRawDurationSeconds)
-    : Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
-      ? Number(args.sceneDurationSeconds)
+    : trimmedDuration != null
+      ? Number(args.sourceTrimStartSeconds || 0) + trimmedDuration
       : null;
   const trimStart = Number.isFinite(args.sourceTrimStartSeconds) && Number(args.sourceTrimStartSeconds) > 0
     ? Number(args.sourceTrimStartSeconds)
     : 0;
   const trimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
     ? Number(args.sourceTrimEndSeconds)
+    : null;
+  // Keep trim-in for lip sync, but don't hard-cut exactly at source trim-out.
+  // ElevenLabs can add a small sentence tail; the runtime already freeze-holds
+  // the last frame while fixed redub audio finishes.
+  const redubTrimEnd = trimEnd != null && rawDuration != null
+    ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
+      ? null
+      : Math.min(rawDuration, trimEnd + 2)
     : null;
 
   const clipPatch = {
@@ -336,15 +347,30 @@ async function ensureRedubClip(
     loop_clip: false,
     pause_on_word_card: true,
     trim_start_seconds: trimStart,
-    trim_end_seconds: trimEnd,
+    trim_end_seconds: redubTrimEnd,
     playback_rate: 1.0,
     source_kind: "redub" as const,
   };
 
   if (existingClip?.id) {
-    await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", existingClip.id);
+    const { error } = await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", existingClip.id);
+    if (error) throw new Error(`Failed to update redub clip: ${error.message}`);
   } else {
-    await admin.from("prek_level_audio_clips").insert(clipPatch);
+    const { error } = await admin.from("prek_level_audio_clips").insert(clipPatch);
+    if (error) {
+      const { data: racedClip, error: racedReadError } = await admin
+        .from("prek_level_audio_clips")
+        .select("id")
+        .eq("level_id", args.levelId)
+        .eq("track_index", REDUB_TRACK_INDEX)
+        .eq("anchor_scene_key", args.sceneKey)
+        .eq("source_kind", "redub")
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (racedReadError || !racedClip?.id) throw new Error(`Failed to insert redub clip: ${error.message}`);
+      const { error: retryError } = await admin.from("prek_level_audio_clips").update(clipPatch).eq("id", racedClip.id);
+      if (retryError) throw new Error(`Failed to repair raced redub clip: ${retryError.message}`);
+    }
   }
 
   // 3. Auto-enable "mute source video audio" so the redub isn't fighting the original.
