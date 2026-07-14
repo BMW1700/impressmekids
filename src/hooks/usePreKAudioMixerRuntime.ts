@@ -233,6 +233,8 @@ export function usePreKAudioMixerRuntime({
     scheduledTimersRef.current.forEach((id) => window.clearTimeout(id));
     scheduledTimersRef.current = [];
     activeSpanClipsRef.current.clear();
+    activeSceneKeyRef.current = null;
+    eventGenerationRef.current += 1;
     for (const [, st] of clipStatesRef.current) {
       if (!st.el.paused) fadeOutAndPause(st, STOP_FADE_SEC);
       else if (st.node === null) { try { st.el.volume = 0; } catch { /* noop */ } }
@@ -341,6 +343,7 @@ export function usePreKAudioMixerRuntime({
         if (clip.duration_mode !== "span-videos") continue;
         if (clip.end_anchor_scene_key !== sceneKey || clip.end_anchor_edge !== "start") continue;
         const fire = () => {
+          if (eventGenerationRef.current !== eventGeneration || activeSceneKeyRef.current !== sceneKey) return;
           activeSpanClipsRef.current.delete(clip.id);
           const st = clipStatesRef.current.get(clip.id); if (!st) return;
           fadeOutAndPause(st, clip.fade_out_seconds || SCENE_END_FADE_SEC);
