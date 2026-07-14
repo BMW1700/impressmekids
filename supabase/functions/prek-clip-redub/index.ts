@@ -42,6 +42,9 @@ interface Body {
   stage?: "isolate" | "sts";
   isolatedStoragePath?: string; // required when stage === "sts"
   sceneDurationSeconds?: number; // fallback clip length until exact MP3 metadata is available
+  sourceRawDurationSeconds?: number;
+  sourceTrimStartSeconds?: number;
+  sourceTrimEndSeconds?: number;
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
@@ -248,6 +251,9 @@ Deno.serve(async (req) => {
       sceneKey: body.sceneKey,
       storagePath: outPath,
       sceneDurationSeconds: body.sceneDurationSeconds,
+      sourceRawDurationSeconds: body.sourceRawDurationSeconds,
+      sourceTrimStartSeconds: body.sourceTrimStartSeconds,
+      sourceTrimEndSeconds: body.sourceTrimEndSeconds,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -266,7 +272,15 @@ Deno.serve(async (req) => {
 
 async function ensureRedubClip(
   admin: ReturnType<typeof createClient>,
-  args: { levelId: string; sceneKey: string; storagePath: string; sceneDurationSeconds?: number },
+  args: {
+    levelId: string;
+    sceneKey: string;
+    storagePath: string;
+    sceneDurationSeconds?: number;
+    sourceRawDurationSeconds?: number;
+    sourceTrimStartSeconds?: number;
+    sourceTrimEndSeconds?: number;
+  },
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
   // (level_id, track_index). ignoreDuplicates skips if a track already exists.
@@ -294,6 +308,18 @@ async function ensureRedubClip(
     .is("deleted_at", null)
     .maybeSingle();
 
+  const rawDuration = Number.isFinite(args.sourceRawDurationSeconds) && Number(args.sourceRawDurationSeconds) > 0
+    ? Number(args.sourceRawDurationSeconds)
+    : Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
+      ? Number(args.sceneDurationSeconds)
+      : null;
+  const trimStart = Number.isFinite(args.sourceTrimStartSeconds) && Number(args.sourceTrimStartSeconds) > 0
+    ? Number(args.sourceTrimStartSeconds)
+    : 0;
+  const trimEnd = Number.isFinite(args.sourceTrimEndSeconds) && Number(args.sourceTrimEndSeconds) > 0
+    ? Number(args.sourceTrimEndSeconds)
+    : null;
+
   const clipPatch = {
     level_id: args.levelId,
     track_index: REDUB_TRACK_INDEX,
@@ -303,15 +329,14 @@ async function ensureRedubClip(
     anchor_edge: "start" as const,
     anchor_offset_seconds: 0,
     duration_mode: "fixed" as const,
-    duration_seconds: Number.isFinite(args.sceneDurationSeconds) && Number(args.sceneDurationSeconds) > 0
-      ? Number(args.sceneDurationSeconds)
-      : null,
+    duration_seconds: rawDuration,
     volume: 1.0,
     fade_in_seconds: 0,
     fade_out_seconds: 0,
     loop_clip: false,
     pause_on_word_card: true,
-    trim_start_seconds: 0,
+    trim_start_seconds: trimStart,
+    trim_end_seconds: trimEnd,
     playback_rate: 1.0,
     source_kind: "redub" as const,
   };
