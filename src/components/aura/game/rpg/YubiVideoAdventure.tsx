@@ -597,6 +597,15 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   // ── Crossfade trigger: incoming slot just painted its first frame ─────────
   const handleVideoPlaying = (slot: Slot) => {
     setPlayBlocked(false);
+    // Fire the pending scene-start now — only once the video is actually
+    // producing frames. This guarantees the redub audio starts exactly when
+    // the paired video frame is on screen, eliminating the 3–4 s drift that
+    // came from firing scene-start on the React step-change effect.
+    if (pendingSceneStartRef.current && slot === (incomingSlotRef.current ?? activeSlotRef.current)) {
+      const sceneKey = pendingSceneStartRef.current;
+      pendingSceneStartRef.current = null;
+      emitScene(sceneKey, "start");
+    }
     // If this is the slot we're crossfading IN to, kick off the dissolve.
     if (incomingSlotRef.current === slot) {
       incomingSlotRef.current = null;
