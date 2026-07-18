@@ -123,7 +123,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Compare pairs side-by-side: mat → mate, kit → kite, hop → hope. The E is silent but powerful.',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 9–10',
+      ckla: 'Grade 1 Skills Units 4–6',
+      hmhIntoReading: 'Grade 1 Modules 6–8',
+      elEducation: 'Grade 1 Module 2 Cycles 1–3',
+      witWisdom: 'Grade 1 Module 2',
+      ufli: 'Lessons 61–80',
+    },
   },
+
   {
     id: 'digraphs',
     stageNumber: 4,
