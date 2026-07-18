@@ -89,7 +89,7 @@ export const compareWordPhonemes = (
   aligned.forEach(({ expected, spoken, index }) => {
     if (expected && spoken && expected !== spoken) {
       // Check if phonemes are similar (might still be acceptable)
-      if (!arePhonemesSimilar(expected, spoken, 0.2)) {
+      if (!arePhonemesSimilar(expected, spoken, phonemeSimilarityThreshold)) {
         substitutions.push({
           expected,
           spoken,
