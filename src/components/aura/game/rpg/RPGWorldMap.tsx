@@ -451,6 +451,9 @@ export const RPGWorldMap = ({
           />
         )}
 
+        {/* Challenge Meter quick-adjust — visible on all modes, first-class on Pre-K */}
+        <ChallengeQuickAdjust variant="amber" />
+
         {/* Pre-K → Benny's Village entry */}
         {isPrek && (
           <Button
