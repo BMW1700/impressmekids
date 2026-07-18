@@ -11,6 +11,19 @@ import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { isHomophone, getWordVariants } from '@/lib/homophones';
 import { isPhonicsConfusion } from '@/lib/phonicsConfusionMap';
 import { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
+import {
+  CHALLENGE_LEVELS,
+  DEFAULT_CHALLENGE_LEVEL,
+  type ChallengeThresholds,
+} from '@/lib/challengeMeter';
+
+/**
+ * Default thresholds = level 3 (Standard). Every matcher accepts an optional
+ * `thresholds` argument so the Challenge Meter can tune strictness per student
+ * at runtime WITHOUT touching the recognizer. Omitting the argument keeps the
+ * historical behavior byte-for-byte.
+ */
+const DEFAULT_THRESHOLDS: ChallengeThresholds = CHALLENGE_LEVELS[DEFAULT_CHALLENGE_LEVEL];
 
 // Fuzzy string matching using Levenshtein distance
 export const levenshteinDistance = (a: string, b: string): number => {
@@ -55,41 +68,39 @@ export const findWordInWindow = (
   expectedWords: string[],
   startIdx: number,
   windowSize: number = 5,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { matchedIndex: number; matchScore: number } => {
   const normalizedSpoken = normalizeWord(spoken);
   if (!normalizedSpoken) return { matchedIndex: -1, matchScore: 0 };
-  
+
   let bestMatch = -1;
   let bestScore = 0;
-  
+
   const endIdx = Math.min(startIdx + windowSize, expectedWords.length);
-  
+
   for (let i = startIdx; i < endIdx; i++) {
     const expected = expectedWords[i];
     const normalizedExpected = normalizeWord(expected);
-    
-    // Exact match - highest priority
+
     if (normalizedSpoken === normalizedExpected) {
       return { matchedIndex: i, matchScore: 100 };
     }
-    
-    // Calculate similarity score
+
     const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
     const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
     const score = Math.round(((maxLen - distance) / maxLen) * 100);
-    
-    // Check if it meets the threshold
-    const meetsThreshold = useLenient 
-      ? isWordMatchLenient(spoken, expected)
-      : isWordMatchStrict(spoken, expected);
-    
+
+    const meetsThreshold = useLenient
+      ? isWordMatchLenient(spoken, expected, thresholds)
+      : isWordMatchStrict(spoken, expected, thresholds);
+
     if (meetsThreshold && score > bestScore) {
       bestScore = score;
       bestMatch = i;
     }
   }
-  
+
   return { matchedIndex: bestMatch, matchScore: bestScore };
 };
 
@@ -100,37 +111,37 @@ export const findWordInWindow = (
 export const matchWithAlternatives = (
   alternatives: string[],
   expected: string,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { isMatch: boolean; bestAlternative: string; matchScore: number } => {
   let bestScore = 0;
   let bestAlternative = alternatives[0] || '';
-  
+
   for (const alt of alternatives) {
     const words = alt.split(/\s+/).filter(w => w.length > 0);
     for (const word of words) {
       const normalizedWord = normalizeWord(word);
       const normalizedExpected = normalizeWord(expected);
-      
+
       if (normalizedWord === normalizedExpected) {
         return { isMatch: true, bestAlternative: word, matchScore: 100 };
       }
-      
+
       const distance = levenshteinDistance(normalizedWord, normalizedExpected);
       const maxLen = Math.max(normalizedWord.length, normalizedExpected.length);
       const score = Math.round(((maxLen - distance) / maxLen) * 100);
-      
+
       if (score > bestScore) {
         bestScore = score;
         bestAlternative = word;
       }
     }
   }
-  
-  // Check if best match meets threshold
-  const meetsThreshold = useLenient 
-    ? isWordMatchLenient(bestAlternative, expected)
-    : isWordMatchStrict(bestAlternative, expected);
-  
+
+  const meetsThreshold = useLenient
+    ? isWordMatchLenient(bestAlternative, expected, thresholds)
+    : isWordMatchStrict(bestAlternative, expected, thresholds);
+
   return { isMatch: meetsThreshold, bestAlternative, matchScore: bestScore };
 };
 
@@ -142,38 +153,38 @@ export const matchWithAlternatives = (
 export const matchWithPhonemes = (
   spoken: string,
   expected: string,
-  threshold: number = 0.70
+  threshold?: number,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { isMatch: boolean; similarity: number } => {
   try {
-    // Get phonemes for both words using CMU Dictionary
+    const effectiveThreshold = threshold ?? thresholds.minPhonemeAccuracy;
     const expectedPhonemes = getIPAPronunciation(expected)[0] || [];
     const spokenPhonemes = getIPAPronunciation(spoken)[0] || [];
-    
+
     if (expectedPhonemes.length === 0 || spokenPhonemes.length === 0) {
-      // Words not in dictionary - fall back to text matching
       return { isMatch: false, similarity: 0 };
     }
-    
-    // Calculate phoneme-level similarity
+
     const maxLen = Math.max(expectedPhonemes.length, spokenPhonemes.length);
     const minLen = Math.min(expectedPhonemes.length, spokenPhonemes.length);
-    
+
     let matchCount = 0;
     for (let i = 0; i < minLen; i++) {
       if (expectedPhonemes[i] === spokenPhonemes[i]) {
         matchCount++;
-      } else if (arePhonemesSimilar(expectedPhonemes[i], spokenPhonemes[i], 0.3)) {
-        matchCount += 0.7; // Partial credit for similar phonemes
+      } else if (
+        arePhonemesSimilar(expectedPhonemes[i], spokenPhonemes[i], thresholds.phonemeSimilarityThreshold)
+      ) {
+        matchCount += 0.7;
       }
     }
-    
+
     const similarity = matchCount / maxLen;
-    return { 
-      isMatch: similarity >= threshold, 
-      similarity 
+    return {
+      isMatch: similarity >= effectiveThreshold,
+      similarity,
     };
   } catch (e) {
-    // Fallback if phoneme comparison fails
     return { isMatch: false, similarity: 0 };
   }
 };
@@ -185,29 +196,24 @@ export const matchWithPhonemes = (
 export const findWordInFullTranscript = (
   expectedWord: string,
   fullTranscript: string,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): boolean => {
   const normalizedExpected = normalizeWord(expectedWord);
   const transcriptWords = fullTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-  
+
   for (const spokenWord of transcriptWords) {
     const normalizedSpoken = normalizeWord(spokenWord);
-    
-    // Exact match
-    if (normalizedSpoken === normalizedExpected) {
-      return true;
-    }
-    
-    // Fuzzy match based on mode
-    const isMatch = useLenient 
-      ? isWordMatchLenient(spokenWord, expectedWord)
-      : isWordMatchStrict(spokenWord, expectedWord);
-    
-    if (isMatch) {
-      return true;
-    }
+
+    if (normalizedSpoken === normalizedExpected) return true;
+
+    const isMatch = useLenient
+      ? isWordMatchLenient(spokenWord, expectedWord, thresholds)
+      : isWordMatchStrict(spokenWord, expectedWord, thresholds);
+
+    if (isMatch) return true;
   }
-  
+
   return false;
 };
 
@@ -217,155 +223,100 @@ export const findWordInFullTranscript = (
  * 
  * SUPERCHARGED V3: Homophones checked FIRST before fuzzy matching
  */
-export const isWordMatchLenient = (spoken: string, expected: string): boolean => {
+export const isWordMatchLenient = (
+  spoken: string,
+  expected: string,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
+): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
-  
-  // Exact match - definitely correct
-  if (normalizedSpoken === normalizedExpected) return true;
-  
-  // Empty check - no speech = not correct
-  if (!normalizedSpoken) return false;
-  if (!normalizedExpected) return false;
-  
-  // SUPERCHARGED V3: Check homophones FIRST (before fuzzy matching)
-  // This catches "the" → "da", "to" → "two", etc.
-  if (isHomophone(normalizedSpoken, normalizedExpected)) {
-    console.log('🎯 HOMOPHONE MATCH:', normalizedSpoken, '→', normalizedExpected);
-    return true;
-  }
 
-  // V4: Phonics-aware misrecognition map (egg→agg, the→duh, three→free, etc.)
-  // Web Speech API systematically misrecognizes short vowels and th-sounds.
-  if (isPhonicsConfusion(normalizedSpoken, normalizedExpected)) {
-    console.log('🔤 PHONICS CONFUSION MATCH:', normalizedSpoken, '→', normalizedExpected);
-    return true;
-  }
-  
+  if (normalizedSpoken === normalizedExpected) return true;
+  if (!normalizedSpoken || !normalizedExpected) return false;
+
+  // Homophones + phonics confusion accepted at levels 1-3
+  if (isHomophone(normalizedSpoken, normalizedExpected)) return true;
+  if (isPhonicsConfusion(normalizedSpoken, normalizedExpected)) return true;
+
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  
-  // SHORT WORDS (1-3 chars): Must be exact or 1 char difference max
-  if (normalizedExpected.length <= 3) {
-    return distance <= 1;
-  }
-  
-  // MEDIUM WORDS (4-6 chars): Max 1 char difference (for speech recognition artifacts)
-  if (normalizedExpected.length <= 6) {
-    return distance <= 1;
-  }
-  
-  // LONG WORDS (7+ chars): Max 2 char difference (for speech recognition artifacts)
-  return distance <= 2;
+  const len = normalizedExpected.length;
+  // tolerance is a ratio of allowed edits per char. Always allow at least 1 edit
+  // so single-letter substitutions don't fail short words at low levels.
+  const maxAllowed = Math.max(1, Math.floor(len * thresholds.levenshteinTolerance));
+  return distance <= maxAllowed;
 };
 
 /**
- * STRICT word matching - for benchmark assessments (accuracy mode)
- * DIBELS-quality accuracy for formal assessment
- * 
- * SUPERCHARGED V3: Also checks homophones (true homophones are valid even in strict mode)
+ * STRICT word matching - for benchmark assessments (accuracy mode).
+ * Homophones accepted only for the "true homophones" list; no child variants.
  */
-export const isWordMatchStrict = (spoken: string, expected: string): boolean => {
+const TRUE_HOMOPHONES = new Set([
+  'to','two','too','for','four','their','there',"they're",
+  'your',"you're",'its',"it's",'know','no','new','knew',
+  'right','write','here','hear','see','sea','be','bee',
+  'by','buy','bye','one','won','eight','ate','sun','son',
+  'some','sum','pair','pear','peace','piece','tail','tale',
+  'mail','male','sail','sale','made','maid','plain','plane',
+  'role','roll','hole','whole','dear','deer','bare','bear',
+  'hair','hare','fair','fare','stair','stare','knight','night',
+  'wait','weight','week','weak','meat','meet','feat','feet',
+  'road','rode','rain','reign','rein','break','brake',
+]);
+
+export const isWordMatchStrict = (
+  spoken: string,
+  expected: string,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
+): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
-  
-  // Exact match - definitely correct
+
   if (normalizedSpoken === normalizedExpected) return true;
-  
-  // Empty check - if no speech, mark as incorrect in strict mode
-  if (!normalizedSpoken) return false;
-  if (!normalizedExpected) return false;
-  
-  // SUPERCHARGED V3: Check TRUE homophones (to/two/too are valid even in strict mode)
-  // But NOT children's speech variants like "da" for "the"
+  if (!normalizedSpoken || !normalizedExpected) return false;
+
   if (isHomophone(normalizedSpoken, normalizedExpected)) {
-    // In strict mode, only accept true homophones (not speech pattern variants)
-    const trueHomophones = ['to', 'two', 'too', 'for', 'four', 'their', 'there', "they're", 
-                           'your', "you're", 'its', "it's", 'know', 'no', 'new', 'knew',
-                           'right', 'write', 'here', 'hear', 'see', 'sea', 'be', 'bee',
-                           'by', 'buy', 'bye', 'one', 'won', 'eight', 'ate', 'sun', 'son',
-                           'some', 'sum', 'pair', 'pear', 'peace', 'piece', 'tail', 'tale',
-                           'mail', 'male', 'sail', 'sale', 'made', 'maid', 'plain', 'plane',
-                           'role', 'roll', 'hole', 'whole', 'dear', 'deer', 'bare', 'bear',
-                           'hair', 'hare', 'fair', 'fare', 'stair', 'stare', 'knight', 'night'];
-    if (trueHomophones.includes(normalizedExpected) || trueHomophones.includes(normalizedSpoken)) {
+    if (TRUE_HOMOPHONES.has(normalizedExpected) || TRUE_HOMOPHONES.has(normalizedSpoken)) {
       return true;
     }
   }
 
-  // V4: Phonics-aware misrecognition — accepted even in strict assessment mode.
-  // The child is correct; the API is wrong (e.g., short-e heard as short-a).
-  if (isPhonicsConfusion(normalizedSpoken, normalizedExpected)) {
-    console.log('🔤 STRICT PHONICS CONFUSION MATCH:', normalizedSpoken, '→', normalizedExpected);
+  // Phonics confusion accepted at level 4 but NOT at level 5 (assessment-grade)
+  if (thresholds.minPhonemeAccuracy < 0.9 && isPhonicsConfusion(normalizedSpoken, normalizedExpected)) {
     return true;
   }
-  
-  // SHORT WORDS (1-3 chars): Max 1 character difference allowed
-  if (normalizedExpected.length <= 3) {
-    const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-    return distance <= 1;
-  }
-  
-  // ALL OTHER WORDS: 80% match required (much stricter)
+
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  const maxAllowedDistance = Math.ceil(normalizedExpected.length * 0.2); // 20% tolerance only
-  
-  return distance <= maxAllowedDistance;
+  const len = normalizedExpected.length;
+  // Strict path: no free short-word edit — allow at most floor(len * tol).
+  const maxAllowed = Math.floor(len * thresholds.levenshteinTolerance);
+  return distance <= maxAllowed;
 };
 
 /**
- * BATTLE MODE word matching - for challenging difficulty in campaign mode
- * Stricter than lenient but still fair for children
- * - No children's speech variants (no "da" for "the")
- * - Only true homophones accepted
- * - 80% match required for longer words
+ * BATTLE MODE word matching - stricter than lenient, no child variants.
  */
-export const isWordMatchBattle = (spoken: string, expected: string): boolean => {
+export const isWordMatchBattle = (
+  spoken: string,
+  expected: string,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
+): boolean => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
-  
-  // Exact match - definitely correct
+
   if (normalizedSpoken === normalizedExpected) return true;
-  
-  // Empty check
-  if (!normalizedSpoken) return false;
-  if (!normalizedExpected) return false;
-  
-  // Only TRUE homophones (to/two/too) - NOT children's variants (da/the)
-  const trueHomophones = ['to', 'two', 'too', 'for', 'four', 'their', 'there', "theyre", 
-                         'your', "youre", 'its', "its", 'know', 'no', 'new', 'knew',
-                         'right', 'write', 'here', 'hear', 'see', 'sea', 'be', 'bee',
-                         'by', 'buy', 'bye', 'one', 'won', 'eight', 'ate', 'sun', 'son',
-                         'some', 'sum', 'pair', 'pear', 'peace', 'piece', 'tail', 'tale',
-                         'mail', 'male', 'sail', 'sale', 'made', 'maid', 'plain', 'plane',
-                         'role', 'roll', 'hole', 'whole', 'dear', 'deer', 'bare', 'bear',
-                         'hair', 'hare', 'fair', 'fare', 'stair', 'stare', 'knight', 'night',
-                         'wait', 'weight', 'week', 'weak', 'meat', 'meet', 'feat', 'feet',
-                         'road', 'rode', 'rain', 'reign', 'rein', 'break', 'brake'];
-  
+  if (!normalizedSpoken || !normalizedExpected) return false;
+
   if (isHomophone(normalizedSpoken, normalizedExpected)) {
-    // Only accept if BOTH words are in the true homophones list
-    if (trueHomophones.includes(normalizedExpected) || trueHomophones.includes(normalizedSpoken)) {
+    if (TRUE_HOMOPHONES.has(normalizedExpected) || TRUE_HOMOPHONES.has(normalizedSpoken)) {
       return true;
     }
-    // Reject children's speech variants like "da" for "the"
     return false;
   }
-  
+
   const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
-  
-  // SHORT WORDS (1-3 chars): Must be exact or 1 char difference max
-  if (normalizedExpected.length <= 3) {
-    return distance <= 1;
-  }
-  
-  // MEDIUM WORDS (4-6 chars): Max 1 char difference
-  if (normalizedExpected.length <= 6) {
-    return distance <= 1;
-  }
-  
-  // LONG WORDS (7+ chars): 80% match required (max 20% difference)
-  const maxAllowedDistance = Math.floor(normalizedExpected.length * 0.2);
-  return distance <= maxAllowedDistance;
+  const len = normalizedExpected.length;
+  const maxAllowed = Math.max(1, Math.floor(len * Math.min(0.25, thresholds.levenshteinTolerance)));
+  return distance <= maxAllowed;
 };
 
 /**
@@ -382,10 +333,11 @@ export interface WordMatchResult {
  * Detailed word match analysis for teacher verification workflow
  */
 export const analyzeWordMatch = (
-  spoken: string, 
-  expected: string, 
-  speechConfidence: number = 1, // Web Speech API confidence (0-1)
-  isStrictMode: boolean = false
+  spoken: string,
+  expected: string,
+  speechConfidence: number = 1,
+  isStrictMode: boolean = false,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): WordMatchResult => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
@@ -401,28 +353,19 @@ export const analyzeWordMatch = (
   }
   
   // Determine if word is correct based on mode
-  const isCorrect = isStrictMode 
-    ? isWordMatchStrict(spoken, expected)
-    : isWordMatchLenient(spoken, expected);
-  
-  // Determine overall confidence
+  const isCorrect = isStrictMode
+    ? isWordMatchStrict(spoken, expected, thresholds)
+    : isWordMatchLenient(spoken, expected, thresholds);
+
   let confidence: 'high' | 'medium' | 'low';
   const combinedScore = (matchScore / 100 + speechConfidence) / 2;
-  
-  if (combinedScore >= 0.9) {
-    confidence = 'high';
-  } else if (combinedScore >= 0.7) {
-    confidence = 'medium';
-  } else {
-    confidence = 'low';
-  }
-  
-  // Flag for teacher verification if:
-  // - Speech API confidence < 0.7
-  // - Match score is in the gray zone (60-85%)
-  // - Word result differs between strict and lenient modes
-  const lenientResult = isWordMatchLenient(spoken, expected);
-  const strictResult = isWordMatchStrict(spoken, expected);
+
+  if (combinedScore >= 0.9) confidence = 'high';
+  else if (combinedScore >= 0.7) confidence = 'medium';
+  else confidence = 'low';
+
+  const lenientResult = isWordMatchLenient(spoken, expected, thresholds);
+  const strictResult = isWordMatchStrict(spoken, expected, thresholds);
   const modesDisagree = lenientResult !== strictResult;
   
   const needsVerification = 

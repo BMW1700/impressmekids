@@ -1,139 +1,64 @@
 
-# YubiLearn Master Plan — Bronx K-2 Pilot Sprint — v5 FINAL (Post-Audit)
+## Brutal-honest recap (so nothing is oversold)
 
-## Brutal-honesty audit results — what we ALREADY have
+- **Web Speech API and iOS `SFSpeechRecognizer` do NOT expose a strictness dial.** They only return transcripts (+ optional confidence). Apple and Chrome give you no acoustic threshold knob.
+- **All 1-5 strictness on YubiLearn is our own post-processing** (`wordMatchingModes.ts`, `phonemeInference.ts`, homophones, phonics-confusion map, Levenshtein).
+- **Good news:** because the dial lives above the recognizer, it works identically on Web + iOS Capacitor. Only the transcript source changes; the matcher is shared.
 
-**Don't rebuild — already 80%+ done:**
-- ✅ **Pre-K video upload** (`preKVideoUpload.ts`, `PreKLevelBuilder`, `PreKWorldsList`) — single-file upload works. Only missing = bulk drag-drop.
-- ✅ **Auto-duration probing** (`preKVideoDurationProbe.ts`) — fully wired, auto-backfills DB. Reuse as-is.
-- ✅ **Universal screener BOY/MOY/EOY** (`useBenchmarkData`, `ClassroomScreeningDashboard`, `benchmark_assessment_periods` + `student_benchmark_results` tables) — ~90% done. Just needs label verification.
-- ✅ **Scope & Sequence page + PDF export** (`ScopeAndSequence.tsx`, `scopeSequencePdf.ts`) — public route lives, CCSS/Wilson/UFLI mapped. Extend, don't recreate.
-- ✅ **Interventions backend** (`useInterventions`, `student_interventions` table, `InterventionTracker`) — full plumbing exists. Only UI/tier-grouping is missing.
-- ✅ **Pre-K word banks** (`preKWordBanks.ts` 73 lines) — categories exist as hardcoded arrays. Need DB migration + phoneme tags, not a from-scratch build.
-- ✅ **Legal docs** (`CONTRACT_READINESS.md`, `docs/soc2/*`) — content written. Just needs packaging into a route.
+## What we're building
 
-**Genuinely missing — build from scratch:**
-- ❌ Deprecation flag on old Pre-K content
-- ❌ Challenge Meter (1–5 speech strictness dial + parent/teacher UI + phonemeInference wiring)
-- ❌ Principal demo route with seeded 6-week growth data
-- ❌ `/for-principals` landing page
-- ❌ `/pilot-packet` route packaging existing legal docs + `pilot_agreements` table
-- ❌ Teacher training video + laminated PDF (content, not code)
-- ❌ Multi-state approval workflow (currently just `is_published` boolean)
+Turn the existing `CHALLENGE_LEVELS` table (already in `src/lib/challengeMeter.ts`) into the single source of truth every matcher reads at runtime, live-tunable per student, with teacher override + parent control already wired to `challenge_settings`.
 
----
+### 1. Runtime thresholds — replace hardcoded constants
 
-## You produce 30 Pre-K videos (unchanged from v4)
+Refactor `src/lib/wordMatchingModes.ts` so `isWordMatchLenient`, `isWordMatchStrict`, `isWordMatchBattle`, `matchWithPhonemes`, and `analyzeWordMatch` accept an optional `ChallengeThresholds` argument. When omitted, fall back to the current defaults (level 3) so nothing regresses.
 
-Same 30-video split — 16 categories + 3 charter-critical additions (Sight Words / Letters & Sounds / Rhyming). New videos go through existing `PreKLevelBuilder` upload flow. No changes to your production workflow.
+Level dial maps to actual matcher behavior:
 
----
+```text
+Level 1 Very Easy  → Levenshtein ≤ 55% of word len, phoneme sim ≤ 0.55,
+                     accept homophones + phonics-confusion + child variants
+Level 2 Easy       → Lev ≤ 45%,  phoneme sim ≤ 0.45,  accept child variants
+Level 3 Standard   → current lenient behavior (unchanged default)
+Level 4 Strict     → current strict behavior, no child variants
+Level 5 Very Strict→ exact + true-homophones only, no confusion map,
+                     Lev ≤ 15%, phoneme sim ≤ 0.10
+```
 
-## What I build — only the deltas
+Also patch the hardcoded `arePhonemesSimilar(..., 0.2)` in `phonemeInference.ts:91` and `0.3` in `wordMatchingModes.ts:165` to read `thresholds.phonemeSimilarityThreshold`.
 
-### Track A — Pre-K video infrastructure improvements (not rebuilds)
+### 2. Live per-student thresholds (already-in-DB, now consumed)
 
-**A1. Bulk drop-zone wrapper around existing uploader**
-- New component `<PreKBulkVideoDropzone>` that accepts multiple MP4s + auto-parses filename (e.g. `W101-L1-opening.mp4`) to route each file into the existing `uploadPreKVideo()` function.
-- No changes to the upload primitive itself.
+- `useChallengeSettings(studentId)` already returns `{ level, thresholds }` and already listens to Supabase. Add a **realtime subscription** on `challenge_settings` filtered by `student_id` so a parent sliding on their phone or a teacher overriding from the dashboard changes the live student session within ~1 second — no refresh, no re-login.
+- Add a lightweight React context `ChallengeContext` mounted inside the student session shell so every reader (`WordByWordReader`, `SingleWordReader`, RPG readers, TugOfWar, `PhonicsMasteryCheck`, `PredictivePractice`) pulls thresholds from one place instead of prop-drilling.
+- Every call site above swaps `isWordMatchLenient(a,b)` → `isWordMatchLenient(a,b, thresholds)`.
 
-**A2. Extend word taxonomy in DB (migration, not new system)**
-- Migration: add `phoneme_tags text[]`, `curriculum_tags jsonb` (`{fundations_unit, ckla_domain, hmh_unit, el_module, ww_module}`), `category text`, `category_level int` to `prek_level_words`.
-- Seed script converts existing `preKWordBanks.ts` arrays + your 30-video word list into rows.
+### 3. Teacher override UI
 
-**A3. Multi-state approval on `prek_levels`**
-- Migration: `status enum('draft','ready_for_review','approved','deprecated')` replacing single `is_published` boolean (keep the boolean for back-compat + write a computed migration).
-- Simple approval queue view at `/superadmin/content-review` — lists levels in `ready_for_review`, click Approve → `approved` + `is_published=true`.
+New `src/components/teacher/StudentChallengeOverride.tsx` — a slider on the student detail page. Writes with `overridden_by_teacher: true` so the parent UI surfaces the amber banner that already exists in `ChallengeSettings.tsx`.
 
-**A4. Deprecation flag on old Pre-K content**
-- Uses the `deprecated` status from A3. One-click "Deprecate all old branded-pennant levels" utility button in super-admin. Deprecated content stays playing for existing students but hides from new signups.
+### 4. iOS / Capacitor parity
 
-### Track B — Curriculum alignment (extend existing surface)
+`@capacitor-community/speech-recognition` returns the same shape as Web Speech (matches array of strings). Add `src/lib/speechRecognizer/index.ts` — a thin adapter that picks the native plugin on Capacitor and `window.SpeechRecognition` on web, exposes one `startRecognition({ onResult })` API. Existing readers already treat transcripts as strings, so the Challenge Meter operates on the output of *both* recognizers identically. No matcher changes needed for iOS beyond routing through the adapter.
 
-**B1. Extend `PhonicsStage` type + `phonicsScopeAndSequence.ts`**
-- Add columns: `hmh_into_reading_unit`, `el_ed_module`, `wit_wisdom_module`, `ckla_domain`, `fundations_unit`.
-- No new page — the existing `/scope-and-sequence` route + PDF export inherits automatically.
+### 5. Default seeding
 
-**B2. New public page `/curriculum-alignment`**
-- School picks curriculum → downloads 1-page PDF crosswalk (reuses `scopeSequencePdf.ts` pattern).
-- 5 alignment PDFs: HMH Into Reading K/1, EL K/1, W&W, CKLA Skills K, Fundations K.
+Backfill trigger on `challenge_settings`: when a student is created, insert `{ level: 3, set_by_role: 'system' }` so every account has a row (avoids the `useChallengeSettings` fallback path and makes realtime edits reflect instantly).
 
-### Track C — Teacher / Principal surfaces (fill UI gaps only)
+### 6. QA harness (proves the dial works)
 
-**C1. MTSS Tier-2 group card on `TeacherDashboard`**
-- New card component reading from existing `useInterventions` + `student_interventions` + `student_risk_history` (all already there).
-- Adds tier-grouping logic (Tier 1/2/3 based on risk score) + printable layout. Pure UI.
+- Add `src/lib/__tests__/challengeMeterMatching.test.ts` running the matcher against a fixed transcript set at each level 1-5; assert monotonicity (level N ⊆ level N-1 accepted set). This is our brutal-honesty proof the dial actually changes behavior.
+- Manual smoke: same student, same audio, slide 1→5 in parent portal, watch acceptance change live in a reader.
 
-**C2. Principal demo route `/demos/principal`**
-- Extends existing `Demos.tsx` (which already has Student/Teacher/Parent/Admin/RPG demos).
-- New seeded demo classroom "Ms. Rivera's K" with 18 fake students, 6 weeks of `student_benchmark_results` + `phonics_foundations_progress` rows.
-- Add `is_demo boolean` column to `classrooms` for filterability.
+## Files touched
 
-**C3. `/for-principals` landing page**
-- New public route. Positions the pilot offer, links to `/curriculum-alignment`, `/demos/principal`, `/pilot-packet`.
+- **Edit**: `src/lib/wordMatchingModes.ts`, `src/lib/phonemeInference.ts`, `src/hooks/useChallengeSettings.ts` (add realtime), all reader components (~9 files) to thread thresholds.
+- **New**: `src/contexts/ChallengeContext.tsx`, `src/lib/speechRecognizer/index.ts`, `src/components/teacher/StudentChallengeOverride.tsx`, `src/lib/__tests__/challengeMeterMatching.test.ts`.
+- **DB migration**: default-seed trigger on `challenge_settings`.
 
-### Track D — Challenge Meter (all new)
+## Explicitly NOT changing
 
-**D1. Schema + settings hook**
-- New table `challenge_settings` (per-student, parent-owned, teacher-overridable). Columns: `level int 1..5`, `set_by user_id`, `overridden_by_teacher bool`.
-- Migration includes GRANTs + RLS.
+- No change to Web Speech / native recognizer configuration — confirmed above that they have no strictness knob to change.
+- No regression to existing K-12 speech flows: default is level 3, matching today's behavior byte-for-byte when no row exists.
 
-**D2. Wire into `phonemeInference.ts`**
-- Level 1–5 maps to Levenshtein tolerance + phoneme-substitution acceptance thresholds already in that library. No new matching engine.
-
-**D3. Parent UI `/parent/settings/challenge` + teacher override on student profile**
-- Simple slider + preview button.
-
-### Track E — Pilot packet (packaging, not new content)
-
-**E1. New table `pilot_agreements`** (school_id, status, signed_date, msa_url, dpa_url, ny_2d_addendum_url).
-
-**E2. Public route `/pilot-packet`**
-- Renders existing markdown from `CONTRACT_READINESS.md` + `docs/soc2/*` as downloadable PDFs.
-- Adds NY Ed Law §2-d addendum template (net-new content — 1 doc).
-- Downloadable 8-week free MSA (net-new content — 1 doc).
-
-### Track F — Content deliverables (write-ups, not code)
-
-- F1. Teacher training video script + you record 15 min
-- F2. 1-page laminated quick-start PDF (design in code, print externally)
-- F3. NY Ed Law §2-d addendum doc
-- F4. 8-week free pilot MSA doc
-
----
-
-## 3-week schedule (revised, tighter because less to build)
-
-**Week 1 — DB + infra deltas**
-1. Word taxonomy migration (A2)
-2. Approval workflow migration (A3) + deprecation flag (A4)
-3. Bulk drop-zone wrapper (A1)
-4. Extend `phonicsScopeAndSequence.ts` with HMH/EL/W&W/CKLA/Fundations (B1)
-5. `challenge_settings` table + RLS (D1)
-6. `pilot_agreements` table + RLS (E1)
-
-**Week 2 — UI surfaces**
-7. `/curriculum-alignment` + 5 alignment PDFs (B2)
-8. MTSS Tier-2 card on TeacherDashboard (C1)
-9. Challenge Meter parent + teacher UI + phonemeInference wiring (D2, D3)
-10. `/pilot-packet` route (E2)
-11. NY §2-d addendum + MSA docs written (F3, F4)
-12. **You start uploading videos 1–10 via new bulk dropzone**
-
-**Week 3 — Demo + landing + polish**
-13. Seeded demo data + `/demos/principal` route (C2)
-14. `/for-principals` landing page (C3)
-15. Teacher training video + laminated PDF (F1, F2)
-16. **You finish uploading videos 11–30**
-17. End-to-end walkthrough
-
----
-
-## Two confirmations before I start (unchanged)
-- Voice for new videos: same ElevenLabs Benny. ✅ assumed yes.
-- Story arc: 30 independent adventures. ✅ assumed yes.
-
-## Definition of done (unchanged)
-Walk into a Bronx K-2 charter and: show alignment PDF, run principal demo, hand over pilot packet + §2-d addendum, show 30 Pre-K videos + Challenge Meter, sign 8-week MSA.
-
-**Approve v5 and I start with the Week 1 migrations.**
+Approve and I'll ship it.
