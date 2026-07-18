@@ -355,28 +355,19 @@ export const analyzeWordMatch = (
   }
   
   // Determine if word is correct based on mode
-  const isCorrect = isStrictMode 
-    ? isWordMatchStrict(spoken, expected)
-    : isWordMatchLenient(spoken, expected);
-  
-  // Determine overall confidence
+  const isCorrect = isStrictMode
+    ? isWordMatchStrict(spoken, expected, thresholds)
+    : isWordMatchLenient(spoken, expected, thresholds);
+
   let confidence: 'high' | 'medium' | 'low';
   const combinedScore = (matchScore / 100 + speechConfidence) / 2;
-  
-  if (combinedScore >= 0.9) {
-    confidence = 'high';
-  } else if (combinedScore >= 0.7) {
-    confidence = 'medium';
-  } else {
-    confidence = 'low';
-  }
-  
-  // Flag for teacher verification if:
-  // - Speech API confidence < 0.7
-  // - Match score is in the gray zone (60-85%)
-  // - Word result differs between strict and lenient modes
-  const lenientResult = isWordMatchLenient(spoken, expected);
-  const strictResult = isWordMatchStrict(spoken, expected);
+
+  if (combinedScore >= 0.9) confidence = 'high';
+  else if (combinedScore >= 0.7) confidence = 'medium';
+  else confidence = 'low';
+
+  const lenientResult = isWordMatchLenient(spoken, expected, thresholds);
+  const strictResult = isWordMatchStrict(spoken, expected, thresholds);
   const modesDisagree = lenientResult !== strictResult;
   
   const needsVerification = 
