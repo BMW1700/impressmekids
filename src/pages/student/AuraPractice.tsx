@@ -121,6 +121,8 @@ const AuraPractice = () => {
   const [isCampaignMode, setIsCampaignMode] = useState(false);
   const [isRpgMode, setIsRpgMode] = useState(false);
   const [rpgView, setRpgView] = useState<'world_map' | 'level_select' | 'battle' | 'prek_reader'>('world_map');
+  const preKStartTimeRef = useRef<number | null>(null);
+  const challengeCtx = useChallengeMatchers();
   const [selectedWorld, setSelectedWorld] = useState<CampaignWorld | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<CampaignLevel | null>(null);
   const [rpgStory, setRpgStory] = useState<Story | null>(null);
