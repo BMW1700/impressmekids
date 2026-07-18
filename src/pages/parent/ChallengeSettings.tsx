@@ -22,19 +22,32 @@ export default function ParentChallengeSettings() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase
+      const { data: acct } = await supabase
+        .from('parent_accounts')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!acct?.id) return;
+      const { data: links } = await supabase
         .from('parent_student_links')
-        .select('student_id, profiles:student_id ( full_name )')
-        .eq('parent_id', user.id)
+        .select('student_id')
+        .eq('parent_id', acct.id)
         .eq('approved', true);
-      const rows: LinkedChild[] = (data ?? []).map((r: any) => ({
-        student_id: r.student_id,
-        full_name: r.profiles?.full_name ?? null,
+      const ids = (links ?? []).map((l: any) => l.student_id);
+      if (ids.length === 0) return;
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', ids);
+      const rows: LinkedChild[] = (profiles ?? []).map((p: any) => ({
+        student_id: p.id,
+        full_name: p.full_name ?? null,
       }));
       setChildren(rows);
       if (rows[0]) setSelected(rows[0].student_id);
     })();
   }, [user]);
+
 
   const { level, setLevel, row, loading } = useChallengeSettings(selected);
   const [pendingLevel, setPendingLevel] = useState<ChallengeLevel>(level);
