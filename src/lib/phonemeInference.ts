@@ -74,7 +74,8 @@ const alignPhonemeSequences = (
 export const compareWordPhonemes = (
   spokenWord: string,
   expectedWord: string,
-  wordIndex: number
+  wordIndex: number,
+  phonemeSimilarityThreshold: number = 0.2
 ): WordPhonemeComparison => {
   // Get phonemes for both words using CMU Dictionary
   const expectedPhonemes = getIPAPronunciation(expectedWord)[0] || [];
