@@ -159,7 +159,12 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
     path.startsWith("/teacher/aura") ||
     path.startsWith("/game/");
 
-  return <MLStatusProvider enabled={enableML}>{children}</MLStatusProvider>;
+  const { user } = useAuth();
+  return (
+    <MLStatusProvider enabled={enableML}>
+      <ChallengeProvider studentId={user?.id ?? null}>{children}</ChallengeProvider>
+    </MLStatusProvider>
+  );
 }
 
 const App = () => (
