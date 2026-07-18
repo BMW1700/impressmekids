@@ -191,9 +191,14 @@ const App = () => (
                   <Route path="/demos/teacher" element={<TeacherDemo />} />
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
+                  <Route path="/demos/principal" element={<PrincipalDemo />} />
+                  <Route path="/for-principals" element={<ForPrincipals />} />
+                  <Route path="/curriculum-alignment" element={<CurriculumAlignment />} />
+                  <Route path="/pilot-packet" element={<PilotPacket />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
+
                   <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
                   <Route path="/game/demo" element={<GameRPGDemo />} />
