@@ -68,41 +68,39 @@ export const findWordInWindow = (
   expectedWords: string[],
   startIdx: number,
   windowSize: number = 5,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { matchedIndex: number; matchScore: number } => {
   const normalizedSpoken = normalizeWord(spoken);
   if (!normalizedSpoken) return { matchedIndex: -1, matchScore: 0 };
-  
+
   let bestMatch = -1;
   let bestScore = 0;
-  
+
   const endIdx = Math.min(startIdx + windowSize, expectedWords.length);
-  
+
   for (let i = startIdx; i < endIdx; i++) {
     const expected = expectedWords[i];
     const normalizedExpected = normalizeWord(expected);
-    
-    // Exact match - highest priority
+
     if (normalizedSpoken === normalizedExpected) {
       return { matchedIndex: i, matchScore: 100 };
     }
-    
-    // Calculate similarity score
+
     const distance = levenshteinDistance(normalizedSpoken, normalizedExpected);
     const maxLen = Math.max(normalizedSpoken.length, normalizedExpected.length);
     const score = Math.round(((maxLen - distance) / maxLen) * 100);
-    
-    // Check if it meets the threshold
-    const meetsThreshold = useLenient 
-      ? isWordMatchLenient(spoken, expected)
-      : isWordMatchStrict(spoken, expected);
-    
+
+    const meetsThreshold = useLenient
+      ? isWordMatchLenient(spoken, expected, thresholds)
+      : isWordMatchStrict(spoken, expected, thresholds);
+
     if (meetsThreshold && score > bestScore) {
       bestScore = score;
       bestMatch = i;
     }
   }
-  
+
   return { matchedIndex: bestMatch, matchScore: bestScore };
 };
 
