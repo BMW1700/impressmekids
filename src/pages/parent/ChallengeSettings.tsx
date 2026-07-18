@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useChallengeSettings } from '@/hooks/useChallengeSettings';
 import { CHALLENGE_LEVELS, ChallengeLevel } from '@/lib/challengeMeter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
