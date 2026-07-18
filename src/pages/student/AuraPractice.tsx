@@ -390,9 +390,21 @@ const AuraPractice = () => {
 
   // RPG Pre-K One-Word Reader (no story, no minigames, no fail state)
   if (isRpgMode && rpgView === 'prek_reader' && selectedWorld && selectedLevel && user?.id) {
+    if (preKStartTimeRef.current === null) preKStartTimeRef.current = Date.now();
     const handlePreKComplete = async (preKStats: { wordsRead: number; correctWords: number; stars: number }) => {
+      const startedAt = preKStartTimeRef.current ?? Date.now();
+      preKStartTimeRef.current = null;
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+      const wordsRead = Math.max(0, preKStats.wordsRead || 0);
+      const correctWords = Math.max(0, preKStats.correctWords || 0);
+      const wpm = wordsRead > 0 ? Math.round((wordsRead / durationSeconds) * 60) : 0;
+      const wcpm = correctWords > 0 ? Math.round((correctWords / durationSeconds) * 60) : 0;
+      const accuracyPercent = wordsRead > 0 ? Math.round((correctWords / wordsRead) * 100) : 0;
+
       console.debug('[PreK/complete] fired', {
         world: selectedWorld.id, level: selectedLevel.id, stats: preKStats,
+        durationSeconds, wpm, wcpm, accuracyPercent,
+        challengeLevel: challengeCtx.level,
       });
       try {
         // 1) Per-level completion — the new source of truth for stars/checkmarks.
@@ -402,8 +414,8 @@ const AuraPractice = () => {
           worldNumber: selectedWorld.id,
           levelNumber: Number(selectedLevel.id),
           stars: Math.max(1, preKStats.stars || 1),
-          wordsRead: preKStats.wordsRead,
-          correctWords: preKStats.correctWords,
+          wordsRead,
+          correctWords,
         });
 
         // 2) Legacy campaign_progress row — kept in sync so books_rescued /
@@ -419,8 +431,8 @@ const AuraPractice = () => {
           battleId: session.id,
           victory: true,
           xpEarned: preKStats.stars * 10,
-          damageDealt: preKStats.correctWords,
-          longestStreak: preKStats.correctWords,
+          damageDealt: correctWords,
+          longestStreak: correctWords,
           storyTitle: selectedLevel.story.title,
           worldNumber: selectedWorld.id,
           goldEarned: preKStats.stars * 5,
@@ -428,6 +440,32 @@ const AuraPractice = () => {
 
         // 3) Village tokens.
         await awardVillageProgress(user.id, 1);
+
+        // 4) Reading stats + reading_sessions — feed the same backend as RPG so
+        //    every Pre-K word shows up in Overview / Phonemes / Sessions tabs.
+        if (wordsRead > 0) {
+          await updateStudentReadingStats(user.id, {
+            wordsRead,
+            xpEarned: preKStats.stars * 10,
+            gradeMode: currentGradeMode,
+          });
+          const { error: sessionErr } = await supabase.from('reading_sessions').insert({
+            student_id: user.id,
+            passage_text: `Pre-K · ${selectedWorld.name} · Level ${selectedLevel.id}`,
+            words_read: wordsRead,
+            duration_seconds: durationSeconds,
+            wpm,
+            accuracy_percent: accuracyPercent,
+            wcpm,
+            fluency_score: Math.min(100, Math.round(accuracyPercent * 0.7 + Math.min(wpm, 150) * 0.3)),
+            fluency_level: accuracyPercent >= 95 ? 'independent' : accuracyPercent >= 90 ? 'instructional' : 'frustration',
+            reading_mode: 'prek',
+            grade_mode: currentGradeMode || 'k5',
+            challenge_level: challengeCtx.level,
+          });
+          if (sessionErr) console.error('[PreK/complete] reading_sessions insert failed', sessionErr);
+        }
+
         refetch();
       } catch (e) {
         console.error('[PreK/complete] persist failed', e);
@@ -441,7 +479,7 @@ const AuraPractice = () => {
           <YubiEpisodeWrapper
             world={selectedWorld}
             level={selectedLevel}
-            onBack={() => setRpgView('level_select')}
+            onBack={() => { preKStartTimeRef.current = null; setRpgView('level_select'); }}
             onComplete={handlePreKComplete}
           />
         </main>
