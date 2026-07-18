@@ -185,7 +185,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Old saying: "When two vowels go walking, the first one does the talking." True for many but not all teams.',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 11–15 / Grade 2 Units 1–3',
+      ckla: 'Grade 1 Skills Units 7–10',
+      hmhIntoReading: 'Grade 1 Modules 9–10 / Grade 2 Modules 1–3',
+      elEducation: 'Grade 1 Module 3 / Grade 2 Module 1',
+      witWisdom: 'Grade 1 Modules 3–4',
+      ufli: 'Lessons 81–120',
+    },
   },
+
   {
     id: 'r-controlled',
     stageNumber: 6,
