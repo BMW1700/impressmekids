@@ -94,7 +94,7 @@ export function ChallengeQuickAdjust({ className, variant = "yellow" }: Props) {
             <div>
               <div className="text-sm font-semibold">Challenge Level</div>
               <div className="text-xs text-muted-foreground">
-                L{pending} — {thresholds.label}
+                {thresholds.label} (Level {pending})
               </div>
             </div>
             {row?.overridden_by_teacher && (
