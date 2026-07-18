@@ -214,7 +214,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       '"Bossy R" controls the vowel sound. Group ir/er/ur — they all sound the same: /ur/.',
+    curriculumAlignment: {
+      fundations: 'Grade 2 Units 4–6',
+      ckla: 'Grade 2 Skills Units 1–3',
+      hmhIntoReading: 'Grade 2 Modules 4–6',
+      elEducation: 'Grade 2 Module 2',
+      witWisdom: 'Grade 2 Module 1',
+      ufli: 'Lessons 121–140',
+    },
   },
+
 ];
 
 /** Total practice words across all stages (used for marketing copy). */
