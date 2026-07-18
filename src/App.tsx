@@ -31,6 +31,12 @@ const StudentDemo = lazy(() => import("./pages/demos/StudentDemo"));
 const TeacherDemo = lazy(() => import("./pages/demos/TeacherDemo"));
 const ParentDemo = lazy(() => import("./pages/demos/ParentDemo"));
 const AdminDemo = lazy(() => import("./pages/demos/AdminDemo"));
+const PrincipalDemo = lazy(() => import("./pages/demos/PrincipalDemo"));
+const ForPrincipals = lazy(() => import("./pages/ForPrincipals"));
+const CurriculumAlignment = lazy(() => import("./pages/CurriculumAlignment"));
+const PilotPacket = lazy(() => import("./pages/PilotPacket"));
+const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
+
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminCalendar = lazy(() => import("./pages/admin/AdminCalendar"));
@@ -185,9 +191,14 @@ const App = () => (
                   <Route path="/demos/teacher" element={<TeacherDemo />} />
                   <Route path="/demos/parent" element={<ParentDemo />} />
                   <Route path="/demos/admin" element={<AdminDemo />} />
+                  <Route path="/demos/principal" element={<PrincipalDemo />} />
+                  <Route path="/for-principals" element={<ForPrincipals />} />
+                  <Route path="/curriculum-alignment" element={<CurriculumAlignment />} />
+                  <Route path="/pilot-packet" element={<PilotPacket />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
+
                   <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
                   <Route path="/game/demo" element={<GameRPGDemo />} />
@@ -258,6 +269,8 @@ const App = () => (
                       <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
                       <Route path="/parent/install-app" element={<PWAInstallGuide />} />
                       <Route path="/parent/data-privacy" element={<DataPrivacy />} />
+                      <Route path="/parent/challenge-settings" element={<ParentChallengeSettings />} />
+
 
                       {/* Admin / District / Security — MFA enforced (FERPA / SOC 2) */}
                       <Route element={<RequireMFA />}>

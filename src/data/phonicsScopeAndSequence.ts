@@ -10,6 +10,23 @@
  *   2. /scope-and-sequence (public, printable)
  */
 
+export interface CurriculumAlignment {
+  /** Wilson Fundations unit (e.g. "K Unit 3", "1 Unit 5") */
+  fundations?: string;
+  /** Amplify CKLA Skills strand domain */
+  ckla?: string;
+  /** HMH Into Reading module + week */
+  hmhIntoReading?: string;
+  /** EL Education module + cycle */
+  elEducation?: string;
+  /** Wit & Wisdom module */
+  witWisdom?: string;
+  /** UFLI Foundations lesson range */
+  ufli?: string;
+  /** Heggerty Phonemic Awareness week range */
+  heggerty?: string;
+}
+
 export interface PhonicsStage {
   id: string;
   stageNumber: number;
@@ -21,7 +38,10 @@ export interface PhonicsStage {
   example: string;
   practiceWords: string[];
   teachingTip: string;
+  /** Crosswalk to the major charter/district-mandated curricula. */
+  curriculumAlignment?: CurriculumAlignment;
 }
+
 
 export const phonicsScopeAndSequence: PhonicsStage[] = [
   {
@@ -43,6 +63,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Sound out each phoneme separately, then blend. Use stretchable hand gestures: c-a-t → cat.',
+    curriculumAlignment: {
+      fundations: 'K Units 4–9 / Grade 1 Unit 1',
+      ckla: 'Kindergarten Skills Units 4–7',
+      hmhIntoReading: 'K Modules 3–6 / Grade 1 Modules 1–2',
+      elEducation: 'K Module 1 Cycles 3–6',
+      witWisdom: 'K Module 1 (foundational skills)',
+      ufli: 'Lessons 1–34',
+      heggerty: 'Kindergarten Weeks 15–30',
+    },
+
   },
   {
     id: 'blends',
@@ -63,7 +93,17 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Each consonant in a blend keeps its sound — don\'t merge them. Say "s-t-op", not "shtop".',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 2–4',
+      ckla: 'Kindergarten Skills Units 8–10 / Grade 1 Unit 1',
+      hmhIntoReading: 'Grade 1 Modules 3–5',
+      elEducation: 'Grade 1 Module 1 Cycles 1–4',
+      witWisdom: 'Grade 1 Module 1',
+      ufli: 'Lessons 35–60',
+      heggerty: 'Grade 1 Weeks 1–15',
+    },
   },
+
   {
     id: 'silent-e',
     stageNumber: 3,
@@ -83,7 +123,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Compare pairs side-by-side: mat → mate, kit → kite, hop → hope. The E is silent but powerful.',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 9–10',
+      ckla: 'Grade 1 Skills Units 4–6',
+      hmhIntoReading: 'Grade 1 Modules 6–8',
+      elEducation: 'Grade 1 Module 2 Cycles 1–3',
+      witWisdom: 'Grade 1 Module 2',
+      ufli: 'Lessons 61–80',
+    },
   },
+
   {
     id: 'digraphs',
     stageNumber: 4,
@@ -104,7 +153,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Two letters, one sound. Practice pairs that look similar: sip vs ship, tin vs thin.',
+    curriculumAlignment: {
+      fundations: 'K Unit 10 / Grade 1 Unit 5',
+      ckla: 'Kindergarten Skills Units 8–10',
+      hmhIntoReading: 'K Modules 7–9 / Grade 1 Modules 3–4',
+      elEducation: 'K Module 2 / Grade 1 Module 1',
+      witWisdom: 'K–1 foundational skills strand',
+      ufli: 'Lessons 40–70',
+    },
   },
+
   {
     id: 'vowel-teams',
     stageNumber: 5,
@@ -127,7 +185,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Old saying: "When two vowels go walking, the first one does the talking." True for many but not all teams.',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 11–15 / Grade 2 Units 1–3',
+      ckla: 'Grade 1 Skills Units 7–10',
+      hmhIntoReading: 'Grade 1 Modules 9–10 / Grade 2 Modules 1–3',
+      elEducation: 'Grade 1 Module 3 / Grade 2 Module 1',
+      witWisdom: 'Grade 1 Modules 3–4',
+      ufli: 'Lessons 81–120',
+    },
   },
+
   {
     id: 'r-controlled',
     stageNumber: 6,
@@ -147,7 +214,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       '"Bossy R" controls the vowel sound. Group ir/er/ur — they all sound the same: /ur/.',
+    curriculumAlignment: {
+      fundations: 'Grade 2 Units 4–6',
+      ckla: 'Grade 2 Skills Units 1–3',
+      hmhIntoReading: 'Grade 2 Modules 4–6',
+      elEducation: 'Grade 2 Module 2',
+      witWisdom: 'Grade 2 Module 1',
+      ufli: 'Lessons 121–140',
+    },
   },
+
 ];
 
 /** Total practice words across all stages (used for marketing copy). */
