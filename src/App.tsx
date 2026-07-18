@@ -31,6 +31,12 @@ const StudentDemo = lazy(() => import("./pages/demos/StudentDemo"));
 const TeacherDemo = lazy(() => import("./pages/demos/TeacherDemo"));
 const ParentDemo = lazy(() => import("./pages/demos/ParentDemo"));
 const AdminDemo = lazy(() => import("./pages/demos/AdminDemo"));
+const PrincipalDemo = lazy(() => import("./pages/demos/PrincipalDemo"));
+const ForPrincipals = lazy(() => import("./pages/ForPrincipals"));
+const CurriculumAlignment = lazy(() => import("./pages/CurriculumAlignment"));
+const PilotPacket = lazy(() => import("./pages/PilotPacket"));
+const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
+
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminCalendar = lazy(() => import("./pages/admin/AdminCalendar"));
