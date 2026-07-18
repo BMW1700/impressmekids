@@ -93,7 +93,17 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Each consonant in a blend keeps its sound — don\'t merge them. Say "s-t-op", not "shtop".',
+    curriculumAlignment: {
+      fundations: 'Grade 1 Units 2–4',
+      ckla: 'Kindergarten Skills Units 8–10 / Grade 1 Unit 1',
+      hmhIntoReading: 'Grade 1 Modules 3–5',
+      elEducation: 'Grade 1 Module 1 Cycles 1–4',
+      witWisdom: 'Grade 1 Module 1',
+      ufli: 'Lessons 35–60',
+      heggerty: 'Grade 1 Weeks 1–15',
+    },
   },
+
   {
     id: 'silent-e',
     stageNumber: 3,
