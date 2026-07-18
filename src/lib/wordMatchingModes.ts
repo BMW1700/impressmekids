@@ -11,6 +11,19 @@ import { getIPAPronunciation } from '@/lib/cmuDictWrapper';
 import { isHomophone, getWordVariants } from '@/lib/homophones';
 import { isPhonicsConfusion } from '@/lib/phonicsConfusionMap';
 import { cleanupTranscript, extractWords } from '@/lib/transcriptCleanup';
+import {
+  CHALLENGE_LEVELS,
+  DEFAULT_CHALLENGE_LEVEL,
+  type ChallengeThresholds,
+} from '@/lib/challengeMeter';
+
+/**
+ * Default thresholds = level 3 (Standard). Every matcher accepts an optional
+ * `thresholds` argument so the Challenge Meter can tune strictness per student
+ * at runtime WITHOUT touching the recognizer. Omitting the argument keeps the
+ * historical behavior byte-for-byte.
+ */
+const DEFAULT_THRESHOLDS: ChallengeThresholds = CHALLENGE_LEVELS[DEFAULT_CHALLENGE_LEVEL];
 
 // Fuzzy string matching using Levenshtein distance
 export const levenshteinDistance = (a: string, b: string): number => {
