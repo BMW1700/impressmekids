@@ -37,7 +37,20 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
         <div className="flex items-center gap-2">
           {children}
 
+          {session && (
+            <button
+              type="button"
+              onClick={() => navigate('/parent/challenge-settings')}
+              title={`Challenge Level ${level} — ${thresholds.label}. Tap to adjust.`}
+              className="hidden sm:inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2.5 py-1 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-500/20"
+            >
+              <Gauge className="w-3.5 h-3.5" />
+              L{level}
+            </button>
+          )}
+
           <SettingsMenu />
+
 
 
           
