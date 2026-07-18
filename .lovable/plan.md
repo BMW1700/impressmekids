@@ -1,42 +1,52 @@
-## Fix the Challenge Meter popover
+## Goal
 
-Right now the popover locks students out by role. That's wrong. The dial should be open to whoever is using the app so a kid or a parent can bump it up or down themselves. The only lock is one the parent chooses to add — a PIN they set and only they know.
+Extend the existing **Clean Slate** button so it does exactly what you want:
 
-### What changes
+- Keep every world, every level, every word, every ask line / success line / title / goal — **all text stays in the DB, untouched**.
+- Unpublish everything except the 2 canon levels (Benny Picks a Drink, Help Benny Visit Grandma) and their parent worlds.
+- **Also blank out the video slots** on every non-canon level + word so the Build page shows empty "Upload video" dropzones, ready to receive new footage.
 
-**1. Popover — open by default**
-- Remove the "Ask a grown-up" role gate.
-- Everyone signed in sees the full slider + Save button by default.
-- Chip label + slider behavior stays exactly as it is now.
+Net effect: you open any non-canon level, all the text and word rows are still there, but every video slot is empty. Upload the two clips, hit Redub + Music, done.
 
-**2. Optional parent PIN lock**
-- Add a "Lock this setting" section in `/parent/challenge-settings` (parent-only page).
-- Parent can:
-  - Set a 4–6 digit PIN → future edits from the popover require it.
-  - Change the PIN (must enter current one).
-  - Remove the lock entirely.
-- When a lock exists:
-  - Popover shows the slider read-only + a small "🔒 Locked — enter PIN to change" input.
-  - Correct PIN unlocks the Save button for that session only (not persisted).
-  - Wrong PIN → toast + no change.
-- When no lock exists → popover behaves openly as in step 1.
+## What changes
 
-**3. Where the PIN lives**
-- New columns on `challenge_settings`:
-  - `lock_pin_hash text` (bcrypt-style hash via `crypto.subtle` on the client → stored as SHA-256 hex; simple + adequate for a 4-digit gate, no server round-trip needed).
-  - `lock_set_by uuid` (the parent user_id that set it).
-  - `lock_enabled boolean default false`.
-- RLS: parents/teachers keep write access as today; the popover just reads `lock_enabled` + verifies the hash client-side.
+**File:** `src/pages/superadmin/PreKWorldsList.tsx` — expand `cleanSlatePurge()`.
 
-**4. School Mode gate — untouched**
-- `/school/setup` role-selection remains exactly as it is. This change only touches the ChallengeQuickAdjust popover and the parent settings page. Nothing else moves.
+Current behavior: only flips `is_published` to false.
 
-### Files touched
+New behavior (single transaction-ish sequence, canon IDs excluded throughout):
 
-- `src/components/challenge/ChallengeQuickAdjust.tsx` — drop role gate, add PIN entry UI when `lock_enabled`.
-- `src/pages/parent/ChallengeSettings.tsx` — add "Lock with PIN" card (set / change / remove).
-- `src/hooks/useChallengeSettings.ts` — surface `lock_enabled` + `lock_pin_hash`; add `setLock(pin)` / `clearLock()` helpers.
-- Migration: add the three columns to `challenge_settings`.
+1. `UPDATE prek_levels SET is_published = false, opening_video_url = NULL, closing_video_url = NULL, opening_video_duration_seconds = NULL, closing_video_duration_seconds = NULL WHERE id NOT IN (canon)`
+2. `UPDATE prek_level_words SET first_video_url = NULL, second_video_url = NULL, first_video_duration_seconds = NULL, second_video_duration_seconds = NULL WHERE level_id NOT IN (canon)`
+3. `UPDATE prek_worlds SET is_published = false WHERE id NOT IN (canon)`
+4. (Optional, off by default) Delete the orphaned storage objects from the `prek-video` bucket. **Skipping this** for safety — cheap to leave, and no risk of nuking a file that's still referenced somewhere. You can re-upload freely; new uploads overwrite the slot.
 
-### Out of scope
-- No changes to School Mode setup, RPG dashboard chip placement, Pre-K header chip placement, or matcher logic. Level values continue to save live to the same row.
+Untouched columns (text preserved):
+- `prek_worlds`: title, description, world_number, difficulty
+- `prek_levels`: title, goal, level_number, audio settings
+- `prek_level_words`: spoken word, ask_line, success_line, sort_order, everything else
+
+## Confirmation copy
+
+Update the modal text to:
+
+> CLEAN SLATE — unpublish + clear videos
+>
+> This will, for every Pre-K world/level EXCEPT "Benny Picks a Drink" and "Help Benny Visit Grandma":
+> • unpublish the world + level (hidden from players)
+> • clear every video slot (opening, closing, and every word's before/after video)
+>
+> All text is preserved — titles, words, ask lines, success lines, goals. Re-uploading a video is the only step needed to re-publish.
+
+## Verification
+
+After running:
+- World Map for players still shows only the 2 canon levels.
+- Super Admin → Pre-K Worlds still lists every world/level with all text intact, marked Draft.
+- Opening a non-canon Build page shows empty upload dropzones for opening/closing + every word slot.
+
+## Non-goals
+
+- No schema change.
+- No storage deletion (files stay in the bucket, unreferenced — safe to leave; can add a follow-up "hard purge" later if you want).
+- No changes to the two canon levels.

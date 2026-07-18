@@ -161,32 +161,55 @@ const PreKWorldsList = () => {
 
   const cleanSlatePurge = async () => {
     const msg =
-      'CLEAN SLATE PURGE\n\n' +
-      'This will UNPUBLISH every Pre-K level and world EXCEPT:\n' +
-      '  • "Help Benny Visit Grandma"\n' +
-      '  • "Benny Picks a Drink"\n\n' +
-      'Data is preserved (nothing is deleted). You can re-publish anything later.\n\n' +
+      'CLEAN SLATE — unpublish + clear videos\n\n' +
+      'For every Pre-K world/level EXCEPT "Benny Picks a Drink" and "Help Benny Visit Grandma":\n' +
+      '  • unpublish the world + level (hidden from players)\n' +
+      '  • clear every video slot (opening, closing, and each word\'s before/after video)\n\n' +
+      'All text is preserved — titles, words, ask lines, success lines, goals.\n' +
+      'Re-uploading a video is the only step needed to re-publish.\n\n' +
       'Continue?';
     if (!confirm(msg)) return;
 
-    const [{ error: e1, count: c1 }, { error: e2, count: c2 }] = await Promise.all([
-      supabase
-        .from("prek_levels")
-        .update({ is_published: false }, { count: "exact" })
-        .not("id", "in", `(${CANON_LEVEL_IDS.join(",")})`)
-        .eq("is_published", true),
-      supabase
-        .from("prek_worlds")
-        .update({ is_published: false }, { count: "exact" })
-        .not("id", "in", `(${CANON_WORLD_IDS.join(",")})`)
-        .eq("is_published", true),
-    ]);
+    const canonLevels = `(${CANON_LEVEL_IDS.join(",")})`;
+    const canonWorlds = `(${CANON_WORLD_IDS.join(",")})`;
 
-    if (e1 || e2) {
-      toast.error(`Purge failed: ${e1?.message ?? e2?.message}`);
+    // 1) Unpublish + clear opening/closing video URLs on all non-canon levels.
+    const { error: e1, count: c1 } = await supabase
+      .from("prek_levels")
+      .update({
+        is_published: false,
+        opening_video_url: null,
+        closing_video_url: null,
+        opening_video_duration_seconds: null,
+        closing_video_duration_seconds: null,
+      }, { count: "exact" })
+      .not("id", "in", canonLevels);
+
+    // 2) Clear every word's first/second video on non-canon levels.
+    const { error: e2, count: c2 } = await supabase
+      .from("prek_level_words")
+      .update({
+        first_video_url: null,
+        second_video_url: null,
+        first_video_duration_seconds: null,
+        second_video_duration_seconds: null,
+      }, { count: "exact" })
+      .not("level_id", "in", canonLevels);
+
+    // 3) Unpublish non-canon worlds.
+    const { error: e3, count: c3 } = await supabase
+      .from("prek_worlds")
+      .update({ is_published: false }, { count: "exact" })
+      .not("id", "in", canonWorlds)
+      .eq("is_published", true);
+
+    if (e1 || e2 || e3) {
+      toast.error(`Purge failed: ${e1?.message ?? e2?.message ?? e3?.message}`);
       return;
     }
-    toast.success(`Clean slate complete — ${c1 ?? 0} levels + ${c2 ?? 0} worlds unpublished. Only the 2 canon Benny videos remain live.`);
+    toast.success(
+      `Clean slate complete — ${c1 ?? 0} levels cleared, ${c2 ?? 0} word videos cleared, ${c3 ?? 0} worlds unpublished. Text preserved.`
+    );
     load();
   };
 
