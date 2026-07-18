@@ -159,9 +159,6 @@ const PreKWorldsList = () => {
             <h1 className="text-3xl font-bold">Pre-K Worlds</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={cleanSlatePurge} title="Unpublish every Pre-K world/level except the 2 canon Benny videos">
-              <Sparkles className="h-4 w-4 mr-1" /> Clean Slate (keep 2 canon)
-            </Button>
             <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> New World</Button>
           </div>
         </div>
