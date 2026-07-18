@@ -153,7 +153,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Two letters, one sound. Practice pairs that look similar: sip vs ship, tin vs thin.',
+    curriculumAlignment: {
+      fundations: 'K Unit 10 / Grade 1 Unit 5',
+      ckla: 'Kindergarten Skills Units 8–10',
+      hmhIntoReading: 'K Modules 7–9 / Grade 1 Modules 3–4',
+      elEducation: 'K Module 2 / Grade 1 Module 1',
+      witWisdom: 'K–1 foundational skills strand',
+      ufli: 'Lessons 40–70',
+    },
   },
+
   {
     id: 'vowel-teams',
     stageNumber: 5,
