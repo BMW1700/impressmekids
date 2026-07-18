@@ -269,6 +269,8 @@ const App = () => (
                       <Route path="/parent/review-annotations/:submissionId" element={<ParentReviewAnnotations />} />
                       <Route path="/parent/install-app" element={<PWAInstallGuide />} />
                       <Route path="/parent/data-privacy" element={<DataPrivacy />} />
+                      <Route path="/parent/challenge-settings" element={<ParentChallengeSettings />} />
+
 
                       {/* Admin / District / Security — MFA enforced (FERPA / SOC 2) */}
                       <Route element={<RequireMFA />}>
