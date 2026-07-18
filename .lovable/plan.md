@@ -1,57 +1,61 @@
-# Brutally honest audit — what actually shipped last turn vs. what you're seeing
+## What that "Set Up School Access" page actually is
 
-You're not a monkey's uncle. You're right — the last turn built the plumbing but did **not** connect it to anything you can see or feel. Here's the raw truth from the code:
+You're right — we didn't rebuild School Mode. That page (`/school/setup`) is the **one-time gate** for anyone entering the hidden School Mode flow. Its only job is: "pick your role + district" → then hand you off to the correct dashboard:
 
-## What exists ✅
-- `src/lib/challengeMeter.ts` — Level 1–5 threshold table (real).
-- `src/lib/wordMatchingModes.ts` and `phonemeInference.ts` — now accept dynamic thresholds (real).
-- `src/hooks/useChallengeSettings.ts` — reads/writes `challenge_settings`, realtime subscribed (real).
-- `src/contexts/ChallengeContext.tsx` — provider + threshold-aware matchers (real).
-- `src/pages/parent/ChallengeSettings.tsx` — parent slider page (real).
-- `src/components/teacher/StudentChallengeOverride.tsx` — teacher override card (real).
-- Route `/parent/challenge-settings` is registered in `App.tsx`.
+- teacher → `/teacher/dashboard`
+- student → `/student/dashboard`
+- parent → `/parent/dashboard`
+- admin → `/admin/dashboard`
+- district_admin → `/district/dashboard`
 
-## What is broken / invisible ❌ (this is why you see nothing)
-1. **No nav link anywhere** points to `/parent/challenge-settings`. Parents can't reach it unless they type the URL.
-2. **`<ChallengeProvider>` is never mounted.** Zero readers are wrapped in it. Every speech match still uses the old hardcoded thresholds. Moving the slider changes the DB row and nothing else.
-3. **`StudentChallengeOverride` isn't placed in any teacher page.** Teachers can't see or use it.
-4. **Pre-K mode is completely disconnected from stats.** `updateStudentReadingStats` is only called from `GuidedReadingFlow`, `BattleReader`, and `RPGBattleArena`. No Pre-K component logs sessions, words, WCPM, or accuracy. Pre-K speech does not touch `reading_sessions`, does not feed Overview/Phonemes/Sessions tabs, does not affect streaks, and does not respect the Challenge Meter at all.
+If you already have a role + district set on your profile, it auto-redirects and you never see it again. So it's not a "second home page" — it's a router/onboarding step for the school pilot pipeline. All the real School Mode stuff (teacher dashboards, admin dashboards, gradebook, safety, etc.) still lives behind it, untouched from before we hid it.
 
-So: the backend rows exist, but the runtime, the UI surfaces, and Pre-K are all still wired the old way.
+**Recommendation:** leave that page alone (it's necessary infrastructure for pilots), but stop treating it like a landing page. Teacher dashboards are 100% still there — no need to "bring them back"; they're just gated by role.
 
-## Plan to fix it — end-to-end, visibly
+---
 
-### 1. Wire the Challenge Meter into every reader
-- Mount `<ChallengeProvider studentId={activeStudentId}>` inside `RouteAwareProviders` in `App.tsx` (reads student id from AuthContext / student session) so every downstream reader inherits live thresholds.
-- Refactor these readers to consume `useChallengeMatchers()` instead of importing raw matchers directly:
-  - `src/components/aura/GuidedReadingFlow.tsx`
-  - `src/components/aura/WordByWordReader.tsx`
-  - `src/components/aura/game/BattleReader.tsx`
-  - `src/components/aura/game/rpg/RPGBattleArena.tsx`
-  - Pre-K speech loop (see step 3).
-- Add a lightweight "Level X" badge in each reader's HUD so you can *visibly* verify the level in play.
+## The real problem: the Challenge Meter is buried
 
-### 2. Expose the UI so it's reachable
-- Add a "Challenge Meter" tile on the Parent dashboard linking to `/parent/challenge-settings`.
-- Add a "Challenge Level" section inside the teacher's Student Detail view that mounts `<StudentChallengeOverride studentId={id} />`.
-- Add a small "Level X • Tap to change" chip on the student's Game Mode header (opens the same slider, gated by role) — this is the change you'll see instantly on load.
+Looking at pic 2 (RPG dashboard) I can see the `L3` chip we added in the header — good. But on pic 3 (Pre-K Mode / Benny's Village) there's **no Challenge Meter chip at all**, and on both pages tapping it currently routes to `/parent/challenge-settings` which is a parent-only screen. That's wrong for a kid using the app, and it's invisible on Pre-K.
 
-### 3. Wire Pre-K into the same backend as RPG (main ask)
-- Add a `usePreKSessionLogger` hook that mirrors what `BattleReader` / `RPGBattleArena` do: batches word-level attempts, flushes at scene end / video end / word-card completion.
-- On every Pre-K word attempt call `matchers.analyze(...)` from `useChallengeMatchers()` so Pre-K obeys the same strictness dial.
-- On flush, call `updateStudentReadingStats({...})` and insert a row in `reading_sessions` with `source: 'prek'` (new discriminator) plus `words_read`, `correct`, `duration_ms`, `wcpm`, `accuracy`, `challenge_level`.
-- Extend `useGameReadingSummary`, `useReadingSessions`, `useWeeklyProgress`, and the "Sessions" tab in your screenshot to include `source in ('rpg','prek','castle_swarm')` so Pre-K reads show up next to "Rpg Battle" with a "Pre-K" label.
-- Add `challenge_level` and `source` columns to `reading_sessions` via migration (with GRANTs). Backfill existing rows with `source = 'rpg'`.
+I'll fix that so the meter lives on the pages you actually use.
 
-### 4. Verification (so you can *see* it working)
-- Move slider on `/parent/challenge-settings` → HUD "Level X" badge in the reader updates in <1s (realtime channel already in place).
-- Play one Pre-K scene → new row appears in the Sessions tab labeled "Pre-K" with WCPM/accuracy, and Overview totals go up.
-- Run `runChallengeMeterSelfCheck()` from console; expect `failed: []`.
+### Plan
 
-## Technical notes
-- Migration: `ALTER TABLE public.reading_sessions ADD COLUMN source text NOT NULL DEFAULT 'rpg', ADD COLUMN challenge_level smallint;` + re-`GRANT` per project rules.
-- `ChallengeProvider` must resolve `studentId` from the active student context (student self, or teacher/parent viewing) — fall back to the default level-3 matchers when none, which preserves current behavior.
-- Pre-K logger must respect `pause_on_word_card` timing so WCPM isn't inflated by video runtime.
-- No changes to Castle Swarm scoring in this pass unless you want it — say the word and I'll include it.
+1. **Add the `L{level}` chip to the Pre-K header** (pic 3). Same visual style as the RPG chip, right next to "Benny's Village". Tapping opens the same quick adjust popover as everywhere else — no page navigation.
 
-Approve and I'll build it in this order: (1) migration + Pre-K logger, (2) provider mount + reader refactors, (3) nav links + HUD badge, (4) Sessions tab source filter.
+2. **Convert the header chip into an inline quick-adjust popover** (both RPG and Pre-K). Instead of navigating to `/parent/challenge-settings`, tapping "L3" opens a small popover with:
+   - the 1-5 slider
+   - live label ("Standard", "Easy", etc.)
+   - one-line description of what changes
+   - Save button (writes immediately, live via realtime — no refresh)
+   - a small "Manage in parent settings →" link for the full page
+
+   This means students, parents, or teachers on the same device can nudge strictness in ~2 seconds from either main page. Full page stays for parents who want the whole story.
+
+3. **Role-aware write behavior** — the popover uses the current signed-in role:
+   - parent role → writes `set_by_role='parent'`
+   - teacher role → writes `set_by_role='teacher', overridden_by_teacher=true` (matches existing `StudentChallengeOverride` semantics)
+   - student → read-only view of current level with a "Ask a grown-up to change this" note (no self-editing, so kids can't crank it to Level 1 to cheese words)
+
+4. **Show the meter on Pre-K Mode summary card too** — under "My Reading Journey" (pic 3), add a small "Challenge: L3 · Standard" row so parents scanning that page see it without hunting for the header chip.
+
+5. **Don't touch School Mode** — teacher dashboards, admin dashboards, and the `/school/setup` gate stay exactly as they are. Nothing to migrate. If you want a link from the main dashboard into a teacher view later ("I'm also a teacher, take me there"), that's a separate small task — flag it and I'll add it, but it's not needed for pilots.
+
+### Files that will change
+
+- `src/components/game/GameHeader.tsx` — swap navigate() for a Popover; hide chip for student role or make read-only.
+- `src/components/prek/PreKHeader.tsx` (or wherever the Pre-K top bar lives — I'll locate it in build mode) — add the same chip + popover.
+- `src/components/challenge/ChallengeQuickAdjust.tsx` — **new** shared popover component so both headers use one control.
+- Pre-K "My Reading Journey" card — add the small "Challenge: L{n}" row.
+
+### Files/behavior that will NOT change
+
+- `/school/setup` and School Mode routing.
+- `challenge_settings` table, RLS, realtime hook (`useChallengeSettings`) — all still correct.
+- `/parent/challenge-settings` full page — kept as the deep-dive view.
+- Reading matcher thresholds and `ChallengeProvider` — already wired at the app root, so any edit from the popover applies live everywhere including Pre-K sessions.
+
+### Brutally honest note
+
+The Challenge Meter is real and wired to the actual speech-matching thresholds — moving the slider does change acceptance in Pre-K, RPG, guided reading, and battle. What was broken was **discoverability**: it was one chip on one page, aimed at a parent-only route. After this change it's a first-class control on both main pages you screenshotted, adjustable in-place, and respecting role.

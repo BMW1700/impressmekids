@@ -38,6 +38,7 @@ import { RPGPlayerHUD } from "./RPGPlayerHUD";
 import { ReadingProgressPanel } from "./ReadingProgressPanel";
 import { BennyStanding } from "./BennyStanding";
 import prekBedroomBg from "@/assets/prek-bedroom-bg.png.asset.json";
+import { ChallengeQuickAdjust } from "@/components/challenge/ChallengeQuickAdjust";
 
 export interface WorldProgress {
   worldId: number;
@@ -450,6 +451,9 @@ export const RPGWorldMap = ({
             className="hidden sm:flex"
           />
         )}
+
+        {/* Challenge Meter quick-adjust — visible on all modes, first-class on Pre-K */}
+        <ChallengeQuickAdjust variant="amber" />
 
         {/* Pre-K → Benny's Village entry */}
         {isPrek && (

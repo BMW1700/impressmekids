@@ -1,10 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Gamepad2, BarChart3, LogOut, Home, LogIn, Gauge } from "lucide-react";
+import { Gamepad2, BarChart3, LogOut, Home, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { ReactNode } from "react";
-import { useChallengeMatchers } from "@/contexts/ChallengeContext";
+import { ChallengeQuickAdjust } from "@/components/challenge/ChallengeQuickAdjust";
 
 interface GameHeaderProps {
   children?: ReactNode;
@@ -14,7 +14,6 @@ interface GameHeaderProps {
 export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
-  const { level, thresholds } = useChallengeMatchers();
 
   const handleSignOut = async () => {
     await signOut();
@@ -38,15 +37,9 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
           {children}
 
           {session && (
-            <button
-              type="button"
-              onClick={() => navigate('/parent/challenge-settings')}
-              title={`Challenge Level ${level} — ${thresholds.label}. Tap to adjust.`}
-              className="hidden sm:inline-flex items-center gap-1 rounded-full border border-yellow-400/30 bg-yellow-500/10 px-2.5 py-1 text-[11px] font-semibold text-yellow-200 hover:bg-yellow-500/20"
-            >
-              <Gauge className="w-3.5 h-3.5" />
-              L{level}
-            </button>
+            <div className="hidden sm:inline-flex">
+              <ChallengeQuickAdjust />
+            </div>
           )}
 
           <SettingsMenu />
