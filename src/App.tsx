@@ -15,6 +15,8 @@ import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
+import { ChallengeProvider } from "@/contexts/ChallengeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
 import { Loader2 } from "lucide-react";
 
