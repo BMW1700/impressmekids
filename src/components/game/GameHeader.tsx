@@ -14,6 +14,7 @@ interface GameHeaderProps {
 export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
+  const { level, thresholds } = useChallengeMatchers();
 
   const handleSignOut = async () => {
     await signOut();
