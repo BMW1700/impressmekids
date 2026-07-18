@@ -155,38 +155,38 @@ export const matchWithAlternatives = (
 export const matchWithPhonemes = (
   spoken: string,
   expected: string,
-  threshold: number = 0.70
+  threshold?: number,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { isMatch: boolean; similarity: number } => {
   try {
-    // Get phonemes for both words using CMU Dictionary
+    const effectiveThreshold = threshold ?? thresholds.minPhonemeAccuracy;
     const expectedPhonemes = getIPAPronunciation(expected)[0] || [];
     const spokenPhonemes = getIPAPronunciation(spoken)[0] || [];
-    
+
     if (expectedPhonemes.length === 0 || spokenPhonemes.length === 0) {
-      // Words not in dictionary - fall back to text matching
       return { isMatch: false, similarity: 0 };
     }
-    
-    // Calculate phoneme-level similarity
+
     const maxLen = Math.max(expectedPhonemes.length, spokenPhonemes.length);
     const minLen = Math.min(expectedPhonemes.length, spokenPhonemes.length);
-    
+
     let matchCount = 0;
     for (let i = 0; i < minLen; i++) {
       if (expectedPhonemes[i] === spokenPhonemes[i]) {
         matchCount++;
-      } else if (arePhonemesSimilar(expectedPhonemes[i], spokenPhonemes[i], 0.3)) {
-        matchCount += 0.7; // Partial credit for similar phonemes
+      } else if (
+        arePhonemesSimilar(expectedPhonemes[i], spokenPhonemes[i], thresholds.phonemeSimilarityThreshold)
+      ) {
+        matchCount += 0.7;
       }
     }
-    
+
     const similarity = matchCount / maxLen;
-    return { 
-      isMatch: similarity >= threshold, 
-      similarity 
+    return {
+      isMatch: similarity >= effectiveThreshold,
+      similarity,
     };
   } catch (e) {
-    // Fallback if phoneme comparison fails
     return { isMatch: false, similarity: 0 };
   }
 };
@@ -198,29 +198,24 @@ export const matchWithPhonemes = (
 export const findWordInFullTranscript = (
   expectedWord: string,
   fullTranscript: string,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): boolean => {
   const normalizedExpected = normalizeWord(expectedWord);
   const transcriptWords = fullTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-  
+
   for (const spokenWord of transcriptWords) {
     const normalizedSpoken = normalizeWord(spokenWord);
-    
-    // Exact match
-    if (normalizedSpoken === normalizedExpected) {
-      return true;
-    }
-    
-    // Fuzzy match based on mode
-    const isMatch = useLenient 
-      ? isWordMatchLenient(spokenWord, expectedWord)
-      : isWordMatchStrict(spokenWord, expectedWord);
-    
-    if (isMatch) {
-      return true;
-    }
+
+    if (normalizedSpoken === normalizedExpected) return true;
+
+    const isMatch = useLenient
+      ? isWordMatchLenient(spokenWord, expectedWord, thresholds)
+      : isWordMatchStrict(spokenWord, expectedWord, thresholds);
+
+    if (isMatch) return true;
   }
-  
+
   return false;
 };
 
