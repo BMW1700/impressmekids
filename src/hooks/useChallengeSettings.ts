@@ -39,6 +39,25 @@ export function useChallengeSettings(studentId: string | null | undefined) {
     void refresh();
   }, [refresh]);
 
+  // Realtime: react to parent/teacher edits without a refresh
+  useEffect(() => {
+    if (!studentId) return;
+    const channel = supabase
+      .channel(`challenge_settings:${studentId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'challenge_settings', filter: `student_id=eq.${studentId}` },
+        (payload) => {
+          const next = (payload.new ?? null) as ChallengeSettingsRow | null;
+          if (next) setRow(next);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [studentId]);
+
   const setLevel = useCallback(
     async (level: ChallengeLevel, opts?: { asTeacherOverride?: boolean; role?: string }) => {
       if (!studentId) return;
