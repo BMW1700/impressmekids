@@ -84,7 +84,7 @@ export function ChallengeQuickAdjust({ className, variant = "yellow" }: Props) {
           className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${chipClasses} ${className ?? ""}`}
         >
           <Gauge className="w-3.5 h-3.5" />
-          L{level}
+          Challenge: {CHALLENGE_LEVELS[level].label}
           {lockEnabled && <Lock className="w-3 h-3 ml-0.5 opacity-80" />}
         </button>
       </PopoverTrigger>
