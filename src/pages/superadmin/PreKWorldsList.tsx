@@ -147,6 +147,49 @@ const PreKWorldsList = () => {
     load();
   };
 
+  // Canon Pre-K content that survives a "Clean Slate" purge.
+  // - "Help Benny Visit Grandma" (level 28b2032f) → world 04420500
+  // - "Benny Picks a Drink"      (level 2774972e) → world c8e2f4ff
+  const CANON_LEVEL_IDS = [
+    "28b2032f-96af-4701-8db9-5eb7bac1f6c1",
+    "2774972e-be72-41a6-8da6-4240cc7a72b6",
+  ];
+  const CANON_WORLD_IDS = [
+    "04420500-93a3-4836-aed4-3c9aa9efc62e",
+    "c8e2f4ff-6bfc-4086-85a2-7e432e58d77c",
+  ];
+
+  const cleanSlatePurge = async () => {
+    const msg =
+      'CLEAN SLATE PURGE\n\n' +
+      'This will UNPUBLISH every Pre-K level and world EXCEPT:\n' +
+      '  • "Help Benny Visit Grandma"\n' +
+      '  • "Benny Picks a Drink"\n\n' +
+      'Data is preserved (nothing is deleted). You can re-publish anything later.\n\n' +
+      'Continue?';
+    if (!confirm(msg)) return;
+
+    const [{ error: e1, count: c1 }, { error: e2, count: c2 }] = await Promise.all([
+      supabase
+        .from("prek_levels")
+        .update({ is_published: false }, { count: "exact" })
+        .not("id", "in", `(${CANON_LEVEL_IDS.join(",")})`)
+        .eq("is_published", true),
+      supabase
+        .from("prek_worlds")
+        .update({ is_published: false }, { count: "exact" })
+        .not("id", "in", `(${CANON_WORLD_IDS.join(",")})`)
+        .eq("is_published", true),
+    ]);
+
+    if (e1 || e2) {
+      toast.error(`Purge failed: ${e1?.message ?? e2?.message}`);
+      return;
+    }
+    toast.success(`Clean slate complete — ${c1 ?? 0} levels + ${c2 ?? 0} worlds unpublished. Only the 2 canon Benny videos remain live.`);
+    load();
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
