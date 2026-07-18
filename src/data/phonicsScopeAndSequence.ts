@@ -63,6 +63,16 @@ export const phonicsScopeAndSequence: PhonicsStage[] = [
     ],
     teachingTip:
       'Sound out each phoneme separately, then blend. Use stretchable hand gestures: c-a-t → cat.',
+    curriculumAlignment: {
+      fundations: 'K Units 4–9 / Grade 1 Unit 1',
+      ckla: 'Kindergarten Skills Units 4–7',
+      hmhIntoReading: 'K Modules 3–6 / Grade 1 Modules 1–2',
+      elEducation: 'K Module 1 Cycles 3–6',
+      witWisdom: 'K Module 1 (foundational skills)',
+      ufli: 'Lessons 1–34',
+      heggerty: 'Kindergarten Weeks 15–30',
+    },
+
   },
   {
     id: 'blends',
