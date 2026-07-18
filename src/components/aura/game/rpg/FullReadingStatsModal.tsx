@@ -446,7 +446,9 @@ export const FullReadingStatsModal = ({
                             </div>
                             <div>
                               <p className="text-sm font-medium text-white">
-                                {session.reading_mode?.replace(/_/g, ' ') || 'Reading Practice'}
+                                {session.reading_mode === 'prek'
+                                  ? 'Pre-K Adventure'
+                                  : session.reading_mode?.replace(/_/g, ' ') || 'Reading Practice'}
                               </p>
                               <p className="text-xs text-slate-400">
                                 {new Date(session.created_at).toLocaleDateString()}

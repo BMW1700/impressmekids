@@ -6212,6 +6212,7 @@ export type Database = {
           accuracy_percent: number
           assignment_id: string | null
           audio_url: string | null
+          challenge_level: number | null
           cognitive_load_avg: number | null
           comprehension_score: number | null
           created_at: string | null
@@ -6235,6 +6236,7 @@ export type Database = {
           accuracy_percent: number
           assignment_id?: string | null
           audio_url?: string | null
+          challenge_level?: number | null
           cognitive_load_avg?: number | null
           comprehension_score?: number | null
           created_at?: string | null
@@ -6258,6 +6260,7 @@ export type Database = {
           accuracy_percent?: number
           assignment_id?: string | null
           audio_url?: string | null
+          challenge_level?: number | null
           cognitive_load_avg?: number | null
           comprehension_score?: number | null
           created_at?: string | null

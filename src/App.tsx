@@ -15,6 +15,8 @@ import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
 import { MLStatusProvider } from "@/components/ml/MLStatusProvider";
+import { ChallengeProvider } from "@/contexts/ChallengeContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { SentryUserTracker } from "@/components/auth/SentryUserTracker";
 import { Loader2 } from "lucide-react";
 
@@ -157,7 +159,12 @@ function RouteAwareProviders({ children }: { children: ReactNode }) {
     path.startsWith("/teacher/aura") ||
     path.startsWith("/game/");
 
-  return <MLStatusProvider enabled={enableML}>{children}</MLStatusProvider>;
+  const { user } = useAuth();
+  return (
+    <MLStatusProvider enabled={enableML}>
+      <ChallengeProvider studentId={user?.id ?? null}>{children}</ChallengeProvider>
+    </MLStatusProvider>
+  );
 }
 
 const App = () => (
