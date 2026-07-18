@@ -1562,6 +1562,48 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_settings: {
+        Row: {
+          created_at: string
+          id: string
+          level: number
+          notes: string | null
+          overridden_by_teacher: boolean
+          set_by: string | null
+          set_by_role: string | null
+          student_id: string
+          teacher_override_at: string | null
+          teacher_override_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level?: number
+          notes?: string | null
+          overridden_by_teacher?: boolean
+          set_by?: string | null
+          set_by_role?: string | null
+          student_id: string
+          teacher_override_at?: string | null
+          teacher_override_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: number
+          notes?: string | null
+          overridden_by_teacher?: boolean
+          set_by?: string | null
+          set_by_role?: string | null
+          student_id?: string
+          teacher_override_at?: string | null
+          teacher_override_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       classroom_announcements: {
         Row: {
           announcement_type: string
@@ -1824,6 +1866,7 @@ export type Database = {
           end_time: string | null
           grade: number | null
           id: string
+          is_demo: boolean
           join_code: string
           location: string | null
           meeting_days: string[] | null
@@ -1839,6 +1882,7 @@ export type Database = {
           end_time?: string | null
           grade?: number | null
           id?: string
+          is_demo?: boolean
           join_code: string
           location?: string | null
           meeting_days?: string[] | null
@@ -1854,6 +1898,7 @@ export type Database = {
           end_time?: string | null
           grade?: number | null
           id?: string
+          is_demo?: boolean
           join_code?: string
           location?: string | null
           meeting_days?: string[] | null
@@ -4713,6 +4758,87 @@ export type Database = {
           },
         ]
       }
+      pilot_agreements: {
+        Row: {
+          activated_at: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_role: string | null
+          created_at: string
+          created_by: string | null
+          district_id: string | null
+          dpa_url: string | null
+          expires_at: string | null
+          id: string
+          msa_url: string | null
+          notes: string | null
+          ny_2d_addendum_url: string | null
+          privacy_summary_url: string | null
+          school_id: string | null
+          sent_at: string | null
+          signed_at: string | null
+          status: Database["public"]["Enums"]["pilot_agreement_status"]
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_role?: string | null
+          created_at?: string
+          created_by?: string | null
+          district_id?: string | null
+          dpa_url?: string | null
+          expires_at?: string | null
+          id?: string
+          msa_url?: string | null
+          notes?: string | null
+          ny_2d_addendum_url?: string | null
+          privacy_summary_url?: string | null
+          school_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["pilot_agreement_status"]
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_role?: string | null
+          created_at?: string
+          created_by?: string | null
+          district_id?: string | null
+          dpa_url?: string | null
+          expires_at?: string | null
+          id?: string
+          msa_url?: string | null
+          notes?: string | null
+          ny_2d_addendum_url?: string | null
+          privacy_summary_url?: string | null
+          school_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: Database["public"]["Enums"]["pilot_agreement_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pilot_agreements_district_id_fkey"
+            columns: ["district_id"]
+            isOneToOne: false
+            referencedRelation: "districts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pilot_agreements_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_achievements: {
         Row: {
           achievement_category: string
@@ -5139,7 +5265,10 @@ export type Database = {
       prek_level_words: {
         Row: {
           ask_line: string
+          category: string | null
+          category_level: number | null
           created_at: string
+          curriculum_tags: Json | null
           first_trim_in_seconds: number | null
           first_trim_out_seconds: number | null
           first_video_duration_seconds: number | null
@@ -5147,6 +5276,7 @@ export type Database = {
           hold_poster_url: string | null
           id: string
           level_id: string
+          phoneme_tags: string[] | null
           second_trim_in_seconds: number | null
           second_trim_out_seconds: number | null
           second_video_duration_seconds: number | null
@@ -5159,7 +5289,10 @@ export type Database = {
         }
         Insert: {
           ask_line?: string
+          category?: string | null
+          category_level?: number | null
           created_at?: string
+          curriculum_tags?: Json | null
           first_trim_in_seconds?: number | null
           first_trim_out_seconds?: number | null
           first_video_duration_seconds?: number | null
@@ -5167,6 +5300,7 @@ export type Database = {
           hold_poster_url?: string | null
           id?: string
           level_id: string
+          phoneme_tags?: string[] | null
           second_trim_in_seconds?: number | null
           second_trim_out_seconds?: number | null
           second_video_duration_seconds?: number | null
@@ -5179,7 +5313,10 @@ export type Database = {
         }
         Update: {
           ask_line?: string
+          category?: string | null
+          category_level?: number | null
           created_at?: string
+          curriculum_tags?: Json | null
           first_trim_in_seconds?: number | null
           first_trim_out_seconds?: number | null
           first_video_duration_seconds?: number | null
@@ -5187,6 +5324,7 @@ export type Database = {
           hold_poster_url?: string | null
           id?: string
           level_id?: string
+          phoneme_tags?: string[] | null
           second_trim_in_seconds?: number | null
           second_trim_out_seconds?: number | null
           second_video_duration_seconds?: number | null
@@ -5216,6 +5354,8 @@ export type Database = {
           closing_video_url: string | null
           created_at: string
           created_by: string | null
+          deprecated_at: string | null
+          deprecation_reason: string | null
           description: string
           ending_line: string
           goal: string
@@ -5235,7 +5375,12 @@ export type Database = {
           redub_similarity_boost: number
           redub_stability: number
           redub_voice_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_credential: string | null
+          reviewer_name: string | null
           sort_order: number
+          status: Database["public"]["Enums"]["prek_level_status"]
           title: string
           updated_at: string
           world_id: string
@@ -5248,6 +5393,8 @@ export type Database = {
           closing_video_url?: string | null
           created_at?: string
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecation_reason?: string | null
           description?: string
           ending_line?: string
           goal?: string
@@ -5267,7 +5414,12 @@ export type Database = {
           redub_similarity_boost?: number
           redub_stability?: number
           redub_voice_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_credential?: string | null
+          reviewer_name?: string | null
           sort_order?: number
+          status?: Database["public"]["Enums"]["prek_level_status"]
           title: string
           updated_at?: string
           world_id: string
@@ -5280,6 +5432,8 @@ export type Database = {
           closing_video_url?: string | null
           created_at?: string
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecation_reason?: string | null
           description?: string
           ending_line?: string
           goal?: string
@@ -5299,7 +5453,12 @@ export type Database = {
           redub_similarity_boost?: number
           redub_stability?: number
           redub_voice_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_credential?: string | null
+          reviewer_name?: string | null
           sort_order?: number
+          status?: Database["public"]["Enums"]["prek_level_status"]
           title?: string
           updated_at?: string
           world_id?: string
@@ -9746,6 +9905,19 @@ export type Database = {
         | "parent_teacher_conference"
         | "other"
       match_status: "waiting" | "in_progress" | "completed"
+      pilot_agreement_status:
+        | "draft"
+        | "sent"
+        | "under_review"
+        | "signed"
+        | "active"
+        | "expired"
+        | "cancelled"
+      prek_level_status:
+        | "draft"
+        | "ready_for_review"
+        | "approved"
+        | "deprecated"
       question_type: "question_answer" | "reading_comprehension" | "speaking"
       school_event_type:
         | "holiday"
@@ -9924,6 +10096,21 @@ export const Constants = {
         "other",
       ],
       match_status: ["waiting", "in_progress", "completed"],
+      pilot_agreement_status: [
+        "draft",
+        "sent",
+        "under_review",
+        "signed",
+        "active",
+        "expired",
+        "cancelled",
+      ],
+      prek_level_status: [
+        "draft",
+        "ready_for_review",
+        "approved",
+        "deprecated",
+      ],
       question_type: ["question_answer", "reading_comprehension", "speaking"],
       school_event_type: [
         "holiday",
