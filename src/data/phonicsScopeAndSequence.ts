@@ -10,6 +10,23 @@
  *   2. /scope-and-sequence (public, printable)
  */
 
+export interface CurriculumAlignment {
+  /** Wilson Fundations unit (e.g. "K Unit 3", "1 Unit 5") */
+  fundations?: string;
+  /** Amplify CKLA Skills strand domain */
+  ckla?: string;
+  /** HMH Into Reading module + week */
+  hmhIntoReading?: string;
+  /** EL Education module + cycle */
+  elEducation?: string;
+  /** Wit & Wisdom module */
+  witWisdom?: string;
+  /** UFLI Foundations lesson range */
+  ufli?: string;
+  /** Heggerty Phonemic Awareness week range */
+  heggerty?: string;
+}
+
 export interface PhonicsStage {
   id: string;
   stageNumber: number;
@@ -21,7 +38,10 @@ export interface PhonicsStage {
   example: string;
   practiceWords: string[];
   teachingTip: string;
+  /** Crosswalk to the major charter/district-mandated curricula. */
+  curriculumAlignment?: CurriculumAlignment;
 }
+
 
 export const phonicsScopeAndSequence: PhonicsStage[] = [
   {
