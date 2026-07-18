@@ -335,10 +335,11 @@ export interface WordMatchResult {
  * Detailed word match analysis for teacher verification workflow
  */
 export const analyzeWordMatch = (
-  spoken: string, 
-  expected: string, 
-  speechConfidence: number = 1, // Web Speech API confidence (0-1)
-  isStrictMode: boolean = false
+  spoken: string,
+  expected: string,
+  speechConfidence: number = 1,
+  isStrictMode: boolean = false,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): WordMatchResult => {
   const normalizedSpoken = normalizeWord(spoken);
   const normalizedExpected = normalizeWord(expected);
