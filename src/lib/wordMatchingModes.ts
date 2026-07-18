@@ -111,37 +111,37 @@ export const findWordInWindow = (
 export const matchWithAlternatives = (
   alternatives: string[],
   expected: string,
-  useLenient: boolean = true
+  useLenient: boolean = true,
+  thresholds: ChallengeThresholds = DEFAULT_THRESHOLDS
 ): { isMatch: boolean; bestAlternative: string; matchScore: number } => {
   let bestScore = 0;
   let bestAlternative = alternatives[0] || '';
-  
+
   for (const alt of alternatives) {
     const words = alt.split(/\s+/).filter(w => w.length > 0);
     for (const word of words) {
       const normalizedWord = normalizeWord(word);
       const normalizedExpected = normalizeWord(expected);
-      
+
       if (normalizedWord === normalizedExpected) {
         return { isMatch: true, bestAlternative: word, matchScore: 100 };
       }
-      
+
       const distance = levenshteinDistance(normalizedWord, normalizedExpected);
       const maxLen = Math.max(normalizedWord.length, normalizedExpected.length);
       const score = Math.round(((maxLen - distance) / maxLen) * 100);
-      
+
       if (score > bestScore) {
         bestScore = score;
         bestAlternative = word;
       }
     }
   }
-  
-  // Check if best match meets threshold
-  const meetsThreshold = useLenient 
-    ? isWordMatchLenient(bestAlternative, expected)
-    : isWordMatchStrict(bestAlternative, expected);
-  
+
+  const meetsThreshold = useLenient
+    ? isWordMatchLenient(bestAlternative, expected, thresholds)
+    : isWordMatchStrict(bestAlternative, expected, thresholds);
+
   return { isMatch: meetsThreshold, bestAlternative, matchScore: bestScore };
 };
 
