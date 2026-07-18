@@ -61,7 +61,7 @@ import { awardVillageProgress } from "@/hooks/useVillage";
 import { usePreKLevelStars, recordPreKLevelCompletion } from "@/hooks/usePreKLevelStars";
 import { updateStudentReadingStats } from "@/lib/updateStudentReadingStats";
 import { useChallengeMatchers } from "@/contexts/ChallengeContext";
-import { useRef } from "react";
+
 
 // Helper component to get student's classroom and show leaderboard
 const ClassroomLeaderboardWrapper = ({ studentId, gradeMode }: { studentId: string; gradeMode?: string }) => {
