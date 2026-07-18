@@ -13,6 +13,18 @@ export interface ChallengeSettingsRow {
   overridden_by_teacher: boolean;
   set_by_role: string | null;
   updated_at: string;
+  lock_enabled: boolean;
+  lock_pin_hash: string | null;
+  lock_set_by: string | null;
+}
+
+/** SHA-256 hex hash for a PIN, computed in the browser. */
+export async function hashPin(pin: string): Promise<string> {
+  const enc = new TextEncoder().encode(pin);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 /**
@@ -28,7 +40,9 @@ export function useChallengeSettings(studentId: string | null | undefined) {
     setLoading(true);
     const { data } = await supabase
       .from('challenge_settings')
-      .select('student_id, level, overridden_by_teacher, set_by_role, updated_at')
+      .select(
+        'student_id, level, overridden_by_teacher, set_by_role, updated_at, lock_enabled, lock_pin_hash, lock_set_by',
+      )
       .eq('student_id', studentId)
       .maybeSingle();
     setRow((data as ChallengeSettingsRow) ?? null);
@@ -78,6 +92,49 @@ export function useChallengeSettings(studentId: string | null | undefined) {
     [studentId, refresh],
   );
 
+  /** Parent PIN lock: sets a hashed PIN so the popover requires it before editing. */
+  const setLock = useCallback(
+    async (pin: string) => {
+      if (!studentId || !pin) return;
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id ?? null;
+      const lock_pin_hash = await hashPin(pin);
+      await supabase.from('challenge_settings').upsert(
+        {
+          student_id: studentId,
+          // Preserve current level; upsert requires level to exist. Fall back to default if none.
+          level: (row?.level ?? DEFAULT_CHALLENGE_LEVEL) as ChallengeLevel,
+          lock_enabled: true,
+          lock_pin_hash,
+          lock_set_by: uid,
+        },
+        { onConflict: 'student_id' },
+      );
+      await refresh();
+    },
+    [studentId, row?.level, refresh],
+  );
+
+  /** Remove the PIN lock. Requires current PIN unless there is no lock. */
+  const clearLock = useCallback(async () => {
+    if (!studentId) return;
+    await supabase
+      .from('challenge_settings')
+      .update({ lock_enabled: false, lock_pin_hash: null, lock_set_by: null })
+      .eq('student_id', studentId);
+    await refresh();
+  }, [studentId, refresh]);
+
+  /** Client-side PIN check against the stored hash. */
+  const verifyPin = useCallback(
+    async (pin: string): Promise<boolean> => {
+      if (!row?.lock_enabled || !row?.lock_pin_hash) return true;
+      const h = await hashPin(pin);
+      return h === row.lock_pin_hash;
+    },
+    [row?.lock_enabled, row?.lock_pin_hash],
+  );
+
   const level = (row?.level ?? DEFAULT_CHALLENGE_LEVEL) as ChallengeLevel;
   return {
     row,
@@ -85,7 +142,11 @@ export function useChallengeSettings(studentId: string | null | undefined) {
     thresholds: getChallengeThresholds(level),
     label: CHALLENGE_LEVELS[level].label,
     loading,
+    lockEnabled: !!row?.lock_enabled,
     setLevel,
+    setLock,
+    clearLock,
+    verifyPin,
     refresh,
   };
 }
