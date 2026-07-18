@@ -1567,6 +1567,9 @@ export type Database = {
           created_at: string
           id: string
           level: number
+          lock_enabled: boolean
+          lock_pin_hash: string | null
+          lock_set_by: string | null
           notes: string | null
           overridden_by_teacher: boolean
           set_by: string | null
@@ -1580,6 +1583,9 @@ export type Database = {
           created_at?: string
           id?: string
           level?: number
+          lock_enabled?: boolean
+          lock_pin_hash?: string | null
+          lock_set_by?: string | null
           notes?: string | null
           overridden_by_teacher?: boolean
           set_by?: string | null
@@ -1593,6 +1599,9 @@ export type Database = {
           created_at?: string
           id?: string
           level?: number
+          lock_enabled?: boolean
+          lock_pin_hash?: string | null
+          lock_set_by?: string | null
           notes?: string | null
           overridden_by_teacher?: boolean
           set_by?: string | null
