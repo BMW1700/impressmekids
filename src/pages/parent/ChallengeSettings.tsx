@@ -136,6 +136,181 @@ export default function ParentChallengeSettings() {
           </CardContent>
         </Card>
       )}
+
+      {selected && <LockCard studentId={selected} />}
     </div>
   );
 }
+
+function LockCard({ studentId }: { studentId: string }) {
+  const { row, lockEnabled, setLock, clearLock, verifyPin, loading } = useChallengeSettings(studentId);
+  const [mode, setMode] = useState<'idle' | 'set' | 'change' | 'remove'>('idle');
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+
+  const reset = () => {
+    setMode('idle');
+    setCurrentPin('');
+    setNewPin('');
+    setConfirmPin('');
+  };
+
+  const digits = (s: string) => s.replace(/\D/g, '').slice(0, 6);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Lock with PIN</span>
+          <Badge variant={lockEnabled ? 'default' : 'secondary'}>
+            {lockEnabled ? 'Locked' : 'Unlocked'}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Optional. When on, changing the Challenge Level from the header requires this PIN.
+          Only you will know it. Turn it off any time.
+        </p>
+
+        {mode === 'idle' && !lockEnabled && (
+          <Button onClick={() => setMode('set')}>Set a PIN</Button>
+        )}
+
+        {mode === 'idle' && lockEnabled && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setMode('change')}>Change PIN</Button>
+            <Button variant="destructive" onClick={() => setMode('remove')}>Remove lock</Button>
+          </div>
+        )}
+
+        {mode === 'set' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">New PIN (4–6 digits)</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={newPin}
+                onChange={(e) => setNewPin(digits(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Confirm PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(digits(e.target.value))}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                disabled={loading || newPin.length < 4 || newPin !== confirmPin}
+                onClick={async () => {
+                  await setLock(newPin);
+                  toast({ title: 'PIN lock enabled' });
+                  reset();
+                }}
+              >
+                Save PIN
+              </Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'change' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">Current PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={currentPin}
+                onChange={(e) => setCurrentPin(digits(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">New PIN (4–6 digits)</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={newPin}
+                onChange={(e) => setNewPin(digits(e.target.value))}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Confirm new PIN</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(digits(e.target.value))}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                disabled={loading || newPin.length < 4 || newPin !== confirmPin}
+                onClick={async () => {
+                  const ok = await verifyPin(currentPin);
+                  if (!ok) {
+                    toast({ title: 'Incorrect current PIN', variant: 'destructive' });
+                    return;
+                  }
+                  await setLock(newPin);
+                  toast({ title: 'PIN updated' });
+                  reset();
+                }}
+              >
+                Update PIN
+              </Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'remove' && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">Enter current PIN to remove the lock</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                className="mt-1 h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={currentPin}
+                onChange={(e) => setCurrentPin(digits(e.target.value))}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                disabled={loading || currentPin.length < 4}
+                onClick={async () => {
+                  const ok = await verifyPin(currentPin);
+                  if (!ok) {
+                    toast({ title: 'Incorrect PIN', variant: 'destructive' });
+                    return;
+                  }
+                  await clearLock();
+                  toast({ title: 'Lock removed' });
+                  reset();
+                }}
+              >
+                Remove lock
+              </Button>
+              <Button variant="outline" onClick={reset}>Cancel</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
