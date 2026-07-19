@@ -335,11 +335,15 @@ async function ensureRedubClip(
   // Keep trim-in for lip sync, but don't hard-cut exactly at source trim-out.
   // ElevenLabs can add a small sentence tail; the runtime already freeze-holds
   // the last frame while fixed redub audio finishes.
-  const redubTrimEnd = trimEnd != null && rawDuration != null
-    ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
-      ? null
-      : Math.min(rawDuration, trimEnd + 2)
-    : null;
+  // Region-rescue redubs are already trimmed to the exact phrase, so we play
+  // them start-to-end without any tail trimming.
+  const redubTrimEnd = args.clipIsPreTrimmed
+    ? null
+    : trimEnd != null && rawDuration != null
+      ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
+        ? null
+        : Math.min(rawDuration, trimEnd + 2)
+      : null;
 
   const clipPatch = {
     level_id: args.levelId,
