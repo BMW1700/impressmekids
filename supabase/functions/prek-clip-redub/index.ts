@@ -260,8 +260,9 @@ Deno.serve(async (req) => {
       storagePath: outPath,
       sceneDurationSeconds: body.sceneDurationSeconds,
       sourceRawDurationSeconds: body.sourceRawDurationSeconds,
-      sourceTrimStartSeconds: body.sourceTrimStartSeconds,
-      sourceTrimEndSeconds: body.sourceTrimEndSeconds,
+      sourceTrimStartSeconds: body.clipIsPreTrimmed ? 0 : body.sourceTrimStartSeconds,
+      sourceTrimEndSeconds: body.clipIsPreTrimmed ? undefined : body.sourceTrimEndSeconds,
+      clipIsPreTrimmed: body.clipIsPreTrimmed === true,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
