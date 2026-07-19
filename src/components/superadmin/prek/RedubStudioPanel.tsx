@@ -33,6 +33,8 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
   const [voiceIdInitialized, setVoiceIdInitialized] = useState(false);
   const previewRef = useRef<HTMLAudioElement | null>(null);
   const [previewingKey, setPreviewingKey] = useState<string | null>(null);
+  const [rescueFrom, setRescueFrom] = useState<RedubSceneInput | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
 
   // Sync draft with loaded settings once
   if (!voiceIdInitialized && !redub.loading) {
