@@ -289,6 +289,7 @@ async function ensureRedubClip(
     sourceRawDurationSeconds?: number;
     sourceTrimStartSeconds?: number;
     sourceTrimEndSeconds?: number;
+    clipIsPreTrimmed?: boolean;
   },
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
