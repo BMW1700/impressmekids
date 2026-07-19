@@ -190,6 +190,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setCorrect(0);
     setScoreCredit(0);
     setWordsAsked(0);
+    slotStepIndexRef.current = { A: null, B: null };
     advancedRef.current = false;
     askedStepRef.current = -1;
   }, [adventure?.id]);
@@ -711,8 +712,10 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   };
 
   const handleVideoError = (slot: Slot) => {
+    const stepIndexForSlot = slotStepIndexRef.current[slot];
+    const stepForSlot = stepIndexForSlot == null ? null : steps[stepIndexForSlot];
     const currentSrc = slotSrc[slot] || videoRefs.current[slot]?.currentSrc || videoRefs.current[slot]?.src || "";
-    const fallback = fallbackBySrc.get(currentSrc);
+    const fallback = stepForSlot?.kind === "clip" ? stepForSlot.fallbackSrc : fallbackBySrc.get(currentSrc);
     if (fallback && fallback !== currentSrc) {
       setSlotSrc((s) => ({ ...s, [slot]: fallback }));
       window.setTimeout(() => {
