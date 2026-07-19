@@ -214,8 +214,17 @@ const PreKLevelBuilder = () => {
       if (levelError) throw levelError;
       const firstErr = results.find((r) => r.error)?.error;
       if (firstErr) throw firstErr;
+      // Cascade the freshly-saved video trims onto every redub/music clip so
+      // audio never drifts ahead of the video (e.g. intern trims after redub).
+      const patched = await alignPreKAudioClipsToVideoTrims(level.id).catch(() => 0);
       invalidatePreKLevelCacheByDbId(level.id);
-      if (showToast) toast.success("Saved — all clip crops are locked in");
+      if (showToast) {
+        toast.success(
+          patched > 0
+            ? `Saved — realigned ${patched} audio clip${patched === 1 ? "" : "s"} to new trims`
+            : "Saved — all clip crops are locked in",
+        );
+      }
       return true;
     } catch (e: unknown) {
       toast.error(errorMessage(e, "Save failed"));
