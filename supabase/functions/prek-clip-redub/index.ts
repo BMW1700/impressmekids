@@ -142,16 +142,20 @@ Deno.serve(async (req) => {
       audioBytes = new Uint8Array(await dl.data.arrayBuffer());
       audioMime = "audio/mpeg";
     } else {
-      // 1. Download source video bytes (Phase A, or legacy single-shot).
-      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      // 1. Download source bytes (Phase A, or legacy single-shot). Source
+      //    normally lives in VIDEO_BUCKET, but the Region Rescue tool uploads
+      //    a pre-trimmed WAV to AUDIO_BUCKET and passes sourceBucket to point
+      //    us at it.
+      const srcBucket = body.sourceBucket || VIDEO_BUCKET;
+      const dl = await admin.storage.from(srcBucket).download(body.sourceStoragePath);
       if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
       audioBytes = new Uint8Array(await dl.data.arrayBuffer());
-      audioMime = "video/mp4";
+      audioMime = srcBucket === AUDIO_BUCKET ? "audio/wav" : "video/mp4";
 
       // 2. Voice isolation (removes music, secondary voices, room noise → clean Benny stem).
       if (doIsolatePhase) {
         const isoForm = new FormData();
-        isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
+        isoForm.append("audio", new Blob([audioBytes], { type: audioMime }), audioMime === "audio/wav" ? "source.wav" : "source.mp4");
         const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
           method: "POST",
           headers: { "xi-api-key": apiKey },
