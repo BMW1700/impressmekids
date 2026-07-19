@@ -30,21 +30,25 @@ interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+  /** Optional storage bucket for source. Defaults to VIDEO_BUCKET. Set to
+   *  AUDIO_BUCKET when the "source" is a pre-trimmed WAV/MP3 written by the
+   *  Region Rescue tool. */
+  sourceBucket?: string;
   voiceId?: string;
   stability?: number;
   similarityBoost?: number;
   isolate?: boolean;     // default true
   isolateOnly?: boolean; // default false — skip STS
-  // Two-phase mode to stay under Supabase Edge Function 150s wall-clock on
-  // long clips: "isolate" runs Voice Isolator only; "sts" consumes an already
-  // isolated MP3 path from AUDIO_BUCKET and only runs Speech-to-Speech.
-  // Omit to run the legacy single-shot pipeline (isolation + STS in one call).
   stage?: "isolate" | "sts";
   isolatedStoragePath?: string; // required when stage === "sts"
-  sceneDurationSeconds?: number; // fallback clip length until exact MP3 metadata is available
+  sceneDurationSeconds?: number;
   sourceRawDurationSeconds?: number;
   sourceTrimStartSeconds?: number;
   sourceTrimEndSeconds?: number;
+  /** When true the client already trimmed the audio to the exact phrase; the
+   *  resulting clip is placed with trim_start=0 / trim_end=null so it plays
+   *  in full at the scene's timeline start. */
+  clipIsPreTrimmed?: boolean;
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
