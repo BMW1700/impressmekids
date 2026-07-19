@@ -69,7 +69,7 @@ export function sortPreKWords<T extends { sort_order: number; id: string }>(word
 }
 
 export function getPreKVideoSceneKeys(words: PreKIntegrityWord[]): string[] {
-  const keys = [SCENE_KEYS.opening];
+  const keys: string[] = [SCENE_KEYS.opening];
   sortPreKWords(words).forEach((_, idx) => {
     const i = idx + 1;
     keys.push(SCENE_KEYS.wordFirst(i), SCENE_KEYS.wordSecond(i));
