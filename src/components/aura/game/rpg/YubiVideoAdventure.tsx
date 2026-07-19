@@ -111,6 +111,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // Number of "word" steps — needed to compute scene keys from step index.
   const wordCount = useMemo(() => steps.filter((s) => s.kind === "word").length, [steps]);
+  const slotStepIndexRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
 
   // Audio overlay mix (no-op when dbLevelId is null)
   const mix = usePreKAudioMix(dbLevelId ?? null);
@@ -189,6 +190,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setCorrect(0);
     setScoreCredit(0);
     setWordsAsked(0);
+    slotStepIndexRef.current = { A: null, B: null };
     advancedRef.current = false;
     askedStepRef.current = -1;
   }, [adventure?.id]);
@@ -263,19 +265,16 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     return null;
   }, [stepIndex, steps]);
 
-  // src → {trimIn, trimOut} lookup used by the <video> elements to seek to
-  // the in-point on load and synthesize an early "ended" at the out-point.
-  // Non-destructive: the file in storage is untouched.
-  const trimsBySrc = useMemo(() => {
-    const m = new Map<string, { trimIn: number; trimOut: number | null }>();
-    for (const s of steps) {
-      if (s.kind !== "clip") continue;
-      const tIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
-      const tOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
-      if (tIn > 0 || tOut !== null) m.set(s.src, { trimIn: tIn, trimOut: tOut });
-      if ((tIn > 0 || tOut !== null) && s.fallbackSrc) m.set(s.fallbackSrc, { trimIn: tIn, trimOut: tOut });
-    }
-    return m;
+  // Trim lookup is scene/step-based, not URL-based. Multiple scenes can reuse
+  // the same file; keying trims by src lets a later scene overwrite an earlier
+  // one and can make playback seek/stop the wrong clip.
+  const trimForStep = useCallback((index: number | null) => {
+    if (index == null) return null;
+    const s = steps[index];
+    if (!s || s.kind !== "clip") return null;
+    const trimIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
+    const trimOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
+    return { trimIn, trimOut };
   }, [steps]);
 
   const fallbackBySrc = useMemo(() => {
@@ -294,6 +293,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setSlotSrc((s) => (s.A === firstClipSrc ? s : { ...s, A: firstClipSrc }));
     setActiveSlot("A");
     activeSlotRef.current = "A";
+    slotStepIndexRef.current.A = 0;
   }, [firstClipSrc, phase]);
 
   // ── student id (for AURA telemetry) ────────────────────────────────────────
@@ -371,21 +371,28 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   }, []);
 
   // ── Crossfade swap: load nextSrc on idle slot, fade when it plays ─────────
-  const swapToClip = useCallback((nextSrc: string) => {
+  const swapToClip = useCallback((nextSrc: string, nextStepIndex: number) => {
     const cur = activeSlotRef.current;
     const incoming = otherSlot(cur);
 
     // Already showing this src? nothing to do.
     if (slotSrc[cur] === nextSrc) {
+      slotStepIndexRef.current[cur] = nextStepIndex;
+      const trim = trimForStep(nextStepIndex);
+      const v = videoRefs.current[cur];
+      if (v) {
+        try { v.currentTime = trim?.trimIn ?? 0; } catch { /* noop */ }
+      }
       playSlot(cur);
       return;
     }
     // Already loaded on the other slot? just trigger the fade path.
+    slotStepIndexRef.current[incoming] = nextStepIndex;
     incomingSlotRef.current = incoming;
     setSlotSrc((s) => ({ ...s, [incoming]: nextSrc }));
     // The incoming <video> will mount/remount on the next render due to the
     // new src+key; onPlaying for that slot finishes the crossfade.
-  }, [slotSrc, playSlot]);
+  }, [slotSrc, playSlot, trimForStep]);
 
   // freeze current frame and pin opaque poster on top so the word card sits
   // on a totally stable image.
@@ -418,9 +425,15 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
           setHoldPosterVisible(false);
           queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
         }
+        slotStepIndexRef.current[cur] = stepIndex;
+        const trim = trimForStep(stepIndex);
+        const v = videoRefs.current[cur];
+        if (v) {
+          try { v.currentTime = trim?.trimIn ?? 0; } catch { /* noop */ }
+        }
         playSlot(cur);
       } else {
-        swapToClip(current.src);
+        swapToClip(current.src, stepIndex);
       }
       return;
     }
@@ -550,8 +563,8 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         // Respect the per-level mute_source_video_audio setting; only unmute
         // when the level keeps its baked-in narration.
         v.muted = muteSourceVideo;
-        const srcForTrim = v.currentSrc || firstClipSrc || "";
-        const trim = trimsBySrc.get(srcForTrim);
+        slotStepIndexRef.current[activeSlotRef.current] = 0;
+        const trim = trimForStep(0);
         v.currentTime = trim?.trimIn ?? 0;
       } catch { /* ignore */ }
       playSlot(activeSlotRef.current);
@@ -568,8 +581,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const seekToTrimIn = (slot: Slot) => {
     const v = videoRefs.current[slot];
     if (!v) return;
-    const src = v.currentSrc || v.src;
-    const trim = trimsBySrc.get(src);
+    const trim = trimForStep(slotStepIndexRef.current[slot]);
     if (!trim || trim.trimIn <= 0) {
       pendingTrimSeekRef.current[slot] = false;
       return;
@@ -599,8 +611,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     if (slot !== activeSlotRef.current) return;
     const v = videoRefs.current[slot];
     if (!v) return;
-    const src = v.currentSrc || v.src;
-    const trim = trimsBySrc.get(src);
+    const trim = trimForStep(slotStepIndexRef.current[slot]);
     if (!trim?.trimOut) return;
     if (v.currentTime >= trim.trimOut - 0.02) {
       try { v.pause(); } catch { /* noop */ }
@@ -691,6 +702,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
         if (prevVideo) {
           try { prevVideo.pause(); } catch { /* ignore */ }
         }
+        slotStepIndexRef.current[prev] = null;
         setSlotSrc((s) => ({ ...s, [prev]: null }));
         setCrossfading(false);
         if (holdPoster) setHoldPoster(null);
@@ -710,8 +722,10 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   };
 
   const handleVideoError = (slot: Slot) => {
+    const stepIndexForSlot = slotStepIndexRef.current[slot];
+    const stepForSlot = stepIndexForSlot == null ? null : steps[stepIndexForSlot];
     const currentSrc = slotSrc[slot] || videoRefs.current[slot]?.currentSrc || videoRefs.current[slot]?.src || "";
-    const fallback = fallbackBySrc.get(currentSrc);
+    const fallback = stepForSlot?.kind === "clip" ? stepForSlot.fallbackSrc : fallbackBySrc.get(currentSrc);
     if (fallback && fallback !== currentSrc) {
       setSlotSrc((s) => ({ ...s, [slot]: fallback }));
       window.setTimeout(() => {

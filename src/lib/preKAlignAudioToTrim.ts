@@ -1,5 +1,5 @@
-// Realigns Pre-K audio clips (redub + music) so their `trim_start_seconds`,
-// `duration_seconds`, and `trim_end_seconds` follow the current video trims
+// Realigns Pre-K audio clips (redub + music) so their `trim_start_seconds`
+// and `trim_end_seconds` follow the current video trims
 // on the parent scene. Fixes the "audio ~0.8s ahead of video" drift that
 // happens when a video is trimmed AFTER redub/music has already been
 // generated. No audio regeneration, no ElevenLabs/LALAL cost — millisecond-
@@ -40,8 +40,9 @@ async function loadSceneMap(levelId: string): Promise<SceneMap | null> {
 }
 
 /**
- * For each redub/music clip on this level, set trim_start / trim_end /
- * duration to match the scene's current video trim.
+ * For each redub/music clip on this level, set trim_start / trim_end to match
+ * the scene's current video trim. Do NOT overwrite duration_seconds here: that
+ * column represents the audio file's actual duration, not the video duration.
  *
  * Returns the number of clips that were actually patched (drift found).
  */
@@ -92,24 +93,20 @@ export async function alignPreKAudioClipsToVideoTrims(
     const curTrimStart = Number(c.trim_start_seconds ?? 0);
     const curTrimEnd =
       c.trim_end_seconds == null ? null : Number(c.trim_end_seconds);
-    const curDur = Number(c.duration_seconds ?? 0);
-
     const trimStartDrift = Math.abs(curTrimStart - trimIn) > EPS;
     const trimEndDrift =
       (curTrimEnd == null) !== (newTrimEnd == null) ||
       (curTrimEnd != null &&
         newTrimEnd != null &&
         Math.abs(curTrimEnd - newTrimEnd) > EPS);
-    const durDrift = Math.abs(curDur - raw) > EPS;
 
-    if (!trimStartDrift && !trimEndDrift && !durDrift) continue;
+    if (!trimStartDrift && !trimEndDrift) continue;
 
     const { error: upErr } = await supabase
       .from("prek_level_audio_clips")
       .update({
         trim_start_seconds: trimIn,
         trim_end_seconds: newTrimEnd,
-        duration_seconds: raw,
       })
       .eq("id", c.id);
     if (!upErr) patched += 1;
