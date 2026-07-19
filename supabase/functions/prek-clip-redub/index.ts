@@ -30,21 +30,25 @@ interface Body {
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
+  /** Optional storage bucket for source. Defaults to VIDEO_BUCKET. Set to
+   *  AUDIO_BUCKET when the "source" is a pre-trimmed WAV/MP3 written by the
+   *  Region Rescue tool. */
+  sourceBucket?: string;
   voiceId?: string;
   stability?: number;
   similarityBoost?: number;
   isolate?: boolean;     // default true
   isolateOnly?: boolean; // default false — skip STS
-  // Two-phase mode to stay under Supabase Edge Function 150s wall-clock on
-  // long clips: "isolate" runs Voice Isolator only; "sts" consumes an already
-  // isolated MP3 path from AUDIO_BUCKET and only runs Speech-to-Speech.
-  // Omit to run the legacy single-shot pipeline (isolation + STS in one call).
   stage?: "isolate" | "sts";
   isolatedStoragePath?: string; // required when stage === "sts"
-  sceneDurationSeconds?: number; // fallback clip length until exact MP3 metadata is available
+  sceneDurationSeconds?: number;
   sourceRawDurationSeconds?: number;
   sourceTrimStartSeconds?: number;
   sourceTrimEndSeconds?: number;
+  /** When true the client already trimmed the audio to the exact phrase; the
+   *  resulting clip is placed with trim_start=0 / trim_end=null so it plays
+   *  in full at the scene's timeline start. */
+  clipIsPreTrimmed?: boolean;
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
@@ -138,16 +142,20 @@ Deno.serve(async (req) => {
       audioBytes = new Uint8Array(await dl.data.arrayBuffer());
       audioMime = "audio/mpeg";
     } else {
-      // 1. Download source video bytes (Phase A, or legacy single-shot).
-      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      // 1. Download source bytes (Phase A, or legacy single-shot). Source
+      //    normally lives in VIDEO_BUCKET, but the Region Rescue tool uploads
+      //    a pre-trimmed WAV to AUDIO_BUCKET and passes sourceBucket to point
+      //    us at it.
+      const srcBucket = body.sourceBucket || VIDEO_BUCKET;
+      const dl = await admin.storage.from(srcBucket).download(body.sourceStoragePath);
       if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
       audioBytes = new Uint8Array(await dl.data.arrayBuffer());
-      audioMime = "video/mp4";
+      audioMime = srcBucket === AUDIO_BUCKET ? "audio/wav" : "video/mp4";
 
       // 2. Voice isolation (removes music, secondary voices, room noise → clean Benny stem).
       if (doIsolatePhase) {
         const isoForm = new FormData();
-        isoForm.append("audio", new Blob([audioBytes], { type: "video/mp4" }), "source.mp4");
+        isoForm.append("audio", new Blob([audioBytes], { type: audioMime }), audioMime === "audio/wav" ? "source.wav" : "source.mp4");
         const isoResp = await fetchWithRetry("https://api.elevenlabs.io/v1/audio-isolation", {
           method: "POST",
           headers: { "xi-api-key": apiKey },
@@ -252,8 +260,9 @@ Deno.serve(async (req) => {
       storagePath: outPath,
       sceneDurationSeconds: body.sceneDurationSeconds,
       sourceRawDurationSeconds: body.sourceRawDurationSeconds,
-      sourceTrimStartSeconds: body.sourceTrimStartSeconds,
-      sourceTrimEndSeconds: body.sourceTrimEndSeconds,
+      sourceTrimStartSeconds: body.clipIsPreTrimmed ? 0 : body.sourceTrimStartSeconds,
+      sourceTrimEndSeconds: body.clipIsPreTrimmed ? undefined : body.sourceTrimEndSeconds,
+      clipIsPreTrimmed: body.clipIsPreTrimmed === true,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -280,6 +289,7 @@ async function ensureRedubClip(
     sourceRawDurationSeconds?: number;
     sourceTrimStartSeconds?: number;
     sourceTrimEndSeconds?: number;
+    clipIsPreTrimmed?: boolean;
   },
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
@@ -325,11 +335,15 @@ async function ensureRedubClip(
   // Keep trim-in for lip sync, but don't hard-cut exactly at source trim-out.
   // ElevenLabs can add a small sentence tail; the runtime already freeze-holds
   // the last frame while fixed redub audio finishes.
-  const redubTrimEnd = trimEnd != null && rawDuration != null
-    ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
-      ? null
-      : Math.min(rawDuration, trimEnd + 2)
-    : null;
+  // Region-rescue redubs are already trimmed to the exact phrase, so we play
+  // them start-to-end without any tail trimming.
+  const redubTrimEnd = args.clipIsPreTrimmed
+    ? null
+    : trimEnd != null && rawDuration != null
+      ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
+        ? null
+        : Math.min(rawDuration, trimEnd + 2)
+      : null;
 
   const clipPatch = {
     level_id: args.levelId,
