@@ -111,6 +111,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // Number of "word" steps — needed to compute scene keys from step index.
   const wordCount = useMemo(() => steps.filter((s) => s.kind === "word").length, [steps]);
+  const slotStepIndexRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
 
   // Audio overlay mix (no-op when dbLevelId is null)
   const mix = usePreKAudioMix(dbLevelId ?? null);
@@ -263,19 +264,16 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     return null;
   }, [stepIndex, steps]);
 
-  // src → {trimIn, trimOut} lookup used by the <video> elements to seek to
-  // the in-point on load and synthesize an early "ended" at the out-point.
-  // Non-destructive: the file in storage is untouched.
-  const trimsBySrc = useMemo(() => {
-    const m = new Map<string, { trimIn: number; trimOut: number | null }>();
-    for (const s of steps) {
-      if (s.kind !== "clip") continue;
-      const tIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
-      const tOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
-      if (tIn > 0 || tOut !== null) m.set(s.src, { trimIn: tIn, trimOut: tOut });
-      if ((tIn > 0 || tOut !== null) && s.fallbackSrc) m.set(s.fallbackSrc, { trimIn: tIn, trimOut: tOut });
-    }
-    return m;
+  // Trim lookup is scene/step-based, not URL-based. Multiple scenes can reuse
+  // the same file; keying trims by src lets a later scene overwrite an earlier
+  // one and can make playback seek/stop the wrong clip.
+  const trimForStep = useCallback((index: number | null) => {
+    if (index == null) return null;
+    const s = steps[index];
+    if (!s || s.kind !== "clip") return null;
+    const trimIn = typeof s.trimIn === "number" && s.trimIn > 0 ? s.trimIn : 0;
+    const trimOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
+    return { trimIn, trimOut };
   }, [steps]);
 
   const fallbackBySrc = useMemo(() => {
