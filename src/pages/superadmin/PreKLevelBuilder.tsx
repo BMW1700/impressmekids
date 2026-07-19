@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
 import { VideoTrimEditor } from "@/components/superadmin/prek/VideoTrimEditor";
+import { alignPreKAudioClipsToVideoTrims } from "@/lib/preKAlignAudioToTrim";
 
 interface LevelRow {
   id: string;
