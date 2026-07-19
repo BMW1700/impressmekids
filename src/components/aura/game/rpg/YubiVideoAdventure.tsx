@@ -378,6 +378,11 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     // Already showing this src? nothing to do.
     if (slotSrc[cur] === nextSrc) {
       slotStepIndexRef.current[cur] = nextStepIndex;
+      const trim = trimForStep(nextStepIndex);
+      const v = videoRefs.current[cur];
+      if (v) {
+        try { v.currentTime = trim?.trimIn ?? 0; } catch { /* noop */ }
+      }
       playSlot(cur);
       return;
     }
@@ -387,7 +392,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     setSlotSrc((s) => ({ ...s, [incoming]: nextSrc }));
     // The incoming <video> will mount/remount on the next render due to the
     // new src+key; onPlaying for that slot finishes the crossfade.
-  }, [slotSrc, playSlot]);
+  }, [slotSrc, playSlot, trimForStep]);
 
   // freeze current frame and pin opaque poster on top so the word card sits
   // on a totally stable image.
@@ -421,6 +426,11 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
           queue(() => setHoldPoster(null), POSTER_FADE_OUT_MS + 40);
         }
         slotStepIndexRef.current[cur] = stepIndex;
+        const trim = trimForStep(stepIndex);
+        const v = videoRefs.current[cur];
+        if (v) {
+          try { v.currentTime = trim?.trimIn ?? 0; } catch { /* noop */ }
+        }
         playSlot(cur);
       } else {
         swapToClip(current.src, stepIndex);
