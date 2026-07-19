@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Play, Save, Radio } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Upload, Trash2, Plus, ArrowUp, ArrowDown, Loader2, Save, Radio, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,13 @@ import { AudioMixEditor } from "@/components/superadmin/prek/AudioMixEditor";
 import { backfillLevelVideoDurations } from "@/lib/preKVideoDurationProbe";
 import { VideoTrimEditor } from "@/components/superadmin/prek/VideoTrimEditor";
 import { alignPreKAudioClipsToVideoTrims } from "@/lib/preKAlignAudioToTrim";
+import { SCENE_KEYS } from "@/lib/preKSceneGraph";
+import {
+  auditPreKLevelIntegrity,
+  clearPreKGeneratedAudioForScenes,
+  sortPreKWords,
+  type PreKLevelHealth,
+} from "@/lib/preKLevelIntegrity";
 
 interface LevelRow {
   id: string;
@@ -178,14 +185,47 @@ const PreKLevelBuilder = () => {
   const { worldId, levelId } = useParams<{ worldId: string; levelId: string }>();
   const [level, setLevel] = useState<LevelRow | null>(null);
   const [words, setWords] = useState<WordRow[]>([]);
+  const [health, setHealth] = useState<PreKLevelHealth | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const sceneKeyForWordSlot = (wordId: string, slot: "first" | "second", sourceWords = words) => {
+    const idx = sortPreKWords(sourceWords).findIndex((w) => w.id === wordId);
+    if (idx < 0) return null;
+    const wordIndex = idx + 1;
+    return slot === "first" ? SCENE_KEYS.wordFirst(wordIndex) : SCENE_KEYS.wordSecond(wordIndex);
+  };
+
+  const refreshHealth = async (levelRow = level, wordRows = words) => {
+    if (!levelRow) {
+      setHealth(null);
+      return null;
+    }
+    const next = await auditPreKLevelIntegrity(levelRow, wordRows);
+    setHealth(next);
+    return next;
+  };
+
+  const normalizeWordOrders = async (sourceWords = words): Promise<WordRow[]> => {
+    const normalized = sortPreKWords(sourceWords).map((w, idx) => ({ ...w, sort_order: idx + 1 }));
+    const changed = normalized.filter((w) => sourceWords.find((x) => x.id === w.id)?.sort_order !== w.sort_order);
+    if (changed.length > 0) {
+      const results = await Promise.all(
+        changed.map((w) => supabase.from("prek_level_words").update({ sort_order: w.sort_order }).eq("id", w.id)),
+      );
+      const firstErr = results.find((r) => r.error)?.error;
+      if (firstErr) throw firstErr;
+      setWords(normalized);
+    }
+    return normalized;
+  };
 
   const persistEdits = async ({ showToast = true }: { showToast?: boolean } = {}): Promise<boolean> => {
     if (!level) return false;
     setSaving(true);
     try {
+      const normalizedWords = await normalizeWordOrders();
       const [{ error: levelError }, ...results] = await Promise.all([
         supabase
           .from("prek_levels")
@@ -196,10 +236,11 @@ const PreKLevelBuilder = () => {
             closing_trim_out_seconds: level.closing_trim_out_seconds,
           })
           .eq("id", level.id),
-        ...words.map((w) =>
+        ...normalizedWords.map((w) =>
           supabase
             .from("prek_level_words")
             .update({
+              sort_order: w.sort_order,
               word: (w.word ?? "").trim(),
               ask_line: w.ask_line ?? "",
               success_line: w.success_line ?? "",
@@ -218,6 +259,7 @@ const PreKLevelBuilder = () => {
       // audio never drifts ahead of the video (e.g. intern trims after redub).
       const patched = await alignPreKAudioClipsToVideoTrims(level.id).catch(() => 0);
       invalidatePreKLevelCacheByDbId(level.id);
+      await refreshHealth(level, normalizedWords);
       if (showToast) {
         toast.success(
           patched > 0
@@ -264,10 +306,11 @@ const PreKLevelBuilder = () => {
       supabase.from("prek_level_words").select("*").eq("level_id", levelId).order("sort_order"),
     ]);
     const levelRow = l as LevelRow | null;
-    const wordRows = (ws ?? []) as WordRow[];
+    const wordRows = sortPreKWords((ws ?? []) as WordRow[]);
     setLevel(levelRow);
     setWords(wordRows);
     setLoading(false);
+    void refreshHealth(levelRow, wordRows);
 
     // Auto-probe any missing video durations so the audio overlay editor's
     // scene graph has accurate timing. Runs in the background — if it updates
@@ -342,6 +385,7 @@ const PreKLevelBuilder = () => {
         })
         .eq("id", level.id);
       if (error) throw error;
+      await clearPreKGeneratedAudioForScenes(level.id, [slot === "opening" ? SCENE_KEYS.opening : SCENE_KEYS.closing]);
       invalidatePreKLevelCacheByDbId(level.id);
       toast.success(
         r2Copied
@@ -365,6 +409,7 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_in_seconds`]: null,
       [`${slot}_trim_out_seconds`]: null,
     }).eq("id", level.id);
+    await clearPreKGeneratedAudioForScenes(level.id, [slot === "opening" ? SCENE_KEYS.opening : SCENE_KEYS.closing]);
     invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
@@ -426,7 +471,7 @@ const PreKLevelBuilder = () => {
         file,
         level.world_id,
         level.id,
-        `word-${word.sort_order}-${slot}`,
+        `word-${sortPreKWords(words).findIndex((w) => w.id === word.id) + 1}-${slot}`,
       );
       const column = slot === "first" ? "first_video_url" : "second_video_url";
       // Reset trim + cached duration so the new file isn't cut by the old clip's marks.
@@ -440,6 +485,8 @@ const PreKLevelBuilder = () => {
         })
         .eq("id", word.id);
       if (error) throw error;
+      const sceneKey = sceneKeyForWordSlot(word.id, slot);
+      if (sceneKey) await clearPreKGeneratedAudioForScenes(level.id, [sceneKey]);
       invalidatePreKLevelCacheByDbId(level.id);
       toast.success(r2Copied ? "Word video saved and copied to R2" : "Word video saved — backend preview is ready");
       load();
@@ -460,6 +507,8 @@ const PreKLevelBuilder = () => {
       [`${slot}_trim_out_seconds`]: null,
       [`${slot}_video_duration_seconds`]: null,
     }).eq("id", word.id);
+    const sceneKey = sceneKeyForWordSlot(word.id, slot);
+    if (sceneKey) await clearPreKGeneratedAudioForScenes(level.id, [sceneKey]);
     invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
@@ -485,6 +534,12 @@ const PreKLevelBuilder = () => {
       supabase.from("prek_level_words").update({ sort_order: neighbor.sort_order }).eq("id", word.id),
       supabase.from("prek_level_words").update({ sort_order: word.sort_order }).eq("id", neighbor.id),
     ]);
+    await clearPreKGeneratedAudioForScenes(level.id, [
+      SCENE_KEYS.wordFirst(Math.min(idx, neighborIdx) + 1),
+      SCENE_KEYS.wordSecond(Math.min(idx, neighborIdx) + 1),
+      SCENE_KEYS.wordFirst(Math.max(idx, neighborIdx) + 1),
+      SCENE_KEYS.wordSecond(Math.max(idx, neighborIdx) + 1),
+    ]);
     invalidatePreKLevelCacheByDbId(level.id);
     load();
   };
@@ -494,13 +549,9 @@ const PreKLevelBuilder = () => {
     if (!level) return;
     const saved = await persistEdits({ showToast: false });
     if (!saved) return;
-    const ready =
-      !!level.opening_video_url &&
-      !!level.closing_video_url &&
-      words.length > 0 &&
-      words.every((w) => w.first_video_url && w.second_video_url && w.word.trim());
-    if (!level.is_published && !ready) {
-      toast.error("Add opening + closing videos and complete every word before publishing.");
+    const currentHealth = await refreshHealth();
+    if (!level.is_published && currentHealth && !currentHealth.ready) {
+      toast.error(currentHealth.issues.find((i) => i.severity === "error")?.message ?? "Fix Level Health errors before publishing.");
       return;
     }
     const { error } = await supabase
@@ -544,6 +595,41 @@ const PreKLevelBuilder = () => {
             </Button>
           </div>
         </div>
+
+        {/* Opening */}
+        <Card className={health?.ready ? "border-emerald-500/30" : "border-destructive/40"}>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              {health?.ready ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-destructive" />}
+              Level Health
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {health ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={health.ready ? "default" : "destructive"}>{health.ready ? "Ready to publish" : "Fix before publish"}</Badge>
+                  <Badge variant="outline">Videos {health.requiredVideoCount}</Badge>
+                  <Badge variant="outline">Redub {health.generatedRedubCount}/{health.videoSceneCount}</Badge>
+                  <Badge variant="outline">Music {health.generatedMusicCount}/{health.videoSceneCount}</Badge>
+                </div>
+                {health.issues.length > 0 ? (
+                  <ul className="space-y-1 text-muted-foreground">
+                    {health.issues.slice(0, 8).map((issue, idx) => (
+                      <li key={`${issue.code}-${idx}`} className={issue.severity === "error" ? "text-destructive" : ""}>
+                        {issue.severity === "error" ? "•" : "⚠"} {issue.message}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">Scene order, video files, trims, and generated audio anchors are aligned.</p>
+                )}
+              </>
+            ) : (
+              <p className="text-muted-foreground">Checking level integrity…</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Opening */}
         <Card>
