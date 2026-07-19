@@ -394,6 +394,16 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
             </div>
           )}
         </div>
+
+        {rescueFrom && (
+          <RedubRegionRescueDialog
+            open={!!rescueFrom}
+            onOpenChange={(v) => { if (!v) setRescueFrom(null); }}
+            fromScene={rescueFrom}
+            allScenes={scenes}
+            onSubmit={async (args) => redub.redubFromRegion(args)}
+          />
+        )}
       </CardContent>
     </Card>
   );
