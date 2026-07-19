@@ -6,7 +6,7 @@
 // by scene key; the student player picks it up automatically.
 
 import { useMemo, useRef, useState } from "react";
-import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers, Music2, Zap } from "lucide-react";
+import { Loader2, Play, Pause, RotateCw, CheckCircle2, AlertCircle, Sparkles, Wand2, Layers, Music2, Zap, Trash2, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { useBennyRedub, type RedubSceneInput } from "@/hooks/useBennyRedub";
 import { SCENE_KEYS, isVideoScene, type SceneGraph } from "@/lib/preKSceneGraph";
 import { ClipWaveform } from "./ClipWaveform";
 import { BulkAudioDropzone } from "./BulkAudioDropzone";
+import { RedubRegionRescueDialog } from "./RedubRegionRescueDialog";
 
 interface Props {
   levelId: string;
