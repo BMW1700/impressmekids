@@ -326,6 +326,34 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Music…</>
                     : existingMusic ? <><RotateCw className="h-3 w-3 mr-1"/> Music</> : <><Music2 className="h-3 w-3 mr-1"/> Music</>}
                 </Button>
+                <Button
+                  size="sm" variant="ghost"
+                  onClick={() => setRescueFrom(s)}
+                  title="Region Rescue — drag-select a phrase from this source and redub it into ANY scene"
+                  className="h-7 text-amber-700 dark:text-amber-300"
+                >
+                  <Scissors className="h-3 w-3 mr-1"/> Region
+                </Button>
+                {existingRedub && (
+                  <Button
+                    size="sm" variant="ghost"
+                    onClick={() => {
+                      if (confirmingDelete === s.sceneKey) {
+                        void redub.deleteScene(s.sceneKey).then(() => {
+                          toast.success(`Deleted redub for ${s.label}`);
+                          setConfirmingDelete(null);
+                        });
+                      } else {
+                        setConfirmingDelete(s.sceneKey);
+                        window.setTimeout(() => setConfirmingDelete((k) => (k === s.sceneKey ? null : k)), 3000);
+                      }
+                    }}
+                    title="Delete this scene's redub (frees the slot for re-redub)"
+                    className="h-7 text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1"/>{confirmingDelete === s.sceneKey ? "Sure?" : "Delete"}
+                  </Button>
+                )}
                 </div>
                 {musicStatus === "error" && (
                   <div className="flex items-start gap-1 rounded-sm border border-red-500/30 bg-red-500/10 px-2 py-1 text-[11px] leading-snug text-red-600 dark:text-red-300">
