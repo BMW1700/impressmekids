@@ -442,6 +442,50 @@ export function useBennyRedub(levelId: string | null) {
     await reload();
   }, [extractMusic, reload]);
 
+  const deleteScene = useCallback(async (sceneKey: string) => {
+    if (!levelId) return;
+    await deletePreKRedub(levelId, sceneKey);
+    setSettings((s) => {
+      const audio = { ...s.audioPaths }; delete audio[sceneKey];
+      const iso = { ...s.isolatedPaths }; delete iso[sceneKey];
+      return { ...s, audioPaths: audio, isolatedPaths: iso };
+    });
+    setSignedRedubUrls((m) => { const n = { ...m }; delete n[sceneKey]; return n; });
+    setSignedIsolatedUrls((m) => { const n = { ...m }; delete n[sceneKey]; return n; });
+    setStates((m) => ({ ...m, [sceneKey]: { status: "idle" } }));
+  }, [levelId]);
+
+  const redubFromRegion = useCallback(async (args: Omit<RedubFromRegionArgs, "levelId" | "voiceId" | "stability" | "similarityBoost"> & { voiceId?: string }) => {
+    if (!levelId) throw new Error("No level");
+    const voiceId = args.voiceId || settings.voiceId;
+    if (!voiceId) throw new Error("Set a Benny voice ID first.");
+    setStates((m) => ({ ...m, [args.targetSceneKey]: { status: "running", progressMessage: "Rescuing from region…" } }));
+    try {
+      const res = await redubFromSourceRegion({
+        levelId,
+        targetSceneKey: args.targetSceneKey,
+        sourceVideoStoragePath: args.sourceVideoStoragePath,
+        regionStartSeconds: args.regionStartSeconds,
+        regionEndSeconds: args.regionEndSeconds,
+        voiceId,
+        stability: settings.stability,
+        similarityBoost: settings.similarityBoost,
+      });
+      setStates((m) => ({ ...m, [args.targetSceneKey]: { status: "done", storagePath: res.storagePath, signedUrl: res.signedUrl } }));
+      if (res.storagePath) {
+        setSettings((s) => ({ ...s, audioPaths: { ...s.audioPaths, [args.targetSceneKey]: res.storagePath! } }));
+      }
+      if (res.signedUrl) {
+        setSignedRedubUrls((m) => ({ ...m, [args.targetSceneKey]: res.signedUrl! }));
+      }
+      return true;
+    } catch (e) {
+      const msg = (e as Error).message || "Region rescue failed";
+      setStates((m) => ({ ...m, [args.targetSceneKey]: { status: "error", errorMessage: msg } }));
+      return false;
+    }
+  }, [levelId, settings.voiceId, settings.stability, settings.similarityBoost]);
+
   return {
     loading,
     settings,
@@ -461,5 +505,7 @@ export function useBennyRedub(levelId: string | null) {
     extractMusic,
     runMusicAll,
     runFullAuto,
+    deleteScene,
+    redubFromRegion,
   };
 }
