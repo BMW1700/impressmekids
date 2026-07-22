@@ -37,6 +37,11 @@ const PrincipalDemo = lazy(() => import("./pages/demos/PrincipalDemo"));
 const ForPrincipals = lazy(() => import("./pages/ForPrincipals"));
 const CurriculumAlignment = lazy(() => import("./pages/CurriculumAlignment"));
 const PilotPacket = lazy(() => import("./pages/PilotPacket"));
+const PilotImagineCoexistence = lazy(() => import("./pages/pilot/ImagineCoexistence"));
+const PilotNJAddendum = lazy(() => import("./pages/pilot/NJAddendum"));
+const PilotNDPAExhibit = lazy(() => import("./pages/pilot/NDPAExhibit"));
+const PilotFerpaCoppa = lazy(() => import("./pages/pilot/FerpaCoppaOnePager"));
+const PilotQuickStart = lazy(() => import("./pages/pilot/QuickStart"));
 const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
 
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
@@ -202,6 +207,11 @@ const App = () => (
                   <Route path="/for-principals" element={<ForPrincipals />} />
                   <Route path="/curriculum-alignment" element={<CurriculumAlignment />} />
                   <Route path="/pilot-packet" element={<PilotPacket />} />
+                  <Route path="/pilot-packet/imagine-coexistence" element={<PilotImagineCoexistence />} />
+                  <Route path="/pilot-packet/nj-addendum" element={<PilotNJAddendum />} />
+                  <Route path="/pilot-packet/ndpa-exhibit" element={<PilotNDPAExhibit />} />
+                  <Route path="/pilot-packet/ferpa-coppa" element={<PilotFerpaCoppa />} />
+                  <Route path="/pilot-packet/quick-start" element={<PilotQuickStart />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
