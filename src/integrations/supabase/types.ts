@@ -6540,6 +6540,42 @@ export type Database = {
           },
         ]
       }
+      rpg_daily_quests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_count: number
+          id: string
+          quest_date: string
+          quest_type: string
+          target_count: number
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          quest_date?: string
+          quest_type: string
+          target_count: number
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_count?: number
+          id?: string
+          quest_date?: string
+          quest_type?: string
+          target_count?: number
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       rpg_loot_drops: {
         Row: {
           boss_id: string
@@ -6577,6 +6613,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rpg_season_pass: {
+        Row: {
+          claimed_tiers: number[]
+          id: string
+          season_id: string
+          updated_at: string
+          user_id: string
+          xp_total: number
+        }
+        Insert: {
+          claimed_tiers?: number[]
+          id?: string
+          season_id: string
+          updated_at?: string
+          user_id: string
+          xp_total?: number
+        }
+        Update: {
+          claimed_tiers?: number[]
+          id?: string
+          season_id?: string
+          updated_at?: string
+          user_id?: string
+          xp_total?: number
+        }
+        Relationships: []
       }
       rubric_criteria: {
         Row: {
@@ -9884,6 +9947,41 @@ export type Database = {
           slot: string
           stats: Json
         }[]
+      }
+      rpg_award_quest_progress: {
+        Args: { p_delta: number; p_quest_type: string; p_season_id: string }
+        Returns: {
+          quest_completed: boolean
+          season_xp: number
+          xp_awarded: number
+        }[]
+      }
+      rpg_claim_season_tier: {
+        Args: { p_required_xp: number; p_season_id: string; p_tier: number }
+        Returns: {
+          claimed_tiers: number[]
+          success: boolean
+        }[]
+      }
+      rpg_ensure_daily_quests: {
+        Args: never
+        Returns: {
+          completed_at: string | null
+          created_at: string
+          current_count: number
+          id: string
+          quest_date: string
+          quest_type: string
+          target_count: number
+          user_id: string
+          xp_reward: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "rpg_daily_quests"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       seed_default_behavior_categories: {
         Args: { p_classroom_id: string }
