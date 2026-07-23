@@ -5,6 +5,8 @@ import { Sword, Shield, Heart } from "lucide-react";
 import { RPGCharacter } from "./RPGCharacter";
 import { heroKnight, RPGEnemy } from "@/lib/rpgBattleData";
 import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
+import { awardQuestProgress } from "@/hooks/useDailyQuests";
+import { isBossType } from "@/lib/rpgBossSpectacle";
 
 interface RPGCombatPhaseProps {
   enemy: RPGEnemy;
