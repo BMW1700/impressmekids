@@ -5,6 +5,8 @@ import { Trophy, Sword, Shield, Zap, Star, ArrowLeft } from "lucide-react";
 import { RPGArenaFighter, FighterAction } from "./RPGArenaFighter";
 import { ArenaAI } from "./RPGArenaAI";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
+import { RPGLootChest } from "./v2/RPGLootChest";
+import { rollBossLoot, type RolledLoot } from "@/hooks/usePlayerLoot";
 
 const battleSounds = new SoundEffects();
 
