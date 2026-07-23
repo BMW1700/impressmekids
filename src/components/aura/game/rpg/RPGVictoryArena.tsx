@@ -334,6 +334,9 @@ export const RPGVictoryArena = ({
           </motion.div>
         </motion.div>
       )}
+
+      {/* Boss loot chest */}
+      <RPGLootChest loot={rolledLoot} open={chestOpen} onClose={() => setChestOpen(false)} />
     </motion.div>
   );
 };
