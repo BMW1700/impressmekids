@@ -18,6 +18,7 @@ export interface LootStats {
 
 export interface LootItem {
   id: string;
+  item_id: string;
   name: string;
   rarity: LootRarity;
   slot: LootSlot;
