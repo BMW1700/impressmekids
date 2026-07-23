@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolveLootName, resolveLootFlavor, resolveLootEmoji } from "@/lib/rpgLootCatalog";
 import type { LootItem, LootRarity, LootSlot } from "@/lib/rpgLootCatalog";
 
 interface LootRow {
@@ -17,14 +18,14 @@ function rowToItem(row: LootRow): LootItem {
   return {
     id: row.id,
     item_id: row.item_id,
-    name: row.item_id,
+    name: resolveLootName(row.item_id),
     rarity: row.rarity,
     slot: row.slot,
     stats: row.stats ?? {},
     equipped: row.equipped,
     world_number: row.world_number,
-    emoji: "🎁",
-    flavor: "",
+    emoji: resolveLootEmoji(row.item_id),
+    flavor: resolveLootFlavor(row.item_id),
   };
 }
 
