@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SirValor } from '../characters/SirValor';
 import { Elara } from '../characters/Elara';
 import { PrincessElla } from '../characters/PrincessElla';
-import { Shield, Sparkles, Flower2, Heart, Zap, Sword } from 'lucide-react';
+import { Shield, Sparkles, Flower2, Heart, Zap, Sword, Backpack } from 'lucide-react';
 import { AgentCharacterSelect } from './AgentCharacterSelect';
 import { getStoredTheme } from '@/lib/gameTheme';
+import { RPGGearLocker } from './v2/RPGGearLocker';
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
