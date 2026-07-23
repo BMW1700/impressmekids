@@ -34,9 +34,25 @@ export const RPGVictoryArena = ({
   const [canAct, setCanAct] = useState(true);
   const [combo, setCombo] = useState(0);
   const [showComicText, setShowComicText] = useState<string | null>(null);
+  const [rolledLoot, setRolledLoot] = useState<RolledLoot | null>(null);
+  const [chestOpen, setChestOpen] = useState(false);
+  const lootRolledRef = useRef(false);
 
   const aiRef = useRef(new ArenaAI(Math.min(3, worldNumber)));
   const actionLockRef = useRef(false);
+
+  // Roll boss loot once when victory triggers
+  useEffect(() => {
+    if (phase !== 'victory' || lootRolledRef.current) return;
+    lootRolledRef.current = true;
+    const bossId = `arena-w${worldNumber}`;
+    void rollBossLoot(bossId, worldNumber).then((drop) => {
+      if (drop) {
+        setRolledLoot(drop);
+        setChestOpen(true);
+      }
+    });
+  }, [phase, worldNumber]);
 
   // Enemy AI loop
   useEffect(() => {
