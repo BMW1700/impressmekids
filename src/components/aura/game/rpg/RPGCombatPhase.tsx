@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sword, Shield, Heart } from "lucide-react";
 import { RPGCharacter } from "./RPGCharacter";
 import { heroKnight, RPGEnemy } from "@/lib/rpgBattleData";
+import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
 
 interface RPGCombatPhaseProps {
   enemy: RPGEnemy;
@@ -115,6 +116,7 @@ export const RPGCombatPhase = ({
 
   return (
     <div className="w-full space-y-6">
+      <RPGBossSpectacle enemy={enemy} currentHp={enemyHp} maxHp={enemy.maxHp} />
       {/* Combat Header */}
       <div className="text-center">
         <h3 className="text-xl font-bold">⚔️ Combat Phase ⚔️</h3>
