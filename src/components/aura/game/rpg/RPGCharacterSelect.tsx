@@ -248,6 +248,7 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
       </motion.p>
 
       <RPGGearLocker open={gearOpen} onClose={() => setGearOpen(false)} />
+      <RPGDailyHubPanel open={hubOpen} onClose={() => setHubOpen(false)} />
     </motion.div>
   );
 };
