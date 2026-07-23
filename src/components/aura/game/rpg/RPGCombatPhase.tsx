@@ -42,12 +42,16 @@ export const RPGCombatPhase = ({
   useEffect(() => {
     if (enemyHp <= 0) {
       setCombatAction('victory');
+      // Fire-and-forget daily quest progress
+      void awardQuestProgress('defeat_enemies');
+      void awardQuestProgress('battle_wins');
+      if (isBossType(enemy.type)) void awardQuestProgress('defeat_bosses');
       setTimeout(onVictory, 1500);
     } else if (playerHp <= 0) {
       setCombatAction('defeat');
       setTimeout(onDefeat, 1500);
     }
-  }, [enemyHp, playerHp, onVictory, onDefeat]);
+  }, [enemyHp, playerHp, enemy.type, onVictory, onDefeat]);
 
   // Enemy attack timing
   useEffect(() => {
