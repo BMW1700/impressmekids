@@ -4951,6 +4951,45 @@ export type Database = {
         }
         Relationships: []
       }
+      player_loot: {
+        Row: {
+          acquired_at: string
+          dropped_from_boss: string | null
+          equipped: boolean
+          id: string
+          item_id: string
+          rarity: string
+          slot: string
+          stats: Json
+          user_id: string
+          world_number: number | null
+        }
+        Insert: {
+          acquired_at?: string
+          dropped_from_boss?: string | null
+          equipped?: boolean
+          id?: string
+          item_id: string
+          rarity: string
+          slot: string
+          stats?: Json
+          user_id: string
+          world_number?: number | null
+        }
+        Update: {
+          acquired_at?: string
+          dropped_from_boss?: string | null
+          equipped?: boolean
+          id?: string
+          item_id?: string
+          rarity?: string
+          slot?: string
+          stats?: Json
+          user_id?: string
+          world_number?: number | null
+        }
+        Relationships: []
+      }
       player_pets: {
         Row: {
           created_at: string
@@ -6501,6 +6540,44 @@ export type Database = {
           },
         ]
       }
+      rpg_loot_drops: {
+        Row: {
+          boss_id: string
+          created_at: string
+          id: string
+          loot_id: string | null
+          rarity: string
+          user_id: string
+          world_number: number
+        }
+        Insert: {
+          boss_id: string
+          created_at?: string
+          id?: string
+          loot_id?: string | null
+          rarity: string
+          user_id: string
+          world_number: number
+        }
+        Update: {
+          boss_id?: string
+          created_at?: string
+          id?: string
+          loot_id?: string | null
+          rarity?: string
+          user_id?: string
+          world_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rpg_loot_drops_loot_id_fkey"
+            columns: ["loot_id"]
+            isOneToOne: false
+            referencedRelation: "player_loot"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rubric_criteria: {
         Row: {
           created_at: string | null
@@ -7038,6 +7115,7 @@ export type Database = {
           disable_session_replay_for_students: boolean
           id: string
           pseudonymize_ai_requests: boolean
+          rpg_v2_hooks_enabled: boolean
           school_end_time: string
           school_mode_enabled: boolean
           school_start_time: string
@@ -7054,6 +7132,7 @@ export type Database = {
           disable_session_replay_for_students?: boolean
           id?: string
           pseudonymize_ai_requests?: boolean
+          rpg_v2_hooks_enabled?: boolean
           school_end_time?: string
           school_mode_enabled?: boolean
           school_start_time?: string
@@ -7070,6 +7149,7 @@ export type Database = {
           disable_session_replay_for_students?: boolean
           id?: string
           pseudonymize_ai_requests?: boolean
+          rpg_v2_hooks_enabled?: boolean
           school_end_time?: string
           school_mode_enabled?: boolean
           school_start_time?: string
@@ -9794,6 +9874,16 @@ export type Database = {
       redeem_classroom_join_code: {
         Args: { p_join_code: string; p_student_id: string }
         Returns: Json
+      }
+      roll_boss_loot: {
+        Args: { _boss_id: string; _world_number: number }
+        Returns: {
+          item_id: string
+          loot_id: string
+          rarity: string
+          slot: string
+          stats: Json
+        }[]
       }
       seed_default_behavior_categories: {
         Args: { p_classroom_id: string }

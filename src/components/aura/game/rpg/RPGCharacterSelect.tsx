@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SirValor } from '../characters/SirValor';
 import { Elara } from '../characters/Elara';
 import { PrincessElla } from '../characters/PrincessElla';
-import { Shield, Sparkles, Flower2, Heart, Zap, Sword } from 'lucide-react';
+import { Shield, Sparkles, Flower2, Heart, Zap, Sword, Backpack } from 'lucide-react';
 import { AgentCharacterSelect } from './AgentCharacterSelect';
 import { getStoredTheme } from '@/lib/gameTheme';
+import { RPGGearLocker } from './v2/RPGGearLocker';
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
@@ -15,7 +17,8 @@ interface RPGCharacterSelectProps {
 
 export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
   const theme = getStoredTheme();
-  
+  const [gearOpen, setGearOpen] = useState(false);
+
   // Delegate to agent character select if in agent mode
   if (theme === 'agent') {
     return <AgentCharacterSelect onSelect={onSelect} />;
@@ -27,6 +30,13 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
+      <button
+        onClick={() => setGearOpen(true)}
+        className="absolute top-4 right-4 z-10 flex items-center gap-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
+      >
+        <Backpack className="h-4 w-4" /> Gear Locker
+      </button>
+
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -226,6 +236,8 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
       >
         Each hero has unique abilities. Choose wisely!
       </motion.p>
+
+      <RPGGearLocker open={gearOpen} onClose={() => setGearOpen(false)} />
     </motion.div>
   );
 };
