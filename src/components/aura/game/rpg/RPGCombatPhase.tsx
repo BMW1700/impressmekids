@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sword, Shield, Heart } from "lucide-react";
 import { RPGCharacter } from "./RPGCharacter";
 import { heroKnight, RPGEnemy } from "@/lib/rpgBattleData";
+import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
 
 interface RPGCombatPhaseProps {
   enemy: RPGEnemy;
