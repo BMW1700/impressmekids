@@ -236,6 +236,8 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
       >
         Each hero has unique abilities. Choose wisely!
       </motion.p>
+
+      <RPGGearLocker open={gearOpen} onClose={() => setGearOpen(false)} />
     </motion.div>
   );
 };
