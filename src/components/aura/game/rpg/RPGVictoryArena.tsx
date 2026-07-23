@@ -7,6 +7,7 @@ import { ArenaAI } from "./RPGArenaAI";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { RPGLootChest } from "./v2/RPGLootChest";
 import { rollBossLoot, type RolledLoot } from "@/hooks/usePlayerLoot";
+import { awardQuestProgress } from "@/hooks/useDailyQuests";
 
 const battleSounds = new SoundEffects();
 
@@ -41,7 +42,7 @@ export const RPGVictoryArena = ({
   const aiRef = useRef(new ArenaAI(Math.min(3, worldNumber)));
   const actionLockRef = useRef(false);
 
-  // Roll boss loot once when victory triggers
+  // Roll boss loot + award quest progress once when victory triggers
   useEffect(() => {
     if (phase !== 'victory' || lootRolledRef.current) return;
     lootRolledRef.current = true;
@@ -52,6 +53,9 @@ export const RPGVictoryArena = ({
         setChestOpen(true);
       }
     });
+    void awardQuestProgress('defeat_enemies');
+    void awardQuestProgress('defeat_bosses');
+    void awardQuestProgress('battle_wins');
   }, [phase, worldNumber]);
 
   // Enemy AI loop
