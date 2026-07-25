@@ -1519,7 +1519,7 @@ export const RPGBattleArena = ({
       setRageHits(h => Math.max(0, h - 1));
     }
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits, petDamageBonusPct, petStreakBonusPct]);
+  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits, petDamageBonusPct, petStreakBonusPct, lootStats.attack]);
 
   // Pet auto-attack — call after a correct word.
   // Increments charge; when full, deals pet damage and resets.
