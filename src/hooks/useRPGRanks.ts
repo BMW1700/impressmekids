@@ -9,6 +9,8 @@ export interface RankRow {
   tier: RankTier;
   wins: number;
   losses: number;
+  active_title?: string | null;
+  active_badge?: string | null;
 }
 
 export interface LeaderboardEntry extends RankRow {
