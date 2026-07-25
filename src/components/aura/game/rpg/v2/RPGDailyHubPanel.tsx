@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Lock, Check, Trophy } from 'lucide-react';
+import { X, Sparkles, Lock, Check, Trophy, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDailyQuests } from '@/hooks/useDailyQuests';
 import { useSeasonPass } from '@/hooks/useSeasonPass';
 import { CURRENT_SEASON, questLabel } from '@/lib/rpgSeasonPass';
 import { useToast } from '@/hooks/use-toast';
+import { RPGLeaderboardPanel } from './RPGLeaderboardPanel';
 
 interface Props {
   open: boolean;
@@ -18,6 +20,7 @@ interface Props {
  * and cannot alter combat balance.
  */
 export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
+  const [tab, setTab] = useState<'quests' | 'ranks'>('quests');
   const { quests, loading: qLoading, refresh: refreshQuests } = useDailyQuests();
   const { xp_total, claimed_tiers, loading: sLoading, claimTier, refresh: refreshPass } = useSeasonPass();
   const { toast } = useToast();
@@ -70,6 +73,24 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
               </Button>
             </div>
 
+            <div className="px-6 pt-4 flex gap-2 border-b">
+              <button
+                onClick={() => setTab('quests')}
+                className={`px-3 py-2 text-xs font-bold uppercase tracking-widest border-b-2 -mb-px ${tab === 'quests' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+              >
+                <Trophy className="h-3.5 w-3.5 inline mr-1" /> Quests & Pass
+              </button>
+              <button
+                onClick={() => setTab('ranks')}
+                className={`px-3 py-2 text-xs font-bold uppercase tracking-widest border-b-2 -mb-px ${tab === 'ranks' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+              >
+                <Medal className="h-3.5 w-3.5 inline mr-1" /> Ranks
+              </button>
+            </div>
+
+            {tab === 'ranks' ? (
+              <div className="p-6"><RPGLeaderboardPanel /></div>
+            ) : (
             <div className="p-6 space-y-6">
               {/* Daily Quests */}
               <section>
@@ -166,6 +187,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 </div>
               </section>
             </div>
+            )}
           </motion.div>
         </motion.div>
       )}

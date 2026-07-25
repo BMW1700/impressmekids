@@ -6576,6 +6576,48 @@ export type Database = {
         }
         Relationships: []
       }
+      rpg_highlight_cards: {
+        Row: {
+          created_at: string
+          damage_dealt: number
+          enemy_id: string
+          enemy_name: string | null
+          id: string
+          perfect_blocks: number
+          shareable_slug: string
+          stats: Json
+          turns_taken: number
+          user_id: string
+          world_number: number | null
+        }
+        Insert: {
+          created_at?: string
+          damage_dealt?: number
+          enemy_id: string
+          enemy_name?: string | null
+          id?: string
+          perfect_blocks?: number
+          shareable_slug?: string
+          stats?: Json
+          turns_taken?: number
+          user_id: string
+          world_number?: number | null
+        }
+        Update: {
+          created_at?: string
+          damage_dealt?: number
+          enemy_id?: string
+          enemy_name?: string | null
+          id?: string
+          perfect_blocks?: number
+          shareable_slug?: string
+          stats?: Json
+          turns_taken?: number
+          user_id?: string
+          world_number?: number | null
+        }
+        Relationships: []
+      }
       rpg_loot_drops: {
         Row: {
           boss_id: string
@@ -6613,6 +6655,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rpg_player_ranks: {
+        Row: {
+          losses: number
+          rank_points: number
+          season_id: string
+          tier: string
+          updated_at: string
+          user_id: string
+          wins: number
+        }
+        Insert: {
+          losses?: number
+          rank_points?: number
+          season_id: string
+          tier?: string
+          updated_at?: string
+          user_id: string
+          wins?: number
+        }
+        Update: {
+          losses?: number
+          rank_points?: number
+          season_id?: string
+          tier?: string
+          updated_at?: string
+          user_id?: string
+          wins?: number
+        }
+        Relationships: []
       }
       rpg_season_pass: {
         Row: {
@@ -9956,6 +10028,15 @@ export type Database = {
           xp_awarded: number
         }[]
       }
+      rpg_award_rank_points: {
+        Args: { _delta: number; _season_id: string; _win: boolean }
+        Returns: {
+          losses: number
+          rank_points: number
+          tier: string
+          wins: number
+        }[]
+      }
       rpg_claim_season_tier: {
         Args: { p_required_xp: number; p_season_id: string; p_tier: number }
         Returns: {
@@ -9982,6 +10063,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      rpg_generate_highlight: {
+        Args: {
+          _damage_dealt: number
+          _enemy_id: string
+          _enemy_name: string
+          _perfect_blocks: number
+          _stats: Json
+          _turns_taken: number
+          _world_number: number
+        }
+        Returns: {
+          id: string
+          shareable_slug: string
+        }[]
       }
       seed_default_behavior_categories: {
         Args: { p_classroom_id: string }

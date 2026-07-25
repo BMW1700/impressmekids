@@ -15,6 +15,8 @@ import { heroKnight, allyWizard } from "@/lib/rpgBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 import { useAuth } from "@/contexts/AuthContext";
+import { awardRankPoints } from "@/hooks/useRPGRanks";
+import { PVP_WIN_POINTS, PVP_LOSS_POINTS } from "@/lib/rpgRanks";
 import {
   MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS,
   MultiplayerRoomSnapshot,
@@ -465,6 +467,8 @@ export const RPGOnlinePvPBattle = ({
     completedRef.current = true;
     const isWin = endPhase === 'victory';
     const correct = isHost ? gs.hostCorrect : gs.guestCorrect;
+    // RPG v2 Phase 4: award ranked points for the season.
+    void awardRankPoints(isWin ? PVP_WIN_POINTS : PVP_LOSS_POINTS, isWin);
     setTimeout(() => {
       onComplete(isWin, {
         wordsRead: gs.wordsRead,

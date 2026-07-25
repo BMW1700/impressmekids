@@ -85,6 +85,10 @@ import { updateStudentReadingStats as updateSharedReadingStats } from "@/lib/upd
 import { useMLIntegration } from "@/hooks/useMLIntegration";
 import { usePlayerInventory } from "@/hooks/usePlayerInventory";
 import { usePlayerPets } from "@/hooks/usePlayerPets";
+import { useEquippedStats } from "@/hooks/useEquippedStats";
+import { generateHighlight } from "@/hooks/useHighlightCards";
+import { RPGHighlightCard, type HighlightPayload } from "./v2/RPGHighlightCard";
+import { isBossType } from "@/lib/rpgBossSpectacle";
 import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
 import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
@@ -138,6 +142,12 @@ export const RPGBattleArena = ({
   const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
   // EQUIPPED PET — drives passive bonuses + charge attack
   const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
+  // EQUIPPED LOOT — RPG v2 Phase 1: adds HP + attack % + mp_regen
+  const { stats: lootStats } = useEquippedStats();
+  // Battle highlight card (RPG v2 Phase 4) — shown after boss defeats
+  const [highlightPayload, setHighlightPayload] = useState<HighlightPayload | null>(null);
+  const [highlightOpen, setHighlightOpen] = useState(false);
+  const highlightFiredRef = useRef(false);
   const petBonusValue = useMemo(() => (
     equippedPet && equippedPetData ? calculatePetBonus(equippedPetData, equippedPet.level) : 0
   ), [equippedPet, equippedPetData]);
@@ -309,8 +319,8 @@ export const RPGBattleArena = ({
   // Combat stats - player HP initialized based on selected character + health_boost upgrade
   const maxHpWithBoost = useMemo(() => {
     const baseHp = playerCharacter?.maxHp || heroKnight.maxHp;
-    return baseHp + (activeUpgrades.health_boost || 0);
-  }, [playerCharacter?.maxHp, activeUpgrades.health_boost]);
+    return baseHp + (activeUpgrades.health_boost || 0) + (lootStats.hp || 0);
+  }, [playerCharacter?.maxHp, activeUpgrades.health_boost, lootStats.hp]);
   const [playerHp, setPlayerHp] = useState(maxHpWithBoost);
   const [wizardMp, setWizardMp] = useState(50 + (activeUpgrades.mp_boost || 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
@@ -1496,8 +1506,8 @@ export const RPGBattleArena = ({
     }
     if (isDebuffed) baseDamage = Math.floor(baseDamage * 0.7);
 
-    // attack_boost is now a true % multiplier + pet damage bonus
-    const attackBoostPct = (activeUpgrades.attack_boost || 0) + petDamageBonusPct;
+    // attack_boost is now a true % multiplier + pet damage bonus + loot attack bonus (%)
+    const attackBoostPct = (activeUpgrades.attack_boost || 0) + petDamageBonusPct + (lootStats.attack || 0);
     let totalDamage = Math.floor(
       (baseDamage + streakBonus + speedBonus) * accuracyMultiplier * (1 + attackBoostPct / 100)
     );
@@ -1509,7 +1519,7 @@ export const RPGBattleArena = ({
       setRageHits(h => Math.max(0, h - 1));
     }
     return { damage: totalDamage, speedTier, isCritical, accuracyMultiplier };
-  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits, petDamageBonusPct, petStreakBonusPct]);
+  }, [isDebuffed, activeUpgrades.attack_boost, activeUpgrades.streak_boost, activeUpgrades.crit_boost, speedHits, petDamageBonusPct, petStreakBonusPct, lootStats.attack]);
 
   // Pet auto-attack — call after a correct word.
   // Increments charge; when full, deals pet damage and resets.
@@ -2543,6 +2553,38 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
+  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (highlightFiredRef.current) return;
+    if (!isBossType(enemy.type)) return;
+    highlightFiredRef.current = true;
+    const capturedName = enemy.name;
+    const capturedWorld = worldNumber;
+    const capturedDamage = totalDamage;
+    const capturedTurns = wordsRead;
+    const capturedStreak = longestStreak;
+    const capturedCorrect = correctWords;
+    void generateHighlight({
+      enemyId: `w${capturedWorld}-${enemy.type}`,
+      enemyName: capturedName,
+      worldNumber: capturedWorld,
+      damageDealt: capturedDamage,
+      turnsTaken: capturedTurns,
+      perfectBlocks: 0,
+      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
+    }).then((res) => {
+      setHighlightPayload({
+        enemyName: capturedName,
+        worldNumber: capturedWorld,
+        damageDealt: capturedDamage,
+        turnsTaken: capturedTurns,
+        perfectBlocks: 0,
+        shareableSlug: res?.slug ?? null,
+      });
+      setTimeout(() => setHighlightOpen(true), 2000);
+    });
+  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
   return (
     <motion.div 
@@ -3362,6 +3404,11 @@ export const RPGBattleArena = ({
           </div>
         </div>
       </div>
+      <RPGHighlightCard
+        open={highlightOpen}
+        payload={highlightPayload}
+        onClose={() => setHighlightOpen(false)}
+      />
     </motion.div>
   );
 };
