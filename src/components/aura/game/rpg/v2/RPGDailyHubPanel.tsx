@@ -24,6 +24,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const [tab, setTab] = useState<'quests' | 'ranks'>('quests');
   const { quests, loading: qLoading, refresh: refreshQuests } = useDailyQuests();
   const { xp_total, claimed_tiers, loading: sLoading, claimTier, refresh: refreshPass } = useSeasonPass();
+  const { rank, refresh: refreshRank } = useMyRank();
   const { toast } = useToast();
 
   const maxXp = CURRENT_SEASON.tiers[CURRENT_SEASON.tiers.length - 1].requiredXp;
