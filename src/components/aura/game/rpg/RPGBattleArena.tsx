@@ -1506,8 +1506,8 @@ export const RPGBattleArena = ({
     }
     if (isDebuffed) baseDamage = Math.floor(baseDamage * 0.7);
 
-    // attack_boost is now a true % multiplier + pet damage bonus
-    const attackBoostPct = (activeUpgrades.attack_boost || 0) + petDamageBonusPct;
+    // attack_boost is now a true % multiplier + pet damage bonus + loot attack bonus (%)
+    const attackBoostPct = (activeUpgrades.attack_boost || 0) + petDamageBonusPct + (lootStats.attack || 0);
     let totalDamage = Math.floor(
       (baseDamage + streakBonus + speedBonus) * accuracyMultiplier * (1 + attackBoostPct / 100)
     );
