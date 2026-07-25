@@ -20,6 +20,7 @@ interface Props {
  * and cannot alter combat balance.
  */
 export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
+  const [tab, setTab] = useState<'quests' | 'ranks'>('quests');
   const { quests, loading: qLoading, refresh: refreshQuests } = useDailyQuests();
   const { xp_total, claimed_tiers, loading: sLoading, claimTier, refresh: refreshPass } = useSeasonPass();
   const { toast } = useToast();
