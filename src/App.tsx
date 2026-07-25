@@ -216,6 +216,7 @@ const App = () => (
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
+                  <Route path="/rpg/highlight/:slug" element={<RPGHighlightView />} />
 
                   <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
