@@ -32,8 +32,9 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const handleClaim = async (tier: number, requiredXp: number, label: string, emoji: string) => {
     const ok = await claimTier(tier, requiredXp);
     if (ok) {
-      toast({ title: `${emoji} Reward claimed!`, description: label });
+      toast({ title: `${emoji} Reward claimed!`, description: `${label} equipped` });
       void refreshPass();
+      void refreshRank();
     } else {
       toast({ title: 'Cannot claim yet', description: 'Earn more XP or refresh.' });
     }
