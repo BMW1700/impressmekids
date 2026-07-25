@@ -36,7 +36,7 @@ export function useEquippedStats() {
     } else {
       const total: EquippedStats = { hp: 0, attack: 0, mp_regen: 0 };
       for (const row of data ?? []) {
-        const s = (row.stats as EquippedStats | null) ?? EMPTY;
+        const s = ((row.stats as unknown) as EquippedStats | null) ?? EMPTY;
         total.hp += s.hp ?? 0;
         total.attack += s.attack ?? 0;
         total.mp_regen += s.mp_regen ?? 0;

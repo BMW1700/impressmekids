@@ -32,7 +32,7 @@ export async function generateHighlight(input: GenerateHighlightInput): Promise<
     _damage_dealt: Math.floor(input.damageDealt),
     _turns_taken: Math.floor(input.turnsTaken),
     _perfect_blocks: Math.floor(input.perfectBlocks),
-    _stats: input.stats ?? {},
+    _stats: (input.stats ?? {}) as never,
   });
   if (error) { console.error('rpg_generate_highlight failed:', error); return null; }
   const row = Array.isArray(data) ? data[0] : data;
