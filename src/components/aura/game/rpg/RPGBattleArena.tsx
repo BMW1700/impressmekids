@@ -2553,6 +2553,38 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
+  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (highlightFiredRef.current) return;
+    if (!isBossType(enemy.type)) return;
+    highlightFiredRef.current = true;
+    const capturedName = enemy.name;
+    const capturedWorld = worldNumber;
+    const capturedDamage = totalDamage;
+    const capturedTurns = wordsRead;
+    const capturedStreak = longestStreak;
+    const capturedCorrect = correctWords;
+    void generateHighlight({
+      enemyId: `w${capturedWorld}-${enemy.type}`,
+      enemyName: capturedName,
+      worldNumber: capturedWorld,
+      damageDealt: capturedDamage,
+      turnsTaken: capturedTurns,
+      perfectBlocks: 0,
+      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
+    }).then((res) => {
+      setHighlightPayload({
+        enemyName: capturedName,
+        worldNumber: capturedWorld,
+        damageDealt: capturedDamage,
+        turnsTaken: capturedTurns,
+        perfectBlocks: 0,
+        shareableSlug: res?.slug ?? null,
+      });
+      setTimeout(() => setHighlightOpen(true), 2000);
+    });
+  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
   return (
     <motion.div 
