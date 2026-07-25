@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Lock, Check, Trophy } from 'lucide-react';
+import { X, Sparkles, Lock, Check, Trophy, Medal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDailyQuests } from '@/hooks/useDailyQuests';
 import { useSeasonPass } from '@/hooks/useSeasonPass';
 import { CURRENT_SEASON, questLabel } from '@/lib/rpgSeasonPass';
 import { useToast } from '@/hooks/use-toast';
+import { RPGLeaderboardPanel } from './RPGLeaderboardPanel';
 
 interface Props {
   open: boolean;
