@@ -32,14 +32,23 @@ const tierColor: Record<string, string> = {
  * Teacher-facing snapshot of student engagement in RPG mode this season.
  * Non-instructional (engagement only), placed alongside the reading metrics.
  */
-export const TeacherRPGReport = ({ studentIds }: Props) => {
+export const TeacherRPGReport = ({ classroomIds }: Props) => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (studentIds.length === 0) { setLoading(false); return; }
     (async () => {
       setLoading(true);
+      if (classroomIds.length === 0) { setRows([]); setLoading(false); return; }
+
+      // Resolve student IDs from classroom rosters
+      const { data: rosters } = await supabase
+        .from('classroom_students')
+        .select('student_id')
+        .in('classroom_id', classroomIds);
+      const studentIds = Array.from(new Set((rosters ?? []).map((r) => r.student_id).filter(Boolean)));
+      if (studentIds.length === 0) { setRows([]); setLoading(false); return; }
+
       const { data: ranks } = await supabase
         .from('rpg_player_ranks')
         .select('user_id, rank_points, tier, wins, losses, active_title')
@@ -65,7 +74,7 @@ export const TeacherRPGReport = ({ studentIds }: Props) => {
       })));
       setLoading(false);
     })();
-  }, [studentIds.join(',')]);
+  }, [classroomIds.join(',')]);
 
   return (
     <Card>
