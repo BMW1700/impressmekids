@@ -381,6 +381,11 @@ const TeacherDashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* RPG engagement snapshot (Phase 4) */}
+              {classrooms.length > 0 && (
+                <TeacherRPGReport classroomIds={classrooms.map((c) => c.id)} />
+              )}
             </TabsContent>
 
             <TabsContent value="links-resources" className="mt-6">
