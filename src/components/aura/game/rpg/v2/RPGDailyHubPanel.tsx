@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDailyQuests } from '@/hooks/useDailyQuests';
 import { useSeasonPass } from '@/hooks/useSeasonPass';
+import { useMyRank } from '@/hooks/useRPGRanks';
 import { CURRENT_SEASON, questLabel } from '@/lib/rpgSeasonPass';
 import { useToast } from '@/hooks/use-toast';
 import { RPGLeaderboardPanel } from './RPGLeaderboardPanel';
