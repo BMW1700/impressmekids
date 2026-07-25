@@ -187,6 +187,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 </div>
               </section>
             </div>
+            )}
           </motion.div>
         </motion.div>
       )}
