@@ -73,6 +73,24 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
               </Button>
             </div>
 
+            <div className="px-6 pt-4 flex gap-2 border-b">
+              <button
+                onClick={() => setTab('quests')}
+                className={`px-3 py-2 text-xs font-bold uppercase tracking-widest border-b-2 -mb-px ${tab === 'quests' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+              >
+                <Trophy className="h-3.5 w-3.5 inline mr-1" /> Quests & Pass
+              </button>
+              <button
+                onClick={() => setTab('ranks')}
+                className={`px-3 py-2 text-xs font-bold uppercase tracking-widest border-b-2 -mb-px ${tab === 'ranks' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+              >
+                <Medal className="h-3.5 w-3.5 inline mr-1" /> Ranks
+              </button>
+            </div>
+
+            {tab === 'ranks' ? (
+              <div className="p-6"><RPGLeaderboardPanel /></div>
+            ) : (
             <div className="p-6 space-y-6">
               {/* Daily Quests */}
               <section>
