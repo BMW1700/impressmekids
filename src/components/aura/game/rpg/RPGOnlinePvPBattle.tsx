@@ -15,6 +15,8 @@ import { heroKnight, allyWizard } from "@/lib/rpgBattleData";
 import { supabase } from "@/integrations/supabase/client";
 import { LongLoadNotice } from "@/components/system/LongLoadNotice";
 import { useAuth } from "@/contexts/AuthContext";
+import { awardRankPoints } from "@/hooks/useRPGRanks";
+import { PVP_WIN_POINTS, PVP_LOSS_POINTS } from "@/lib/rpgRanks";
 import {
   MULTIPLAYER_ROOM_SNAPSHOT_COLUMNS,
   MultiplayerRoomSnapshot,
