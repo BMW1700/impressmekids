@@ -319,8 +319,8 @@ export const RPGBattleArena = ({
   // Combat stats - player HP initialized based on selected character + health_boost upgrade
   const maxHpWithBoost = useMemo(() => {
     const baseHp = playerCharacter?.maxHp || heroKnight.maxHp;
-    return baseHp + (activeUpgrades.health_boost || 0);
-  }, [playerCharacter?.maxHp, activeUpgrades.health_boost]);
+    return baseHp + (activeUpgrades.health_boost || 0) + (lootStats.hp || 0);
+  }, [playerCharacter?.maxHp, activeUpgrades.health_boost, lootStats.hp]);
   const [playerHp, setPlayerHp] = useState(maxHpWithBoost);
   const [wizardMp, setWizardMp] = useState(50 + (activeUpgrades.mp_boost || 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
