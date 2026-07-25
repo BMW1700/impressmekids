@@ -47,7 +47,7 @@ export function useMyRank() {
     if (!uid) { setRank(null); setLoading(false); return; }
     const { data, error } = await supabase
       .from('rpg_player_ranks')
-      .select('user_id, rank_points, tier, wins, losses')
+      .select('user_id, rank_points, tier, wins, losses, active_title, active_badge')
       .eq('user_id', uid)
       .eq('season_id', CURRENT_SEASON.id)
       .maybeSingle();
@@ -55,7 +55,7 @@ export function useMyRank() {
     if (data) {
       setRank({ ...data, tier: (data.tier as RankTier) });
     } else {
-      setRank({ user_id: uid, rank_points: 0, tier: 'bronze', wins: 0, losses: 0 });
+      setRank({ user_id: uid, rank_points: 0, tier: 'bronze', wins: 0, losses: 0, active_title: null, active_badge: null });
     }
     setLoading(false);
   }, []);
