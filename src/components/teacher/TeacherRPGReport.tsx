@@ -16,7 +16,7 @@ interface Row {
 }
 
 interface Props {
-  studentIds: string[];
+  classroomIds: string[];
 }
 
 const tierColor: Record<string, string> = {
