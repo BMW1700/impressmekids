@@ -10,6 +10,7 @@ import { MLModelTraining } from "@/components/teacher/MLModelTraining";
 import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { TeacherLinksResourcesTab } from "@/components/teacher/TeacherLinksResourcesTab";
+import { TeacherRPGReport } from "@/components/teacher/TeacherRPGReport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
