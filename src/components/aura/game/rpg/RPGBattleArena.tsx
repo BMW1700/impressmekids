@@ -322,6 +322,20 @@ export const RPGBattleArena = ({
     return baseHp + (activeUpgrades.health_boost || 0) + (lootStats.hp || 0);
   }, [playerCharacter?.maxHp, activeUpgrades.health_boost, lootStats.hp]);
   const [playerHp, setPlayerHp] = useState(maxHpWithBoost);
+
+  // RPG v2 Phase 4: passive HP regen from equipped loot's mp_regen stat.
+  // 1 HP per mp_regen point every 8 seconds during active battle. Cannot revive from 0.
+  useEffect(() => {
+    const regen = lootStats.mp_regen || 0;
+    if (regen <= 0) return;
+    const id = setInterval(() => {
+      setPlayerHp((prev) => {
+        if (prev <= 0 || prev >= maxHpWithBoost) return prev;
+        return Math.min(maxHpWithBoost, prev + regen);
+      });
+    }, 8000);
+    return () => clearInterval(id);
+  }, [lootStats.mp_regen, maxHpWithBoost]);
   const [wizardMp, setWizardMp] = useState(50 + (activeUpgrades.mp_boost || 0));
   const [enemyHp, setEnemyHp] = useState(enemy.maxHp);
   const [streak, setStreak] = useState(0);

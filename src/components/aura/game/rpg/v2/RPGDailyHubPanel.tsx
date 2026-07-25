@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDailyQuests } from '@/hooks/useDailyQuests';
 import { useSeasonPass } from '@/hooks/useSeasonPass';
+import { useMyRank } from '@/hooks/useRPGRanks';
 import { CURRENT_SEASON, questLabel } from '@/lib/rpgSeasonPass';
 import { useToast } from '@/hooks/use-toast';
 import { RPGLeaderboardPanel } from './RPGLeaderboardPanel';
@@ -23,6 +24,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const [tab, setTab] = useState<'quests' | 'ranks'>('quests');
   const { quests, loading: qLoading, refresh: refreshQuests } = useDailyQuests();
   const { xp_total, claimed_tiers, loading: sLoading, claimTier, refresh: refreshPass } = useSeasonPass();
+  const { rank, refresh: refreshRank } = useMyRank();
   const { toast } = useToast();
 
   const maxXp = CURRENT_SEASON.tiers[CURRENT_SEASON.tiers.length - 1].requiredXp;
@@ -30,8 +32,9 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const handleClaim = async (tier: number, requiredXp: number, label: string, emoji: string) => {
     const ok = await claimTier(tier, requiredXp);
     if (ok) {
-      toast({ title: `${emoji} Reward claimed!`, description: label });
+      toast({ title: `${emoji} Reward claimed!`, description: `${label} equipped` });
       void refreshPass();
+      void refreshRank();
     } else {
       toast({ title: 'Cannot claim yet', description: 'Earn more XP or refresh.' });
     }
@@ -66,6 +69,11 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 <div>
                   <div className="text-xs tracking-widest opacity-80">SEASON</div>
                   <div className="text-lg font-black">{CURRENT_SEASON.name}</div>
+                  {rank?.active_title && (
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/25 text-[10px] font-bold uppercase tracking-wider">
+                      {rank.active_title}
+                    </div>
+                  )}
                 </div>
               </div>
               <Button size="icon" variant="ghost" onClick={onClose} className="text-white hover:bg-white/20">

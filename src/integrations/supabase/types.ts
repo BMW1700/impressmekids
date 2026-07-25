@@ -6658,6 +6658,8 @@ export type Database = {
       }
       rpg_player_ranks: {
         Row: {
+          active_badge: string | null
+          active_title: string | null
           losses: number
           rank_points: number
           season_id: string
@@ -6667,6 +6669,8 @@ export type Database = {
           wins: number
         }
         Insert: {
+          active_badge?: string | null
+          active_title?: string | null
           losses?: number
           rank_points?: number
           season_id: string
@@ -6676,6 +6680,8 @@ export type Database = {
           wins?: number
         }
         Update: {
+          active_badge?: string | null
+          active_title?: string | null
           losses?: number
           rank_points?: number
           season_id?: string
@@ -10078,6 +10084,27 @@ export type Database = {
           id: string
           shareable_slug: string
         }[]
+      }
+      rpg_get_highlight_by_slug: {
+        Args: { _slug: string }
+        Returns: {
+          created_at: string
+          damage_dealt: number
+          enemy_name: string
+          perfect_blocks: number
+          stats: Json
+          turns_taken: number
+          world_number: number
+        }[]
+      }
+      rpg_set_active_cosmetic: {
+        Args: {
+          _kind: string
+          _label: string
+          _reward_id: string
+          _season_id: string
+        }
+        Returns: undefined
       }
       seed_default_behavior_categories: {
         Args: { p_classroom_id: string }

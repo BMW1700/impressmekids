@@ -10,6 +10,7 @@ import { MLModelTraining } from "@/components/teacher/MLModelTraining";
 import { AllStudentsDialog } from "@/components/teacher/AllStudentsDialog";
 import { CalendarWidget } from "@/components/calendar/CalendarWidget";
 import { TeacherLinksResourcesTab } from "@/components/teacher/TeacherLinksResourcesTab";
+import { TeacherRPGReport } from "@/components/teacher/TeacherRPGReport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -380,6 +381,11 @@ const TeacherDashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* RPG engagement snapshot (Phase 4) */}
+              {classrooms.length > 0 && (
+                <TeacherRPGReport classroomIds={classrooms.map((c) => c.id)} />
+              )}
             </TabsContent>
 
             <TabsContent value="links-resources" className="mt-6">

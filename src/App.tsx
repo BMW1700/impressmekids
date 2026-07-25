@@ -43,6 +43,7 @@ const PilotNDPAExhibit = lazy(() => import("./pages/pilot/NDPAExhibit"));
 const PilotFerpaCoppa = lazy(() => import("./pages/pilot/FerpaCoppaOnePager"));
 const PilotQuickStart = lazy(() => import("./pages/pilot/QuickStart"));
 const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
+const RPGHighlightView = lazy(() => import("./pages/rpg/HighlightView"));
 
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -215,6 +216,7 @@ const App = () => (
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
+                  <Route path="/rpg/highlight/:slug" element={<RPGHighlightView />} />
 
                   <Route path="/game" element={<GameDashboard />} />
                   <Route path="/game/auth" element={<GameAuth />} />
