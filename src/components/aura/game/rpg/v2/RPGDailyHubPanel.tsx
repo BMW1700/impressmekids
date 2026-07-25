@@ -69,6 +69,11 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 <div>
                   <div className="text-xs tracking-widest opacity-80">SEASON</div>
                   <div className="text-lg font-black">{CURRENT_SEASON.name}</div>
+                  {rank?.active_title && (
+                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/25 text-[10px] font-bold uppercase tracking-wider">
+                      {rank.active_title}
+                    </div>
+                  )}
                 </div>
               </div>
               <Button size="icon" variant="ghost" onClick={onClose} className="text-white hover:bg-white/20">
