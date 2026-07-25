@@ -42,6 +42,16 @@ export function useSeasonPass() {
     if (error) { console.error('rpg_claim_season_tier failed:', error); return false; }
     const row = Array.isArray(data) ? data[0] : data;
     if (row?.success) {
+      // Equip visible cosmetic reward (title/badge) after claim
+      const t = CURRENT_SEASON.tiers.find((x) => x.tier === tier);
+      if (t && (t.rewardKind === 'title' || t.rewardKind === 'badge')) {
+        await supabase.rpc('rpg_set_active_cosmetic', {
+          _season_id: CURRENT_SEASON.id,
+          _kind: t.rewardKind,
+          _reward_id: t.rewardId,
+          _label: `${t.rewardEmoji} ${t.rewardLabel}`,
+        });
+      }
       setState((prev) => ({ ...prev, claimed_tiers: (row.claimed_tiers as number[]) ?? prev.claimed_tiers }));
       return true;
     }
