@@ -261,7 +261,32 @@ export const RPGBattleArena = ({
     
     battleSounds.victoryFanfare();
     setPhase('victory');
-  }, [clearAllTimeouts, studentId]);
+
+    // RPG v2 Phase 4: Generate a shareable Battle Highlight card for boss defeats.
+    if (!highlightFiredRef.current && isBossType(enemy.type)) {
+      highlightFiredRef.current = true;
+      void generateHighlight({
+        enemyId: `w${worldNumber}-${enemy.type}`,
+        enemyName: enemy.name,
+        worldNumber: worldNumber,
+        damageDealt: totalDamage,
+        turnsTaken: wordsRead,
+        perfectBlocks: 0,
+        stats: { longestStreak, correctWords },
+      }).then((res) => {
+        setHighlightPayload({
+          enemyName: enemy.name,
+          worldNumber: worldNumber,
+          damageDealt: totalDamage,
+          turnsTaken: wordsRead,
+          perfectBlocks: 0,
+          shareableSlug: res?.slug ?? null,
+        });
+        // Show after victory celebration settles.
+        setTimeout(() => setHighlightOpen(true), 2000);
+      });
+    }
+  }, [clearAllTimeouts, studentId, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
   
   const triggerDefeat = useCallback((reason: string) => {
     if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') {
