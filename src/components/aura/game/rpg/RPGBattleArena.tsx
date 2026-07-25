@@ -3404,6 +3404,11 @@ export const RPGBattleArena = ({
           </div>
         </div>
       </div>
+      <RPGHighlightCard
+        open={highlightOpen}
+        payload={highlightPayload}
+        onClose={() => setHighlightOpen(false)}
+      />
     </motion.div>
   );
 };
