@@ -467,6 +467,8 @@ export const RPGOnlinePvPBattle = ({
     completedRef.current = true;
     const isWin = endPhase === 'victory';
     const correct = isHost ? gs.hostCorrect : gs.guestCorrect;
+    // RPG v2 Phase 4: award ranked points for the season.
+    void awardRankPoints(isWin ? PVP_WIN_POINTS : PVP_LOSS_POINTS, isWin);
     setTimeout(() => {
       onComplete(isWin, {
         wordsRead: gs.wordsRead,
