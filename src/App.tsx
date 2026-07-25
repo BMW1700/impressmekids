@@ -43,6 +43,7 @@ const PilotNDPAExhibit = lazy(() => import("./pages/pilot/NDPAExhibit"));
 const PilotFerpaCoppa = lazy(() => import("./pages/pilot/FerpaCoppaOnePager"));
 const PilotQuickStart = lazy(() => import("./pages/pilot/QuickStart"));
 const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
+const RPGHighlightView = lazy(() => import("./pages/rpg/HighlightView"));
 
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
