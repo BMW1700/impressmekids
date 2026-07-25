@@ -142,6 +142,12 @@ export const RPGBattleArena = ({
   const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
   // EQUIPPED PET — drives passive bonuses + charge attack
   const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
+  // EQUIPPED LOOT — RPG v2 Phase 1: adds HP + attack % + mp_regen
+  const { stats: lootStats } = useEquippedStats();
+  // Battle highlight card (RPG v2 Phase 4) — shown after boss defeats
+  const [highlightPayload, setHighlightPayload] = useState<HighlightPayload | null>(null);
+  const [highlightOpen, setHighlightOpen] = useState(false);
+  const highlightFiredRef = useRef(false);
   const petBonusValue = useMemo(() => (
     equippedPet && equippedPetData ? calculatePetBonus(equippedPetData, equippedPet.level) : 0
   ), [equippedPet, equippedPetData]);
