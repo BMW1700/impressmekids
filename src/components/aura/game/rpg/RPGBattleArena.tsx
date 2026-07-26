@@ -2096,6 +2096,32 @@ export const RPGBattleArena = ({
       const newStreak = streakRef.current + 1;
       streakRef.current = newStreak;
       setStreak(newStreak);
+
+      // --- GAME FEEL: streak heat + ultimate charge ---
+      // Light tick confirms the word landed before the attack even animates.
+      haptic('light');
+
+      const tier = streakTier(newStreak);
+      if (tier > prevStreakTierRef.current) {
+        // Rising pitch ladder: each tier is the same cue, a step higher.
+        battleSounds.streakTierCue(streakHeat(newStreak).pitch);
+        haptic('success');
+      }
+      prevStreakTierRef.current = tier;
+
+      // Reading well is what buys the spectacle.
+      if (!ultFiring) {
+        const gained = ultimateChargeForWord(word.length || 5, newStreak);
+        const nextCharge = Math.min(ULTIMATE_MAX, ultChargeRef.current + gained);
+        ultChargeRef.current = nextCharge;
+        setUltCharge(nextCharge);
+        if (nextCharge >= ULTIMATE_MAX && !ultReadyAnnouncedRef.current) {
+          ultReadyAnnouncedRef.current = true;
+          battleSounds.ultimateReady();
+          haptic('success');
+        }
+      }
+
       correctWordsRef.current += 1;
       pendingWordsQuestRef.current += 1;
       if (pendingWordsQuestRef.current >= WORDS_QUEST_BATCH) flushWordsQuest();
