@@ -1,53 +1,49 @@
-## RPG Pre-Launch Fix Pass
+## Brutally honest verdict
 
-Two confirmed defects shipped in the last change, plus three retention gaps. Fix the defects first — they are the only true blockers to App Store submission.
+RPG mode is genuinely strong — loot, boss spectacle, seasons, ranks, highlights, quests, coach marks, teacher reporting. It is *shippable*. It is not *perfect*, and one thing I just verified is actually broken.
 
----
+### Confirmed broken (verified by reading the code, not guessing)
 
-### Tier 1 — Blockers (must fix before submission)
+**1. `RPGCombatPhase.tsx` is dead code — nothing imports it.**
+It is the only place in the app that awards `defeat_bosses`, and one of only two places awarding `defeat_enemies` / `battle_wins`. Because it never renders:
+- `defeat_bosses` is awarded **nowhere** — that quest can never complete.
+- `defeat_enemies` and `battle_wins` are awarded **only** in `RPGVictoryArena`, which `RPGBattleArena` renders only on `boss` / `final_boss` victories. Every ordinary battle win credits nothing.
 
-**1. Wire up the 4 dead quest types**
+The previous fix removed the double-count from the wrong side: the survivor was the file nobody uses.
 
-Four of the seven quest types in the server pool have no client call sites, so they can never complete:
+**2. `minigame_wins` over-credits.**
+It fires on any transition out of a mini-game phase while alive. Mini-games that are *failed* also transition back to `reading`/`combat` alive, so losses count as wins.
 
-| Quest type | Where to award it |
-|---|---|
-| `perfect_battles` | Battle victory when the run took zero player damage / zero misreads |
-| `words_read` | The reading/word-check success path, one per correctly read word |
-| `play_streak` | Once per day on entering the Adventure |
-| `minigame_wins` | Each mini-game success resolution |
-
-**2. Remove boss quest double-counting**
-
-`RPGVictoryArena` awards `defeat_bosses` unconditionally while `RPGCombatPhase` also awards it, inflating quest progress and Season XP. Make arena victory award boss credit only when the arena opponent is genuinely a boss, and ensure the two paths cannot both fire for one defeat.
+### Real but not blocking
+- No weekly parent digest (blocked by bulk-email policy — needs the in-app or on-demand variant instead).
+- No dynamic season content beyond what an admin types; cosmetics are titles/badges, not visual character changes.
+- No mid-play social proof (classmate activity ticker).
 
 ---
 
-### Tier 2 — Retention (recommended before, safe after)
+## Proposed fix pass
 
-**3. Weekly parent digest**
+**A. Move battle/boss quest credit into the live battle component**
+In `RPGBattleArena`, at the single terminal-victory point that already flushes `words_read`:
+- award `defeat_enemies` and `battle_wins` on every victory;
+- award `defeat_bosses` when `isBossType(enemy.type)`.
+Remove the awards from `RPGVictoryArena` entirely so the bonus brawl never adds a second credit.
 
-A scheduled backend job that emails each linked parent a short weekly recap: bosses defeated, words read, current rank and season tier, plus the child's best highlight card link. This is the purchase trigger for parents and the piece most missing today.
+**B. Delete `RPGCombatPhase.tsx`**
+Unreferenced dead code that misleads future audits. (Confirmed: zero imports outside itself.)
 
-**4. Boss Spectacle audio**
+**C. Make `minigame_wins` accurate**
+Only credit when the mini-game resolved successfully — gate the transition-watcher on the existing success signal rather than "still alive", so failures don't award progress.
 
-Add an entrance stinger and a phase-transition cue, respecting the existing game mute/settings toggle. Currently the spectacle is silent, which mutes the "wow" moment on a classroom iPad.
+**D. Verify, don't assume**
+After the change, run a scripted battle in the preview and read back the quest rows to confirm exactly one increment per event.
 
-**5. Surface rank and quests in-play**
+### Out of scope here
+Parent digest, new cosmetics, new bosses, social ticker. Those are post-launch.
 
-Show a compact rank badge and an "N quests ready to claim" indicator in the game header, so the Daily Hub and Leaderboard are discoverable without going back to character select.
-
----
-
-### Explicitly out of scope
-
-More bosses, more loot rarities, extra worlds, additional cosmetics. Those are post-launch content, not launch blockers.
-
----
+### Then: App Store
+Once A–D are verified, RPG is done for v1 and the remaining work is Capacitor porting, iOS speech adapter validation on device, and submission assets.
 
 ### Technical notes
-
-- Quest awards go through the existing `awardQuestProgress(questType, delta)` helper in `src/hooks/useDailyQuests.ts`; no schema change is required for Tier 1.
-- The `words_read` quest will fire frequently, so batch increments rather than one network call per word.
-- The parent digest needs a scheduled edge function plus a send trigger; it will reuse the existing app email infrastructure and must respect each parent's notification preferences and consent flags.
-- Audio assets must be small and preloaded so they do not delay the spectacle animation.
+- All awards route through `awardQuestProgress(questType, delta)` in `src/hooks/useDailyQuests.ts`; no schema change.
+- The terminal-phase effect in `RPGBattleArena` (around line 404) already guards with `questsSettledRef`, so adding awards there is idempotent per battle.
