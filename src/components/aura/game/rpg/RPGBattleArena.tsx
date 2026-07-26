@@ -352,6 +352,23 @@ export const RPGBattleArena = ({
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
+
+  // ── Daily quest instrumentation ────────────────────────────────────────────
+  // `words_read` fires on every correct word, so batch it instead of issuing one
+  // network call per word. Flushed every WORDS_QUEST_BATCH words and on victory.
+  const WORDS_QUEST_BATCH = 5;
+  const pendingWordsQuestRef = useRef(0);
+  const flushWordsQuest = useCallback(() => {
+    const pending = pendingWordsQuestRef.current;
+    if (pending <= 0) return;
+    pendingWordsQuestRef.current = 0;
+    void awardQuestProgress('words_read', pending);
+  }, []);
+
+  // `perfect_battles` requires finishing a battle without losing any HP. A single
+  // effect on playerHp catches every damage source (attacks, mini-games, traps).
+  const tookDamageRef = useRef(false);
+
   
   // Track whether starter kit has been seeded (prevents re-adding mid-battle after potions are used)
   const starterKitSeededRef = useRef(false);
