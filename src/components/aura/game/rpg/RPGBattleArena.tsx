@@ -2802,7 +2802,32 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
+  /**
+   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
+   * hit-stop, stagger, and a free-hit window where the next correct word hits
+   * for double. Turns a flat HP drain into two memorable spikes.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const thresholds = [66, 33];
+    for (const t of thresholds) {
+      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
+        bossBreaksFiredRef.current.add(t);
+        freeHitRef.current = true;
+        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
+        triggerScreenShake('break');
+        setEnemyTakingDamage(true);
+        setTimeout(() => setEnemyTakingDamage(false), 700);
+        setTimeout(() => setBossBreakLabel(null), 2200);
+        break;
+      }
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+
   useEffect(() => {
     if (phase !== 'victory') return;
     if (highlightFiredRef.current) return;
