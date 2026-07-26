@@ -1290,7 +1290,7 @@ export const RPGBattleArena = ({
     
     if (damageTaken > 0) {
       takePlayerDamage(damageTaken);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     
     // FIX: Track accuracy for words consumed by quick block
@@ -1304,7 +1304,7 @@ export const RPGBattleArena = ({
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
     takePlayerDamage(damage);
-    triggerScreenShake();
+    triggerScreenShake('heavy');
   }, []);
 
   // === LITERACY FEATURE HANDLERS ===
@@ -1367,7 +1367,7 @@ export const RPGBattleArena = ({
     } else {
       // Boss counter-attacks
       takePlayerDamage(15);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     setVocabShieldData(null);
     returnToReading();
@@ -1382,7 +1382,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + damage);
     } else {
       takePlayerDamage(10);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     setContextClueData(null);
     returnToReading();
@@ -1570,7 +1570,7 @@ export const RPGBattleArena = ({
       y: 60 + Math.random() * 10,
       isPlayer: true
     }]);
-    triggerScreenShake();
+    triggerScreenShake('heavy');
   }, []);
 
   // Get current dialogue
@@ -1834,7 +1834,7 @@ export const RPGBattleArena = ({
       
       setEnemyHp(prev => Math.max(0, prev - finalDamage));
       setTotalDamage(prev => prev + finalDamage);
-      triggerScreenShake();
+      triggerScreenShake(intensityForDamage(finalDamage, enemy.maxHp, { isCritical: true }));
       
       // Add floating damage number for spell
       setFloatingDamages(prev => [...prev, {
@@ -1977,7 +1977,7 @@ export const RPGBattleArena = ({
         }
         
         setHeroTakingDamage(true);
-        triggerScreenShake();
+        triggerScreenShake('heavy');
         
         scheduleTimeout(() => {
           // Check terminal state before returning to reading
@@ -2249,7 +2249,7 @@ export const RPGBattleArena = ({
           setEnemyTakingDamage(true);
           setShowDamageNumber(true);
           setEnemyHp(prev => Math.max(0, prev - actualDamage));
-          triggerScreenShake();
+          triggerScreenShake(intensityForDamage(actualDamage, enemy.maxHp, { isCritical: isElaraBarrage || damageResult.isCritical }));
           
           // Add floating damage for big hits (Elara barrage or speed crits)
           if (isElaraBarrage || damageResult.isCritical) {
@@ -2297,7 +2297,7 @@ export const RPGBattleArena = ({
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
           takePlayerDamage(damage);
-          triggerScreenShake();
+          triggerScreenShake('heavy');
           
           setTimeout(() => {
             setHeroTakingDamage(false);
