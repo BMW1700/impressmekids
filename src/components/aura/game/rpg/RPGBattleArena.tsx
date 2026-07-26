@@ -2275,7 +2275,18 @@ export const RPGBattleArena = ({
         setDamageAmount(baseDamage);
       }
       
+      // BOSS BREAK payoff: the staggered window doubles the next real hit.
+      if (freeHitRef.current && actualDamage > 0) {
+        freeHitRef.current = false;
+        actualDamage *= 2;
+        setDamageAmount(actualDamage);
+        setComboAnnouncement('💢 BREAK HIT! ×2 💢');
+        setComboPowerLevel('ultra');
+        setTimeout(() => setComboAnnouncement(null), 900);
+      }
+
       setTotalDamage(prev => prev + actualDamage);
+
       
       // Calculate and trigger gold/XP rewards
       // Apply Lucky Coin / Double XP potion multipliers on top of permanent upgrades
