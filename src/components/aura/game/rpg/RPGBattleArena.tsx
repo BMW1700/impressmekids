@@ -368,6 +368,26 @@ export const RPGBattleArena = ({
   // `perfect_battles` requires finishing a battle without losing any HP. A single
   // effect on playerHp catches every damage source (attacks, mini-games, traps).
   const tookDamageRef = useRef(false);
+  useEffect(() => {
+    if (playerHp < maxHpWithBoost) tookDamageRef.current = true;
+  }, [playerHp, maxHpWithBoost]);
+
+  // `minigame_wins`: mini-games have ~25 separate completion handlers, so instead
+  // of touching each one we watch the single phase transition every one of them
+  // performs — leaving a mini-game phase while still alive means it was cleared.
+  const prevPhaseRef = useRef<BattlePhase>('intro');
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (prev === phase) return;
+    if (MINIGAME_PHASES.has(prev) && !MINIGAME_PHASES.has(phase) && phase !== 'defeat') {
+      void awardQuestProgress('minigame_wins');
+    }
+  }, [phase]);
+
+  // Never lose buffered word progress if the student leaves mid-battle.
+  useEffect(() => flushWordsQuest, [flushWordsQuest]);
+
 
   
   // Track whether starter kit has been seeded (prevents re-adding mid-battle after potions are used)
