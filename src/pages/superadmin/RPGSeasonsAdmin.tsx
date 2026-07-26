@@ -116,7 +116,7 @@ const RPGSeasonsAdmin = () => {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      <Link to="/superadmin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
+      <Link to="/super-admin" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Link>
 
