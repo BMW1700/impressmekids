@@ -29,7 +29,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const { toast } = useToast();
   const { season } = useActiveSeason();
 
-  const maxXp = season.tiers[season.tiers.length - 1].requiredXp;
+  const maxXp = season.tiers.length > 0 ? season.tiers[season.tiers.length - 1].requiredXp : 1;
 
   const handleClaim = async (tier: number, requiredXp: number, label: string, emoji: string) => {
     const ok = await claimTier(tier, requiredXp);
