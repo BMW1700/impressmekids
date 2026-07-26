@@ -30,6 +30,18 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
     return () => clearTimeout(t);
   }, []);
 
+  // `play_streak` daily quest: credit once per calendar day when the student
+  // enters the Adventure. The local guard just avoids redundant round-trips —
+  // the server clamps quest progress to the target, so a stale guard is harmless.
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const KEY = 'rpg_play_streak_awarded_on';
+    if (localStorage.getItem(KEY) === today) return;
+    localStorage.setItem(KEY, today);
+    void awardQuestProgress('play_streak');
+  }, []);
+
+
   // Delegate to agent character select if in agent mode
   if (theme === 'agent') {
     return <AgentCharacterSelect onSelect={onSelect} />;
