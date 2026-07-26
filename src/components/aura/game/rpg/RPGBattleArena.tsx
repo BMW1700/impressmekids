@@ -94,6 +94,20 @@ import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
 import { awardQuestProgress } from "@/hooks/useDailyQuests";
+import {
+  getImpactProfile,
+  intensityForDamage,
+  hapticForIntensity,
+  haptic,
+  setHapticsEnabled,
+  streakHeat,
+  streakTier,
+  ULTIMATE_MAX,
+  ultimateChargeForWord,
+  ultimateDamage,
+  type ImpactIntensity,
+} from "@/lib/rpgGameFeel";
+
 
 
 // Sound effects singleton
