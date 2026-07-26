@@ -10,6 +10,8 @@ import { getStoredTheme } from '@/lib/gameTheme';
 import { RPGGearLocker } from './v2/RPGGearLocker';
 import { RPGDailyHubPanel } from './v2/RPGDailyHubPanel';
 import { RPGCoachMarks, hasSeenRPGCoachMarks } from './v2/RPGCoachMarks';
+import { awardQuestProgress } from '@/hooks/useDailyQuests';
+
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
