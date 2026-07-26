@@ -1,57 +1,64 @@
-# RPG Mode Final Close-Out — Phase 4 + Gap Fixes
+## RPG Retention & Trust Pass
 
-Three-part plan to make RPG mode genuinely complete before we pivot to App Store porting.
+Four workstreams to close the retention and reliability gaps before the App Store port. Additive only — no changes to existing combat balance beyond what is already shipped.
 
-## Part 1 — Fix the gaps in Phases 1-3
+---
 
-### 1a. Wire loot stats into real combat
-Currently `RPGCombatPhase.tsx` uses hardcoded `heroKnight.attack` and `playerMaxHp` — equipped gear does nothing to actual gameplay.
+### A. PvP regression smoke test (do first)
 
-- Create `src/hooks/useEquippedStats.ts` — reads `player_loot` rows where `equipped = true`, sums `hp`, `attack`, `mp_regen` bonuses.
-- Update `RPGCombatPhase.tsx` to accept a `bonusStats` prop; apply `bonusStats.attack` to damage calc and `bonusStats.hp` to `playerMaxHp`.
-- Update `RPGWorldMap.tsx` (or whichever parent mounts combat) to pass equipped stats down.
-- Show a small "+X ATK / +Y HP from gear" badge in the combat header so players see gear matters.
+Combat math changed when loot attack bonuses and passive HP regen were added. Two-player PvP has not been re-verified since.
 
-### 1b. Verify Season Pass rewards actually unlock something visible
-- Audit `rpgSeasonPass.ts` tier rewards — confirm each claimed tier grants a real cosmetic (title, frame, skin flag) that displays somewhere (character select, victory arena, or profile).
-- If any tier reward is orphaned, wire it to a visible surface.
+- Drive two browser sessions against the live preview, join the same PvP room, and play a full match to a win/loss.
+- Verify: HP totals agree on both clients, loot bonuses apply symmetrically, regen does not desync turn state, the winner/loser rank award fires exactly once each.
+- Fix whatever the run surfaces. If nothing breaks, record it and move on — no speculative refactor.
 
-### 1c. Live multiplayer smoke test
-- Playwright script: launch 2 browser contexts, sign in as 2 test users, create room, join, play through 1 full PvP match with loot equipped and boss spectacle triggering.
-- Capture screenshots at: room join, first attack, spectacle entrance, victory.
-- Report any regressions and fix before shipping Phase 4.
+**Why first:** a desync on launch day is the single highest-cost defect, and it gates whether B–D are worth building on top.
 
-## Part 2 — Phase 4: Social & Ranks
+---
 
-### 2a. Database
-New migration:
-- `rpg_player_ranks` table: `user_id`, `season_id`, `rank_points`, `tier` (Bronze/Silver/Gold/Platinum/Diamond/Master), `wins`, `losses`, `updated_at`.
-- `rpg_highlight_cards` table: `user_id`, `enemy_id`, `damage_dealt`, `turns_taken`, `perfect_blocks`, `created_at`, `shareable_slug`.
-- RPC `rpg_award_rank_points(_delta int, _win bool)` — updates points + recomputes tier server-side.
-- RPC `rpg_generate_highlight(_enemy_id text, _stats jsonb)` — writes a highlight row after boss defeats.
-- GRANT SELECT/INSERT/UPDATE to `authenticated`, ALL to `service_role`, RLS scoped to `auth.uid()`.
+### B. RPG onboarding coach-marks
 
-### 2b. UI
-- `RPGLeaderboardPanel.tsx` — top 100 by rank points this season, current user's row pinned, tier badges with icons.
-- `RPGHighlightCard.tsx` — post-boss "Battle Highlight" card (enemy, damage dealt, turns, perfect blocks), with a "Copy Link" button using the shareable slug.
-- `RPGRankBadge.tsx` — small tier badge shown in character select and victory arena.
-- Add a "Ranks" tab to the Daily & Season hub next to Quests and Season Pass.
+Loot Locker, gear equipping, Season Pass, Ranks, and highlight sharing are all reachable but nothing teaches them. New students never find the depth.
 
-### 2c. Wiring
-- Fire `rpg_award_rank_points` from `RPGVictoryArena.tsx` on PvP wins (+25 win / -10 loss, tunable).
-- Fire `rpg_generate_highlight` on any boss defeat in `RPGCombatPhase.tsx`.
-- Show highlight card modal 2 seconds after victory overlay in single-player boss fights.
+- New component: a lightweight 5-step coach-mark overlay (spotlight + tooltip + Next/Skip), styled with existing design tokens.
+- Steps: Gear Locker → Equip an item → Daily Hub / Quests → Season Pass tiers → Ranks tab.
+- Shown once per user; completion flag persisted so it never re-nags. Re-runnable from the game header settings gear.
+- Respects the existing visual-restraint rule: solid colors, no bouncing, slow fades.
 
-## Part 3 — Verify & greenlight App Store
+---
 
-- Run `tsgo` to confirm typecheck is clean.
-- Playwright end-to-end: character select → equip loot → boss fight → victory → highlight card → check leaderboard → claim season tier.
-- Report status. If green, we pivot to Capacitor iOS port planning in the next turn.
+### C. Weekly parent digest email
 
-## Technical notes
+Parents currently have no recurring reason to see value from RPG mode — this is the purchase trigger.
 
-- All new tables follow the public-schema GRANT + RLS pattern (auth-only, `auth.uid()` scoped).
-- Loot stat application is client-side computed but server-validated on future PvP damage RPCs (out of scope for this session — noted for App Store hardening pass).
-- Leaderboard query uses index on `(season_id, rank_points DESC)` for fast top-100 fetches.
-- No changes to multiplayer sync engine (`multiplayerRoomTypes.ts`) — Phase 4 rides on top of existing `OnlinePvPGameState`.
-- Highlight cards are single-image React components; sharing is link-only (no server-side image generation) to keep costs at $0.
+- New app-email template: "This week in the Adventure" — bosses defeated, battles won, current rank/tier, active title, words/phonemes practiced, one shareable highlight link.
+- Sent once weekly per linked parent, using the existing parent-student link and notification-preference tables so opted-out parents are excluded.
+- Scheduled weekly via the backend scheduler; each send is a single recipient triggered by that child's own week — not a bulk list.
+- Requires the project's email domain to be configured; if it isn't yet, that setup dialog runs first.
+
+---
+
+### D. Database-driven seasons
+
+`CURRENT_SEASON` is hardcoded in `src/lib/rpgSeasonPass.ts` as `season-2026-w30`, running `2026-07-20` → `2026-07-27`. When it ends, there is no next season and no way to add one without a code deploy.
+
+- New `rpg_seasons` table (id, name, theme color, starts/ends, tiers as JSONB, active flag) with grants + RLS: everyone reads, only super admins write.
+- Seed it with the current Ember Trials config so nothing regresses.
+- New hook reads the active season from the database; `CURRENT_SEASON` stays exported as a fallback constant so existing call sites keep compiling during the swap.
+- Small super-admin screen to create/activate the next season and edit tier rewards.
+
+Also in scope here: widen the daily-quest pool. Today only three quest types exist (`defeat_enemies`, `defeat_bosses`, `battle_wins`). Add several more (perfect-accuracy battles, words read, streak days, minigame wins) and have the daily roll pick 3 from the pool so the board actually varies day to day.
+
+---
+
+### Explicitly out of scope
+
+New bosses, new loot rarities, boss audio stingers, in-battle friend-activity ticker. All post-launch.
+
+---
+
+### Technical notes
+
+- Order matters: A gates the rest. B and C are independent and can land in parallel. D touches the database and should land last so the seasons migration doesn't collide with anything.
+- C and D both need migrations; each will be surfaced for approval separately.
+- Typecheck after each workstream, not just at the end.
