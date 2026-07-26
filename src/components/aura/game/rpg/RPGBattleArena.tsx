@@ -3442,7 +3442,37 @@ export const RPGBattleArena = ({
                   className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-2 md:gap-4"
                 >
                   {/* Command Menu - compact row on mobile, full panel on desktop */}
-                  <div className="order-2 md:order-none">
+                  <div className="order-2 md:order-none space-y-2">
+                    {/* ULTIMATE METER — earned by reading, spent on spectacle */}
+                    <motion.button
+                      type="button"
+                      onClick={fireUltimate}
+                      disabled={!ultReady || ultFiring}
+                      aria-label={ultReady ? 'Unleash ultimate attack' : `Ultimate charging: ${ultCharge} percent`}
+                      className="w-full rounded-lg border-2 px-3 py-2 text-left transition-colors disabled:cursor-default"
+                      style={{
+                        borderColor: ultReady ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+                        background: ultReady ? 'hsl(var(--primary) / 0.18)' : 'hsl(var(--muted) / 0.35)',
+                      }}
+                      animate={ultReady ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                      transition={{ repeat: ultReady ? Infinity : 0, duration: 0.7 }}
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest text-foreground">
+                        <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {ultReady ? 'Ultimate Ready!' : 'Ultimate'}
+                        </span>
+                        <span className="tabular-nums">{ultCharge}%</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-background/60">
+                        <motion.div
+                          className="h-full rounded-full bg-primary"
+                          animate={{ width: `${ultCharge}%` }}
+                          transition={{ duration: 0.25 }}
+                        />
+                      </div>
+                    </motion.button>
+
                     <RPGCommandMenu
                       onSelectCommand={handleCommand}
                       onCastSpell={handleCastSpell}
@@ -3456,6 +3486,7 @@ export const RPGBattleArena = ({
                       extraSpells={purchasedPowerSpells}
                     />
                   </div>
+
 
                    {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
                     <div className="relative min-h-[120px] md:min-h-[200px] space-y-4 overflow-hidden order-1 md:order-none">
