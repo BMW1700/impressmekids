@@ -712,10 +712,13 @@ export const RPGBattleArena = ({
       });
   }, [studentId]);
   
-  // Update sound effects when toggle changes
+  // Update sound effects when toggle changes.
+  // Haptics ride the same switch so a classroom can silence buzzing too.
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
+    setHapticsEnabled(soundEnabled);
   }, [soundEnabled]);
+
   
   // Cleanup all timeouts on unmount
   useEffect(() => {
