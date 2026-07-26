@@ -2820,6 +2820,13 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
+  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
+  useEffect(() => {
+    bossBreaksFiredRef.current = new Set();
+    freeHitRef.current = false;
+    setBossBreakLabel(null);
+  }, [enemy.name, enemy.type]);
+
   /**
    * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
    * hit-stop, stagger, and a free-hit window where the next correct word hits
