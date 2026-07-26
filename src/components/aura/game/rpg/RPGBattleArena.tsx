@@ -2845,7 +2845,6 @@ export const RPGBattleArena = ({
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
-      key={undefined}
       animate={screenShake ? {
         x: impactProfile.shakeX,
         rotate: impactProfile.shakeRotate,
@@ -2863,6 +2862,7 @@ export const RPGBattleArena = ({
       <AnimatePresence>
         {impactFlash > 0 && (
           <motion.div
+            key={impactNonce}
             className="pointer-events-none absolute inset-0 z-[60] bg-primary-foreground"
             initial={{ opacity: impactFlash }}
             animate={{ opacity: 0 }}
