@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RPGEnemy } from '@/lib/rpgBattleData';
+import { SoundEffects } from '@/lib/pronunciationPlayer';
 import {
   getBossSpectacle,
   isBossType,
   type BossPhase,
 } from '@/lib/rpgBossSpectacle';
+
+const spectacleSounds = new SoundEffects();
 
 interface RPGBossSpectacleProps {
   enemy: RPGEnemy;
@@ -27,9 +30,11 @@ export const RPGBossSpectacle = ({ enemy, currentHp, maxHp }: RPGBossSpectaclePr
   const [activePhase, setActivePhase] = useState<BossPhase | null>(null);
   const [firedPhaseIds, setFiredPhaseIds] = useState<Set<number>>(new Set());
 
-  // Entrance auto-dismiss.
+  // Entrance auto-dismiss + stinger. The cue is synthesized on the fly, so
+  // there is no asset load that could delay the animation.
   useEffect(() => {
     if (!showEntrance) return;
+    spectacleSounds.bossEntranceStinger();
     const t = setTimeout(() => setShowEntrance(false), 2200);
     return () => clearTimeout(t);
   }, [showEntrance]);
@@ -42,6 +47,7 @@ export const RPGBossSpectacle = ({ enemy, currentHp, maxHp }: RPGBossSpectaclePr
       const phase = spectacle.phases[i];
       if (ratio <= phase.hpThreshold && !firedPhaseIds.has(i)) {
         setActivePhase(phase);
+        spectacleSounds.bossPhaseCue();
         setFiredPhaseIds((prev) => {
           const next = new Set(prev);
           next.add(i);
