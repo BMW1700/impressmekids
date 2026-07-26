@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CURRENT_SEASON } from '@/lib/rpgSeasonPass';
+import { getActiveSeasonId } from '@/lib/rpgSeasonPass';
 import { tierFromPoints, type RankTier } from '@/lib/rpgRanks';
 
 export interface RankRow {
@@ -24,7 +24,7 @@ export interface LeaderboardEntry extends RankRow {
  */
 export async function awardRankPoints(delta: number, isWin: boolean): Promise<RankRow | null> {
   const { data, error } = await supabase.rpc('rpg_award_rank_points', {
-    _season_id: CURRENT_SEASON.id,
+    _season_id: getActiveSeasonId(),
     _delta: delta,
     _win: isWin,
   });
@@ -49,7 +49,7 @@ export function useMyRank() {
       .from('rpg_player_ranks')
       .select('user_id, rank_points, tier, wins, losses, active_title, active_badge')
       .eq('user_id', uid)
-      .eq('season_id', CURRENT_SEASON.id)
+      .eq('season_id', getActiveSeasonId())
       .maybeSingle();
     if (error) console.error('useMyRank:', error);
     if (data) {
@@ -74,7 +74,7 @@ export function useLeaderboard(limit = 100) {
     const { data: ranks, error } = await supabase
       .from('rpg_player_ranks')
       .select('user_id, rank_points, tier, wins, losses')
-      .eq('season_id', CURRENT_SEASON.id)
+      .eq('season_id', getActiveSeasonId())
       .order('rank_points', { ascending: false })
       .limit(limit);
     if (error) { console.error('leaderboard:', error); setRows([]); setLoading(false); return; }

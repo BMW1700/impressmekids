@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { SirValor } from '../characters/SirValor';
 import { Elara } from '../characters/Elara';
 import { PrincessElla } from '../characters/PrincessElla';
-import { Shield, Sparkles, Flower2, Heart, Zap, Sword, Backpack, Trophy } from 'lucide-react';
+import { Shield, Sparkles, Flower2, Heart, Zap, Sword, Backpack, Trophy, HelpCircle } from 'lucide-react';
 import { AgentCharacterSelect } from './AgentCharacterSelect';
 import { getStoredTheme } from '@/lib/gameTheme';
 import { RPGGearLocker } from './v2/RPGGearLocker';
 import { RPGDailyHubPanel } from './v2/RPGDailyHubPanel';
+import { RPGCoachMarks, hasSeenRPGCoachMarks } from './v2/RPGCoachMarks';
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
 
@@ -20,6 +21,14 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
   const theme = getStoredTheme();
   const [gearOpen, setGearOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+
+  // First-time players get the tour once; it can be replayed from the "?" button.
+  useEffect(() => {
+    if (hasSeenRPGCoachMarks()) return;
+    const t = setTimeout(() => setCoachOpen(true), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   // Delegate to agent character select if in agent mode
   if (theme === 'agent') {
@@ -34,18 +43,28 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
     >
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <button
+          onClick={() => setCoachOpen(true)}
+          aria-label="How the Adventure works"
+          className="flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white/80 h-9 w-9 backdrop-blur transition"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </button>
+        <button
+          data-coach="daily-hub"
           onClick={() => setHubOpen(true)}
           className="flex items-center gap-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-orange-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
         >
           <Trophy className="h-4 w-4" /> Daily & Season
         </button>
         <button
+          data-coach="gear-locker"
           onClick={() => setGearOpen(true)}
           className="flex items-center gap-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
         >
           <Backpack className="h-4 w-4" /> Gear Locker
         </button>
       </div>
+
 
       <motion.div
         initial={{ y: -20, opacity: 0 }}
@@ -249,6 +268,8 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
 
       <RPGGearLocker open={gearOpen} onClose={() => setGearOpen(false)} />
       <RPGDailyHubPanel open={hubOpen} onClose={() => setHubOpen(false)} />
+      <RPGCoachMarks open={coachOpen} onClose={() => setCoachOpen(false)} />
+
     </motion.div>
   );
 };

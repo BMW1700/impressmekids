@@ -37,11 +37,39 @@ export const CURRENT_SEASON: Season = {
   ],
 };
 
-export function questLabel(questType: string): { label: string; emoji: string } {
+/**
+ * Human label for a quest row. Target counts come from the row itself so the
+ * label stays correct if the pool's targets are ever retuned server-side.
+ */
+export function questLabel(questType: string, target?: number): { label: string; emoji: string } {
+  const n = (fallback: number) => target ?? fallback;
   switch (questType) {
-    case 'defeat_enemies': return { label: 'Defeat 5 enemies',       emoji: '⚔️' };
-    case 'defeat_bosses':  return { label: 'Defeat 1 boss',          emoji: '👑' };
-    case 'battle_wins':    return { label: 'Win 3 battles',          emoji: '🏆' };
-    default:               return { label: questType,                emoji: '⭐' };
+    case 'defeat_enemies':  return { label: `Defeat ${n(5)} enemies`,               emoji: '⚔️' };
+    case 'defeat_bosses':   return { label: `Defeat ${n(1)} boss`,                  emoji: '👑' };
+    case 'battle_wins':     return { label: `Win ${n(3)} battles`,                  emoji: '🏆' };
+    case 'perfect_battles': return { label: `Win ${n(1)} battle with no mistakes`,  emoji: '🎯' };
+    case 'words_read':      return { label: `Read ${n(40)} words aloud`,            emoji: '📖' };
+    case 'play_streak':     return { label: 'Play the Adventure today',             emoji: '🔥' };
+    case 'minigame_wins':   return { label: `Win ${n(2)} mini-games`,               emoji: '🎮' };
+    default:                return { label: questType,                             emoji: '⭐' };
   }
+}
+
+// ── Active season cache ──────────────────────────────────────────────────────
+// The active season lives in the database (`rpg_seasons`) so a new season can
+// launch without a deploy. `useActiveSeason` writes it here once loaded, which
+// lets module-level helpers (fire-and-forget combat callbacks) use the right
+// season id without threading React state through every call site.
+let activeSeason: Season = CURRENT_SEASON;
+
+export function setActiveSeasonCache(season: Season): void {
+  activeSeason = season;
+}
+
+export function getActiveSeason(): Season {
+  return activeSeason;
+}
+
+export function getActiveSeasonId(): string {
+  return activeSeason.id;
 }

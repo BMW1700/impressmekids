@@ -91,6 +91,19 @@ const SuperAdminDashboard = () => {
               </CardHeader>
             </Card>
           </Link>
+
+          <Link to="/super-admin/rpg-seasons">
+            <Card className="hover:border-primary transition-colors h-full">
+              <CardHeader>
+                <Swords className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>RPG Seasons</CardTitle>
+                <CardDescription>
+                  Create and go live with the next Season Pass — no code deploy required.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
         </div>
       </div>
     </div>

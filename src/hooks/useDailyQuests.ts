@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CURRENT_SEASON } from '@/lib/rpgSeasonPass';
+import { getActiveSeasonId } from '@/lib/rpgSeasonPass';
 
 export interface DailyQuest {
   id: string;
@@ -41,7 +41,7 @@ export async function awardQuestProgress(questType: string, delta = 1): Promise<
   const { error } = await supabase.rpc('rpg_award_quest_progress', {
     p_quest_type: questType,
     p_delta: delta,
-    p_season_id: CURRENT_SEASON.id,
+    p_season_id: getActiveSeasonId(),
   });
   if (error) console.error('rpg_award_quest_progress failed:', error);
 }

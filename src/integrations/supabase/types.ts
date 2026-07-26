@@ -6719,6 +6719,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rpg_seasons: {
+        Row: {
+          created_at: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          name: string
+          starts_at: string
+          theme_color: string
+          tiers: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          id: string
+          is_active?: boolean
+          name: string
+          starts_at: string
+          theme_color?: string
+          tiers?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          starts_at?: string
+          theme_color?: string
+          tiers?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       rubric_criteria: {
         Row: {
           created_at: string | null
