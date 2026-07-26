@@ -93,6 +93,8 @@ import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
 import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
+import { awardQuestProgress } from "@/hooks/useDailyQuests";
+
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
