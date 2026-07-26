@@ -2835,14 +2835,56 @@ export const RPGBattleArena = ({
     });
   }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
+  // GAME FEEL: the live impact profile drives shake amplitude, rotation and
+  // camera punch. `impactNonce` re-keys the animation so back-to-back hits
+  // restart the shake instead of swallowing it.
+  const impactProfile = getImpactProfile(impactIntensity);
+  const heat = streakHeat(streak);
+  const ultReady = ultCharge >= ULTIMATE_MAX;
+
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
-      animate={screenShake ? { x: [-5, 5, -5, 5, 0] } : {}}
-      transition={{ duration: 0.3 }}
+      key={undefined}
+      animate={screenShake ? {
+        x: impactProfile.shakeX,
+        rotate: impactProfile.shakeRotate,
+        scale: [1, impactProfile.zoom, 1],
+      } : { x: 0, rotate: 0, scale: 1 }}
+      transition={{ duration: impactProfile.shakeDuration, ease: 'easeOut' }}
+      style={{
+        // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
+        // recognition, timers and game logic are untouched by this.
+        animationPlayState: hitStop ? 'paused' : 'running',
+        filter: hitStop ? 'contrast(1.12) saturate(1.15)' : undefined,
+      }}
     >
+      {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
+      <AnimatePresence>
+        {impactFlash > 0 && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-[60] bg-primary-foreground"
+            initial={{ opacity: impactFlash }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Streak heat — the whole screen takes on the streak's temperature */}
+      {heat.tier > 0 && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-[55]"
+          animate={{ opacity: [0.25, 0.5, 0.25] }}
+          transition={{ repeat: Infinity, duration: 1.6 }}
+          style={{ boxShadow: `inset 0 0 ${40 + heat.tier * 40}px ${heat.glow}` }}
+        />
+      )}
+
       {/* Battle Background */}
       <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
+
 
       {/* Enemy Transition Overlay */}
       <RPGEnemyTransition
