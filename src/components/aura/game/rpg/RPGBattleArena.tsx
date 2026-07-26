@@ -2925,6 +2925,24 @@ export const RPGBattleArena = ({
         />
       )}
 
+      {/* Boss break banner — the free-hit window announces itself loudly */}
+      <AnimatePresence>
+        {bossBreakLabel && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/3 z-[58] flex justify-center"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+          >
+            <span className="rounded-lg border-2 border-destructive bg-destructive/85 px-5 py-2 text-lg font-black uppercase tracking-widest text-destructive-foreground shadow-lg">
+              {bossBreakLabel}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+
       {/* Battle Background */}
       <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
 
