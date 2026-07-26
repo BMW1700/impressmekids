@@ -102,7 +102,20 @@ const battleSounds = new SoundEffects();
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate' | 'word_ninja';
+
+// Phases that represent an active mini-game. Leaving one of these while still
+// alive counts as clearing it (drives the `minigame_wins` daily quest).
+const MINIGAME_PHASES = new Set<BattlePhase>([
+  'barrage', 'fireball_barrage', 'asteroid_barrage', 'beast_swarm',
+  'ice_crystal_barrage', 'ghostly_whispers', 'rolling_boulders', 'word_shield',
+  'spell_combo', 'dodge_words', 'rhyme_chain', 'speed_typist', 'tug_of_war',
+  'balloon_battle', 'goblin_horde', 'fireball_defense', 'word_echo',
+  'wind_chase', 'ink_splash', 'crystal_prison', 'lightning_storm', 'void_pull',
+  'ground_ripple', 'web_trap', 'vocab_shield', 'context_clue', 'word_ninja',
+]);
+
 // InventoryKey removed — now uses string keys from store items
+
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon' | 'pvp' | 'coop';
