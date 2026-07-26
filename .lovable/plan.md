@@ -1,64 +1,53 @@
-## RPG Retention & Trust Pass
+## RPG Pre-Launch Fix Pass
 
-Four workstreams to close the retention and reliability gaps before the App Store port. Additive only — no changes to existing combat balance beyond what is already shipped.
-
----
-
-### A. PvP regression smoke test (do first)
-
-Combat math changed when loot attack bonuses and passive HP regen were added. Two-player PvP has not been re-verified since.
-
-- Drive two browser sessions against the live preview, join the same PvP room, and play a full match to a win/loss.
-- Verify: HP totals agree on both clients, loot bonuses apply symmetrically, regen does not desync turn state, the winner/loser rank award fires exactly once each.
-- Fix whatever the run surfaces. If nothing breaks, record it and move on — no speculative refactor.
-
-**Why first:** a desync on launch day is the single highest-cost defect, and it gates whether B–D are worth building on top.
+Two confirmed defects shipped in the last change, plus three retention gaps. Fix the defects first — they are the only true blockers to App Store submission.
 
 ---
 
-### B. RPG onboarding coach-marks
+### Tier 1 — Blockers (must fix before submission)
 
-Loot Locker, gear equipping, Season Pass, Ranks, and highlight sharing are all reachable but nothing teaches them. New students never find the depth.
+**1. Wire up the 4 dead quest types**
 
-- New component: a lightweight 5-step coach-mark overlay (spotlight + tooltip + Next/Skip), styled with existing design tokens.
-- Steps: Gear Locker → Equip an item → Daily Hub / Quests → Season Pass tiers → Ranks tab.
-- Shown once per user; completion flag persisted so it never re-nags. Re-runnable from the game header settings gear.
-- Respects the existing visual-restraint rule: solid colors, no bouncing, slow fades.
+Four of the seven quest types in the server pool have no client call sites, so they can never complete:
 
----
+| Quest type | Where to award it |
+|---|---|
+| `perfect_battles` | Battle victory when the run took zero player damage / zero misreads |
+| `words_read` | The reading/word-check success path, one per correctly read word |
+| `play_streak` | Once per day on entering the Adventure |
+| `minigame_wins` | Each mini-game success resolution |
 
-### C. Weekly parent digest email
+**2. Remove boss quest double-counting**
 
-Parents currently have no recurring reason to see value from RPG mode — this is the purchase trigger.
-
-- New app-email template: "This week in the Adventure" — bosses defeated, battles won, current rank/tier, active title, words/phonemes practiced, one shareable highlight link.
-- Sent once weekly per linked parent, using the existing parent-student link and notification-preference tables so opted-out parents are excluded.
-- Scheduled weekly via the backend scheduler; each send is a single recipient triggered by that child's own week — not a bulk list.
-- Requires the project's email domain to be configured; if it isn't yet, that setup dialog runs first.
+`RPGVictoryArena` awards `defeat_bosses` unconditionally while `RPGCombatPhase` also awards it, inflating quest progress and Season XP. Make arena victory award boss credit only when the arena opponent is genuinely a boss, and ensure the two paths cannot both fire for one defeat.
 
 ---
 
-### D. Database-driven seasons
+### Tier 2 — Retention (recommended before, safe after)
 
-`CURRENT_SEASON` is hardcoded in `src/lib/rpgSeasonPass.ts` as `season-2026-w30`, running `2026-07-20` → `2026-07-27`. When it ends, there is no next season and no way to add one without a code deploy.
+**3. Weekly parent digest**
 
-- New `rpg_seasons` table (id, name, theme color, starts/ends, tiers as JSONB, active flag) with grants + RLS: everyone reads, only super admins write.
-- Seed it with the current Ember Trials config so nothing regresses.
-- New hook reads the active season from the database; `CURRENT_SEASON` stays exported as a fallback constant so existing call sites keep compiling during the swap.
-- Small super-admin screen to create/activate the next season and edit tier rewards.
+A scheduled backend job that emails each linked parent a short weekly recap: bosses defeated, words read, current rank and season tier, plus the child's best highlight card link. This is the purchase trigger for parents and the piece most missing today.
 
-Also in scope here: widen the daily-quest pool. Today only three quest types exist (`defeat_enemies`, `defeat_bosses`, `battle_wins`). Add several more (perfect-accuracy battles, words read, streak days, minigame wins) and have the daily roll pick 3 from the pool so the board actually varies day to day.
+**4. Boss Spectacle audio**
+
+Add an entrance stinger and a phase-transition cue, respecting the existing game mute/settings toggle. Currently the spectacle is silent, which mutes the "wow" moment on a classroom iPad.
+
+**5. Surface rank and quests in-play**
+
+Show a compact rank badge and an "N quests ready to claim" indicator in the game header, so the Daily Hub and Leaderboard are discoverable without going back to character select.
 
 ---
 
 ### Explicitly out of scope
 
-New bosses, new loot rarities, boss audio stingers, in-battle friend-activity ticker. All post-launch.
+More bosses, more loot rarities, extra worlds, additional cosmetics. Those are post-launch content, not launch blockers.
 
 ---
 
 ### Technical notes
 
-- Order matters: A gates the rest. B and C are independent and can land in parallel. D touches the database and should land last so the seasons migration doesn't collide with anything.
-- C and D both need migrations; each will be surfaced for approval separately.
-- Typecheck after each workstream, not just at the end.
+- Quest awards go through the existing `awardQuestProgress(questType, delta)` helper in `src/hooks/useDailyQuests.ts`; no schema change is required for Tier 1.
+- The `words_read` quest will fire frequently, so batch increments rather than one network call per word.
+- The parent digest needs a scheduled edge function plus a send trigger; it will reuse the existing app email infrastructure and must respect each parent's notification preferences and consent flags.
+- Audio assets must be small and preloaded so they do not delay the spectacle animation.

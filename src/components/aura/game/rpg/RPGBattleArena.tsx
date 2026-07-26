@@ -93,6 +93,8 @@ import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
 import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
+import { awardQuestProgress } from "@/hooks/useDailyQuests";
+
 
 // Sound effects singleton
 const battleSounds = new SoundEffects();
@@ -100,7 +102,20 @@ const battleSounds = new SoundEffects();
 type EnemyType = 'minion' | 'guard' | 'elite' | 'boss' | 'final_boss' | 'dragon' | 'mini_beast' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'cave_troll' | 'crystal_spider' | 'echo_wraith' | 'storm_harpy' | 'cloud_giant' | 'zephyr' | 'ink_kraken' | 'reef_guardian' | 'leviathan' | 'void_phantom' | 'reality_shifter' | 'word_eater' | 'goblin_shaman' | 'fire_elemental' | 'lava_hound' | 'ember_drake' | 'crystal_knight' | 'prism_mage' | 'crystal_queen' | 'star_sprite' | 'comet_wolf' | 'nova_titan' | 'tome_golem' | 'page_wraith' | 'the_librarian' | 'vault_sentinel' | 'vault_drone' | 'the_vault_keeper' | 'shadow_operative' | 'shadow_drone' | 'the_shadow_broker' | 'frost_trooper' | 'ice_drone' | 'the_frostbite' | 'maze_runner' | 'tunnel_rat' | 'the_minotaur' | 'lab_guard' | 'bio_drone' | 'the_catalyst' | 'omega_soldier' | 'omega_elite' | 'the_omega';
 // UPDATED: Added goblin_horde for Classic mode mini-game + quick_block for enemy attacks
 type BattlePhase = 'intro' | 'dialogue' | 'reading' | 'combat' | 'barrage' | 'fireball_barrage' | 'asteroid_barrage' | 'beast_swarm' | 'ice_crystal_barrage' | 'ghostly_whispers' | 'rolling_boulders' | 'word_shield' | 'spell_combo' | 'dodge_words' | 'rhyme_chain' | 'speed_typist' | 'tug_of_war' | 'balloon_battle' | 'goblin_horde' | 'fireball_defense' | 'quick_block' | 'enemy_turn' | 'enemy_transition' | 'victory' | 'defeat' | 'word_echo' | 'wind_chase' | 'ink_splash' | 'crystal_prison' | 'lightning_storm' | 'void_pull' | 'ground_ripple' | 'web_trap' | 'vocab_shield' | 'context_clue' | 'boss_gate' | 'word_ninja';
+
+// Phases that represent an active mini-game. Leaving one of these while still
+// alive counts as clearing it (drives the `minigame_wins` daily quest).
+const MINIGAME_PHASES = new Set<BattlePhase>([
+  'barrage', 'fireball_barrage', 'asteroid_barrage', 'beast_swarm',
+  'ice_crystal_barrage', 'ghostly_whispers', 'rolling_boulders', 'word_shield',
+  'spell_combo', 'dodge_words', 'rhyme_chain', 'speed_typist', 'tug_of_war',
+  'balloon_battle', 'goblin_horde', 'fireball_defense', 'word_echo',
+  'wind_chase', 'ink_splash', 'crystal_prison', 'lightning_storm', 'void_pull',
+  'ground_ripple', 'web_trap', 'vocab_shield', 'context_clue', 'word_ninja',
+]);
+
 // InventoryKey removed — now uses string keys from store items
+
 type CommandType = 'read' | 'magic' | 'defend' | 'items';
 
 export type BattleModeType = 'classic' | 'tug_of_war' | 'balloon' | 'pvp' | 'coop';
@@ -350,6 +365,58 @@ export const RPGBattleArena = ({
   const longestStreakRef = useRef(0);
   const wordsReadRef = useRef(0);
   const correctWordsRef = useRef(0);
+
+  // ── Daily quest instrumentation ────────────────────────────────────────────
+  // `words_read` fires on every correct word, so batch it instead of issuing one
+  // network call per word. Flushed every WORDS_QUEST_BATCH words and on victory.
+  const WORDS_QUEST_BATCH = 5;
+  const pendingWordsQuestRef = useRef(0);
+  const flushWordsQuest = useCallback(() => {
+    const pending = pendingWordsQuestRef.current;
+    if (pending <= 0) return;
+    pendingWordsQuestRef.current = 0;
+    void awardQuestProgress('words_read', pending);
+  }, []);
+
+  // `perfect_battles` requires finishing a battle without losing any HP. A single
+  // effect on playerHp catches every damage source (attacks, mini-games, traps).
+  const tookDamageRef = useRef(false);
+  useEffect(() => {
+    if (playerHp < maxHpWithBoost) tookDamageRef.current = true;
+  }, [playerHp, maxHpWithBoost]);
+
+  // `minigame_wins`: mini-games have ~25 separate completion handlers, so instead
+  // of touching each one we watch the single phase transition every one of them
+  // performs — leaving a mini-game phase while still alive means it was cleared.
+  const prevPhaseRef = useRef<BattlePhase>('intro');
+  useEffect(() => {
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (prev === phase) return;
+    if (MINIGAME_PHASES.has(prev) && !MINIGAME_PHASES.has(phase) && phase !== 'defeat') {
+      void awardQuestProgress('minigame_wins');
+    }
+  }, [phase]);
+
+  // Terminal phase: flush buffered words and, on a flawless win, credit the
+  // `perfect_battles` quest. Kept as an effect (not inside triggerVictory) so it
+  // can safely reference helpers declared after the trigger callbacks.
+  const questsSettledRef = useRef(false);
+  useEffect(() => {
+    if (phase !== 'victory' && phase !== 'defeat') return;
+    if (questsSettledRef.current) return;
+    questsSettledRef.current = true;
+    flushWordsQuest();
+    if (phase === 'victory' && !tookDamageRef.current) {
+      void awardQuestProgress('perfect_battles');
+    }
+  }, [phase, flushWordsQuest]);
+
+  // Never lose buffered word progress if the student leaves mid-battle.
+  useEffect(() => flushWordsQuest, [flushWordsQuest]);
+
+
+
   
   // Track whether starter kit has been seeded (prevents re-adding mid-battle after potions are used)
   const starterKitSeededRef = useRef(false);
@@ -1947,6 +2014,9 @@ export const RPGBattleArena = ({
       streakRef.current = newStreak;
       setStreak(newStreak);
       correctWordsRef.current += 1;
+      pendingWordsQuestRef.current += 1;
+      if (pendingWordsQuestRef.current >= WORDS_QUEST_BATCH) flushWordsQuest();
+
       setCorrectWords(prev => prev + 1);
 
       // Pet companion: charge up and fire when ready

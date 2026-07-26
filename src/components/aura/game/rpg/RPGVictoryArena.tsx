@@ -53,9 +53,12 @@ export const RPGVictoryArena = ({
         setChestOpen(true);
       }
     });
+    // The arena is a bonus brawl that follows a boss fight the combat phase has
+    // already credited, so do NOT award `defeat_bosses` here — that double-counted
+    // one boss defeat across two quest paths and inflated Season XP.
     void awardQuestProgress('defeat_enemies');
-    void awardQuestProgress('defeat_bosses');
     void awardQuestProgress('battle_wins');
+
   }, [phase, worldNumber]);
 
   // Enemy AI loop

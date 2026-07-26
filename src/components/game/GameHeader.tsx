@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { ReactNode } from "react";
 import { ChallengeQuickAdjust } from "@/components/challenge/ChallengeQuickAdjust";
+import { RPGQuestStatusChip } from "@/components/aura/game/rpg/v2/RPGQuestStatusChip";
 
 interface GameHeaderProps {
   children?: ReactNode;
@@ -37,9 +38,13 @@ export const GameHeader = ({ children, studentId }: GameHeaderProps) => {
           {children}
 
           {session && (
-            <div className="hidden sm:inline-flex">
-              <ChallengeQuickAdjust />
-            </div>
+            <>
+              {/* Rank + daily-quest progress, visible mid-play instead of only in the hub. */}
+              <RPGQuestStatusChip />
+              <div className="hidden sm:inline-flex">
+                <ChallengeQuickAdjust />
+              </div>
+            </>
           )}
 
           <SettingsMenu />
