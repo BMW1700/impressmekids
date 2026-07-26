@@ -2304,6 +2304,10 @@ export const RPGBattleArena = ({
     } else {
       setStreak(0);
       streakRef.current = 0;
+      // GAME FEEL: losing the streak has to be felt, not just displayed.
+      prevStreakTierRef.current = 0;
+      haptic('error');
+
       // Enemy always counter-attacks on miss
       const damage = Math.floor(enemy.attack * 0.5);
       setEnemyAbilityMessage(`${enemy.name} strikes back!`);
