@@ -645,6 +645,17 @@ export const RPGBattleArena = ({
   
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // === ULTIMATE METER ===
+  // Fills from correct reading. The thing the child is saving up for.
+  const [ultCharge, setUltCharge] = useState(0);
+  const ultChargeRef = useRef(0);
+  const [ultFiring, setUltFiring] = useState(false);
+  const ultReadyAnnouncedRef = useRef(false);
+
+  // Streak heat tier (drives the escalating aura + rising pitch ladder)
+  const prevStreakTierRef = useRef(0);
+
   
   // === LITERACY FEATURES STATE ===
   const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
