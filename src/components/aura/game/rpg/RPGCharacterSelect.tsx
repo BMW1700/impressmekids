@@ -268,6 +268,8 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
 
       <RPGGearLocker open={gearOpen} onClose={() => setGearOpen(false)} />
       <RPGDailyHubPanel open={hubOpen} onClose={() => setHubOpen(false)} />
+      <RPGCoachMarks open={coachOpen} onClose={() => setCoachOpen(false)} />
+
     </motion.div>
   );
 };
