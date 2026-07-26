@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { CURRENT_SEASON, type Season, type SeasonTier } from '@/lib/rpgSeasonPass';
+import { CURRENT_SEASON, setActiveSeasonCache, type Season, type SeasonTier } from '@/lib/rpgSeasonPass';
 
 export interface SeasonRow {
   id: string;
@@ -40,11 +40,12 @@ export function useActiveSeason() {
       .eq('is_active', true)
       .maybeSingle();
     if (error) console.error('useActiveSeason:', error);
-    if (data && Array.isArray(data.tiers) && data.tiers.length > 0) {
-      setSeason(rowToSeason(data as unknown as SeasonRow));
-    } else {
-      setSeason(CURRENT_SEASON);
-    }
+    const resolved =
+      data && Array.isArray(data.tiers) && data.tiers.length > 0
+        ? rowToSeason(data as unknown as SeasonRow)
+        : CURRENT_SEASON;
+    setActiveSeasonCache(resolved);
+    setSeason(resolved);
     setLoading(false);
   }, []);
 
