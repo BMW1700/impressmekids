@@ -1999,6 +1999,9 @@ export const RPGBattleArena = ({
       streakRef.current = newStreak;
       setStreak(newStreak);
       correctWordsRef.current += 1;
+      pendingWordsQuestRef.current += 1;
+      if (pendingWordsQuestRef.current >= WORDS_QUEST_BATCH) flushWordsQuest();
+
       setCorrectWords(prev => prev + 1);
 
       // Pet companion: charge up and fire when ready
