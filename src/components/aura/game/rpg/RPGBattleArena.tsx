@@ -1724,6 +1724,58 @@ export const RPGBattleArena = ({
     else battleSounds.impactThud(weight);
   }, []);
 
+  /**
+   * ULTIMATE — the payoff the child has been saving up for all battle.
+   * Charge comes only from correct reading, so the spectacle is earned.
+   * Presentation-only: it drains the meter and deals damage through the same
+   * enemyHp path as any other hit, so victory/quest logic is untouched.
+   */
+  const fireUltimate = useCallback(() => {
+    if (ultChargeRef.current < ULTIMATE_MAX) return;
+    if (ultFiring) return;
+
+    setUltFiring(true);
+    ultChargeRef.current = 0;
+    setUltCharge(0);
+    ultReadyAnnouncedRef.current = false;
+
+    battleSounds.ultimateBlast();
+    haptic('heavy');
+    setHeroAttacking(true);
+    setActiveSpell(attackType);
+    setShowSpellEffect(true);
+    setComboAnnouncement('💥 ULTIMATE UNLEASHED! 💥');
+    setComboPowerLevel('ultra');
+
+    // Charge-up beat, then the detonation lands.
+    setTimeout(() => {
+      const dmg = ultimateDamage(enemy.maxHp, lootStats.attack || 0);
+      setHeroAttacking(false);
+      setEnemyTakingDamage(true);
+      setEnemyHp(prev => Math.max(0, prev - dmg));
+      setTotalDamage(prev => prev + dmg);
+      triggerScreenShake('ultimate');
+
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage: dmg,
+        x: 28 + Math.random() * 14,
+        y: 26 + Math.random() * 12,
+        isPlayer: false,
+        isCritical: true,
+      }]);
+
+      setTimeout(() => {
+        setEnemyTakingDamage(false);
+        setShowSpellEffect(false);
+        setComboAnnouncement(null);
+        setUltFiring(false);
+      }, 800);
+    }, 520);
+  }, [ultFiring, enemy.maxHp, lootStats.attack, attackType, triggerScreenShake]);
+
+
+
 
   // Handle command selection
   const handleCommand = (command: CommandType) => {
