@@ -94,6 +94,20 @@ import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
 import { VerbAnimationLayer } from "@/components/aura/game/effects/VerbAnimationLayer";
 import { awardQuestProgress } from "@/hooks/useDailyQuests";
+import {
+  getImpactProfile,
+  intensityForDamage,
+  hapticForIntensity,
+  haptic,
+  setHapticsEnabled,
+  streakHeat,
+  streakTier,
+  ULTIMATE_MAX,
+  ultimateChargeForWord,
+  ultimateDamage,
+  type ImpactIntensity,
+} from "@/lib/rpgGameFeel";
+
 
 
 // Sound effects singleton
@@ -206,6 +220,14 @@ export const RPGBattleArena = ({
   const [currentCommand, setCurrentCommand] = useState<CommandType | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
+  // === GAME FEEL ===
+  // The impact layer: damage-scaled shake, hit-stop and flash. `hitStop` is a
+  // VISUAL freeze only — it never gates the speech recognizer or game logic.
+  const [impactIntensity, setImpactIntensity] = useState<ImpactIntensity>('normal');
+  const [impactNonce, setImpactNonce] = useState(0);
+  const [hitStop, setHitStop] = useState(false);
+  const [impactFlash, setImpactFlash] = useState(0);
+
   
   // ========== TERMINAL STATE SAFETY INFRASTRUCTURE ==========
   // phaseRef tracks current phase synchronously for use in callbacks
@@ -623,6 +645,24 @@ export const RPGBattleArena = ({
   
   // Sound toggle
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // === ULTIMATE METER ===
+  // Fills from correct reading. The thing the child is saving up for.
+  const [ultCharge, setUltCharge] = useState(0);
+  const ultChargeRef = useRef(0);
+  const [ultFiring, setUltFiring] = useState(false);
+  const ultReadyAnnouncedRef = useRef(false);
+
+  // Streak heat tier (drives the escalating aura + rising pitch ladder)
+  const prevStreakTierRef = useRef(0);
+
+  // Boss break moments: which HP thresholds have already staggered the boss,
+  // plus the pending double-damage free hit they grant.
+  const bossBreaksFiredRef = useRef<Set<number>>(new Set());
+  const freeHitRef = useRef(false);
+  const [bossBreakLabel, setBossBreakLabel] = useState<string | null>(null);
+
+
   
   // === LITERACY FEATURES STATE ===
   const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
@@ -679,10 +719,13 @@ export const RPGBattleArena = ({
       });
   }, [studentId]);
   
-  // Update sound effects when toggle changes
+  // Update sound effects when toggle changes.
+  // Haptics ride the same switch so a classroom can silence buzzing too.
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
+    setHapticsEnabled(soundEnabled);
   }, [soundEnabled]);
+
   
   // Cleanup all timeouts on unmount
   useEffect(() => {
@@ -1254,7 +1297,7 @@ export const RPGBattleArena = ({
     
     if (damageTaken > 0) {
       takePlayerDamage(damageTaken);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     
     // FIX: Track accuracy for words consumed by quick block
@@ -1268,7 +1311,7 @@ export const RPGBattleArena = ({
   // Handle mini-game damage
   const handleMiniGameDamage = useCallback((damage: number) => {
     takePlayerDamage(damage);
-    triggerScreenShake();
+    triggerScreenShake('heavy');
   }, []);
 
   // === LITERACY FEATURE HANDLERS ===
@@ -1331,7 +1374,7 @@ export const RPGBattleArena = ({
     } else {
       // Boss counter-attacks
       takePlayerDamage(15);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     setVocabShieldData(null);
     returnToReading();
@@ -1346,7 +1389,7 @@ export const RPGBattleArena = ({
       setTotalDamage(prev => prev + damage);
     } else {
       takePlayerDamage(10);
-      triggerScreenShake();
+      triggerScreenShake('heavy');
     }
     setContextClueData(null);
     returnToReading();
@@ -1534,7 +1577,7 @@ export const RPGBattleArena = ({
       y: 60 + Math.random() * 10,
       isPlayer: true
     }]);
-    triggerScreenShake();
+    triggerScreenShake('heavy');
   }, []);
 
   // Get current dialogue
@@ -1652,11 +1695,94 @@ export const RPGBattleArena = ({
 
 
 
-  // Trigger screen shake
-  const triggerScreenShake = () => {
+  /**
+   * The single impact choke point: damage-scaled shake + hit-stop + flash +
+   * haptic + weighted thud. Every hit in the battle routes through here, so a
+   * 4-damage poke and a 90-damage crit can never feel the same again.
+   *
+   * `hitStop` freezes VISUALS only — reading, speech and timers keep running.
+   */
+  const triggerScreenShake = useCallback((intensity: ImpactIntensity = 'normal') => {
+    const profile = getImpactProfile(intensity);
+
+    setImpactIntensity(intensity);
+    setImpactNonce(n => n + 1);
     setScreenShake(true);
-    setTimeout(() => setScreenShake(false), 300);
-  };
+    setTimeout(() => setScreenShake(false), profile.shakeDuration * 1000);
+
+    if (profile.hitStopMs > 0) {
+      setHitStop(true);
+      setTimeout(() => setHitStop(false), profile.hitStopMs);
+    }
+
+    if (profile.flashOpacity > 0) {
+      setImpactFlash(profile.flashOpacity);
+      setTimeout(() => setImpactFlash(0), 110);
+    }
+
+    hapticForIntensity(intensity);
+
+    const weight =
+      intensity === 'tap' ? 0.15 :
+      intensity === 'normal' ? 0.4 :
+      intensity === 'heavy' ? 0.7 : 1;
+    if (intensity === 'crit') battleSounds.critHit();
+    else if (intensity === 'break') battleSounds.bossBreakCue();
+    else battleSounds.impactThud(weight);
+  }, []);
+
+  /**
+   * ULTIMATE — the payoff the child has been saving up for all battle.
+   * Charge comes only from correct reading, so the spectacle is earned.
+   * Presentation-only: it drains the meter and deals damage through the same
+   * enemyHp path as any other hit, so victory/quest logic is untouched.
+   */
+  const fireUltimate = useCallback(() => {
+    if (ultChargeRef.current < ULTIMATE_MAX) return;
+    if (ultFiring) return;
+
+    setUltFiring(true);
+    ultChargeRef.current = 0;
+    setUltCharge(0);
+    ultReadyAnnouncedRef.current = false;
+
+    battleSounds.ultimateBlast();
+    haptic('heavy');
+    setHeroAttacking(true);
+    setActiveSpell(attackType);
+    setShowSpellEffect(true);
+    setComboAnnouncement('💥 ULTIMATE UNLEASHED! 💥');
+    setComboPowerLevel('ultra');
+
+    // Charge-up beat, then the detonation lands.
+    setTimeout(() => {
+      const dmg = ultimateDamage(enemy.maxHp, lootStats.attack || 0);
+      setHeroAttacking(false);
+      setEnemyTakingDamage(true);
+      setEnemyHp(prev => Math.max(0, prev - dmg));
+      setTotalDamage(prev => prev + dmg);
+      triggerScreenShake('ultimate');
+
+      setFloatingDamages(prev => [...prev, {
+        id: Date.now(),
+        damage: dmg,
+        x: 28 + Math.random() * 14,
+        y: 26 + Math.random() * 12,
+        isPlayer: false,
+        isCritical: true,
+      }]);
+
+      setTimeout(() => {
+        setEnemyTakingDamage(false);
+        setShowSpellEffect(false);
+        setComboAnnouncement(null);
+        setUltFiring(false);
+      }, 800);
+    }, 520);
+  }, [ultFiring, enemy.maxHp, lootStats.attack, attackType, triggerScreenShake]);
+
+
+
 
   // Handle command selection
   const handleCommand = (command: CommandType) => {
@@ -1767,7 +1893,7 @@ export const RPGBattleArena = ({
       
       setEnemyHp(prev => Math.max(0, prev - finalDamage));
       setTotalDamage(prev => prev + finalDamage);
-      triggerScreenShake();
+      triggerScreenShake(intensityForDamage(finalDamage, enemy.maxHp, { isCritical: true }));
       
       // Add floating damage number for spell
       setFloatingDamages(prev => [...prev, {
@@ -1910,7 +2036,7 @@ export const RPGBattleArena = ({
         }
         
         setHeroTakingDamage(true);
-        triggerScreenShake();
+        triggerScreenShake('heavy');
         
         scheduleTimeout(() => {
           // Check terminal state before returning to reading
@@ -2029,6 +2155,32 @@ export const RPGBattleArena = ({
       const newStreak = streakRef.current + 1;
       streakRef.current = newStreak;
       setStreak(newStreak);
+
+      // --- GAME FEEL: streak heat + ultimate charge ---
+      // Light tick confirms the word landed before the attack even animates.
+      haptic('light');
+
+      const tier = streakTier(newStreak);
+      if (tier > prevStreakTierRef.current) {
+        // Rising pitch ladder: each tier is the same cue, a step higher.
+        battleSounds.streakTierCue(streakHeat(newStreak).pitch);
+        haptic('success');
+      }
+      prevStreakTierRef.current = tier;
+
+      // Reading well is what buys the spectacle.
+      if (!ultFiring) {
+        const gained = ultimateChargeForWord(word.length || 5, newStreak);
+        const nextCharge = Math.min(ULTIMATE_MAX, ultChargeRef.current + gained);
+        ultChargeRef.current = nextCharge;
+        setUltCharge(nextCharge);
+        if (nextCharge >= ULTIMATE_MAX && !ultReadyAnnouncedRef.current) {
+          ultReadyAnnouncedRef.current = true;
+          battleSounds.ultimateReady();
+          haptic('success');
+        }
+      }
+
       correctWordsRef.current += 1;
       pendingWordsQuestRef.current += 1;
       if (pendingWordsQuestRef.current >= WORDS_QUEST_BATCH) flushWordsQuest();
@@ -2123,7 +2275,18 @@ export const RPGBattleArena = ({
         setDamageAmount(baseDamage);
       }
       
+      // BOSS BREAK payoff: the staggered window doubles the next real hit.
+      if (freeHitRef.current && actualDamage > 0) {
+        freeHitRef.current = false;
+        actualDamage *= 2;
+        setDamageAmount(actualDamage);
+        setComboAnnouncement('💢 BREAK HIT! ×2 💢');
+        setComboPowerLevel('ultra');
+        setTimeout(() => setComboAnnouncement(null), 900);
+      }
+
       setTotalDamage(prev => prev + actualDamage);
+
       
       // Calculate and trigger gold/XP rewards
       // Apply Lucky Coin / Double XP potion multipliers on top of permanent upgrades
@@ -2182,7 +2345,7 @@ export const RPGBattleArena = ({
           setEnemyTakingDamage(true);
           setShowDamageNumber(true);
           setEnemyHp(prev => Math.max(0, prev - actualDamage));
-          triggerScreenShake();
+          triggerScreenShake(intensityForDamage(actualDamage, enemy.maxHp, { isCritical: isElaraBarrage || damageResult.isCritical }));
           
           // Add floating damage for big hits (Elara barrage or speed crits)
           if (isElaraBarrage || damageResult.isCritical) {
@@ -2211,6 +2374,10 @@ export const RPGBattleArena = ({
     } else {
       setStreak(0);
       streakRef.current = 0;
+      // GAME FEEL: losing the streak has to be felt, not just displayed.
+      prevStreakTierRef.current = 0;
+      haptic('error');
+
       // Enemy always counter-attacks on miss
       const damage = Math.floor(enemy.attack * 0.5);
       setEnemyAbilityMessage(`${enemy.name} strikes back!`);
@@ -2230,7 +2397,7 @@ export const RPGBattleArena = ({
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
           takePlayerDamage(damage);
-          triggerScreenShake();
+          triggerScreenShake('heavy');
           
           setTimeout(() => {
             setHeroTakingDamage(false);
@@ -2653,7 +2820,39 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
+  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
+  useEffect(() => {
+    bossBreaksFiredRef.current = new Set();
+    freeHitRef.current = false;
+    setBossBreakLabel(null);
+  }, [enemy.name, enemy.type]);
+
+  /**
+   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
+   * hit-stop, stagger, and a free-hit window where the next correct word hits
+   * for double. Turns a flat HP drain into two memorable spikes.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const thresholds = [66, 33];
+    for (const t of thresholds) {
+      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
+        bossBreaksFiredRef.current.add(t);
+        freeHitRef.current = true;
+        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
+        triggerScreenShake('break');
+        setEnemyTakingDamage(true);
+        setTimeout(() => setEnemyTakingDamage(false), 700);
+        setTimeout(() => setBossBreakLabel(null), 2200);
+        break;
+      }
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+
   useEffect(() => {
     if (phase !== 'victory') return;
     if (highlightFiredRef.current) return;
@@ -2686,14 +2885,74 @@ export const RPGBattleArena = ({
     });
   }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
+  // GAME FEEL: the live impact profile drives shake amplitude, rotation and
+  // camera punch. `impactNonce` re-keys the animation so back-to-back hits
+  // restart the shake instead of swallowing it.
+  const impactProfile = getImpactProfile(impactIntensity);
+  const heat = streakHeat(streak);
+  const ultReady = ultCharge >= ULTIMATE_MAX;
+
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
-      animate={screenShake ? { x: [-5, 5, -5, 5, 0] } : {}}
-      transition={{ duration: 0.3 }}
+      animate={screenShake ? {
+        x: impactProfile.shakeX,
+        rotate: impactProfile.shakeRotate,
+        scale: [1, impactProfile.zoom, 1],
+      } : { x: 0, rotate: 0, scale: 1 }}
+      transition={{ duration: impactProfile.shakeDuration, ease: 'easeOut' }}
+      style={{
+        // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
+        // recognition, timers and game logic are untouched by this.
+        animationPlayState: hitStop ? 'paused' : 'running',
+        filter: hitStop ? 'contrast(1.12) saturate(1.15)' : undefined,
+      }}
     >
+      {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
+      <AnimatePresence>
+        {impactFlash > 0 && (
+          <motion.div
+            key={impactNonce}
+            className="pointer-events-none absolute inset-0 z-[60] bg-primary-foreground"
+            initial={{ opacity: impactFlash }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Streak heat — the whole screen takes on the streak's temperature */}
+      {heat.tier > 0 && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-[55]"
+          animate={{ opacity: [0.25, 0.5, 0.25] }}
+          transition={{ repeat: Infinity, duration: 1.6 }}
+          style={{ boxShadow: `inset 0 0 ${40 + heat.tier * 40}px ${heat.glow}` }}
+        />
+      )}
+
+      {/* Boss break banner — the free-hit window announces itself loudly */}
+      <AnimatePresence>
+        {bossBreakLabel && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/3 z-[58] flex justify-center"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+          >
+            <span className="rounded-lg border-2 border-destructive bg-destructive/85 px-5 py-2 text-lg font-black uppercase tracking-widest text-destructive-foreground shadow-lg">
+              {bossBreakLabel}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+
+
       {/* Battle Background */}
       <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
+
 
       {/* Enemy Transition Overlay */}
       <RPGEnemyTransition
@@ -3089,15 +3348,22 @@ export const RPGBattleArena = ({
           <div className="flex items-center gap-4 text-white/80">
             <span className="text-sm font-medium truncate max-w-[200px]">{story.title}</span>
             {streak > 0 && (
-              <motion.div 
-                className="flex items-center gap-1 text-orange-400"
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 0.5 }}
+              <motion.div
+                className="flex items-center gap-1"
+                animate={{ scale: heat.tier > 0 ? [1, 1.14, 1] : [1, 1.06, 1] }}
+                transition={{ repeat: Infinity, duration: heat.tier > 1 ? 0.34 : 0.5 }}
+                style={{ color: heat.tier > 0 ? heat.glow : undefined, textShadow: heat.tier > 1 ? `0 0 12px ${heat.glow}` : undefined }}
               >
                 <Flame className="h-4 w-4" />
                 <span className="font-bold">x{streak}</span>
+                {heat.label && (
+                  <span className="hidden sm:inline text-[10px] font-black tracking-widest uppercase ml-1">
+                    {heat.label}
+                  </span>
+                )}
               </motion.div>
             )}
+
             {/* Sound Toggle */}
             <Button
               variant="ghost"
@@ -3244,7 +3510,37 @@ export const RPGBattleArena = ({
                   className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] gap-2 md:gap-4"
                 >
                   {/* Command Menu - compact row on mobile, full panel on desktop */}
-                  <div className="order-2 md:order-none">
+                  <div className="order-2 md:order-none space-y-2">
+                    {/* ULTIMATE METER — earned by reading, spent on spectacle */}
+                    <motion.button
+                      type="button"
+                      onClick={fireUltimate}
+                      disabled={!ultReady || ultFiring}
+                      aria-label={ultReady ? 'Unleash ultimate attack' : `Ultimate charging: ${ultCharge} percent`}
+                      className="w-full rounded-lg border-2 px-3 py-2 text-left transition-colors disabled:cursor-default"
+                      style={{
+                        borderColor: ultReady ? 'hsl(var(--primary))' : 'hsl(var(--border))',
+                        background: ultReady ? 'hsl(var(--primary) / 0.18)' : 'hsl(var(--muted) / 0.35)',
+                      }}
+                      animate={ultReady ? { scale: [1, 1.03, 1] } : { scale: 1 }}
+                      transition={{ repeat: ultReady ? Infinity : 0, duration: 0.7 }}
+                    >
+                      <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest text-foreground">
+                        <span className="flex items-center gap-1">
+                          <Zap className="h-3 w-3" />
+                          {ultReady ? 'Ultimate Ready!' : 'Ultimate'}
+                        </span>
+                        <span className="tabular-nums">{ultCharge}%</span>
+                      </div>
+                      <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-background/60">
+                        <motion.div
+                          className="h-full rounded-full bg-primary"
+                          animate={{ width: `${ultCharge}%` }}
+                          transition={{ duration: 0.25 }}
+                        />
+                      </div>
+                    </motion.button>
+
                     <RPGCommandMenu
                       onSelectCommand={handleCommand}
                       onCastSpell={handleCastSpell}
@@ -3258,6 +3554,7 @@ export const RPGBattleArena = ({
                       extraSpells={purchasedPowerSpells}
                     />
                   </div>
+
 
                    {/* Center: Voice Reading - Fixed height to prevent layout shifts */}
                     <div className="relative min-h-[120px] md:min-h-[200px] space-y-4 overflow-hidden order-1 md:order-none">

@@ -711,5 +711,96 @@ export class SoundEffects {
       setTimeout(() => this.playTone(freq, 0.22, 0.13), i * 110);
     });
   }
+
+  /**
+   * Impact thud — the body of a landed hit. Volume/pitch scale with how big
+   * the hit was so a poke and a haymaker never sound identical.
+   */
+  impactThud(weight: number = 0.5) {
+    if (!this.ensureContext() || !this.audioContext) return;
+    const w = Math.max(0, Math.min(1, weight));
+    this.playNoise(0.1 + w * 0.12, 0.08 + w * 0.14, 320 + w * 900);
+    this.playTone(90 - w * 25, 0.14 + w * 0.12, 0.08 + w * 0.12);
+  }
+
+  /**
+   * Critical hit — a bright rising slice over the thud. This is the sound the
+   * child should start chasing.
+   */
+  critHit() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    const ctx = this.audioContext;
+    const t0 = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(520, t0);
+    osc.frequency.exponentialRampToValueAtTime(1560, t0 + 0.16);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.14, t0 + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.32);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.35);
+
+    this.impactThud(0.85);
+  }
+
+  /**
+   * Streak tier cue — same shape at a higher pitch each tier. The rising
+   * ladder is what makes a streak feel like it is escalating.
+   */
+  streakTierCue(pitch: number) {
+    if (!this.ensureContext() || !this.audioContext) return;
+    [0, 1].forEach((i) => {
+      setTimeout(() => this.playTone(pitch * (1 + i * 0.25), 0.16, 0.1), i * 80);
+    });
+  }
+
+  /** Ultimate meter just filled — a short "ready" chime, not a fanfare. */
+  ultimateReady() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    [784, 988, 1319].forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.18, 0.1), i * 70);
+    });
+  }
+
+  /** Ultimate fired — charge-up whoosh into a heavy detonation. */
+  ultimateBlast() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    const ctx = this.audioContext;
+    const t0 = ctx.currentTime;
+
+    // Charge-up sweep
+    const sweep = ctx.createOscillator();
+    const sweepGain = ctx.createGain();
+    sweep.type = 'sawtooth';
+    sweep.frequency.setValueAtTime(160, t0);
+    sweep.frequency.exponentialRampToValueAtTime(1400, t0 + 0.45);
+    sweepGain.gain.setValueAtTime(0.0001, t0);
+    sweepGain.gain.linearRampToValueAtTime(0.1, t0 + 0.4);
+    sweepGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.5);
+    sweep.connect(sweepGain);
+    sweepGain.connect(ctx.destination);
+    sweep.start(t0);
+    sweep.stop(t0 + 0.52);
+
+    // Detonation on landing
+    setTimeout(() => {
+      this.playNoise(0.5, 0.24, 900);
+      this.playTone(62, 0.55, 0.2);
+    }, 460);
+  }
+
+  /** Boss stagger / phase break — everything stops for this one. */
+  bossBreakCue() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    this.playNoise(0.35, 0.2, 600);
+    this.playTone(70, 0.45, 0.18);
+    setTimeout(() => this.playTone(1046, 0.25, 0.11), 180);
+  }
 }
+
 
