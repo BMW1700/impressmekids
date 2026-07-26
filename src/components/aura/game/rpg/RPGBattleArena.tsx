@@ -220,6 +220,14 @@ export const RPGBattleArena = ({
   const [currentCommand, setCurrentCommand] = useState<CommandType | null>(null);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [screenShake, setScreenShake] = useState(false);
+  // === GAME FEEL ===
+  // The impact layer: damage-scaled shake, hit-stop and flash. `hitStop` is a
+  // VISUAL freeze only — it never gates the speech recognizer or game logic.
+  const [impactIntensity, setImpactIntensity] = useState<ImpactIntensity>('normal');
+  const [impactNonce, setImpactNonce] = useState(0);
+  const [hitStop, setHitStop] = useState(false);
+  const [impactFlash, setImpactFlash] = useState(0);
+
   
   // ========== TERMINAL STATE SAFETY INFRASTRUCTURE ==========
   // phaseRef tracks current phase synchronously for use in callbacks
