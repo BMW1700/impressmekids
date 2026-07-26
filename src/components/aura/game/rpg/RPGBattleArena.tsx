@@ -398,8 +398,23 @@ export const RPGBattleArena = ({
     }
   }, [phase]);
 
+  // Terminal phase: flush buffered words and, on a flawless win, credit the
+  // `perfect_battles` quest. Kept as an effect (not inside triggerVictory) so it
+  // can safely reference helpers declared after the trigger callbacks.
+  const questsSettledRef = useRef(false);
+  useEffect(() => {
+    if (phase !== 'victory' && phase !== 'defeat') return;
+    if (questsSettledRef.current) return;
+    questsSettledRef.current = true;
+    flushWordsQuest();
+    if (phase === 'victory' && !tookDamageRef.current) {
+      void awardQuestProgress('perfect_battles');
+    }
+  }, [phase, flushWordsQuest]);
+
   // Never lose buffered word progress if the student leaves mid-battle.
   useEffect(() => flushWordsQuest, [flushWordsQuest]);
+
 
 
   
