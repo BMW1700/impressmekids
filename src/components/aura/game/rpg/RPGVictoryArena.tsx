@@ -7,7 +7,6 @@ import { ArenaAI } from "./RPGArenaAI";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { RPGLootChest } from "./v2/RPGLootChest";
 import { rollBossLoot, type RolledLoot } from "@/hooks/usePlayerLoot";
-import { awardQuestProgress } from "@/hooks/useDailyQuests";
 
 const battleSounds = new SoundEffects();
 
@@ -42,7 +41,7 @@ export const RPGVictoryArena = ({
   const aiRef = useRef(new ArenaAI(Math.min(3, worldNumber)));
   const actionLockRef = useRef(false);
 
-  // Roll boss loot + award quest progress once when victory triggers
+  // Roll bonus loot once when victory triggers.
   useEffect(() => {
     if (phase !== 'victory' || lootRolledRef.current) return;
     lootRolledRef.current = true;
@@ -53,13 +52,11 @@ export const RPGVictoryArena = ({
         setChestOpen(true);
       }
     });
-    // The arena is a bonus brawl that follows a boss fight the combat phase has
-    // already credited, so do NOT award `defeat_bosses` here — that double-counted
-    // one boss defeat across two quest paths and inflated Season XP.
-    void awardQuestProgress('defeat_enemies');
-    void awardQuestProgress('battle_wins');
-
+    // No daily-quest credit here: the arena is a bonus brawl that only appears
+    // AFTER a boss victory that RPGBattleArena has already credited. Awarding
+    // again would double-count one defeat and inflate Season XP.
   }, [phase, worldNumber]);
+
 
   // Enemy AI loop
   useEffect(() => {
