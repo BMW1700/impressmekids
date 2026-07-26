@@ -656,6 +656,13 @@ export const RPGBattleArena = ({
   // Streak heat tier (drives the escalating aura + rising pitch ladder)
   const prevStreakTierRef = useRef(0);
 
+  // Boss break moments: which HP thresholds have already staggered the boss,
+  // plus the pending double-damage free hit they grant.
+  const bossBreaksFiredRef = useRef<Set<number>>(new Set());
+  const freeHitRef = useRef(false);
+  const [bossBreakLabel, setBossBreakLabel] = useState<string | null>(null);
+
+
   
   // === LITERACY FEATURES STATE ===
   const [activePowerWord, setActivePowerWord] = useState<{ id: number; word: string; definition: string | null } | null>(null);
