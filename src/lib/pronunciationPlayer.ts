@@ -669,4 +669,47 @@ export class SoundEffects {
     osc.start();
     osc.stop(this.audioContext.currentTime + 0.55);
   }
+
+  /**
+   * Boss entrance stinger — a low descending brass-like swell under a bright
+   * accent hit. Fully synthesized (no assets to preload), so it cannot delay
+   * the spectacle animation, and it respects the shared mute flag.
+   */
+  bossEntranceStinger() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    const ctx = this.audioContext;
+    const t0 = ctx.currentTime;
+
+    // Low swell
+    const swell = ctx.createOscillator();
+    const swellGain = ctx.createGain();
+    swell.type = 'sawtooth';
+    swell.frequency.setValueAtTime(110, t0);
+    swell.frequency.exponentialRampToValueAtTime(55, t0 + 1.1);
+    swellGain.gain.setValueAtTime(0.0001, t0);
+    swellGain.gain.linearRampToValueAtTime(0.14, t0 + 0.35);
+    swellGain.gain.exponentialRampToValueAtTime(0.001, t0 + 1.2);
+    swell.connect(swellGain);
+    swellGain.connect(ctx.destination);
+    swell.start(t0);
+    swell.stop(t0 + 1.25);
+
+    // Bright accent hits on top
+    [0, 0.16, 0.32].forEach((offset, i) => {
+      setTimeout(() => this.playTone(330 - i * 40, 0.35, 0.12), offset * 1000);
+    });
+  }
+
+  /**
+   * Boss phase-transition cue — two quick rising stabs signalling the fight
+   * just got harder. Deliberately shorter than the entrance stinger so it does
+   * not talk over the reading prompt.
+   */
+  bossPhaseCue() {
+    if (!this.ensureContext() || !this.audioContext) return;
+    [440, 622].forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.22, 0.13), i * 110);
+    });
+  }
 }
+
