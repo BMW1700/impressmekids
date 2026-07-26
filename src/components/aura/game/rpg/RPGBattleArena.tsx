@@ -387,30 +387,46 @@ export const RPGBattleArena = ({
 
   // `minigame_wins`: mini-games have ~25 separate completion handlers, so instead
   // of touching each one we watch the single phase transition every one of them
-  // performs — leaving a mini-game phase while still alive means it was cleared.
+  // performs. Leaving alive is NOT enough — failed mini-games also return to
+  // `reading`/`combat` alive, they just cost the player HP. So a clear is
+  // "exited the mini-game phase without losing any HP while inside it".
   const prevPhaseRef = useRef<BattlePhase>('intro');
+  const minigameEntryHpRef = useRef<number>(0);
+  const playerHpRef = useRef(playerHp);
+  useEffect(() => { playerHpRef.current = playerHp; }, [playerHp]);
   useEffect(() => {
     const prev = prevPhaseRef.current;
     prevPhaseRef.current = phase;
     if (prev === phase) return;
+    if (MINIGAME_PHASES.has(phase) && !MINIGAME_PHASES.has(prev)) {
+      minigameEntryHpRef.current = playerHpRef.current;
+      return;
+    }
     if (MINIGAME_PHASES.has(prev) && !MINIGAME_PHASES.has(phase) && phase !== 'defeat') {
-      void awardQuestProgress('minigame_wins');
+      if (playerHpRef.current >= minigameEntryHpRef.current) {
+        void awardQuestProgress('minigame_wins');
+      }
     }
   }, [phase]);
 
-  // Terminal phase: flush buffered words and, on a flawless win, credit the
-  // `perfect_battles` quest. Kept as an effect (not inside triggerVictory) so it
-  // can safely reference helpers declared after the trigger callbacks.
+  // Terminal phase: flush buffered words and credit every end-of-battle quest.
+  // This is the ONLY place battle/boss credit is awarded — the old
+  // `RPGCombatPhase` component was dead code and `RPGVictoryArena` is a bonus
+  // brawl, so neither can double-count here.
   const questsSettledRef = useRef(false);
   useEffect(() => {
     if (phase !== 'victory' && phase !== 'defeat') return;
     if (questsSettledRef.current) return;
     questsSettledRef.current = true;
     flushWordsQuest();
-    if (phase === 'victory' && !tookDamageRef.current) {
-      void awardQuestProgress('perfect_battles');
+    if (phase === 'victory') {
+      void awardQuestProgress('defeat_enemies');
+      void awardQuestProgress('battle_wins');
+      if (isBossType(enemy.type)) void awardQuestProgress('defeat_bosses');
+      if (!tookDamageRef.current) void awardQuestProgress('perfect_battles');
     }
-  }, [phase, flushWordsQuest]);
+  }, [phase, flushWordsQuest, enemy.type]);
+
 
   // Never lose buffered word progress if the student leaves mid-battle.
   useEffect(() => flushWordsQuest, [flushWordsQuest]);
