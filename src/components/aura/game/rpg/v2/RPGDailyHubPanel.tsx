@@ -6,7 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { useDailyQuests } from '@/hooks/useDailyQuests';
 import { useSeasonPass } from '@/hooks/useSeasonPass';
 import { useMyRank } from '@/hooks/useRPGRanks';
-import { CURRENT_SEASON, questLabel } from '@/lib/rpgSeasonPass';
+import { questLabel } from '@/lib/rpgSeasonPass';
+import { useActiveSeason } from '@/hooks/useActiveSeason';
 import { useToast } from '@/hooks/use-toast';
 import { RPGLeaderboardPanel } from './RPGLeaderboardPanel';
 
@@ -26,8 +27,9 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
   const { xp_total, claimed_tiers, loading: sLoading, claimTier, refresh: refreshPass } = useSeasonPass();
   const { rank, refresh: refreshRank } = useMyRank();
   const { toast } = useToast();
+  const { season } = useActiveSeason();
 
-  const maxXp = CURRENT_SEASON.tiers[CURRENT_SEASON.tiers.length - 1].requiredXp;
+  const maxXp = season.tiers[season.tiers.length - 1].requiredXp;
 
   const handleClaim = async (tier: number, requiredXp: number, label: string, emoji: string) => {
     const ok = await claimTier(tier, requiredXp);
@@ -56,19 +58,19 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
             exit={{ scale: 0.9, y: 20 }}
             transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             className="w-full max-w-2xl bg-card rounded-2xl border-2 shadow-2xl my-8"
-            style={{ borderColor: CURRENT_SEASON.themeColor }}
+            style={{ borderColor: season.themeColor }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div
               className="flex items-center justify-between px-6 py-4 rounded-t-2xl"
-              style={{ background: `linear-gradient(135deg, ${CURRENT_SEASON.themeColor}, ${CURRENT_SEASON.themeColor}cc)` }}
+              style={{ background: `linear-gradient(135deg, ${season.themeColor}, ${season.themeColor}cc)` }}
             >
               <div className="flex items-center gap-3 text-white">
                 <Sparkles className="h-6 w-6" />
                 <div>
                   <div className="text-xs tracking-widest opacity-80">SEASON</div>
-                  <div className="text-lg font-black">{CURRENT_SEASON.name}</div>
+                  <div className="text-lg font-black">{season.name}</div>
                   {rank?.active_title && (
                     <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/25 text-[10px] font-bold uppercase tracking-wider">
                       {rank.active_title}
@@ -111,7 +113,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 ) : (
                   <div className="space-y-2">
                     {quests.map((q) => {
-                      const meta = questLabel(q.quest_type);
+                      const meta = questLabel(q.quest_type, q.target_count);
                       const pct = Math.min(100, (q.current_count / q.target_count) * 100);
                       const done = !!q.completed_at;
                       return (
@@ -154,7 +156,7 @@ export const RPGDailyHubPanel = ({ open, onClose }: Props) => {
                 <Progress value={Math.min(100, (xp_total / maxXp) * 100)} className="h-3 mb-4" />
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {CURRENT_SEASON.tiers.map((t) => {
+                  {season.tiers.map((t) => {
                     const claimed = claimed_tiers.includes(t.tier);
                     const eligible = xp_total >= t.requiredXp && !claimed;
                     return (
