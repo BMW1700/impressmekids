@@ -1688,11 +1688,42 @@ export const RPGBattleArena = ({
 
 
 
-  // Trigger screen shake
-  const triggerScreenShake = () => {
+  /**
+   * The single impact choke point: damage-scaled shake + hit-stop + flash +
+   * haptic + weighted thud. Every hit in the battle routes through here, so a
+   * 4-damage poke and a 90-damage crit can never feel the same again.
+   *
+   * `hitStop` freezes VISUALS only — reading, speech and timers keep running.
+   */
+  const triggerScreenShake = useCallback((intensity: ImpactIntensity = 'normal') => {
+    const profile = getImpactProfile(intensity);
+
+    setImpactIntensity(intensity);
+    setImpactNonce(n => n + 1);
     setScreenShake(true);
-    setTimeout(() => setScreenShake(false), 300);
-  };
+    setTimeout(() => setScreenShake(false), profile.shakeDuration * 1000);
+
+    if (profile.hitStopMs > 0) {
+      setHitStop(true);
+      setTimeout(() => setHitStop(false), profile.hitStopMs);
+    }
+
+    if (profile.flashOpacity > 0) {
+      setImpactFlash(profile.flashOpacity);
+      setTimeout(() => setImpactFlash(0), 110);
+    }
+
+    hapticForIntensity(intensity);
+
+    const weight =
+      intensity === 'tap' ? 0.15 :
+      intensity === 'normal' ? 0.4 :
+      intensity === 'heavy' ? 0.7 : 1;
+    if (intensity === 'crit') battleSounds.critHit();
+    else if (intensity === 'break') battleSounds.bossBreakCue();
+    else battleSounds.impactThud(weight);
+  }, []);
+
 
   // Handle command selection
   const handleCommand = (command: CommandType) => {
