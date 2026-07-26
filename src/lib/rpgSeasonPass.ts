@@ -55,3 +55,21 @@ export function questLabel(questType: string, target?: number): { label: string;
   }
 }
 
+// ── Active season cache ──────────────────────────────────────────────────────
+// The active season lives in the database (`rpg_seasons`) so a new season can
+// launch without a deploy. `useActiveSeason` writes it here once loaded, which
+// lets module-level helpers (fire-and-forget combat callbacks) use the right
+// season id without threading React state through every call site.
+let activeSeason: Season = CURRENT_SEASON;
+
+export function setActiveSeasonCache(season: Season): void {
+  activeSeason = season;
+}
+
+export function getActiveSeason(): Season {
+  return activeSeason;
+}
+
+export function getActiveSeasonId(): string {
+  return activeSeason.id;
+}
