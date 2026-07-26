@@ -7,7 +7,6 @@ import { ArenaAI } from "./RPGArenaAI";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
 import { RPGLootChest } from "./v2/RPGLootChest";
 import { rollBossLoot, type RolledLoot } from "@/hooks/usePlayerLoot";
-import { awardQuestProgress } from "@/hooks/useDailyQuests";
 
 const battleSounds = new SoundEffects();
 
