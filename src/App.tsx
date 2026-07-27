@@ -44,7 +44,6 @@ const PilotFerpaCoppa = lazy(() => import("./pages/pilot/FerpaCoppaOnePager"));
 const PilotQuickStart = lazy(() => import("./pages/pilot/QuickStart"));
 const ParentChallengeSettings = lazy(() => import("./pages/parent/ChallengeSettings"));
 const RPGHighlightView = lazy(() => import("./pages/rpg/HighlightView"));
-const DevRPGSmoke = lazy(() => import("./pages/DevRPGSmoke"));
 
 
 const PendingVerification = lazy(() => import("./pages/PendingVerification"));
@@ -220,7 +219,6 @@ const App = () => (
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="/scope-and-sequence" element={<ScopeAndSequence />} />
                   <Route path="/rpg/highlight/:slug" element={<RPGHighlightView />} />
-                  <Route path="/dev/rpg-smoke" element={<DevRPGSmoke />} />
 
 
                   <Route path="/game" element={<GameDashboard />} />
