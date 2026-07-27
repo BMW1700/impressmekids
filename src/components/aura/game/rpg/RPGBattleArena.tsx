@@ -107,6 +107,14 @@ import {
   ultimateDamage,
   type ImpactIntensity,
 } from "@/lib/rpgGameFeel";
+// SPECTACLE ENGINE — canvas particle/beam layer + camera rig. Presentation
+// only: it draws on top of the arena and never touches damage or speech.
+import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
+import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
+import { ARENA_ANCHORS, ELEMENT_HUES } from "@/lib/rpg/attackChoreography";
+import { cameraPunch, cameraReset, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
+
+
 
 
 
