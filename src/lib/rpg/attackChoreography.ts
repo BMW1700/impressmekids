@@ -72,6 +72,13 @@ export interface ChoreographyOptions {
   onImpact?: () => void;
   /** Fired when recovery finishes. */
   onComplete?: () => void;
+  /**
+   * Set false when the caller already owns the impact frame (e.g. the arena's
+   * `triggerScreenShake`, which emits its own burst + shockwave). The
+   * anticipation and strike beats still play, so the hit gets its wind-up
+   * without doubling up particles on the landing frame.
+   */
+  impactVisuals?: boolean;
 }
 
 /**
@@ -86,6 +93,7 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
     element = 'physical',
     onImpact,
     onComplete,
+    impactVisuals = true,
   } = opts;
 
   const beat = BEATS[intensity] ?? BEATS.normal;
@@ -131,8 +139,8 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
 
   /* IMPACT — everything lands on one frame. */
   at(beat.anticipation + beat.strike, () => {
-    sfxImpact(beat.power);
-    if (visuals) {
+    if (impactVisuals) sfxImpact(beat.power);
+    if (visuals && impactVisuals) {
       emitSpectacle({ type: 'screenFlash', x: to.x, y: to.y, power: beat.power * 0.8, hue: '0 0% 100%' });
       emitSpectacle({ type: 'burst', x: to.x, y: to.y, power: beat.power, hue });
       emitSpectacle({ type: 'shockwave', x: to.x, y: to.y, power: beat.power, hue });
