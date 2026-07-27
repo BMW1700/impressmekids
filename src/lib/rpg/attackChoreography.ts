@@ -25,6 +25,7 @@ import {
   sfxSuperAttack,
   sfxFinalBlow,
 } from '@/lib/rpg/spectacleAudio';
+import { cameraPushIn } from '@/lib/rpg/spectacleCamera';
 import type { ImpactIntensity } from '@/lib/rpgGameFeel';
 
 
@@ -107,6 +108,9 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
 
   /* ANTICIPATION — the charge. Without this the hit has no weight. */
   sfxCharge(beat.anticipation, beat.power);
+  // Camera leans toward whoever is winding up. The rig damps itself under
+  // reduced motion, so this is safe to call unconditionally.
+  cameraPushIn(from.x, beat.anticipation);
   if (visuals) {
     emitSpectacle({
       type: 'bloomOrb',

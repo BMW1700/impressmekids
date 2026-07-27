@@ -3156,11 +3156,12 @@ export const RPGBattleArena = ({
 
       animate={screenShake ? {
         x: impactProfile.shakeX,
+        y: `${camera.y}%`,
         rotate: impactProfile.shakeRotate,
         // Camera rig multiplies into the shake punch so a charge-then-hit
         // reads as one continuous move instead of two fighting animations.
         scale: [camera.scale, impactProfile.zoom * camera.scale, camera.scale],
-      } : { x: `${camera.x}%`, rotate: 0, scale: camera.scale }}
+      } : { x: `${camera.x}%`, y: `${camera.y}%`, rotate: 0, scale: camera.scale }}
       transition={{
         duration: screenShake ? impactProfile.shakeDuration : camera.duration,
         ease: 'easeOut',

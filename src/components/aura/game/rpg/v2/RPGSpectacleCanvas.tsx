@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   SpectacleRenderer,
   subscribeSpectacle,
@@ -48,7 +48,7 @@ export function RPGSpectacleCanvas({ zIndex = 57, className }: Props) {
     };
   }, []);
 
-  if (!isSpectacleEnabled()) return null;
+  if (!isSpectacleEnabled()) return <ReducedMotionHitConfirm zIndex={zIndex} />;
 
   return (
     <canvas
@@ -56,6 +56,44 @@ export function RPGSpectacleCanvas({ zIndex = 57, className }: Props) {
       aria-hidden="true"
       className={className ?? 'pointer-events-none absolute inset-0 h-full w-full'}
       style={{ zIndex }}
+    />
+  );
+}
+
+/**
+ * Reduced-motion / spectacle-off fallback.
+ *
+ * Cues are still emitted when the canvas is disabled, so we keep a minimal
+ * hit confirm: a short opacity-only tint. No transforms, no particles, no
+ * animation — but the student never loses the feedback that a hit landed.
+ */
+function ReducedMotionHitConfirm({ zIndex }: { zIndex: number }) {
+  const [flash, setFlash] = useState<{ hue: string; power: number } | null>(null);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsub = subscribeSpectacle((cue) => {
+      if (cue.type !== 'burst' && cue.type !== 'screenFlash') return;
+      setFlash({ hue: cue.hue ?? '0 0% 100%', power: cue.power ?? 0.4 });
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => setFlash(null), 160);
+    });
+    return () => {
+      unsub();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  if (!flash) return null;
+
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{
+        zIndex,
+        background: `hsl(${flash.hue} / ${Math.min(0.28, 0.1 + flash.power * 0.18)})`,
+      }}
     />
   );
 }
