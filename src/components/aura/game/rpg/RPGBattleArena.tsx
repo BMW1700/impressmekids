@@ -2206,6 +2206,20 @@ export const RPGBattleArena = ({
       // Light tick confirms the word landed before the attack even animates.
       haptic('light');
 
+      // Refill the decay meter — the streak is only safe while reading continues.
+      lastCorrectAtRef.current = Date.now();
+
+      // BLOCK BEAT: a correct word inside the enemy's wind-up parries the blow.
+      if (blockWindowRef.current) {
+        blockedRef.current = true;
+        blockWindowRef.current = false;
+        setShowBlockSpark(true);
+        haptic('success');
+        battleSounds.streakTierCue(1320);
+        setTimeout(() => setShowBlockSpark(false), 600);
+      }
+
+
       const tier = streakTier(newStreak);
       if (tier > prevStreakTierRef.current) {
         // Rising pitch ladder: each tier is the same cue, a step higher.
