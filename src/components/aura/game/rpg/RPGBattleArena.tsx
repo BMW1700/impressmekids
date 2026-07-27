@@ -113,6 +113,8 @@ import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
 import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
 import { ARENA_ANCHORS, ELEMENT_HUES, playBossTransform, playSuperAttack, playFinalBlow } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
+import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
+
 
 
 
