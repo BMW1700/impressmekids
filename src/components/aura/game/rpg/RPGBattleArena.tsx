@@ -3137,7 +3137,14 @@ export const RPGBattleArena = ({
           ? (impactIntensity === 'crit' || impactIntensity === 'ultimate' || impactIntensity === 'break')
             ? 'saturate(0.2) contrast(1.35)'
             : 'contrast(1.12) saturate(1.15)'
-          : undefined,
+          // Boss phase palette shift: the world drains as the boss transforms.
+          : bossPhase >= 3
+            ? 'saturate(0.55) contrast(1.25) brightness(0.92)'
+            : bossPhase >= 2
+              ? 'saturate(0.78) contrast(1.12)'
+              : undefined,
+        transition: 'filter 700ms ease-out',
+
 
       }}
     >
