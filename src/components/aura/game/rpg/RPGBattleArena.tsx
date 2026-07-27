@@ -2046,12 +2046,17 @@ export const RPGBattleArena = ({
     // Pick a random ability
     const ability = enemy.specialAbilities[Math.floor(Math.random() * enemy.specialAbilities.length)];
     setEnemyAbilityMessage(`${enemy.name} uses ${ability.name}!`);
-    
+    // Wind-up telegraph so an incoming ability reads as dangerous.
+    setEnemyTelegraph(true);
+
     scheduleTimeout(() => {
       // Check terminal state before proceeding
       if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
-      
+
+      setEnemyTelegraph(false);
       setEnemyAttacking(true);
+      
+
       
       scheduleTimeout(() => {
         // Check terminal state before proceeding
