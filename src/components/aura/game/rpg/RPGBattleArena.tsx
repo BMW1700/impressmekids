@@ -3337,6 +3337,44 @@ export const RPGBattleArena = ({
         )}
       </AnimatePresence>
 
+      {/* Block prompt — training wheels until the child has landed a few blocks. */}
+      <AnimatePresence>
+        {enemyTelegraph && blockTraining && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-[22%] z-[58] flex justify-center px-4"
+            initial={{ opacity: 0, y: -12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: [1, 1.06, 1] }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ scale: { repeat: Infinity, duration: 0.45 } }}
+          >
+            <span className="rounded-xl border-2 border-destructive bg-destructive/90 px-6 py-3 text-center text-xl font-black uppercase tracking-wider text-destructive-foreground shadow-2xl md:text-2xl">
+              Read fast to block!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Ultimate ready callout — one per battle. */}
+      <AnimatePresence>
+        {showUltReadyBanner && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-[34%] z-[58] flex justify-center px-4"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+          >
+            <span className="rounded-xl border-2 border-primary bg-primary/90 px-6 py-3 text-center text-xl font-black uppercase tracking-wider text-primary-foreground shadow-2xl md:text-2xl">
+              Ultimate ready — tap it!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* First-battle combat tour. */}
+      <RPGCombatCoachMarks open={combatCoachOpen} onClose={() => setCombatCoachOpen(false)} />
+
+
+
       {/* Block spark — the payoff for reading inside the wind-up. */}
       <AnimatePresence>
         {showBlockSpark && (
