@@ -412,7 +412,7 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
       /* Staggered bolts raining in from above the arena. */
       case 'barrage': {
         [0.2, 0.45, 0.7, 0.9, 0.32].forEach((x, i) =>
-          at(IMPACT + i * 110, () =>
+          at(i * 110, () =>
             emitSpectacle({
               type: 'plasmaBolt',
               x,
@@ -432,7 +432,7 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
       /* Everything drags inward toward the boss. */
       case 'pull': {
         [0.1, 0.32, 0.55, 0.8].forEach((x, i) =>
-          at(IMPACT + i * 80, () =>
+          at(i * 80, () =>
             emitSpectacle({
               type: 'sparkTrail',
               x,
@@ -446,7 +446,7 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
           )
         );
         emitSpectacle({ type: 'embers', x: origin.x, y: origin.y, power: 1, hue });
-        at(IMPACT + 420, () =>
+        at(420, () =>
           emitSpectacle({ type: 'shockwave', x: origin.x, y: origin.y, power: 1, hue })
         );
         break;
@@ -457,10 +457,10 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
         emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%' });
         emitSpectacle({ type: 'shockwave', x: 0.5, y: 0.5, power: 1, hue });
         emitSpectacle({ type: 'debris', x: 0.5, y: 0.5, power: 1, hue });
-        at(IMPACT + 160, () =>
+        at(160, () =>
           emitSpectacle({ type: 'shockwave', x: 0.5, y: 0.55, power: 0.8, hue })
         );
-        at(IMPACT + 300, () =>
+        at(300, () =>
           emitSpectacle({ type: 'debris', x: target.x, y: target.y, power: 0.7, hue })
         );
         break;
@@ -469,19 +469,19 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
       /* Expanding white-out from the boss, then drifting embers. */
       case 'nova': {
         emitSpectacle({ type: 'bloomOrb', x: origin.x, y: origin.y, power: 1, hue, durationMs: 420 });
-        at(IMPACT + 200, () => {
+        at(200, () => {
           emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%' });
           emitSpectacle({ type: 'burst', x: origin.x, y: origin.y, power: 1, hue });
         });
-        at(IMPACT + 520, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.4, power: 1, hue }));
-        at(IMPACT + 820, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.7, power: 0.7, hue }));
+        at(520, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.4, power: 1, hue }));
+        at(820, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.7, power: 0.7, hue }));
         break;
       }
 
       /* Beams lock onto the hero one at a time. */
       case 'lockOn': {
         [0, 1, 2].forEach((i) =>
-          at(IMPACT + i * 220, () => {
+          at(i * 220, () => {
             emitSpectacle({
               type: 'beam',
               x: origin.x,
@@ -501,7 +501,7 @@ export function playBossMechanic(name: string, opts: MechanicOptions): () => voi
       /* Fallback: the screen-wide three-beam sweep. */
       default: {
         [0.18, 0.5, 0.82].forEach((ty, i) =>
-          at(IMPACT + i * 90, () =>
+          at(i * 90, () =>
             emitSpectacle({
               type: 'beam',
               x: origin.x,
