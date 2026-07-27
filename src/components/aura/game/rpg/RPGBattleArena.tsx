@@ -656,6 +656,72 @@ export const RPGBattleArena = ({
   // Streak heat tier (drives the escalating aura + rising pitch ladder)
   const prevStreakTierRef = useRef(0);
 
+  // === STREAK DECAY ===
+  // A streak the child can see draining converts reading speed into felt urgency.
+  // Ref + rAF + CSS var so the arena never re-renders per frame.
+  const decayBarRef = useRef<HTMLDivElement | null>(null);
+  const lastCorrectAtRef = useRef<number>(0);
+  const STREAK_DECAY_MS = 7000;
+
+  // === ENEMY TELEGRAPH / BLOCK BEAT ===
+  // The enemy winds up before it swings. Reading the next word correctly inside
+  // that window blocks most of the hit — reading becomes moment-to-moment defence.
+  const [enemyTelegraph, setEnemyTelegraph] = useState(false);
+  const blockWindowRef = useRef(false);
+  const blockedRef = useRef(false);
+  const [showBlockSpark, setShowBlockSpark] = useState(false);
+
+  // Never leave a wind-up hanging once the fight is over.
+  useEffect(() => {
+    if (phase === 'victory' || phase === 'defeat') {
+      setEnemyTelegraph(false);
+      blockWindowRef.current = false;
+    }
+  }, [phase]);
+
+  // Prune spent damage numbers so the overlay never accumulates.
+
+  useEffect(() => {
+    if (floatingDamages.length === 0) return;
+    const t = setTimeout(() => {
+      const cutoff = Date.now() - 1200;
+      setFloatingDamages((prev) => prev.filter((f) => f.id > cutoff));
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [floatingDamages]);
+
+  // Drain loop for the streak meter. Writes a CSS variable directly, so no
+
+  // per-frame React render (ref-based counter rule).
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const bar = decayBarRef.current;
+      const s = streakRef.current;
+      if (bar) {
+        if (s <= 0 || !lastCorrectAtRef.current) {
+          bar.style.setProperty('--streak-decay', '0%');
+        } else {
+          const pct = Math.max(0, 1 - (Date.now() - lastCorrectAtRef.current) / STREAK_DECAY_MS);
+          bar.style.setProperty('--streak-decay', `${(pct * 100).toFixed(1)}%`);
+          if (pct <= 0) {
+            // Drop one heat tier — never straight to zero. Struggling readers
+            // should feel urgency, not punishment.
+            const dropped = s >= 8 ? 7 : s >= 5 ? 4 : s >= 3 ? 2 : Math.max(0, s - 1);
+            streakRef.current = dropped;
+            setStreak(dropped);
+            prevStreakTierRef.current = streakTier(dropped);
+            lastCorrectAtRef.current = dropped > 0 ? Date.now() : 0;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+
   // Boss break moments: which HP thresholds have already staggered the boss,
   // plus the pending double-damage free hit they grant.
   const bossBreaksFiredRef = useRef<Set<number>>(new Set());
@@ -2000,12 +2066,17 @@ export const RPGBattleArena = ({
     // Pick a random ability
     const ability = enemy.specialAbilities[Math.floor(Math.random() * enemy.specialAbilities.length)];
     setEnemyAbilityMessage(`${enemy.name} uses ${ability.name}!`);
-    
+    // Wind-up telegraph so an incoming ability reads as dangerous.
+    setEnemyTelegraph(true);
+
     scheduleTimeout(() => {
       // Check terminal state before proceeding
       if (phaseRef.current === 'victory' || phaseRef.current === 'defeat') return;
-      
+
+      setEnemyTelegraph(false);
       setEnemyAttacking(true);
+      
+
       
       scheduleTimeout(() => {
         // Check terminal state before proceeding
@@ -2159,6 +2230,20 @@ export const RPGBattleArena = ({
       // --- GAME FEEL: streak heat + ultimate charge ---
       // Light tick confirms the word landed before the attack even animates.
       haptic('light');
+
+      // Refill the decay meter — the streak is only safe while reading continues.
+      lastCorrectAtRef.current = Date.now();
+
+      // BLOCK BEAT: a correct word inside the enemy's wind-up parries the blow.
+      if (blockWindowRef.current) {
+        blockedRef.current = true;
+        blockWindowRef.current = false;
+        setShowBlockSpark(true);
+        haptic('success');
+        battleSounds.streakTierCue(1320);
+        setTimeout(() => setShowBlockSpark(false), 600);
+      }
+
 
       const tier = streakTier(newStreak);
       if (tier > prevStreakTierRef.current) {
@@ -2378,33 +2463,45 @@ export const RPGBattleArena = ({
       prevStreakTierRef.current = 0;
       haptic('error');
 
-      // Enemy always counter-attacks on miss
+      // Enemy always counter-attacks on miss — but it telegraphs first, and a
+      // correct read inside the wind-up blocks most of the blow.
       const damage = Math.floor(enemy.attack * 0.5);
-      setEnemyAbilityMessage(`${enemy.name} strikes back!`);
-      
-      // Add floating damage for player
-      setFloatingDamages(prev => [...prev, {
-        id: Date.now(),
-        damage,
-        x: 70 + Math.random() * 10,
-        y: 60 + Math.random() * 10,
-        isPlayer: true
-      }]);
-      
+      setEnemyAbilityMessage(`${enemy.name} winds up!`);
+      blockedRef.current = false;
+      blockWindowRef.current = true;
+      setEnemyTelegraph(true);
+
       setTimeout(() => {
+        setEnemyTelegraph(false);
+        blockWindowRef.current = false;
         setEnemyAttacking(true);
+        const blocked = blockedRef.current;
+        const landed = blocked ? Math.max(1, Math.floor(damage * 0.25)) : damage;
+
+        // Floating damage reflects what actually landed after the block check.
+        setFloatingDamages(prev => [...prev, {
+          id: Date.now(),
+          damage: landed,
+          x: 70 + Math.random() * 10,
+          y: 60 + Math.random() * 10,
+          isPlayer: true
+        }]);
+
         setTimeout(() => {
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
-          takePlayerDamage(damage);
-          triggerScreenShake('heavy');
-          
+          takePlayerDamage(landed);
+          triggerScreenShake(blocked ? 'normal' : 'heavy');
+          setEnemyAbilityMessage(blocked ? 'BLOCKED!' : `${enemy.name} strikes back!`);
+
           setTimeout(() => {
             setHeroTakingDamage(false);
             setEnemyAbilityMessage(null);
+            blockedRef.current = false;
           }, 400);
         }, 300);
-      }, 300);
+      }, 1100);
+
     }
 
     // Only advance batch when we finish the current batch (wordIndex reaches end)
@@ -2905,7 +3002,14 @@ export const RPGBattleArena = ({
         // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
         // recognition, timers and game logic are untouched by this.
         animationPlayState: hitStop ? 'paused' : 'running',
-        filter: hitStop ? 'contrast(1.12) saturate(1.15)' : undefined,
+        // A crit drains the colour out of everything except the damage number,
+        // so the number is the only thing left to look at.
+        filter: hitStop
+          ? (impactIntensity === 'crit' || impactIntensity === 'ultimate' || impactIntensity === 'break')
+            ? 'saturate(0.2) contrast(1.35)'
+            : 'contrast(1.12) saturate(1.15)'
+          : undefined,
+
       }}
     >
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
@@ -2950,7 +3054,91 @@ export const RPGBattleArena = ({
 
 
 
+
+      {/* Enemy telegraph — the arena reddens while a blow is being wound up. */}
+      <AnimatePresence>
+        {enemyTelegraph && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-[54]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.15, 0.45, 0.15] }}
+            exit={{ opacity: 0 }}
+            transition={{ repeat: Infinity, duration: 0.55 }}
+            style={{ boxShadow: 'inset 0 0 120px hsl(var(--destructive))' }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Block spark — the payoff for reading inside the wind-up. */}
+      <AnimatePresence>
+        {showBlockSpark && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/2 z-[59] flex justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.3 }}
+          >
+            <span className="rounded-lg border-2 border-primary bg-primary/85 px-5 py-2 text-lg font-black uppercase tracking-widest text-primary-foreground shadow-lg">
+              Blocked!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating damage numbers — crits get their own visual language. */}
+      <div className="pointer-events-none absolute inset-0 z-[57]">
+        <AnimatePresence>
+          {floatingDamages.map((fd) => (
+            <motion.div
+              key={fd.id}
+              className="absolute"
+              style={{ left: `${fd.x}%`, top: `${fd.y}%` }}
+              initial={{ opacity: 0, scale: fd.isCritical ? 0.4 : 0.8, y: 0, rotate: fd.isCritical ? -14 : 0 }}
+              animate={
+                fd.isCritical
+                  ? { opacity: [0, 1, 1, 0], scale: [0.4, 1.5, 1.2, 1.1], y: [0, -18, -26, -40], rotate: -14 }
+                  : { opacity: [0, 1, 0], scale: 1, y: [0, -30, -55] }
+              }
+              exit={{ opacity: 0 }}
+              transition={{ duration: fd.isCritical ? 1 : 0.8, ease: 'easeOut' }}
+            >
+              {fd.isCritical && (
+                <>
+                  {/* Radial impact lines burst out of the contact point. */}
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                    <motion.span
+                      key={deg}
+                      className="absolute left-1/2 top-1/2 h-[2px] w-10 origin-left bg-accent"
+                      style={{ transform: `rotate(${deg}deg)` }}
+                      initial={{ scaleX: 0, opacity: 0.9 }}
+                      animate={{ scaleX: [0, 1, 0.2], opacity: [0.9, 0.7, 0] }}
+                      transition={{ duration: 0.42, ease: 'easeOut' }}
+                    />
+                  ))}
+                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-black uppercase tracking-widest text-accent">
+                    Critical
+                  </span>
+                </>
+              )}
+              <span
+                className={
+                  fd.isCritical
+                    ? 'text-5xl font-black text-accent'
+                    : fd.isPlayer
+                      ? 'text-2xl font-black text-destructive'
+                      : 'text-2xl font-black text-foreground'
+                }
+                style={{ textShadow: '3px 3px 0 rgba(0,0,0,0.85), -1px -1px 0 rgba(0,0,0,0.85)' }}
+              >
+                -{fd.damage}
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Battle Background */}
+
       <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
 
 
@@ -3348,21 +3536,34 @@ export const RPGBattleArena = ({
           <div className="flex items-center gap-4 text-white/80">
             <span className="text-sm font-medium truncate max-w-[200px]">{story.title}</span>
             {streak > 0 && (
-              <motion.div
-                className="flex items-center gap-1"
-                animate={{ scale: heat.tier > 0 ? [1, 1.14, 1] : [1, 1.06, 1] }}
-                transition={{ repeat: Infinity, duration: heat.tier > 1 ? 0.34 : 0.5 }}
-                style={{ color: heat.tier > 0 ? heat.glow : undefined, textShadow: heat.tier > 1 ? `0 0 12px ${heat.glow}` : undefined }}
-              >
-                <Flame className="h-4 w-4" />
-                <span className="font-bold">x{streak}</span>
-                {heat.label && (
-                  <span className="hidden sm:inline text-[10px] font-black tracking-widest uppercase ml-1">
-                    {heat.label}
-                  </span>
-                )}
-              </motion.div>
+              <div className="flex flex-col items-center gap-1">
+                <motion.div
+                  className="flex items-center gap-1"
+                  animate={{ scale: heat.tier > 0 ? [1, 1.14, 1] : [1, 1.06, 1] }}
+                  transition={{ repeat: Infinity, duration: heat.tier > 1 ? 0.34 : 0.5 }}
+                  style={{ color: heat.tier > 0 ? heat.glow : undefined, textShadow: heat.tier > 1 ? `0 0 12px ${heat.glow}` : undefined }}
+                >
+                  <Flame className="h-4 w-4" />
+                  <span className="font-bold">x{streak}</span>
+                  {heat.label && (
+                    <span className="hidden sm:inline text-[10px] font-black tracking-widest uppercase ml-1">
+                      {heat.label}
+                    </span>
+                  )}
+                </motion.div>
+                {/* Streak decay meter — the streak is visibly at risk. */}
+                <div ref={decayBarRef} className="h-1 w-20 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full transition-[background-color] duration-300"
+                    style={{
+                      width: 'var(--streak-decay, 100%)',
+                      backgroundColor: heat.tier > 0 ? heat.glow : 'hsl(var(--primary))',
+                    }}
+                  />
+                </div>
+              </div>
             )}
+
 
             {/* Sound Toggle */}
             <Button

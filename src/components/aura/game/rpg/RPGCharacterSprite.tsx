@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/lib/rpgGameFeel";
 
 type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent' | 'wiggleworm' | 'bouncer' | 'echo_blob';
 
@@ -1301,12 +1303,56 @@ export const RPGCharacterSprite = ({
   // Sleep posture: settle the character down into the bed.
   const restY = isSleeping ? [0, 18, 22, 22] : (isTakingDamage ? [0, -5, 0] : [0, -3, 0]);
 
+  /* ----------------------------------------------------------------
+   * Attack arc: anticipation → strike → contact → settle.
+   * A single ±30px translate reads as a nudge; a real arc reads as a hit.
+   * `attackKey` re-fires the keyframes so back-to-back attacks replay.
+   * ---------------------------------------------------------------- */
+  const [attackKey, setAttackKey] = useState(0);
+  const wasAttackingRef = useRef(false);
+  useEffect(() => {
+    if (isAttacking && !wasAttackingRef.current) setAttackKey((k) => k + 1);
+    wasAttackingRef.current = isAttacking;
+  }, [isAttacking]);
+
+  const [hurtKey, setHurtKey] = useState(0);
+  const wasHurtRef = useRef(false);
+  useEffect(() => {
+    if (isTakingDamage && !wasHurtRef.current) setHurtKey((k) => k + 1);
+    wasHurtRef.current = isTakingDamage;
+  }, [isTakingDamage]);
+
+  const reduceMotion = prefersReducedMotion();
+  // Local +x for an enemy is mirrored by the wrapper, so this sign keeps both
+  // fighters lunging toward their opponent.
+  const lungeDir = isEnemy ? 1 : -1;
+
+  // Anticipation pulls AWAY from the target, the strike overshoots past it,
+  // then the body settles back to the idle mark.
+  const attackX = [0, lungeDir * -14, lungeDir * 46, lungeDir * 28, 0];
+  const attackTimes = [0, 0.22, 0.4, 0.58, 1];
+  const attackScale = [1, 0.94, 1.1, 1.03, 1];
+  const attackRotate = reduceMotion ? [0, 0, 0, 0, 0] : [0, lungeDir * 5, lungeDir * -12, lungeDir * -5, 0];
+
+  // Recoil: the struck body kicks backwards away from the blow, then settles.
+  const hurtX = [0, lungeDir * -26, lungeDir * -10, 0];
+
   return (
     <motion.div
+      
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
-        x: isAttacking ? (isEnemy ? 30 : -30) : (isFlying ? flyX : runX),
-        scale: isTakingDamage ? 0.95 : (isSleeping ? 0.85 : 1),
+        x: isAttacking
+          ? attackX
+          : isTakingDamage
+          ? hurtX
+          : (isFlying ? flyX : runX),
+        rotate: isAttacking ? attackRotate : 0,
+        scale: isAttacking
+          ? attackScale
+          : isTakingDamage
+          ? [1, 0.92, 0.97, 1]
+          : (isSleeping ? 0.85 : 1),
         y: isFlying ? flyY : restY,
       }}
       transition={{
@@ -1315,15 +1361,56 @@ export const RPGCharacterSprite = ({
           : isSleeping
           ? { duration: 1.2, ease: 'easeOut' }
           : { repeat: Infinity, duration: 2.5, ease: 'easeInOut' },
-        x: isRunning
+        x: isAttacking
+          ? { duration: 0.52, times: attackTimes, ease: 'easeOut' }
+          : isTakingDamage
+          ? { duration: 0.34, ease: 'easeOut' }
+          : isRunning
           ? { repeat: Infinity, duration: 1.4, ease: 'easeInOut' }
           : isFlying
           ? { duration: 2.4, ease: 'easeOut' }
           : { type: 'spring', stiffness: 400, damping: 15 },
-        scale: { duration: 0.4 },
+        rotate: { duration: 0.52, times: attackTimes, ease: 'easeOut' },
+        scale: isAttacking
+          ? { duration: 0.52, times: attackTimes, ease: 'easeOut' }
+          : isTakingDamage
+          ? { duration: 0.34, ease: 'easeOut' }
+          : { duration: 0.4 },
       }}
       style={{ perspective: '200px' }}
     >
+      {/* Motion-trail smear — ghost copies that lag the strike. */}
+      {isAttacking && !reduceMotion && (
+        <div className="pointer-events-none absolute inset-0 z-0">
+          {[0, 1, 2].map((i) => (
+            <motion.div
+              key={`smear-${i}-${attackKey}`}
+              className="absolute inset-0"
+              style={{ filter: `blur(${2 + i * 2}px)` }}
+              initial={{ opacity: 0, x: 0 }}
+              animate={{
+                opacity: [0, 0.42 - i * 0.12, 0],
+                x: [0, lungeDir * (-16 - i * 12), 0],
+              }}
+              transition={{ duration: 0.42, delay: 0.18 + i * 0.03, ease: 'easeOut' }}
+            >
+              {renderCharacter()}
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* One-frame white blowout on the struck body. */}
+      {isTakingDamage && !reduceMotion && (
+        <motion.div
+          key={`hurtflash-${hurtKey}`}
+          className="pointer-events-none absolute inset-0 z-40 rounded-2xl bg-white mix-blend-screen"
+          initial={{ opacity: 0.85 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.16, ease: 'easeOut' }}
+        />
+      )}
+
       {/* Wind streaks behind a running OR flying character */}
       {(isRunning || isFlying) && (
         <div className="pointer-events-none absolute inset-y-0 -left-8 w-16 z-0 flex flex-col justify-center gap-1.5">

@@ -1,68 +1,46 @@
-## Honest read first
+## Honest read
 
-The RPG mode has **more systems than almost any reading app on the market** — 25+ mini-game phases, loot, seasons, ranks, pets, upgrades, PvP/co-op, boss spectacle. Content and depth are not the problem.
+The impact layer that was missing last round is now in and verified in the code: damage-scaled shake/hit-stop/flash routes through one `triggerScreenShake` choke point, haptics fire per intensity, boss breaks fire at 66%/33% with a free-hit window, streak heat glows the arena and steps the sound pitch, and the Ultimate meter charges from reading and blasts with its own profile.
 
-What's thin is **game feel** — the 100-millisecond layer between "child says the word correctly" and "child feels a hit land." That layer is what makes a game physically addictive, and right now it's the weakest part of the stack. Verified in the code:
+So the "does a hit feel like a hit" problem is solved. What is still verifiably thin:
 
-- **Screen shake is a flat 5px, 0.3s** regardless of whether the hit was 4 damage or a 90-damage crit (`RPGBattleArena.tsx:2692`). Every hit feels identical.
-- **No hit-stop anywhere in the RPG.** Castle Swarm already has it (`CastleSwarmArena.tsx` freezes 70–150ms on impact) and it's the single biggest reason that mode feels punchier. RPG never freezes on contact.
-- **Zero haptics in the entire app.** No `navigator.vibrate`, no Capacitor Haptics. On an iPad — the primary classroom device — that's the most powerful "addictive" channel available and it is completely unused.
-- **Crits are computed but barely shown.** `isCritical` drives a floating number and nothing else — no zoom, no color shift, no distinct sound, no slow-motion.
-- **Streak is a text chip.** `x3` in the corner. A streak is the core addiction loop of any action game and it currently has no escalating audio, no visual heat, no risk-of-loss tension.
-- **Attack animations are ambient, not impact-driven.** The sprite work is mostly infinite idle loops (breathing, glowing). There's no anticipation → contact → recoil arc, which is what reads as "amazing attack animation."
+1. **The attack animation is not an animation.** In `RPGCharacterSprite.tsx` the entire attack is one spring translate of ±30px (`x: isAttacking ? -30 : ...`). There is no wind-back, no fast strike, no smear, no recoil on the target. This is the single biggest remaining gap versus "amazing attack animations."
+2. **Crits share the normal visual language.** `isCritical` only picks a bigger shake profile and a different sound. The floating number, colour, and screen treatment are the same as a 4-damage poke.
+3. **Streaks have no tension.** Heat tiers exist, but nothing decays — the child never *sees* the streak at risk, so reading fast has no felt urgency.
+4. **Enemy attacks are not dangerous-feeling.** Incoming damage is a scale-to-0.95 blip; there is no telegraph, so there is nothing for the child to react to between words.
 
-So: the gameplay is deep and varied, but it does not yet *hit*. That's fixable without adding a single new mini-game.
+## The plan
 
----
+### 1. Attack animation arc (the main event)
+Rebuild the attack beat in `RPGCharacterSprite.tsx` as a real four-part arc driven by an attack nonce so back-to-back attacks re-fire cleanly:
+- **Anticipation** ~120ms: wind back away from the target, slight squash, weapon/aura charges.
+- **Strike** ~80ms: fast lunge past the contact point with a motion-trail smear (stacked, blurred, fading ghost copies of the sprite) and a slight forward lean.
+- **Contact**: particle burst at the contact point, synced to the existing hit-stop window.
+- **Recoil**: the struck sprite kicks back, flashes white for one frame, and settles.
 
-## The Game Feel Pass
+Enemy attacks get the same arc so incoming damage reads as a real swing, not a nudge.
 
-### Tier 1 — Impact (this is the whole ballgame)
+### 2. Crit gets its own language
+- Damage number arrives large, rotated, gold-on-black with a scale-punch instead of drifting up.
+- Radial impact lines burst from the contact point.
+- Brief desaturation of everything except the crit number during the crit hit-stop.
+- Reuse the existing crit shake profile and `critHit()` sound — no new audio work.
 
-**1. Damage-scaled impact system**
-One shared `impact(intensity)` helper driving every hit:
-- Shake amplitude, duration, and rotation scale with damage-as-percentage-of-enemy-max-HP, not a fixed 5px.
-- Hit-stop: freeze the arena 60ms on a normal hit, 140ms on a crit, 220ms on a boss phase break — ported from the Castle Swarm pattern that already works.
-- Impact flash: one-frame white blowout on the struck sprite.
+### 3. Streak decay meter
+A thin, visibly draining bar under the streak chip between words. It refills on each correct word and drains over the word window; if it empties the streak drops a tier (not to zero — dropping to zero punishes struggling readers). Purely presentational on top of the existing streak counter; no change to damage math or quest credit.
 
-**2. Haptics on iPad and phone**
-Capacitor Haptics with a web `navigator.vibrate` fallback, routed through the existing mute/settings toggle so classrooms can silence it:
-- Light tick on each correct word, medium thump on hit landing, heavy on crit and boss break, error buzz on a miss.
+### 4. Enemy telegraph + block beat
+Before an enemy attack lands, the enemy sprite winds up with a red telegraph flash for a short window. Reading the current word correctly during that window blocks the hit (reduced damage, block spark, distinct haptic). This is the one genuinely new mechanic — it converts reading speed into moment-to-moment defence, which is the missing "I have to react right now" element.
 
-**3. Crit gets its own language**
-Screen punches in ~4%, brief desaturation of everything except the crit number, a distinct rising sound, radial impact lines, and the damage number arrives large and rotated instead of drifting up like a normal hit.
+## Guardrails
 
-**4. Attack animation arc**
-Rebuild the attack beat as anticipation (wind-back, ~120ms) → strike (fast, ~80ms, with a motion-trail smear) → contact (hit-stop + particle burst at the point of contact) → recoil on the target. Same for the enemy's attacks so incoming damage feels dangerous.
-
-### Tier 2 — Escalation (the addiction loop)
-
-**5. Streak heat**
-The streak becomes the visual state of the whole screen: at x3 the hero's weapon ignites, at x5 the background pulses with the hero's element, at x8 a "UNSTOPPABLE" banner and the music layer adds a track. Each streak tier raises the sound pitch a step — the rising-pitch ladder is the cheapest and most reliable dopamine device in games.
-
-**6. Break-the-streak tension**
-A visible, decaying streak meter between words. It's not just a counter that resets on a miss — the child can *see* it draining, which converts reading speed into felt urgency.
-
-**7. Boss break moments**
-When a boss crosses a phase threshold, stop everything: full hit-stop, boss stagger animation, camera push-in, and a free-hit window where the next correct word does double damage. Gives every boss fight two or three memorable spikes instead of a flat HP drain.
-
-### Tier 3 — One new element worth adding
-
-**8. Ultimate meter**
-A charge bar that fills from correct words and streaks. When full, the child gets a one-tap ultimate: a full-screen character-specific attack with its own animation, sound, and hit-stop. This is the "I want to play again" hook — it gives the child something they're *saving up for* across a whole battle, which is exactly the mechanic the current loop is missing.
-
----
-
-## Explicitly out of scope
-
-No new mini-games, no new bosses, no new worlds, no new cosmetics. The library is already large; the problem is not variety, it's impact. Adding more phases would make it worse.
-
----
+- Everything stays in the presentation layer: `RPGCharacterSprite.tsx`, `RPGBattleArena.tsx` render/effects, `RPGSpellEffects.tsx`. Damage math, quest credit, and the speech pipeline are untouched — except the block beat, which only applies a damage multiplier at the existing enemy-attack site.
+- Every new effect honours `prefers-reduced-motion` via the existing `rpgGameFeel` profile reducer: smears and desaturation are dropped, timing beats are kept.
+- Hit-stop stays a visual flag only; it must never gate the recognizer.
+- No new mini-games, bosses, worlds, or cosmetics.
 
 ## Technical notes
 
-- All of it lands in the presentation layer — `RPGBattleArena.tsx`, `RPGCharacterSprite.tsx`, `RPGSpellEffects.tsx`, and the `SoundEffects` class. Damage math, quest credit, and the reading/speech pipeline are untouched.
-- Hit-stop is implemented as a render-pause flag, matching the existing `hitStopUntilRef` pattern in Castle Swarm — it must never pause the speech recognizer, only the visuals.
-- Haptics need `@capacitor/haptics` and must respect the existing game mute setting plus a per-classroom off switch.
-- Every effect gets an intensity ceiling and honors `prefers-reduced-motion` — screen flashes and rapid shake are a real accessibility and photosensitivity concern for K-5, so the reduced-motion path swaps flashes for scale pops.
-- The ultimate meter is client-state only for v1; no schema change.
+- The arc uses framer-motion keyframe arrays with per-segment `times`, keyed on an attack nonce so a new attack interrupts the old one instead of queueing.
+- Smear ghosts are 3 absolutely-positioned copies at decreasing opacity and increasing blur, rendered only during the strike segment and only when reduced motion is off.
+- The decay meter is a ref-driven `requestAnimationFrame` value written to a CSS custom property, so it never re-renders the arena per frame (consistent with the ref-based counter rule already used in the speech components).
