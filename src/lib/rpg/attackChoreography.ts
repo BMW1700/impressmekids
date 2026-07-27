@@ -98,6 +98,7 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
   const visuals = isSpectacleEnabled();
 
   /* ANTICIPATION — the charge. Without this the hit has no weight. */
+  sfxCharge(beat.anticipation, beat.power);
   if (visuals) {
     emitSpectacle({
       type: 'bloomOrb',
@@ -114,6 +115,7 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
 
   /* STRIKE — the projectile crosses the arena. */
   at(beat.anticipation, () => {
+    sfxStrike(beat.power);
     if (!visuals) return;
     emitSpectacle({
       type: intensity === 'ultimate' ? 'beam' : 'plasmaBolt',
@@ -129,6 +131,7 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
 
   /* IMPACT — everything lands on one frame. */
   at(beat.anticipation + beat.strike, () => {
+    sfxImpact(beat.power);
     if (visuals) {
       emitSpectacle({ type: 'screenFlash', x: to.x, y: to.y, power: beat.power * 0.8, hue: '0 0% 100%' });
       emitSpectacle({ type: 'burst', x: to.x, y: to.y, power: beat.power, hue });
@@ -139,6 +142,7 @@ export function playAttack(opts: ChoreographyOptions = {}): () => void {
     }
     onImpact?.();
   });
+
 
   /* RECOVERY — embers keep the moment alive for a beat after the number. */
   at(beat.anticipation + beat.strike + 90, () => {
