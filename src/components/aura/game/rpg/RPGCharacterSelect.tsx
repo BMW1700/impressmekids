@@ -28,6 +28,14 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
   const [gearOpen, setGearOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
+  const { unlocked, justUnlocked, markUnlockSeen } = useRPGUnlocks();
+
+  // Day counter for the day-2 Daily Hub gate.
+  useEffect(() => {
+    markPlayedToday();
+  }, []);
+
+
 
   // First-time players get the tour once; it can be replayed from the "?" button.
   useEffect(() => {
