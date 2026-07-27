@@ -1,83 +1,55 @@
-# RPG v3 — "Breathtaking" Pass
+## Brutally honest audit first — no, the last implementation did not all work
 
-## Honest verdict first
+I re-read the actual source before writing this. Three things I previously described as done are **not wired up**. Typecheck passing hid this, because dead code compiles fine.
 
-**Ready to ship? No — but not because it's broken.** It's mechanically complete and stable. Two real gaps:
+**1. The four-beat attack timeline is dead code.**
+`playAttack` and `playEnemyAttack` in `src/lib/rpg/attackChoreography.ts` have **zero call sites** anywhere in the app. Only `playBossTransform`, `playSuperAttack` and `playFinalBlow` are imported by the arena. So the Anticipation beat — the exact thing I told you makes Kirby feel like Kirby — is not in the game. Every normal hero hit still just fires a burst + shockwave at the moment of impact, with no wind-up.
 
-1. **The spectacle ceiling is CSS.** Every effect (`RPGSpellEffects`, `RPGEnemyAbilityEffect`, sprite smears, ultimate flashes) is a DOM node with a keyframe animation. That caps you at "polished web game." Kirby's Magolor fight works because of: hundreds of simultaneous particles, screen-filling beams with bloom, multi-phase transformation, camera pushes/pulls, and 8–12 frames of anticipation before every attack. You cannot get there with divs — you need one canvas layer sitting over the arena.
-2. **Too much going on — in the wrong places.** 40+ minigame components, 5 battle modes, gear locker, season pass, daily hub, leaderboards, ranks, pets, themes, store. A 7-year-old sees a dashboard, not an adventure. Meanwhile the boss climax — the thing that should be overwhelming — gets the same visual budget as a random encounter. The fix is not "delete features," it's **gate them behind progression** so the first 10 minutes are pure combat.
+**2. The per-boss catalog is orphaned.**
+`src/lib/rpgBossSpectacle.ts` holds a genuinely good catalog: per-boss titles, entrance quotes, colors, and 2–3 named phase mechanics (`VOID PULL`, `REALITY SHATTER`, `SOLAR FLARE`, `FINAL EDIT`) with taunts. The component that renders it, `RPGBossSpectacle.tsx`, is **never mounted** — the arena imports only `isBossType` from that file. Meanwhile the phase gates I added are hardcoded to 50% / 15% with fixed `'shadow'` and `'arcane'` hues. Every boss in the game currently transforms identically.
 
-**Verdict: 2 focused passes, then port.** Not months.
+**3. The entire spectacle is silent.**
+`RPGBattleArena.tsx` contains no audio calls at all, and nothing under `src/lib/rpg/` touches `AudioContext`. The "synthesized boss audio" I claimed earlier does not exist in the battle path. A screen-wide plasma beam with no sound reads as a screensaver, not a boss.
+
+**Answering the technology question directly: you are not constrained.** The hard part is already built and working — the canvas engine supports beams, bursts, shockwaves, bloom orbs, embers, debris, disintegration and screen flash with pooling and adaptive quality; the boss data exists; and `src/components/aura/game/castle/sfx.ts` already proves WebAudio synth works in this codebase. What's missing is wiring, not capability. No new dependency, no WebGL rewrite.
+
+**Is it ready to ship?** The systems are ready. The spectacle is about 60% real and 40% scaffolding. I would not put this in front of a Bronx principal as "the addicting part" until the three gaps above are closed — a kid will notice silence and identical bosses immediately.
 
 ---
 
-## Phase 1 — Spectacle Engine (the Kirby layer)
+## Master Plan v8 — True Boss Set Pieces
 
-A single GPU-friendly canvas overlay mounted once in `RPGBattleArena`, driven by an event bus. Effects become data, not components.
+### Phase 1: Connect the dead choreography (highest value, lowest risk)
+Route hero and enemy attacks through `playAttack` / `playEnemyAttack` instead of the bare impact call, so every strike gets its wind-up. The existing `triggerScreenShake` becomes the `onImpact` callback, which also guarantees shake, hit-stop, haptics and particles land on the same frame. Element hue comes from the equipped weapon / character rather than a constant.
 
-**New: `src/lib/rpg/spectacleEngine.ts`**
-- One `requestAnimationFrame` loop, one `<canvas>`, object-pooled particles (cap ~600, auto-degrade to 200 on low-end/iOS).
-- Emitters: `burst`, `beam`, `shockwave`, `debris`, `sparkTrail`, `screenFlash`, `bloomOrb`, `plasmaBolt`.
-- Additive blending for plasma/energy so beams actually glow instead of looking like colored rectangles.
-- Respects `prefers-reduced-motion` and a Settings toggle (schools will ask).
+### Phase 2: Data-driven boss set pieces
+Replace the hardcoded 50%/15% gates with the real per-boss phase list from `getBossSpectacle(enemy.id)`:
+- Each phase fires at its own `hpThreshold` with its own `mechanicColor` mapped to a spectacle hue.
+- The phase banner shows the boss's real `mechanicName` + emoji + `taunt` instead of a generic "TRANSFORMS!".
+- Each named mechanic gets a distinct choreography shape rather than one shared beam sweep:
 
-**New: `src/components/aura/game/rpg/v2/RPGSpectacleCanvas.tsx`** — mounts the engine, absolutely positioned over the arena, `pointer-events: none`.
-
-**New: `src/lib/rpg/attackChoreography.ts`** — every attack becomes a timeline, not a single animation:
 ```text
-ANTICIPATION (250ms)  charge glow + sprite crouch + camera push-in
-STRIKE      (120ms)   beam/bolt fires, motion smear
-IMPACT      (90ms)    hit-stop, white flash, radial shockwave, debris
-RECOVERY    (400ms)   embers fall, camera settles, damage number arcs up
+ASTEROID BARRAGE  staggered plasmaBolts raining from off-screen top
+VOID PULL         inward-converging embers + arena drift toward the boss
+REALITY SHATTER   full screenFlash, radial shockwave ring, heavy debris
+SUPERNOVA         expanding bloomOrb into a white-out, then embers
+BINDING WORDS     beams that lock onto the hero anchor one at a time
 ```
-Wire the existing `rpgGameFeel` shake/hit-stop/haptics into the IMPACT beat so they land on the same frame instead of firing independently.
 
-**Camera rig** — a transform wrapper around the arena supporting push-in on charge, punch-out on impact, and a slow drift during boss phases. This single addition does more for "wow" than any particle.
+### Phase 3: Mount the orphan and give bosses a voice
+Mount `RPGBossSpectacle` in the arena so entrance titles, quotes and phase callouts actually appear. Add a small WebAudio module modelled on `castle/sfx.ts`: charge whine, beam roar, impact thud, transformation stinger, final-blow silence-then-boom. Respects the existing spectacle/reduced-motion toggle and mutes with the app's audio setting.
 
----
+### Phase 4: Final-blow cinematic upgrade
+Per-boss disintegration color, a brief slow-motion hold before the victory banner, and the boss's defeat line — so the climax is the loudest moment in the session, not a banner swap.
 
-## Phase 2 — Boss climax rework (the Magolor moment)
+### Technical notes
+- All work is presentational. No damage math, reward path, quest crediting or reading-recognition logic is touched.
+- Every new effect goes through the existing pooled `emitSpectacle` cue system and honours `isSpectacleEnabled()`, so reduced-motion and low-end tablets degrade to the current behaviour.
+- Boss phase state stays in refs guarded by `bossPhasesFiredRef` so nothing double-fires on re-render.
+- Files: `attackChoreography.ts`, `rpgBossSpectacle.ts`, `RPGBattleArena.tsx`, `RPGBossSpectacle.tsx`, plus one new `src/lib/rpg/spectacleAudio.ts`.
 
-Upgrade `RPGBossSpectacle` / final-boss encounters only — normal enemies stay cheap.
+### What I will not claim this time
+I will verify each wiring point with a grep for call sites before reporting it done, not just a passing typecheck.
 
-- **Multi-phase fights.** At 50% HP the boss *transforms*: screen desaturates, sprite scales up, arena background shifts palette, new attack set unlocks. At 15% it goes desperate — faster telegraphs, screen-edge vignette pulse.
-- **Signature super attacks** (2–3 per boss) with 1.5s telegraph, full-screen plasma beam sweep, and a readable dodge/block window. These are the moments kids will describe to their friends.
-- **Final blow cinematic**: hit-stop freeze → radial white-out → boss disintegration into particles → slow-motion camera pull → victory banner.
-- **Audio**: layered synth stings per beat (charge riser, impact, disintegrate) reusing the existing spectacle audio approach.
-
----
-
-## Phase 3 — Focus pass (fix "too much going on")
-
-Nothing is deleted; everything is **sequenced**.
-
-- **First-run funnel**: character select → scripted first battle (existing `RPGCoachMarks`) → first level. No hub, no store, no locker visible.
-- **Progressive unlocks**, surfaced as celebratory "NEW!" moments rather than always-on buttons:
-  - Store + Gear Locker → after level 3
-  - Daily Hub / Season Pass → after first day-2 login
-  - Leaderboards / Ranks → after level 5
-  - Multiplayer / battle-mode selector → after first world clear
-- **HUD diet**: during battle show only HP, ultimate meter, streak, and the current word. Quest chip collapses to a thin edge pip and only expands on progress.
-- **Minigame rotation**: pull from a weighted pool of ~8 per world instead of exposing all 40, so each feels like a set piece rather than a grab bag.
-
----
-
-## Phase 4 — App Store port (after 1–3)
-
-- Verify canvas perf on a real iPad (target 60fps, auto-degrade path tested).
-- Native haptics through Capacitor on every IMPACT beat.
-- Audio session config so effects don't duck background/TTS.
-- Then run the store submission checklist.
-
----
-
-## Technical notes
-
-- Canvas overlay is additive-only and never intercepts input, so existing battle logic, RLS, quests, and reward wiring are untouched.
-- Existing CSS effect components remain as the fallback path when the engine is disabled (reduced-motion / low-end).
-- No database changes in Phases 1–3.
-- `RPGBattleArena.tsx` is already 4,033 lines — the choreography timeline moves attack sequencing *out* of it into `attackChoreography.ts`, which shrinks it rather than growing it.
-
-## What I'd cut if you want it faster
-
-Phase 3 can ship independently and is ~1 pass of work. Phase 1 is the one that actually delivers "breathtaking" — I would not skip it.
+### On App Store porting
+After v8. Shipping the port while bosses are silent and identical means shipping the weakest version of the thing the store screenshots will sell.

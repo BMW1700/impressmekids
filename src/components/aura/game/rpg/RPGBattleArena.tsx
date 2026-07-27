@@ -88,7 +88,7 @@ import { usePlayerPets } from "@/hooks/usePlayerPets";
 import { useEquippedStats } from "@/hooks/useEquippedStats";
 import { generateHighlight } from "@/hooks/useHighlightCards";
 import { RPGHighlightCard, type HighlightPayload } from "./v2/RPGHighlightCard";
-import { isBossType } from "@/lib/rpgBossSpectacle";
+import { isBossType, getBossSpectacle } from "@/lib/rpgBossSpectacle";
 import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
 import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
@@ -110,8 +110,10 @@ import {
 // SPECTACLE ENGINE — canvas particle/beam layer + camera rig. Presentation
 // only: it draws on top of the arena and never touches damage or speech.
 import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
+import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
+import { setSpectacleAudioEnabled } from "@/lib/rpg/spectacleAudio";
 import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
-import { ARENA_ANCHORS, ELEMENT_HUES, playBossTransform, playSuperAttack, playFinalBlow } from "@/lib/rpg/attackChoreography";
+import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
 
@@ -838,6 +840,7 @@ export const RPGBattleArena = ({
   // Haptics ride the same switch so a classroom can silence buzzing too.
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
+    setSpectacleAudioEnabled(soundEnabled);
     setHapticsEnabled(soundEnabled);
   }, [soundEnabled]);
 
@@ -2500,7 +2503,16 @@ export const RPGBattleArena = ({
               break;
           }
         }
-        
+
+        // ANTICIPATION + STRIKE beats. The 300ms swing below owns the impact
+        // frame, so this only adds the wind-up and the travelling projectile —
+        // damage timing and combat math are untouched.
+        playAttack({
+          intensity: intensityForDamage(actualDamage, enemy.maxHp, { isCritical: isElaraBarrage || damageResult.isCritical }),
+          element: attackType === 'slash' ? 'physical' : attackType,
+          impactVisuals: false,
+        });
+
         setTimeout(() => {
           setHeroAttacking(false);
           setEnemyTakingDamage(true);
@@ -2562,6 +2574,12 @@ export const RPGBattleArena = ({
           y: 60 + Math.random() * 10,
           isPlayer: true
         }]);
+
+        // Incoming strike reads as a telegraph, so the block window is fair.
+        playEnemyAttack({
+          intensity: blocked ? 'normal' : 'heavy',
+          impactVisuals: false,
+        });
 
         setTimeout(() => {
           setEnemyAttacking(false);
@@ -2886,7 +2904,8 @@ export const RPGBattleArena = ({
     setBossPhase(1);
     setBossPhaseLabel(null);
     bossPhasesFiredRef.current = new Set();
-  }, [enemy.name, enemy.type]);
+    finalBlowFiredRef.current = false;
+  }, [enemy.name, enemy.type, enemy.id]);
 
   /**
    * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
@@ -2913,54 +2932,63 @@ export const RPGBattleArena = ({
   }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
 
   /**
-   * BOSS PHASE GATES — the Magolor moment.
+   * BOSS PHASE GATES — the Magolor moment, now DATA-DRIVEN.
    *
-   * At 50% the boss TRANSFORMS: the arena desaturates, the sprite scales up
-   * and a new palette takes over. At 15% it goes desperate. These are pure
-   * presentation gates layered on top of the existing HP drain — no damage
-   * math, no victory logic, no reward path is touched.
+   * Thresholds, colours, mechanic names and taunts all come from the boss's
+   * own catalog entry, so no two bosses transform the same way. Each named
+   * mechanic maps to its own choreography shape (barrage / pull / shatter /
+   * nova / lock-on). Pure presentation layered over the existing HP drain —
+   * no damage math, no victory logic, no reward path is touched.
    */
   useEffect(() => {
     if (!isBossType(enemy.type)) return;
     if (enemyHp <= 0) return;
-    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const ratio = enemy.maxHp > 0 ? enemyHp / enemy.maxHp : 1;
+    const spectacle = getBossSpectacle(enemy.id);
 
-    if (pct <= 50 && !bossPhasesFiredRef.current.has(2)) {
-      bossPhasesFiredRef.current.add(2);
-      setBossPhase(2);
-      setBossPhaseLabel(`${enemy.name.toUpperCase()} TRANSFORMS!`);
-      playBossTransform({ element: 'shadow' });
+    spectacle.phases.forEach((ph, i) => {
+      // The catalog can list more than two phases; the arena palette only has
+      // three tiers, so anything past the second gate reads as the final one.
+      const phaseNo = (i === 0 ? 2 : 3) as 2 | 3;
+      if (ratio > ph.hpThreshold) return;
+      if (bossPhasesFiredRef.current.has(phaseNo)) return;
+      bossPhasesFiredRef.current.add(phaseNo);
+
+      const hue = hexToHslTriplet(ph.mechanicColor) ?? ELEMENT_HUES.shadow;
+      setBossPhase(phaseNo);
+      // The banner itself is rendered by <RPGBossSpectacle/>; the arena only
+      // owns the palette shift so the two don't stack on screen.
+      setBossPhaseLabel(null);
+
+      // The transformation stinger, then the boss's own signature set piece.
+      playBossTransform({ hue });
+      playBossMechanic(ph.mechanicName, {
+        hue,
+        onImpact: () => triggerScreenShake(phaseNo >= 3 ? 'ultimate' : 'crit'),
+      });
       cameraBossDrift(1400);
-      triggerScreenShake('ultimate');
-      setTimeout(() => setBossPhaseLabel(null), 2400);
-    }
-
-    if (pct <= 15 && !bossPhasesFiredRef.current.has(3)) {
-      bossPhasesFiredRef.current.add(3);
-      setBossPhase(3);
-      setBossPhaseLabel('FINAL STAND — READ FAST!');
-      playSuperAttack({ element: 'arcane', onImpact: () => triggerScreenShake('crit') });
-      cameraBossDrift(1200);
-      setTimeout(() => setBossPhaseLabel(null), 2600);
-    }
-  }, [enemyHp, enemy.type, enemy.maxHp, enemy.name, triggerScreenShake]);
+      setTimeout(() => setBossPhaseLabel(null), 2800);
+    });
+  }, [enemyHp, enemy.type, enemy.id, enemy.maxHp, enemy.name, triggerScreenShake]);
 
   /**
-   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers.
-   * Fires once when a boss dies, purely over the top of the existing victory
-   * flow (which continues on its own schedule underneath).
+   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers, in the
+   * boss's OWN colour. Fires once when a boss dies, purely over the top of the
+   * existing victory flow (which continues on its own schedule underneath).
    */
   useEffect(() => {
     if (phase !== 'victory') return;
     if (!isBossType(enemy.type)) return;
     if (finalBlowFiredRef.current) return;
     finalBlowFiredRef.current = true;
+    const spectacle = getBossSpectacle(enemy.id);
     const cancel = playFinalBlow({
-      element: 'holy',
+      hue: hexToHslTriplet(spectacle.entranceColor) ?? ELEMENT_HUES.holy,
       onFreeze: () => triggerScreenShake('ultimate'),
     });
     return cancel;
-  }, [phase, enemy.type, triggerScreenShake]);
+  }, [phase, enemy.type, enemy.id, triggerScreenShake]);
+
 
 
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
@@ -3162,6 +3190,8 @@ export const RPGBattleArena = ({
           Sits above the arena art, below the reading UI, and never takes
           pointer events. Disables itself under reduced motion. */}
       <RPGSpectacleCanvas zIndex={57} />
+      {/* Boss entrance title card + per-phase mechanic banner (boss enemies only). */}
+      <RPGBossSpectacle enemy={enemy as any} currentHp={enemyHp} maxHp={enemy.maxHp} />
 
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
 
