@@ -772,8 +772,17 @@ export const RPGBattleArena = ({
 
   useEffect(() => {
     if (!playerInventory.isLoading) {
-      setInventory(battleInventory);
+      // Only commit when the contents actually changed — writing a new object
+      // identity every render would re-render forever.
+      setInventory(prev => {
+        const prevKeys = Object.keys(prev);
+        const nextKeys = Object.keys(battleInventory);
+        const same = prevKeys.length === nextKeys.length &&
+          nextKeys.every(k => prev[k] === battleInventory[k]);
+        return same ? prev : battleInventory;
+      });
     }
+
   }, [battleInventory, playerInventory.isLoading]);
 
   const knownWordsRef = useRef<Record<string, number>>({});
