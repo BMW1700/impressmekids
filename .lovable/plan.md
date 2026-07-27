@@ -1,46 +1,38 @@
-## Honest read
+## What I verified (and what I did not)
 
-The impact layer that was missing last round is now in and verified in the code: damage-scaled shake/hit-stop/flash routes through one `triggerScreenShake` choke point, haptics fire per intensity, boss breaks fire at 66%/33% with a free-hit window, streak heat glows the arena and steps the sound pitch, and the Ultimate meter charges from reading and blasts with its own profile.
+Verified:
+- `bunx tsgo --noEmit` is clean — both crashes are **runtime-only**, not type/build errors.
+- RPG: `RPGCharacterSelect` is rendered *inside* `RPGBattleArena.tsx:2806`. So "nothing after Choose Your Hero" means the throw happens when the arena falls through to its main battle JSX after `handleCharacterSelect` (`RPGBattleArena.tsx:884-901`). All `rpgGameFeel` imports resolve, and `getCharacterData` always returns a non-null fallback — so the usual suspects are ruled out.
+- Pre-K: World 6 ("Learn About Different Foods With Benny") is a **CMS/database-only** world, not in the hardcoded `campaignWorlds`. The "4/1 Levels" card is real: `AuraPractice.tsx:809-841` computes `levelsCompleted` from historical star/completion rows while `totalLevels` comes from `meta.level_count` (currently-published levels only). They are never reconciled.
+- On entering that level, `YubiEpisodeWrapper.tsx:48-81` tries the DB level, then `hasVideoLevel()` from the hardcoded video data (World 6 isn't there), then falls through to legacy `YubiAdventure` — which has no data for a CMS-only world. That fall-through path is the most likely source of the black screen.
 
-So the "does a hit feel like a hit" problem is solved. What is still verifiably thin:
-
-1. **The attack animation is not an animation.** In `RPGCharacterSprite.tsx` the entire attack is one spring translate of ±30px (`x: isAttacking ? -30 : ...`). There is no wind-back, no fast strike, no smear, no recoil on the target. This is the single biggest remaining gap versus "amazing attack animations."
-2. **Crits share the normal visual language.** `isCritical` only picks a bigger shake profile and a different sound. The floating number, colour, and screen treatment are the same as a 4-damage poke.
-3. **Streaks have no tension.** Heat tiers exist, but nothing decays — the child never *sees* the streak at risk, so reading fast has no felt urgency.
-4. **Enemy attacks are not dangerous-feeling.** Incoming damage is a scale-to-0.95 blip; there is no telegraph, so there is nothing for the child to react to between words.
+**Not verified:** the exact throwing line in the RPG battle mount. I could not sign in from the sandbox, so I refuse to name a root cause I haven't seen. Step 1 below exists to get it.
 
 ## The plan
 
-### 1. Attack animation arc (the main event)
-Rebuild the attack beat in `RPGCharacterSprite.tsx` as a real four-part arc driven by an attack nonce so back-to-back attacks re-fire cleanly:
-- **Anticipation** ~120ms: wind back away from the target, slight squash, weapon/aura charges.
-- **Strike** ~80ms: fast lunge past the contact point with a motion-trail smear (stacked, blurred, fading ghost copies of the sprite) and a slight forward lean.
-- **Contact**: particle burst at the contact point, synced to the existing hit-stop window.
-- **Recoil**: the struck sprite kicks back, flashes white for one frame, and settles.
+### Step 1 — Make the crash tell us what it is (diagnostic, ships anyway)
+- In `ErrorBoundary`, surface the underlying `error.message` + component stack in preview/dev builds (collapsed "Technical details" block, hidden in production). Right now the fallback throws away the only useful information.
+- Add a `console.error` with the full error object at the boundary so it lands in the console logs I can read next turn.
 
-Enemy attacks get the same arc so incoming damage reads as a real swing, not a nudge.
+### Step 2 — Fix the RPG battle-mount crash
+With the message in hand, fix the actual throw. Based on what's still unexamined, the prime candidates are the hero sprite branches in `RPGCharacter.tsx` (~287-830, skin-variant/alpha-webm lookups), `RPGCoachMarks`, `RPGGearLocker`/`RPGDailyHubPanel` mounting hooks (`useSeasonPass`, `useActiveSeason`, `useDailyQuests`) before their data resolves. Whatever it is, the fix is applied at the source, plus:
+- Defensive guards on every `.find()`/row-shape access in the post-selection render path so a single bad row can never blank the whole battle.
+- A local error boundary around the battle arena so a future presentation-layer throw degrades to a retryable panel instead of nuking the app.
 
-### 2. Crit gets its own language
-- Damage number arrives large, rotated, gold-on-black with a scale-punch instead of drifting up.
-- Radial impact lines burst from the contact point.
-- Brief desaturation of everything except the crit number during the crit hit-stop.
-- Reuse the existing crit shake profile and `critHit()` sound — no new audio work.
+### Step 3 — Fix Pre-K CMS worlds rendering black
+- `PreKEpisodeRouter`: when the DB level build returns `null` **and** there is no hardcoded video level, stop falling through to legacy `YubiAdventure`. Render an explicit "This adventure isn't ready yet" card with a Back button instead of nothing.
+- Log which required video URL was missing so the CMS side is diagnosable.
+- Make the world card refuse to open a world with zero playable published levels (locked state) rather than routing into a dead end.
 
-### 3. Streak decay meter
-A thin, visibly draining bar under the streak chip between words. It refills on each correct word and drains over the word window; if it empties the streak drops a tier (not to zero — dropping to zero punishes struggling readers). Purely presentational on top of the existing streak counter; no change to damage math or quest credit.
+### Step 4 — Fix the "4/1 Levels" count
+- Clamp `levelsCompleted` to `totalLevels` in `AuraPractice.tsx:809-841` so completions against unpublished/deleted levels can never exceed the published count. Presentation-only clamp; no data is deleted.
 
-### 4. Enemy telegraph + block beat
-Before an enemy attack lands, the enemy sprite winds up with a red telegraph flash for a short window. Reading the current word correctly during that window blocks the hit (reduced damage, block spark, distinct haptic). This is the one genuinely new mechanic — it converts reading speed into moment-to-moment defence, which is the missing "I have to react right now" element.
+### Step 5 — Re-verify
+- Walk the real signed-in flow: world map → level → hero select → first battle, and Pre-K World 6, capturing console output. I only report these fixed after I see clean runs, not after the code compiles.
+
+## Then, the game-feel plan
+Once both crashes are closed, I ship the previously approved pass unchanged: in-battle combat coach-marks (Ultimate meter, streak decay bar, block window), a one-time "BLOCKED!" teaching moment, and the scripted unloseable first battle.
 
 ## Guardrails
-
-- Everything stays in the presentation layer: `RPGCharacterSprite.tsx`, `RPGBattleArena.tsx` render/effects, `RPGSpellEffects.tsx`. Damage math, quest credit, and the speech pipeline are untouched — except the block beat, which only applies a damage multiplier at the existing enemy-attack site.
-- Every new effect honours `prefers-reduced-motion` via the existing `rpgGameFeel` profile reducer: smears and desaturation are dropped, timing beats are kept.
-- Hit-stop stays a visual flag only; it must never gate the recognizer.
-- No new mini-games, bosses, worlds, or cosmetics.
-
-## Technical notes
-
-- The arc uses framer-motion keyframe arrays with per-segment `times`, keyed on an attack nonce so a new attack interrupts the old one instead of queueing.
-- Smear ghosts are 3 absolutely-positioned copies at decreasing opacity and increasing blur, rendered only during the strike segment and only when reduced motion is off.
-- The decay meter is a ref-driven `requestAnimationFrame` value written to a CSS custom property, so it never re-renders the arena per frame (consistent with the ref-based counter rule already used in the speech components).
+- Steps 2-4 stay in the presentation/routing layer. No damage math, quest credit, speech pipeline, or database schema changes.
+- The `4/1` clamp is display-only — no progress rows are modified or deleted.

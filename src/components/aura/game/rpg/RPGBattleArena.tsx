@@ -168,7 +168,12 @@ export const RPGBattleArena = ({
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
   // STORE INVENTORY: Read real purchased items from database
   const playerInventory = usePlayerInventory(studentId, gradeMode);
-  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
+  // Always-current handle to the inventory API. Used inside callbacks so that
+  // react-query's per-render mutation objects never destabilize dependencies.
+  const inventoryApiRef = useRef(playerInventory);
+  inventoryApiRef.current = playerInventory;
+  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory.getActiveUpgrades]);
+
   // EQUIPPED PET — drives passive bonuses + charge attack
   const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
   // EQUIPPED LOOT — RPG v2 Phase 1: adds HP + attack % + mp_regen
@@ -201,7 +206,9 @@ export const RPGBattleArena = ({
   const [enemyQueue] = useState<EnemyType[]>(() => buildEnemyQueue(enemyType));
   const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
   const currentEnemyType = enemyQueue[currentEnemyIndex];
-  const enemy = (() => {
+  // Memoized: `enemy` is used in many effect dependency arrays. A fresh object
+  // per render would retrigger those effects forever.
+  const enemy = useMemo(() => {
     const theme = getStoredTheme();
     if (theme === 'agent') {
       if (currentEnemyType === 'boss' || currentEnemyType === 'final_boss') {
@@ -210,7 +217,8 @@ export const RPGBattleArena = ({
       return getAgentEnemy(currentEnemyType);
     }
     return getEnemyForBattle(currentEnemyType);
-  })();
+  }, [currentEnemyType, worldNumber]);
+
   const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
   
   // Battle state
@@ -476,7 +484,7 @@ export const RPGBattleArena = ({
       inv['magic_potion'] = 1;
     }
     return inv;
-  }, [playerInventory]);
+  }, [playerInventory.getItemQuantity]);
 
   // PURCHASED POWERS: Convert store power items in inventory to Spell objects
   const purchasedPowerSpells: Spell[] = useMemo(() => {
@@ -585,11 +593,11 @@ export const RPGBattleArena = ({
       const next = Math.max(0, prev - final);
       // Revive: if hit would kill and feather is available, restore instead of dying.
       if (next === 0 && !reviveAvailableRef.current) {
-        const reviveQty = playerInventory.getItemQuantity('revive_feather');
+        const reviveQty = inventoryApiRef.current.getItemQuantity('revive_feather');
         if (reviveQty > 0) {
           reviveAvailableRef.current = true;
           setReviveAvailable(true);
-          playerInventory.usePotion.mutate('revive_feather');
+          inventoryApiRef.current.usePotion.mutate('revive_feather');
           const restored = Math.max(1, Math.floor(maxHpWithBoost * 0.5));
           // Synchronously return restored HP so the defeat useEffect never sees 0
           return restored;
@@ -597,7 +605,8 @@ export const RPGBattleArena = ({
       }
       return next;
     });
-  }, [activeUpgrades.defense_boost, petDefenseBonusPct, shieldHits, playerInventory, maxHpWithBoost]);
+  }, [activeUpgrades.defense_boost, petDefenseBonusPct, shieldHits, maxHpWithBoost]);
+
 
   
   // Word reading state
@@ -763,8 +772,17 @@ export const RPGBattleArena = ({
 
   useEffect(() => {
     if (!playerInventory.isLoading) {
-      setInventory(battleInventory);
+      // Only commit when the contents actually changed — writing a new object
+      // identity every render would re-render forever.
+      setInventory(prev => {
+        const prevKeys = Object.keys(prev);
+        const nextKeys = Object.keys(battleInventory);
+        const same = prevKeys.length === nextKeys.length &&
+          nextKeys.every(k => prev[k] === battleInventory[k]);
+        return same ? prev : battleInventory;
+      });
     }
+
   }, [battleInventory, playerInventory.isLoading]);
 
   const knownWordsRef = useRef<Record<string, number>>({});
@@ -1995,7 +2013,7 @@ export const RPGBattleArena = ({
     setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
     
     // Deduct from database via usePlayerInventory hook
-    playerInventory.usePotion.mutate(itemKey);
+    inventoryApiRef.current.usePotion.mutate(itemKey);
     
     const maxHp = maxHpWithBoost;
     const maxMp = 50 + (activeUpgrades.mp_boost || 0);
@@ -2041,7 +2059,7 @@ export const RPGBattleArena = ({
       default:
         break;
     }
-  }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
+  }, [inventory, maxHpWithBoost, activeUpgrades.mp_boost]);
 
 
   // Enemy turn logic - with failsafe to prevent stuck state
@@ -2800,6 +2818,73 @@ export const RPGBattleArena = ({
     }
   }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy, enemy, correctWords, wordsRead, triggerVictory, triggerDefeat, setPhaseSafe]);
 
+  // NOTE: these effects must stay ABOVE the early returns below — React
+  // requires a stable hook order across renders.
+  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
+  useEffect(() => {
+    bossBreaksFiredRef.current = new Set();
+    freeHitRef.current = false;
+    setBossBreakLabel(null);
+  }, [enemy.name, enemy.type]);
+
+  /**
+   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
+   * hit-stop, stagger, and a free-hit window where the next correct word hits
+   * for double. Turns a flat HP drain into two memorable spikes.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const thresholds = [66, 33];
+    for (const t of thresholds) {
+      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
+        bossBreaksFiredRef.current.add(t);
+        freeHitRef.current = true;
+        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
+        triggerScreenShake('break');
+        setEnemyTakingDamage(true);
+        setTimeout(() => setEnemyTakingDamage(false), 700);
+        setTimeout(() => setBossBreakLabel(null), 2200);
+        break;
+      }
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
+  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (highlightFiredRef.current) return;
+    if (!isBossType(enemy.type)) return;
+    highlightFiredRef.current = true;
+    const capturedName = enemy.name;
+    const capturedWorld = worldNumber;
+    const capturedDamage = totalDamage;
+    const capturedTurns = wordsRead;
+    const capturedStreak = longestStreak;
+    const capturedCorrect = correctWords;
+    void generateHighlight({
+      enemyId: `w${capturedWorld}-${enemy.type}`,
+      enemyName: capturedName,
+      worldNumber: capturedWorld,
+      damageDealt: capturedDamage,
+      turnsTaken: capturedTurns,
+      perfectBlocks: 0,
+      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
+    }).then((res) => {
+      setHighlightPayload({
+        enemyName: capturedName,
+        worldNumber: capturedWorld,
+        damageDealt: capturedDamage,
+        turnsTaken: capturedTurns,
+        perfectBlocks: 0,
+        shareableSlug: res?.slug ?? null,
+      });
+      setTimeout(() => setHighlightOpen(true), 2000);
+    });
+  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
+
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
     return (
@@ -2917,70 +3002,6 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
-  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
-  useEffect(() => {
-    bossBreaksFiredRef.current = new Set();
-    freeHitRef.current = false;
-    setBossBreakLabel(null);
-  }, [enemy.name, enemy.type]);
-
-  /**
-   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
-   * hit-stop, stagger, and a free-hit window where the next correct word hits
-   * for double. Turns a flat HP drain into two memorable spikes.
-   */
-  useEffect(() => {
-    if (!isBossType(enemy.type)) return;
-    if (enemyHp <= 0) return;
-    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
-    const thresholds = [66, 33];
-    for (const t of thresholds) {
-      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
-        bossBreaksFiredRef.current.add(t);
-        freeHitRef.current = true;
-        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
-        triggerScreenShake('break');
-        setEnemyTakingDamage(true);
-        setTimeout(() => setEnemyTakingDamage(false), 700);
-        setTimeout(() => setBossBreakLabel(null), 2200);
-        break;
-      }
-    }
-  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
-
-  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
-
-  useEffect(() => {
-    if (phase !== 'victory') return;
-    if (highlightFiredRef.current) return;
-    if (!isBossType(enemy.type)) return;
-    highlightFiredRef.current = true;
-    const capturedName = enemy.name;
-    const capturedWorld = worldNumber;
-    const capturedDamage = totalDamage;
-    const capturedTurns = wordsRead;
-    const capturedStreak = longestStreak;
-    const capturedCorrect = correctWords;
-    void generateHighlight({
-      enemyId: `w${capturedWorld}-${enemy.type}`,
-      enemyName: capturedName,
-      worldNumber: capturedWorld,
-      damageDealt: capturedDamage,
-      turnsTaken: capturedTurns,
-      perfectBlocks: 0,
-      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
-    }).then((res) => {
-      setHighlightPayload({
-        enemyName: capturedName,
-        worldNumber: capturedWorld,
-        damageDealt: capturedDamage,
-        turnsTaken: capturedTurns,
-        perfectBlocks: 0,
-        shareableSlug: res?.slug ?? null,
-      });
-      setTimeout(() => setHighlightOpen(true), 2000);
-    });
-  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
   // GAME FEEL: the live impact profile drives shake amplitude, rotation and
   // camera punch. `impactNonce` re-keys the animation so back-to-back hits

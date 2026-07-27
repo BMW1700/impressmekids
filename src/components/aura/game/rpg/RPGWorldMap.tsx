@@ -291,7 +291,9 @@ export const RPGWorldMap = ({
           levels,
         };
       });
-      setPublishedPrekWorlds(built);
+      // A world with zero published levels is a dead end (blank level screen),
+      // so it never gets a card on the map.
+      setPublishedPrekWorlds(built.filter((w) => w.levels.length > 0));
     })();
     return () => { cancelled = true; };
   }, []);

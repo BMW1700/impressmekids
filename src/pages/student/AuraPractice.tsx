@@ -814,9 +814,15 @@ const AuraPractice = () => {
         // Prefer the higher of (per-level completions) vs (legacy world_progress
         // titles) so kids who completed levels before the migration still see
         // their progress.
-        const levelsCompleted = Math.max(totals.levelsCompleted, storiesFromLegacy.length);
-        const starsEarned = Math.max(totals.starsEarned, storiesFromLegacy.length * 2);
-        const totalLevels = meta.level_count || Math.max(1, levelsCompleted);
+        // Clamp to the number of CURRENTLY published levels — historical
+        // completions of since-unpublished levels must never render as "4/1".
+        const totalLevels = meta.level_count || 0;
+        const rawCompleted = Math.max(totals.levelsCompleted, storiesFromLegacy.length);
+        const levelsCompleted = totalLevels > 0 ? Math.min(rawCompleted, totalLevels) : 0;
+        const starsEarned = Math.min(
+          Math.max(totals.starsEarned, storiesFromLegacy.length * 2),
+          Math.max(0, levelsCompleted * 3)
+        );
 
         if (existingIds.has(meta.world_number)) {
           // Overwrite the (usually empty) hardcoded entry with the DB numbers.
