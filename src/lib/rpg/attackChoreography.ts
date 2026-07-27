@@ -227,16 +227,23 @@ export function playSuperAttack(
 /**
  * Boss transformation at a phase gate. Pairs with the arena's palette shift.
  */
-export function playBossTransform(opts: { origin?: Point; element?: string } = {}): () => void {
+export function playBossTransform(
+  opts: { origin?: Point; element?: string; hue?: string } = {}
+): () => void {
   const { origin = ARENA_ANCHORS.enemy, element = 'shadow' } = opts;
-  const hue = ELEMENT_HUES[element] ?? ELEMENT_HUES.shadow;
+  const hue = opts.hue ?? ELEMENT_HUES[element] ?? ELEMENT_HUES.shadow;
   const timers: ReturnType<typeof setTimeout>[] = [];
   const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
-  if (!isSpectacleEnabled()) return () => {};
+
+  // Audio fires even when visuals are suppressed (reduced motion still wants
+  // to know the boss just changed).
+  sfxBossTransform();
+  if (!isSpectacleEnabled()) return () => timers.forEach(clearTimeout);
 
   emitSpectacle({ type: 'bloomOrb', x: origin.x, y: origin.y, power: 1, hue, durationMs: 900 });
   at(300, () => emitSpectacle({ type: 'shockwave', x: origin.x, y: origin.y, power: 0.8, hue }));
   at(600, () => emitSpectacle({ type: 'shockwave', x: origin.x, y: origin.y, power: 1, hue }));
+
   at(900, () => {
     emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%' });
     emitSpectacle({ type: 'burst', x: origin.x, y: origin.y, power: 1, hue });
