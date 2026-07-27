@@ -588,11 +588,11 @@ export const RPGBattleArena = ({
       const next = Math.max(0, prev - final);
       // Revive: if hit would kill and feather is available, restore instead of dying.
       if (next === 0 && !reviveAvailableRef.current) {
-        const reviveQty = playerInventory.getItemQuantity('revive_feather');
+        const reviveQty = inventoryApiRef.current.getItemQuantity('revive_feather');
         if (reviveQty > 0) {
           reviveAvailableRef.current = true;
           setReviveAvailable(true);
-          playerInventory.usePotion.mutate('revive_feather');
+          inventoryApiRef.current.usePotion.mutate('revive_feather');
           const restored = Math.max(1, Math.floor(maxHpWithBoost * 0.5));
           // Synchronously return restored HP so the defeat useEffect never sees 0
           return restored;
@@ -600,7 +600,8 @@ export const RPGBattleArena = ({
       }
       return next;
     });
-  }, [activeUpgrades.defense_boost, petDefenseBonusPct, shieldHits, playerInventory, maxHpWithBoost]);
+  }, [activeUpgrades.defense_boost, petDefenseBonusPct, shieldHits, maxHpWithBoost]);
+
 
   
   // Word reading state
