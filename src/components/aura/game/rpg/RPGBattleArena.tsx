@@ -113,7 +113,7 @@ import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
 import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
 import { setSpectacleAudioEnabled } from "@/lib/rpg/spectacleAudio";
 import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
-import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playSuperAttack, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
+import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
 
