@@ -83,16 +83,37 @@ export function subscribeSpectacle(fn: Listener): () => void {
 /* Global enable / quality                                             */
 /* ------------------------------------------------------------------ */
 
-let spectacleEnabled = true;
+export const SPECTACLE_PREF_KEY = 'yubi.rpg.spectacle.enabled.v1';
 
-/** Wired to the same settings surface as sound + haptics. */
+function readStoredPref(): boolean {
+  try {
+    return localStorage.getItem(SPECTACLE_PREF_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+let spectacleEnabled = typeof window === 'undefined' ? true : readStoredPref();
+
+/** Wired to the same settings surface as sound + haptics. Persisted per device. */
 export function setSpectacleEnabled(enabled: boolean) {
   spectacleEnabled = enabled;
+  try {
+    localStorage.setItem(SPECTACLE_PREF_KEY, enabled ? '1' : '0');
+  } catch {
+    /* private mode — session-only preference is fine */
+  }
+}
+
+/** The raw user preference, ignoring the OS reduced-motion override. */
+export function getSpectaclePreference() {
+  return spectacleEnabled;
 }
 
 export function isSpectacleEnabled() {
   return spectacleEnabled && !prefersReducedMotion();
 }
+
 
 export type SpectacleQuality = 'high' | 'medium' | 'low';
 

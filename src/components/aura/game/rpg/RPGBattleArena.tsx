@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getIPAPronunciation } from "@/lib/cmuDictWrapper";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX, Snowflake, Zap, Sword, Flower2, Heart, Wind as WindIcon, Binary, Shield as ShieldIcon, Bomb, Target } from "lucide-react";
+import { ArrowLeft, Flame, Trophy, Skull, Star, AlertTriangle, Coins, Volume2, VolumeX, Snowflake, Zap, Sword, Flower2, Heart, Wind as WindIcon, Binary, Shield as ShieldIcon, Bomb, Target, Sparkles, Ban as SparklesIconOff } from "lucide-react";
 import { RPGBattleBackground } from "./RPGBattleBackground";
 import { RPGCharacter } from "./RPGCharacter";
 import { RPGDialogueBox } from "./RPGDialogueBox";
@@ -112,10 +112,37 @@ import {
 import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
 import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
 import { setSpectacleAudioEnabled } from "@/lib/rpg/spectacleAudio";
-import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
+import { emitSpectacle, setSpectacleEnabled, getSpectaclePreference } from "@/lib/rpg/spectacleEngine";
 import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
+import { RPGCombatCoachMarks, hasSeenCombatCoach } from "./v2/RPGCombatCoachMarks";
+
+/* ------------------------------------------------------------------ */
+/* Block-training counter                                              */
+/* ------------------------------------------------------------------ */
+// The loud "READ FAST TO BLOCK!" prompt is training wheels. Once a child has
+// actually blocked a few times, it retires to the subtle red flash so the
+// arena stops shouting instructions they already know.
+const BLOCK_TRAINING_KEY = 'yubi.rpg.blocks.landed.v1';
+const BLOCK_TRAINING_TARGET = 3;
+
+function blockSuccessCount(): number {
+  try {
+    return Number(localStorage.getItem(BLOCK_TRAINING_KEY) ?? 0) || 0;
+  } catch {
+    return BLOCK_TRAINING_TARGET;
+  }
+}
+
+function bumpBlockSuccess() {
+  try {
+    localStorage.setItem(BLOCK_TRAINING_KEY, String(blockSuccessCount() + 1));
+  } catch {
+    /* private mode — prompt simply keeps showing */
+  }
+}
+
 
 
 
@@ -712,6 +739,25 @@ export const RPGBattleArena = ({
   const blockWindowRef = useRef(false);
   const blockedRef = useRef(false);
   const [showBlockSpark, setShowBlockSpark] = useState(false);
+  // Training wheels: loud block prompt until the child has landed a few blocks.
+  const [blockTraining] = useState(() => blockSuccessCount() < BLOCK_TRAINING_TARGET);
+
+  // First-battle combat tour (read → block → ultimate).
+  const [combatCoachOpen, setCombatCoachOpen] = useState(false);
+  useEffect(() => {
+    if (!hasSeenCombatCoach()) setCombatCoachOpen(true);
+  }, []);
+
+  // "ULTIMATE READY" callout — one per battle, so the meter is impossible to miss.
+  const [showUltReadyBanner, setShowUltReadyBanner] = useState(false);
+
+  // Extra-effects preference (persisted; also honours OS reduced-motion).
+  const [effectsEnabled, setEffectsEnabled] = useState(() => getSpectaclePreference());
+  useEffect(() => {
+    setSpectacleEnabled(effectsEnabled);
+  }, [effectsEnabled]);
+
+
 
   // Never leave a wind-up hanging once the fight is over.
   useEffect(() => {
@@ -2318,10 +2364,13 @@ export const RPGBattleArena = ({
         blockedRef.current = true;
         blockWindowRef.current = false;
         setShowBlockSpark(true);
+        // Once a child has proved they can block, the loud prompt retires.
+        bumpBlockSuccess();
         haptic('success');
         battleSounds.streakTierCue(1320);
         setTimeout(() => setShowBlockSpark(false), 600);
       }
+
 
 
       const tier = streakTier(newStreak);
@@ -2342,7 +2391,10 @@ export const RPGBattleArena = ({
           ultReadyAnnouncedRef.current = true;
           battleSounds.ultimateReady();
           haptic('success');
+          setShowUltReadyBanner(true);
+          setTimeout(() => setShowUltReadyBanner(false), 2200);
         }
+
       }
 
       correctWordsRef.current += 1;
@@ -3285,6 +3337,44 @@ export const RPGBattleArena = ({
         )}
       </AnimatePresence>
 
+      {/* Block prompt — training wheels until the child has landed a few blocks. */}
+      <AnimatePresence>
+        {enemyTelegraph && blockTraining && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-[22%] z-[58] flex justify-center px-4"
+            initial={{ opacity: 0, y: -12, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: [1, 1.06, 1] }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ scale: { repeat: Infinity, duration: 0.45 } }}
+          >
+            <span className="rounded-xl border-2 border-destructive bg-destructive/90 px-6 py-3 text-center text-xl font-black uppercase tracking-wider text-destructive-foreground shadow-2xl md:text-2xl">
+              Read fast to block!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Ultimate ready callout — one per battle. */}
+      <AnimatePresence>
+        {showUltReadyBanner && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-[34%] z-[58] flex justify-center px-4"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.2 }}
+          >
+            <span className="rounded-xl border-2 border-primary bg-primary/90 px-6 py-3 text-center text-xl font-black uppercase tracking-wider text-primary-foreground shadow-2xl md:text-2xl">
+              Ultimate ready — tap it!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* First-battle combat tour. */}
+      <RPGCombatCoachMarks open={combatCoachOpen} onClose={() => setCombatCoachOpen(false)} />
+
+
+
       {/* Block spark — the payoff for reading inside the wind-up. */}
       <AnimatePresence>
         {showBlockSpark && (
@@ -3780,8 +3870,25 @@ export const RPGBattleArena = ({
               </div>
             )}
 
+            {/* Extra Effects Toggle — accessibility/photosensitivity switch. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEffectsEnabled((v) => !v)}
+              aria-pressed={effectsEnabled}
+              aria-label={effectsEnabled ? 'Turn extra effects off' : 'Turn extra effects on'}
+              title={effectsEnabled ? 'Extra effects: on' : 'Extra effects: off'}
+              className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+            >
+              {effectsEnabled ? (
+                <Sparkles className="h-4 w-4" />
+              ) : (
+                <SparklesIconOff className="h-4 w-4" />
+              )}
+            </Button>
 
             {/* Sound Toggle */}
+
             <Button
               variant="ghost"
               size="sm"
