@@ -739,6 +739,25 @@ export const RPGBattleArena = ({
   const blockWindowRef = useRef(false);
   const blockedRef = useRef(false);
   const [showBlockSpark, setShowBlockSpark] = useState(false);
+  // Training wheels: loud block prompt until the child has landed a few blocks.
+  const [blockTraining] = useState(() => blockSuccessCount() < BLOCK_TRAINING_TARGET);
+
+  // First-battle combat tour (read → block → ultimate).
+  const [combatCoachOpen, setCombatCoachOpen] = useState(false);
+  useEffect(() => {
+    if (!hasSeenCombatCoach()) setCombatCoachOpen(true);
+  }, []);
+
+  // "ULTIMATE READY" callout — one per battle, so the meter is impossible to miss.
+  const [showUltReadyBanner, setShowUltReadyBanner] = useState(false);
+
+  // Extra-effects preference (persisted; also honours OS reduced-motion).
+  const [effectsEnabled, setEffectsEnabled] = useState(() => getSpectaclePreference());
+  useEffect(() => {
+    setSpectacleEnabled(effectsEnabled);
+  }, [effectsEnabled]);
+
+
 
   // Never leave a wind-up hanging once the fight is over.
   useEffect(() => {
