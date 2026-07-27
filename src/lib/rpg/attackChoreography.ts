@@ -17,7 +17,16 @@
  */
 
 import { emitSpectacle, isSpectacleEnabled } from '@/lib/rpg/spectacleEngine';
+import {
+  sfxCharge,
+  sfxStrike,
+  sfxImpact,
+  sfxBossTransform,
+  sfxSuperAttack,
+  sfxFinalBlow,
+} from '@/lib/rpg/spectacleAudio';
 import type { ImpactIntensity } from '@/lib/rpgGameFeel';
+
 
 export interface Point {
   /** Normalised 0..1 within the arena box. */
