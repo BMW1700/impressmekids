@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { prefersReducedMotion } from "@/lib/rpgGameFeel";
 
 type CharacterType = 'knight' | 'wizard' | 'goblin' | 'boss' | 'sorcerer' | 'dragon' | 'ice_golem' | 'shadow_wraith' | 'stone_guardian' | 'agent_x' | 'cipher' | 'shadow_agent' | 'wiggleworm' | 'bouncer' | 'echo_blob';
 
