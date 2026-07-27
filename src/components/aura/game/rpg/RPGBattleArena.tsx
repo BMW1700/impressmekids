@@ -3527,21 +3527,34 @@ export const RPGBattleArena = ({
           <div className="flex items-center gap-4 text-white/80">
             <span className="text-sm font-medium truncate max-w-[200px]">{story.title}</span>
             {streak > 0 && (
-              <motion.div
-                className="flex items-center gap-1"
-                animate={{ scale: heat.tier > 0 ? [1, 1.14, 1] : [1, 1.06, 1] }}
-                transition={{ repeat: Infinity, duration: heat.tier > 1 ? 0.34 : 0.5 }}
-                style={{ color: heat.tier > 0 ? heat.glow : undefined, textShadow: heat.tier > 1 ? `0 0 12px ${heat.glow}` : undefined }}
-              >
-                <Flame className="h-4 w-4" />
-                <span className="font-bold">x{streak}</span>
-                {heat.label && (
-                  <span className="hidden sm:inline text-[10px] font-black tracking-widest uppercase ml-1">
-                    {heat.label}
-                  </span>
-                )}
-              </motion.div>
+              <div className="flex flex-col items-center gap-1">
+                <motion.div
+                  className="flex items-center gap-1"
+                  animate={{ scale: heat.tier > 0 ? [1, 1.14, 1] : [1, 1.06, 1] }}
+                  transition={{ repeat: Infinity, duration: heat.tier > 1 ? 0.34 : 0.5 }}
+                  style={{ color: heat.tier > 0 ? heat.glow : undefined, textShadow: heat.tier > 1 ? `0 0 12px ${heat.glow}` : undefined }}
+                >
+                  <Flame className="h-4 w-4" />
+                  <span className="font-bold">x{streak}</span>
+                  {heat.label && (
+                    <span className="hidden sm:inline text-[10px] font-black tracking-widest uppercase ml-1">
+                      {heat.label}
+                    </span>
+                  )}
+                </motion.div>
+                {/* Streak decay meter — the streak is visibly at risk. */}
+                <div ref={decayBarRef} className="h-1 w-20 overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-full transition-[background-color] duration-300"
+                    style={{
+                      width: 'var(--streak-decay, 100%)',
+                      backgroundColor: heat.tier > 0 ? heat.glow : 'hsl(var(--primary))',
+                    }}
+                  />
+                </div>
+              </div>
             )}
+
 
             {/* Sound Toggle */}
             <Button
