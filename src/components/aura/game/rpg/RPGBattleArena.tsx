@@ -3870,8 +3870,25 @@ export const RPGBattleArena = ({
               </div>
             )}
 
+            {/* Extra Effects Toggle — accessibility/photosensitivity switch. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setEffectsEnabled((v) => !v)}
+              aria-pressed={effectsEnabled}
+              aria-label={effectsEnabled ? 'Turn extra effects off' : 'Turn extra effects on'}
+              title={effectsEnabled ? 'Extra effects: on' : 'Extra effects: off'}
+              className="text-white/70 hover:text-white hover:bg-white/10 p-2"
+            >
+              {effectsEnabled ? (
+                <Sparkles className="h-4 w-4" />
+              ) : (
+                <SparklesIconOff className="h-4 w-4" />
+              )}
+            </Button>
 
             {/* Sound Toggle */}
+
             <Button
               variant="ghost"
               size="sm"
