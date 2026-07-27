@@ -40,6 +40,10 @@ export const RPGPlayerHUD = ({
   const { ownedItems, purchaseItem, equipSkin, getEquippedSkin } = usePlayerInventory(studentId, gradeMode);
 
   const achievementStats = getTotalStats();
+  const { unlocked, justUnlocked, markUnlockSeen } = useRPGUnlocks();
+  const storeUnlocked = unlocked('store');
+  const storeJustUnlocked = justUnlocked('store');
+
   const theme = getStoredTheme();
   const isAgent = theme === 'agent';
 
