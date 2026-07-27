@@ -2913,54 +2913,59 @@ export const RPGBattleArena = ({
   }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
 
   /**
-   * BOSS PHASE GATES — the Magolor moment.
+   * BOSS PHASE GATES — the Magolor moment, now DATA-DRIVEN.
    *
-   * At 50% the boss TRANSFORMS: the arena desaturates, the sprite scales up
-   * and a new palette takes over. At 15% it goes desperate. These are pure
-   * presentation gates layered on top of the existing HP drain — no damage
-   * math, no victory logic, no reward path is touched.
+   * Thresholds, colours, mechanic names and taunts all come from the boss's
+   * own catalog entry, so no two bosses transform the same way. Each named
+   * mechanic maps to its own choreography shape (barrage / pull / shatter /
+   * nova / lock-on). Pure presentation layered over the existing HP drain —
+   * no damage math, no victory logic, no reward path is touched.
    */
   useEffect(() => {
     if (!isBossType(enemy.type)) return;
     if (enemyHp <= 0) return;
-    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const ratio = enemy.maxHp > 0 ? enemyHp / enemy.maxHp : 1;
+    const spectacle = getBossSpectacle(enemy.type);
 
-    if (pct <= 50 && !bossPhasesFiredRef.current.has(2)) {
-      bossPhasesFiredRef.current.add(2);
-      setBossPhase(2);
-      setBossPhaseLabel(`${enemy.name.toUpperCase()} TRANSFORMS!`);
-      playBossTransform({ element: 'shadow' });
+    spectacle.phases.forEach((ph, i) => {
+      const phaseNo = i + 2;
+      if (ratio > ph.hpThreshold) return;
+      if (bossPhasesFiredRef.current.has(phaseNo)) return;
+      bossPhasesFiredRef.current.add(phaseNo);
+
+      const hue = hexToHslTriplet(ph.mechanicColor) ?? ELEMENT_HUES.shadow;
+      setBossPhase(phaseNo);
+      setBossPhaseLabel(`${ph.mechanicEmoji} ${ph.mechanicName} — ${ph.taunt}`);
+
+      // The transformation stinger, then the boss's own signature set piece.
+      playBossTransform({ hue });
+      playBossMechanic(ph.mechanicName, {
+        hue,
+        onImpact: () => triggerScreenShake(phaseNo >= 3 ? 'ultimate' : 'crit'),
+      });
       cameraBossDrift(1400);
-      triggerScreenShake('ultimate');
-      setTimeout(() => setBossPhaseLabel(null), 2400);
-    }
-
-    if (pct <= 15 && !bossPhasesFiredRef.current.has(3)) {
-      bossPhasesFiredRef.current.add(3);
-      setBossPhase(3);
-      setBossPhaseLabel('FINAL STAND — READ FAST!');
-      playSuperAttack({ element: 'arcane', onImpact: () => triggerScreenShake('crit') });
-      cameraBossDrift(1200);
-      setTimeout(() => setBossPhaseLabel(null), 2600);
-    }
+      setTimeout(() => setBossPhaseLabel(null), 2800);
+    });
   }, [enemyHp, enemy.type, enemy.maxHp, enemy.name, triggerScreenShake]);
 
   /**
-   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers.
-   * Fires once when a boss dies, purely over the top of the existing victory
-   * flow (which continues on its own schedule underneath).
+   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers, in the
+   * boss's OWN colour. Fires once when a boss dies, purely over the top of the
+   * existing victory flow (which continues on its own schedule underneath).
    */
   useEffect(() => {
     if (phase !== 'victory') return;
     if (!isBossType(enemy.type)) return;
     if (finalBlowFiredRef.current) return;
     finalBlowFiredRef.current = true;
+    const spectacle = getBossSpectacle(enemy.type);
     const cancel = playFinalBlow({
-      element: 'holy',
+      hue: hexToHslTriplet(spectacle.entranceColor) ?? ELEMENT_HUES.holy,
       onFreeze: () => triggerScreenShake('ultimate'),
     });
     return cancel;
   }, [phase, enemy.type, triggerScreenShake]);
+
 
 
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
