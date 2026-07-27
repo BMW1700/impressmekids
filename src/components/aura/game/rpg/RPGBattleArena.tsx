@@ -243,10 +243,16 @@ export const RPGBattleArena = ({
   const [impactNonce, setImpactNonce] = useState(0);
   const [hitStop, setHitStop] = useState(false);
   const [impactFlash, setImpactFlash] = useState(0);
+  // Boss phase gates (presentation only): 1 = normal, 2 = transformed, 3 = desperate.
+  const [bossPhase, setBossPhase] = useState<1 | 2 | 3>(1);
+  const [bossPhaseLabel, setBossPhaseLabel] = useState<string | null>(null);
+  const bossPhasesFiredRef = useRef<Set<number>>(new Set());
+  const finalBlowFiredRef = useRef(false);
   // Camera rig: push-in on charge, punch-out on contact. Declared here (above
   // every early return) so hook order stays stable across battle modes.
   const camera = useSpectacleCamera();
   useEffect(() => () => cameraReset(), []);
+
 
 
 
