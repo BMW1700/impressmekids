@@ -475,7 +475,15 @@ export const RPGBattleArena = ({
       void awardQuestProgress('battle_wins');
       if (isBossType(enemy.type)) void awardQuestProgress('defeat_bosses');
       if (!tookDamageRef.current) void awardQuestProgress('perfect_battles');
+      // FOCUS PASS: feed the local unlock pacing (store / locker / ranks).
+      // Purely onboarding cadence — it grants nothing server-side.
+      bumpProgress({
+        battlesWon: 1,
+        levelsCompleted: 1,
+        worldsCleared: enemy.type === 'final_boss' ? 1 : 0,
+      });
     }
+
   }, [phase, flushWordsQuest, enemy.type]);
 
 
