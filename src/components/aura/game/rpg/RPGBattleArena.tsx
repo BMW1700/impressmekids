@@ -2500,7 +2500,16 @@ export const RPGBattleArena = ({
               break;
           }
         }
-        
+
+        // ANTICIPATION + STRIKE beats. The 300ms swing below owns the impact
+        // frame, so this only adds the wind-up and the travelling projectile —
+        // damage timing and combat math are untouched.
+        playAttack({
+          intensity: intensityForDamage(actualDamage, enemy.maxHp, { isCritical: isElaraBarrage || damageResult.isCritical }),
+          element: heroElementHue,
+          impactVisuals: false,
+        });
+
         setTimeout(() => {
           setHeroAttacking(false);
           setEnemyTakingDamage(true);
