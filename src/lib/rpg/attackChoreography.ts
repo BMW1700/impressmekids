@@ -260,16 +260,25 @@ export function playBossTransform(
  * victory banner.
  */
 export function playFinalBlow(
-  opts: { origin?: Point; element?: string; onFreeze?: () => void; onComplete?: () => void } = {}
+  opts: {
+    origin?: Point;
+    element?: string;
+    /** Per-boss hue override (from the boss catalog's mechanicColor). */
+    hue?: string;
+    onFreeze?: () => void;
+    onComplete?: () => void;
+  } = {}
 ): () => void {
   const { origin = ARENA_ANCHORS.enemy, element = 'holy', onFreeze, onComplete } = opts;
-  const hue = ELEMENT_HUES[element] ?? ELEMENT_HUES.holy;
+  const hue = opts.hue ?? ELEMENT_HUES[element] ?? ELEMENT_HUES.holy;
   const timers: ReturnType<typeof setTimeout>[] = [];
   const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
   const visuals = isSpectacleEnabled();
 
   onFreeze?.();
+  sfxFinalBlow();
   if (visuals) {
+
     emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%', durationMs: 420 });
     at(220, () => emitSpectacle({ type: 'shockwave', x: origin.x, y: origin.y, power: 1, hue }));
     at(320, () => emitSpectacle({ type: 'disintegrate', x: origin.x, y: origin.y, power: 1, hue }));
