@@ -111,7 +111,7 @@ import {
 // only: it draws on top of the arena and never touches damage or speech.
 import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
 import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
-import { ARENA_ANCHORS, ELEMENT_HUES, playBossTransform, playSuperAttack, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
+import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playSuperAttack, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
 
