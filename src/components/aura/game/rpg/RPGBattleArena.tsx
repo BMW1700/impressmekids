@@ -3054,12 +3054,20 @@ export const RPGBattleArena = ({
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
+  return (
+    <motion.div 
+      className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
       animate={screenShake ? {
         x: impactProfile.shakeX,
         rotate: impactProfile.shakeRotate,
-        scale: [1, impactProfile.zoom, 1],
-      } : { x: 0, rotate: 0, scale: 1 }}
-      transition={{ duration: impactProfile.shakeDuration, ease: 'easeOut' }}
+        // Camera rig multiplies into the shake punch so a charge-then-hit
+        // reads as one continuous move instead of two fighting animations.
+        scale: [camera.scale, impactProfile.zoom * camera.scale, camera.scale],
+      } : { x: `${camera.x}%`, rotate: 0, scale: camera.scale }}
+      transition={{
+        duration: screenShake ? impactProfile.shakeDuration : camera.duration,
+        ease: 'easeOut',
+      }}
       style={{
         // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
         // recognition, timers and game logic are untouched by this.
@@ -3074,7 +3082,13 @@ export const RPGBattleArena = ({
 
       }}
     >
+      {/* SPECTACLE ENGINE — pooled canvas particles, beams and shockwaves.
+          Sits above the arena art, below the reading UI, and never takes
+          pointer events. Disables itself under reduced motion. */}
+      <RPGSpectacleCanvas zIndex={57} />
+
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
+
       <AnimatePresence>
         {impactFlash > 0 && (
           <motion.div
