@@ -130,8 +130,12 @@ const AuraPractice = () => {
   const [selectedBattleMode, setSelectedBattleMode] = useState<BattleMode>('classic');
   const [pendingBattle, setPendingBattle] = useState<null | { level: CampaignLevel; mode: BattleMode; enemy: EnemyType; primaryEnemy: string }>(null);
   const isSelectedPreK = !!selectedWorld && (selectedWorld.mode === 'prek' || isPreKWorldId(selectedWorld.id));
-  const { levelNums: publishedPrekLevelNums, meta: publishedPrekLevelMeta } = usePublishedPrekLevels(
-    isSelectedPreK ? selectedWorld!.id : null,
+  const {
+    levelNums: publishedPrekLevelNums,
+    meta: publishedPrekLevelMeta,
+    loading: publishedPrekLevelsLoading,
+  } = usePublishedPrekLevels(
+    isSelectedPreK && selectedWorld ? selectedWorld.id : null,
   );
   const [activeTab, setActiveTab] = useState<string>(searchParams.get('tab') || 'stories');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(searchParams.get('category'));
@@ -600,7 +604,9 @@ const AuraPractice = () => {
     // Generate levels from world's level data + curated stories (or Pre-K word banks)
     // For Pre-K worlds, only show levels that are PUBLISHED in the Super Admin CMS.
     const sourceLevels = isPreKWorld
-      ? selectedWorld.levels.filter((l) => publishedPrekLevelNums.has(l.id))
+      ? (publishedPrekLevelsLoading || publishedPrekLevelNums.size === 0
+          ? selectedWorld.levels
+          : selectedWorld.levels.filter((l) => publishedPrekLevelNums.has(l.id)))
       : selectedWorld.levels;
 
     const levels: CampaignLevel[] = sourceLevels.map((levelData, idx) => {
