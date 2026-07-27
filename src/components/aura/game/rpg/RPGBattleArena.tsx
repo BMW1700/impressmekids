@@ -112,10 +112,37 @@ import {
 import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
 import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
 import { setSpectacleAudioEnabled } from "@/lib/rpg/spectacleAudio";
-import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
+import { emitSpectacle, setSpectacleEnabled, getSpectaclePreference } from "@/lib/rpg/spectacleEngine";
 import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
+import { RPGCombatCoachMarks, hasSeenCombatCoach } from "./v2/RPGCombatCoachMarks";
+
+/* ------------------------------------------------------------------ */
+/* Block-training counter                                              */
+/* ------------------------------------------------------------------ */
+// The loud "READ FAST TO BLOCK!" prompt is training wheels. Once a child has
+// actually blocked a few times, it retires to the subtle red flash so the
+// arena stops shouting instructions they already know.
+const BLOCK_TRAINING_KEY = 'yubi.rpg.blocks.landed.v1';
+const BLOCK_TRAINING_TARGET = 3;
+
+function blockSuccessCount(): number {
+  try {
+    return Number(localStorage.getItem(BLOCK_TRAINING_KEY) ?? 0) || 0;
+  } catch {
+    return BLOCK_TRAINING_TARGET;
+  }
+}
+
+function bumpBlockSuccess() {
+  try {
+    localStorage.setItem(BLOCK_TRAINING_KEY, String(blockSuccessCount() + 1));
+  } catch {
+    /* private mode — prompt simply keeps showing */
+  }
+}
+
 
 
 
