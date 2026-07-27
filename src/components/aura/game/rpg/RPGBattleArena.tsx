@@ -2013,7 +2013,7 @@ export const RPGBattleArena = ({
     setInventory(prev => ({ ...prev, [itemKey]: (prev[itemKey] || 0) - 1 }));
     
     // Deduct from database via usePlayerInventory hook
-    playerInventory.usePotion.mutate(itemKey);
+    inventoryApiRef.current.usePotion.mutate(itemKey);
     
     const maxHp = maxHpWithBoost;
     const maxMp = 50 + (activeUpgrades.mp_boost || 0);
@@ -2059,7 +2059,7 @@ export const RPGBattleArena = ({
       default:
         break;
     }
-  }, [inventory, playerInventory.usePotion, maxHpWithBoost, activeUpgrades.mp_boost]);
+  }, [inventory, maxHpWithBoost, activeUpgrades.mp_boost]);
 
 
   // Enemy turn logic - with failsafe to prevent stuck state
