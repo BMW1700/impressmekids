@@ -2928,7 +2928,9 @@ export const RPGBattleArena = ({
     const spectacle = getBossSpectacle(enemy.type);
 
     spectacle.phases.forEach((ph, i) => {
-      const phaseNo = i + 2;
+      // The catalog can list more than two phases; the arena palette only has
+      // three tiers, so anything past the second gate reads as the final one.
+      const phaseNo = (i === 0 ? 2 : 3) as 2 | 3;
       if (ratio > ph.hpThreshold) return;
       if (bossPhasesFiredRef.current.has(phaseNo)) return;
       bossPhasesFiredRef.current.add(phaseNo);
