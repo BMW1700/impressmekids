@@ -2318,10 +2318,13 @@ export const RPGBattleArena = ({
         blockedRef.current = true;
         blockWindowRef.current = false;
         setShowBlockSpark(true);
+        // Once a child has proved they can block, the loud prompt retires.
+        bumpBlockSuccess();
         haptic('success');
         battleSounds.streakTierCue(1320);
         setTimeout(() => setShowBlockSpark(false), 600);
       }
+
 
 
       const tier = streakTier(newStreak);
