@@ -671,7 +671,18 @@ export const RPGBattleArena = ({
   const blockedRef = useRef(false);
   const [showBlockSpark, setShowBlockSpark] = useState(false);
 
+  // Prune spent damage numbers so the overlay never accumulates.
+  useEffect(() => {
+    if (floatingDamages.length === 0) return;
+    const t = setTimeout(() => {
+      const cutoff = Date.now() - 1200;
+      setFloatingDamages((prev) => prev.filter((f) => f.id > cutoff));
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [floatingDamages]);
+
   // Drain loop for the streak meter. Writes a CSS variable directly, so no
+
   // per-frame React render (ref-based counter rule).
   useEffect(() => {
     let raf = 0;
