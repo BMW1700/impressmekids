@@ -11,6 +11,8 @@ import { AchievementShowcase } from "./AchievementShowcase";
 import { PetCompanionPanel } from "./PetCompanionPanel";
 import { RPGStore } from "./RPGStore";
 import { getStoredTheme } from "@/lib/gameTheme";
+import { useRPGUnlocks } from "@/lib/rpg/rpgUnlocks";
+
 
 interface RPGPlayerHUDProps {
   studentId: string;
