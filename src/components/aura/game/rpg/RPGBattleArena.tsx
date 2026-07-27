@@ -243,6 +243,12 @@ export const RPGBattleArena = ({
   const [impactNonce, setImpactNonce] = useState(0);
   const [hitStop, setHitStop] = useState(false);
   const [impactFlash, setImpactFlash] = useState(0);
+  // Camera rig: push-in on charge, punch-out on contact. Declared here (above
+  // every early return) so hook order stays stable across battle modes.
+  const camera = useSpectacleCamera();
+  useEffect(() => () => cameraReset(), []);
+
+
 
   
   // ========== TERMINAL STATE SAFETY INFRASTRUCTURE ==========
