@@ -107,6 +107,17 @@ import {
   ultimateDamage,
   type ImpactIntensity,
 } from "@/lib/rpgGameFeel";
+// SPECTACLE ENGINE — canvas particle/beam layer + camera rig. Presentation
+// only: it draws on top of the arena and never touches damage or speech.
+import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
+import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
+import { ARENA_ANCHORS, ELEMENT_HUES, playBossTransform, playSuperAttack, playFinalBlow } from "@/lib/rpg/attackChoreography";
+import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
+import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
+
+
+
+
 
 
 
@@ -235,6 +246,18 @@ export const RPGBattleArena = ({
   const [impactNonce, setImpactNonce] = useState(0);
   const [hitStop, setHitStop] = useState(false);
   const [impactFlash, setImpactFlash] = useState(0);
+  // Boss phase gates (presentation only): 1 = normal, 2 = transformed, 3 = desperate.
+  const [bossPhase, setBossPhase] = useState<1 | 2 | 3>(1);
+  const [bossPhaseLabel, setBossPhaseLabel] = useState<string | null>(null);
+  const bossPhasesFiredRef = useRef<Set<number>>(new Set());
+  const finalBlowFiredRef = useRef(false);
+  // Camera rig: push-in on charge, punch-out on contact. Declared here (above
+  // every early return) so hook order stays stable across battle modes.
+  const camera = useSpectacleCamera();
+  useEffect(() => () => cameraReset(), []);
+
+
+
 
   
   // ========== TERMINAL STATE SAFETY INFRASTRUCTURE ==========
@@ -454,7 +477,15 @@ export const RPGBattleArena = ({
       void awardQuestProgress('battle_wins');
       if (isBossType(enemy.type)) void awardQuestProgress('defeat_bosses');
       if (!tookDamageRef.current) void awardQuestProgress('perfect_battles');
+      // FOCUS PASS: feed the local unlock pacing (store / locker / ranks).
+      // Purely onboarding cadence — it grants nothing server-side.
+      bumpProgress({
+        battlesWon: 1,
+        levelsCompleted: 1,
+        worldsCleared: enemy.type === 'final_boss' ? 1 : 0,
+      });
     }
+
   }, [phase, flushWordsQuest, enemy.type]);
 
 
@@ -1806,6 +1837,33 @@ export const RPGBattleArena = ({
 
     hapticForIntensity(intensity);
 
+    // SPECTACLE: the canvas beat fires on the SAME frame as shake + haptic,
+    // so the flash, the shockwave and the rumble all land together.
+    const power =
+      intensity === 'tap' ? 0.15 :
+      intensity === 'normal' ? 0.4 :
+      intensity === 'heavy' ? 0.62 :
+      intensity === 'crit' ? 0.82 :
+      1;
+    const hue =
+      intensity === 'ultimate' ? ELEMENT_HUES.arcane :
+      intensity === 'crit' ? ELEMENT_HUES.lightning :
+      intensity === 'break' ? ELEMENT_HUES.holy :
+      ELEMENT_HUES.physical;
+    const at = ARENA_ANCHORS.enemy;
+    emitSpectacle({ type: 'burst', x: at.x, y: at.y, power, hue });
+    emitSpectacle({ type: 'shockwave', x: at.x, y: at.y, power, hue });
+    if (power >= 0.55) {
+      emitSpectacle({ type: 'debris', x: at.x, y: at.y, power, hue });
+      emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: power * 0.5, hue: '0 0% 100%' });
+    }
+    if (intensity === 'ultimate' || intensity === 'break') {
+      emitSpectacle({ type: 'beam', x: ARENA_ANCHORS.hero.x, y: ARENA_ANCHORS.hero.y, tx: at.x, ty: at.y, power: 1, hue, durationMs: 520 });
+      emitSpectacle({ type: 'embers', x: at.x, y: at.y, power: 1, hue });
+    }
+    cameraPunch(power);
+
+
     const weight =
       intensity === 'tap' ? 0.15 :
       intensity === 'normal' ? 0.4 :
@@ -2825,6 +2883,9 @@ export const RPGBattleArena = ({
     bossBreaksFiredRef.current = new Set();
     freeHitRef.current = false;
     setBossBreakLabel(null);
+    setBossPhase(1);
+    setBossPhaseLabel(null);
+    bossPhasesFiredRef.current = new Set();
   }, [enemy.name, enemy.type]);
 
   /**
@@ -2850,6 +2911,57 @@ export const RPGBattleArena = ({
       }
     }
   }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
+  /**
+   * BOSS PHASE GATES — the Magolor moment.
+   *
+   * At 50% the boss TRANSFORMS: the arena desaturates, the sprite scales up
+   * and a new palette takes over. At 15% it goes desperate. These are pure
+   * presentation gates layered on top of the existing HP drain — no damage
+   * math, no victory logic, no reward path is touched.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+
+    if (pct <= 50 && !bossPhasesFiredRef.current.has(2)) {
+      bossPhasesFiredRef.current.add(2);
+      setBossPhase(2);
+      setBossPhaseLabel(`${enemy.name.toUpperCase()} TRANSFORMS!`);
+      playBossTransform({ element: 'shadow' });
+      cameraBossDrift(1400);
+      triggerScreenShake('ultimate');
+      setTimeout(() => setBossPhaseLabel(null), 2400);
+    }
+
+    if (pct <= 15 && !bossPhasesFiredRef.current.has(3)) {
+      bossPhasesFiredRef.current.add(3);
+      setBossPhase(3);
+      setBossPhaseLabel('FINAL STAND — READ FAST!');
+      playSuperAttack({ element: 'arcane', onImpact: () => triggerScreenShake('crit') });
+      cameraBossDrift(1200);
+      setTimeout(() => setBossPhaseLabel(null), 2600);
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, enemy.name, triggerScreenShake]);
+
+  /**
+   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers.
+   * Fires once when a boss dies, purely over the top of the existing victory
+   * flow (which continues on its own schedule underneath).
+   */
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (!isBossType(enemy.type)) return;
+    if (finalBlowFiredRef.current) return;
+    finalBlowFiredRef.current = true;
+    const cancel = playFinalBlow({
+      element: 'holy',
+      onFreeze: () => triggerScreenShake('ultimate'),
+    });
+    return cancel;
+  }, [phase, enemy.type, triggerScreenShake]);
+
 
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
 
@@ -3013,12 +3125,18 @@ export const RPGBattleArena = ({
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
+
       animate={screenShake ? {
         x: impactProfile.shakeX,
         rotate: impactProfile.shakeRotate,
-        scale: [1, impactProfile.zoom, 1],
-      } : { x: 0, rotate: 0, scale: 1 }}
-      transition={{ duration: impactProfile.shakeDuration, ease: 'easeOut' }}
+        // Camera rig multiplies into the shake punch so a charge-then-hit
+        // reads as one continuous move instead of two fighting animations.
+        scale: [camera.scale, impactProfile.zoom * camera.scale, camera.scale],
+      } : { x: `${camera.x}%`, rotate: 0, scale: camera.scale }}
+      transition={{
+        duration: screenShake ? impactProfile.shakeDuration : camera.duration,
+        ease: 'easeOut',
+      }}
       style={{
         // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
         // recognition, timers and game logic are untouched by this.
@@ -3029,11 +3147,24 @@ export const RPGBattleArena = ({
           ? (impactIntensity === 'crit' || impactIntensity === 'ultimate' || impactIntensity === 'break')
             ? 'saturate(0.2) contrast(1.35)'
             : 'contrast(1.12) saturate(1.15)'
-          : undefined,
+          // Boss phase palette shift: the world drains as the boss transforms.
+          : bossPhase >= 3
+            ? 'saturate(0.55) contrast(1.25) brightness(0.92)'
+            : bossPhase >= 2
+              ? 'saturate(0.78) contrast(1.12)'
+              : undefined,
+        transition: 'filter 700ms ease-out',
+
 
       }}
     >
+      {/* SPECTACLE ENGINE — pooled canvas particles, beams and shockwaves.
+          Sits above the arena art, below the reading UI, and never takes
+          pointer events. Disables itself under reduced motion. */}
+      <RPGSpectacleCanvas zIndex={57} />
+
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
+
       <AnimatePresence>
         {impactFlash > 0 && (
           <motion.div
@@ -3073,7 +3204,40 @@ export const RPGBattleArena = ({
         )}
       </AnimatePresence>
 
+      {/* BOSS PHASE — the arena itself turns against the child. Phase 2 drains
+          the palette; phase 3 adds a pulsing danger vignette. */}
+      {bossPhase >= 2 && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-[54]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: bossPhase >= 3 ? [0.35, 0.6, 0.35] : 0.3 }}
+          transition={bossPhase >= 3 ? { repeat: Infinity, duration: 1.1 } : { duration: 0.8 }}
+          style={{
+            boxShadow: `inset 0 0 ${bossPhase >= 3 ? 180 : 110}px hsl(var(--destructive) / 0.75)`,
+            background:
+              bossPhase >= 3
+                ? 'radial-gradient(circle at 50% 45%, transparent 45%, hsl(var(--destructive) / 0.28) 100%)'
+                : undefined,
+          }}
+        />
+      )}
 
+      {/* Boss phase banner — the transformation announces itself */}
+      <AnimatePresence>
+        {bossPhaseLabel && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/4 z-[59] flex justify-center"
+            initial={{ opacity: 0, scale: 0.5, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.6 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          >
+            <span className="rounded-xl border-2 border-primary bg-background/90 px-6 py-3 text-xl font-black uppercase tracking-widest text-primary shadow-xl">
+              {bossPhaseLabel}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
       {/* Enemy telegraph — the arena reddens while a blow is being wound up. */}

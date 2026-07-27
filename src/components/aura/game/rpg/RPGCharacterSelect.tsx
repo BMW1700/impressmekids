@@ -11,6 +11,10 @@ import { RPGGearLocker } from './v2/RPGGearLocker';
 import { RPGDailyHubPanel } from './v2/RPGDailyHubPanel';
 import { RPGCoachMarks, hasSeenRPGCoachMarks } from './v2/RPGCoachMarks';
 import { awardQuestProgress } from '@/hooks/useDailyQuests';
+// FOCUS PASS: hub systems arrive one at a time instead of all at once, so a
+// first-time player sees heroes and combat — not a dashboard.
+import { useRPGUnlocks, markPlayedToday } from '@/lib/rpg/rpgUnlocks';
+
 
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
@@ -24,6 +28,14 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
   const [gearOpen, setGearOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
+  const { unlocked, justUnlocked, markUnlockSeen } = useRPGUnlocks();
+
+  // Day counter for the day-2 Daily Hub gate.
+  useEffect(() => {
+    markPlayedToday();
+  }, []);
+
+
 
   // First-time players get the tour once; it can be replayed from the "?" button.
   useEffect(() => {
@@ -63,20 +75,53 @@ export const RPGCharacterSelect = ({ onSelect }: RPGCharacterSelectProps) => {
         >
           <HelpCircle className="h-4 w-4" />
         </button>
-        <button
-          data-coach="daily-hub"
-          onClick={() => setHubOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-orange-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
-        >
-          <Trophy className="h-4 w-4" /> Daily & Season
-        </button>
-        <button
-          data-coach="gear-locker"
-          onClick={() => setGearOpen(true)}
-          className="flex items-center gap-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
-        >
-          <Backpack className="h-4 w-4" /> Gear Locker
-        </button>
+        {/* Daily & Season — arrives on the student's second day, so day one is
+            about the fight, not about a rewards calendar. */}
+        {unlocked('dailyHub') && (
+          <button
+            data-coach="daily-hub"
+            onClick={() => {
+              markUnlockSeen('dailyHub');
+              setHubOpen(true);
+            }}
+            className="relative flex items-center gap-2 rounded-full bg-orange-500/20 hover:bg-orange-500/30 border border-orange-400/40 text-orange-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
+          >
+            <Trophy className="h-4 w-4" /> Daily & Season
+            {justUnlocked('dailyHub') && (
+              <motion.span
+                className="absolute -top-2 -right-1 rounded-full bg-orange-400 px-1.5 py-0.5 text-[10px] font-black text-slate-900"
+                animate={{ scale: [1, 1.18, 1] }}
+                transition={{ repeat: Infinity, duration: 1.2 }}
+              >
+                NEW!
+              </motion.span>
+            )}
+          </button>
+        )}
+        {/* Gear Locker — unlocks after 3 cleared levels, once there is
+            actually loot worth looking at. */}
+        {unlocked('gearLocker') && (
+          <button
+            data-coach="gear-locker"
+            onClick={() => {
+              markUnlockSeen('gearLocker');
+              setGearOpen(true);
+            }}
+            className="relative flex items-center gap-2 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 px-4 py-2 text-sm font-bold backdrop-blur transition"
+          >
+            <Backpack className="h-4 w-4" /> Gear Locker
+            {justUnlocked('gearLocker') && (
+              <motion.span
+                className="absolute -top-2 -right-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-slate-900"
+                animate={{ scale: [1, 1.18, 1] }}
+                transition={{ repeat: Infinity, duration: 1.2 }}
+              >
+                NEW!
+              </motion.span>
+            )}
+          </button>
+        )}
+
       </div>
 
 
