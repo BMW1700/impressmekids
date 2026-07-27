@@ -3027,7 +3027,91 @@ export const RPGBattleArena = ({
 
 
 
+
+      {/* Enemy telegraph — the arena reddens while a blow is being wound up. */}
+      <AnimatePresence>
+        {enemyTelegraph && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-[54]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.15, 0.45, 0.15] }}
+            exit={{ opacity: 0 }}
+            transition={{ repeat: Infinity, duration: 0.55 }}
+            style={{ boxShadow: 'inset 0 0 120px hsl(var(--destructive))' }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Block spark — the payoff for reading inside the wind-up. */}
+      <AnimatePresence>
+        {showBlockSpark && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/2 z-[59] flex justify-center"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.3 }}
+          >
+            <span className="rounded-lg border-2 border-primary bg-primary/85 px-5 py-2 text-lg font-black uppercase tracking-widest text-primary-foreground shadow-lg">
+              Blocked!
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating damage numbers — crits get their own visual language. */}
+      <div className="pointer-events-none absolute inset-0 z-[57]">
+        <AnimatePresence>
+          {floatingDamages.map((fd) => (
+            <motion.div
+              key={fd.id}
+              className="absolute"
+              style={{ left: `${fd.x}%`, top: `${fd.y}%` }}
+              initial={{ opacity: 0, scale: fd.isCritical ? 0.4 : 0.8, y: 0, rotate: fd.isCritical ? -14 : 0 }}
+              animate={
+                fd.isCritical
+                  ? { opacity: [0, 1, 1, 0], scale: [0.4, 1.5, 1.2, 1.1], y: [0, -18, -26, -40], rotate: -14 }
+                  : { opacity: [0, 1, 0], scale: 1, y: [0, -30, -55] }
+              }
+              exit={{ opacity: 0 }}
+              transition={{ duration: fd.isCritical ? 1 : 0.8, ease: 'easeOut' }}
+            >
+              {fd.isCritical && (
+                <>
+                  {/* Radial impact lines burst out of the contact point. */}
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                    <motion.span
+                      key={deg}
+                      className="absolute left-1/2 top-1/2 h-[2px] w-10 origin-left bg-accent"
+                      style={{ transform: `rotate(${deg}deg)` }}
+                      initial={{ scaleX: 0, opacity: 0.9 }}
+                      animate={{ scaleX: [0, 1, 0.2], opacity: [0.9, 0.7, 0] }}
+                      transition={{ duration: 0.42, ease: 'easeOut' }}
+                    />
+                  ))}
+                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-black uppercase tracking-widest text-accent">
+                    Critical
+                  </span>
+                </>
+              )}
+              <span
+                className={
+                  fd.isCritical
+                    ? 'text-5xl font-black text-accent'
+                    : fd.isPlayer
+                      ? 'text-2xl font-black text-destructive'
+                      : 'text-2xl font-black text-foreground'
+                }
+                style={{ textShadow: '3px 3px 0 rgba(0,0,0,0.85), -1px -1px 0 rgba(0,0,0,0.85)' }}
+              >
+                -{fd.damage}
+              </span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
       {/* Battle Background */}
+
       <RPGBattleBackground enemyType={currentEnemyType} worldNumber={worldNumber} />
 
 
