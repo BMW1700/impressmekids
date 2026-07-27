@@ -2438,33 +2438,45 @@ export const RPGBattleArena = ({
       prevStreakTierRef.current = 0;
       haptic('error');
 
-      // Enemy always counter-attacks on miss
+      // Enemy always counter-attacks on miss — but it telegraphs first, and a
+      // correct read inside the wind-up blocks most of the blow.
       const damage = Math.floor(enemy.attack * 0.5);
-      setEnemyAbilityMessage(`${enemy.name} strikes back!`);
-      
-      // Add floating damage for player
-      setFloatingDamages(prev => [...prev, {
-        id: Date.now(),
-        damage,
-        x: 70 + Math.random() * 10,
-        y: 60 + Math.random() * 10,
-        isPlayer: true
-      }]);
-      
+      setEnemyAbilityMessage(`${enemy.name} winds up!`);
+      blockedRef.current = false;
+      blockWindowRef.current = true;
+      setEnemyTelegraph(true);
+
       setTimeout(() => {
+        setEnemyTelegraph(false);
+        blockWindowRef.current = false;
         setEnemyAttacking(true);
+        const blocked = blockedRef.current;
+        const landed = blocked ? Math.max(1, Math.floor(damage * 0.25)) : damage;
+
+        // Floating damage reflects what actually landed after the block check.
+        setFloatingDamages(prev => [...prev, {
+          id: Date.now(),
+          damage: landed,
+          x: 70 + Math.random() * 10,
+          y: 60 + Math.random() * 10,
+          isPlayer: true
+        }]);
+
         setTimeout(() => {
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
-          takePlayerDamage(damage);
-          triggerScreenShake('heavy');
-          
+          takePlayerDamage(landed);
+          triggerScreenShake(blocked ? 'normal' : 'heavy');
+          setEnemyAbilityMessage(blocked ? 'BLOCKED!' : `${enemy.name} strikes back!`);
+
           setTimeout(() => {
             setHeroTakingDamage(false);
             setEnemyAbilityMessage(null);
+            blockedRef.current = false;
           }, 400);
         }, 300);
-      }, 300);
+      }, 1100);
+
     }
 
     // Only advance batch when we finish the current batch (wordIndex reaches end)
