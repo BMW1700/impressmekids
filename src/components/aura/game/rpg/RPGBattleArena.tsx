@@ -656,6 +656,22 @@ export const RPGBattleArena = ({
   // Streak heat tier (drives the escalating aura + rising pitch ladder)
   const prevStreakTierRef = useRef(0);
 
+  // === STREAK DECAY ===
+  // A streak the child can see draining converts reading speed into felt urgency.
+  // Ref + rAF + CSS var so the arena never re-renders per frame.
+  const decayBarRef = useRef<HTMLDivElement | null>(null);
+  const lastCorrectAtRef = useRef<number>(0);
+  const STREAK_DECAY_MS = 7000;
+
+  // === ENEMY TELEGRAPH / BLOCK BEAT ===
+  // The enemy winds up before it swings. Reading the next word correctly inside
+  // that window blocks most of the hit — reading becomes moment-to-moment defence.
+  const [enemyTelegraph, setEnemyTelegraph] = useState(false);
+  const blockWindowRef = useRef(false);
+  const blockedRef = useRef(false);
+  const [showBlockSpark, setShowBlockSpark] = useState(false);
+
+
   // Boss break moments: which HP thresholds have already staggered the boss,
   // plus the pending double-damage free hit they grant.
   const bossBreaksFiredRef = useRef<Set<number>>(new Set());
