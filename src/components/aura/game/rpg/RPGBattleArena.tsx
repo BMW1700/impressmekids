@@ -1814,6 +1814,33 @@ export const RPGBattleArena = ({
 
     hapticForIntensity(intensity);
 
+    // SPECTACLE: the canvas beat fires on the SAME frame as shake + haptic,
+    // so the flash, the shockwave and the rumble all land together.
+    const power =
+      intensity === 'tap' ? 0.15 :
+      intensity === 'normal' ? 0.4 :
+      intensity === 'heavy' ? 0.62 :
+      intensity === 'crit' ? 0.82 :
+      1;
+    const hue =
+      intensity === 'ultimate' ? ELEMENT_HUES.arcane :
+      intensity === 'crit' ? ELEMENT_HUES.lightning :
+      intensity === 'break' ? ELEMENT_HUES.holy :
+      ELEMENT_HUES.physical;
+    const at = ARENA_ANCHORS.enemy;
+    emitSpectacle({ type: 'burst', x: at.x, y: at.y, power, hue });
+    emitSpectacle({ type: 'shockwave', x: at.x, y: at.y, power, hue });
+    if (power >= 0.55) {
+      emitSpectacle({ type: 'debris', x: at.x, y: at.y, power, hue });
+      emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: power * 0.5, hue: '0 0% 100%' });
+    }
+    if (intensity === 'ultimate' || intensity === 'break') {
+      emitSpectacle({ type: 'beam', x: ARENA_ANCHORS.hero.x, y: ARENA_ANCHORS.hero.y, tx: at.x, ty: at.y, power: 1, hue, durationMs: 520 });
+      emitSpectacle({ type: 'embers', x: at.x, y: at.y, power: 1, hue });
+    }
+    cameraPunch(power);
+
+
     const weight =
       intensity === 'tap' ? 0.15 :
       intensity === 'normal' ? 0.4 :
