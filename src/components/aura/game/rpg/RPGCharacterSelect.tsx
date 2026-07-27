@@ -11,6 +11,10 @@ import { RPGGearLocker } from './v2/RPGGearLocker';
 import { RPGDailyHubPanel } from './v2/RPGDailyHubPanel';
 import { RPGCoachMarks, hasSeenRPGCoachMarks } from './v2/RPGCoachMarks';
 import { awardQuestProgress } from '@/hooks/useDailyQuests';
+// FOCUS PASS: hub systems arrive one at a time instead of all at once, so a
+// first-time player sees heroes and combat — not a dashboard.
+import { useRPGUnlocks, markPlayedToday } from '@/lib/rpg/rpgUnlocks';
+
 
 
 export type PlayableCharacter = 'valor' | 'elara' | 'ella' | 'agent_x' | 'cipher' | 'shadow';
