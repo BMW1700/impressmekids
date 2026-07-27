@@ -186,7 +186,9 @@ export function playSuperAttack(
   const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
   const visuals = isSpectacleEnabled();
 
+  sfxSuperAttack(1500);
   if (visuals) {
+
     // Telegraph: a swelling orb plus converging embers. 1.5s is deliberate —
     // a child needs time to read the danger and choose to block.
     emitSpectacle({ type: 'bloomOrb', x: origin.x, y: origin.y, power: 1, hue, durationMs: 1500 });
