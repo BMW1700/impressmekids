@@ -25,6 +25,7 @@ import {
   sfxSuperAttack,
   sfxFinalBlow,
 } from '@/lib/rpg/spectacleAudio';
+import { cameraPushIn } from '@/lib/rpg/spectacleCamera';
 import type { ImpactIntensity } from '@/lib/rpgGameFeel';
 
 
