@@ -2572,6 +2572,12 @@ export const RPGBattleArena = ({
           isPlayer: true
         }]);
 
+        // Incoming strike reads as a telegraph, so the block window is fair.
+        playEnemyAttack({
+          intensity: blocked ? 'normal' : 'heavy',
+          impactVisuals: false,
+        });
+
         setTimeout(() => {
           setEnemyAttacking(false);
           setHeroTakingDamage(true);
