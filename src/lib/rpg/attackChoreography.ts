@@ -297,3 +297,230 @@ export function playFinalBlow(
 
   return () => timers.forEach(clearTimeout);
 }
+
+/* ------------------------------------------------------------------ */
+/* TRUE BOSS SET PIECES                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The boss catalog stores colours as hex (`#dc2626`). The spectacle engine
+ * speaks HSL triplets so it can blend additively. This converts between them
+ * so every boss fights in its OWN colour instead of a shared purple.
+ */
+export function hexToHslTriplet(hex: string): string | undefined {
+  const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(hex.trim());
+  if (!m) return undefined;
+  let h = m[1];
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let hue = 0;
+  let s = 0;
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    switch (max) {
+      case r:
+        hue = ((g - b) / d) % 6;
+        break;
+      case g:
+        hue = (b - r) / d + 2;
+        break;
+      default:
+        hue = (r - g) / d + 4;
+    }
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+  return `${Math.round(hue)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+export interface MechanicOptions {
+  /** HSL triplet, usually derived from the boss's mechanicColor. */
+  hue: string;
+  origin?: Point;
+  target?: Point;
+  /** Fires on the mechanic's main impact frame. */
+  onImpact?: () => void;
+  onComplete?: () => void;
+}
+
+type MechanicShape =
+  | 'barrage'
+  | 'pull'
+  | 'shatter'
+  | 'nova'
+  | 'lockOn'
+  | 'sweep';
+
+/**
+ * Maps a boss's named mechanic to a distinct visual shape. Matching is on
+ * keywords rather than exact strings so a new catalog entry ("SOLAR FLARE",
+ * "PRISM STORM") picks up a sensible set piece without another code change.
+ */
+export function shapeForMechanic(name: string): MechanicShape {
+  const n = name.toUpperCase();
+  if (/BARRAGE|STORM|ASTEROID|FIREBALL|RAIN/.test(n)) return 'barrage';
+  if (/PULL|VOID|BINDING|GRAVITY|DRAIN/.test(n)) return 'pull';
+  if (/SHATTER|QUAKE|ROAR|CRUSH|EDGE|SLAM/.test(n)) return 'shatter';
+  if (/NOVA|SOLAR|FLARE|SUN|LIGHT|PRISM/.test(n)) return 'nova';
+  if (/EDIT|MARK|SNIPE|FOCUS|TARGET/.test(n)) return 'lockOn';
+  return 'sweep';
+}
+
+/**
+ * Plays a boss's signature mechanic as its own set piece.
+ *
+ * Every shape shares the same contract: a readable telegraph, one clear
+ * impact frame (where `onImpact` fires so shake / hit-stop / haptics stay in
+ * sync), then a recovery tail. Presentation only — the caller still owns any
+ * damage the mechanic represents.
+ */
+export function playBossMechanic(name: string, opts: MechanicOptions): () => void {
+  const {
+    hue,
+    origin = ARENA_ANCHORS.enemy,
+    target = ARENA_ANCHORS.hero,
+    onImpact,
+    onComplete,
+  } = opts;
+
+  const shape = shapeForMechanic(name);
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+  const visuals = isSpectacleEnabled();
+
+  // Shared telegraph so the danger is always readable, whatever the shape.
+  sfxSuperAttack(1200);
+  if (visuals) {
+    emitSpectacle({ type: 'bloomOrb', x: origin.x, y: origin.y, power: 1, hue, durationMs: 1200 });
+  }
+
+  const IMPACT = 1200;
+
+  at(IMPACT, () => {
+    if (!visuals) {
+      onImpact?.();
+      return;
+    }
+
+    switch (shape) {
+      /* Staggered bolts raining in from above the arena. */
+      case 'barrage': {
+        [0.2, 0.45, 0.7, 0.9, 0.32].forEach((x, i) =>
+          at(IMPACT + i * 110, () =>
+            emitSpectacle({
+              type: 'plasmaBolt',
+              x,
+              y: -0.1,
+              tx: x + (Math.random() - 0.5) * 0.12,
+              ty: 0.78,
+              power: 0.85,
+              hue,
+              durationMs: 420,
+            })
+          )
+        );
+        emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.2, power: 0.6, hue });
+        break;
+      }
+
+      /* Everything drags inward toward the boss. */
+      case 'pull': {
+        [0.1, 0.32, 0.55, 0.8].forEach((x, i) =>
+          at(IMPACT + i * 80, () =>
+            emitSpectacle({
+              type: 'sparkTrail',
+              x,
+              y: 0.2 + i * 0.16,
+              tx: origin.x,
+              ty: origin.y,
+              power: 0.8,
+              hue,
+              durationMs: 520,
+            })
+          )
+        );
+        emitSpectacle({ type: 'embers', x: origin.x, y: origin.y, power: 1, hue });
+        at(IMPACT + 420, () =>
+          emitSpectacle({ type: 'shockwave', x: origin.x, y: origin.y, power: 1, hue })
+        );
+        break;
+      }
+
+      /* The screen breaks: full flash, ring, heavy debris. */
+      case 'shatter': {
+        emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%' });
+        emitSpectacle({ type: 'shockwave', x: 0.5, y: 0.5, power: 1, hue });
+        emitSpectacle({ type: 'debris', x: 0.5, y: 0.5, power: 1, hue });
+        at(IMPACT + 160, () =>
+          emitSpectacle({ type: 'shockwave', x: 0.5, y: 0.55, power: 0.8, hue })
+        );
+        at(IMPACT + 300, () =>
+          emitSpectacle({ type: 'debris', x: target.x, y: target.y, power: 0.7, hue })
+        );
+        break;
+      }
+
+      /* Expanding white-out from the boss, then drifting embers. */
+      case 'nova': {
+        emitSpectacle({ type: 'bloomOrb', x: origin.x, y: origin.y, power: 1, hue, durationMs: 420 });
+        at(IMPACT + 200, () => {
+          emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue: '0 0% 100%' });
+          emitSpectacle({ type: 'burst', x: origin.x, y: origin.y, power: 1, hue });
+        });
+        at(IMPACT + 520, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.4, power: 1, hue }));
+        at(IMPACT + 820, () => emitSpectacle({ type: 'embers', x: 0.5, y: 0.7, power: 0.7, hue }));
+        break;
+      }
+
+      /* Beams lock onto the hero one at a time. */
+      case 'lockOn': {
+        [0, 1, 2].forEach((i) =>
+          at(IMPACT + i * 220, () => {
+            emitSpectacle({
+              type: 'beam',
+              x: origin.x,
+              y: origin.y - 0.12 + i * 0.12,
+              tx: target.x,
+              ty: target.y,
+              power: 1,
+              hue,
+              durationMs: 380,
+            });
+            emitSpectacle({ type: 'burst', x: target.x, y: target.y, power: 0.7, hue });
+          })
+        );
+        break;
+      }
+
+      /* Fallback: the screen-wide three-beam sweep. */
+      default: {
+        [0.18, 0.5, 0.82].forEach((ty, i) =>
+          at(IMPACT + i * 90, () =>
+            emitSpectacle({
+              type: 'beam',
+              x: origin.x,
+              y: origin.y,
+              tx: 0,
+              ty,
+              power: 1,
+              hue,
+              durationMs: 520,
+            })
+          )
+        );
+        emitSpectacle({ type: 'screenFlash', x: 0.5, y: 0.5, power: 1, hue });
+      }
+    }
+
+    onImpact?.();
+  });
+
+  at(IMPACT + 1300, () => onComplete?.());
+  return () => timers.forEach(clearTimeout);
+}
