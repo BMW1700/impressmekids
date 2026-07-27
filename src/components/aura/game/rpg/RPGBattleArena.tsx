@@ -2506,7 +2506,7 @@ export const RPGBattleArena = ({
         // damage timing and combat math are untouched.
         playAttack({
           intensity: intensityForDamage(actualDamage, enemy.maxHp, { isCritical: isElaraBarrage || damageResult.isCritical }),
-          element: heroElementHue,
+          element: attackType === 'slash' ? 'physical' : attackType,
           impactVisuals: false,
         });
 
