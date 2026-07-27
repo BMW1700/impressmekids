@@ -58,17 +58,21 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
   // Free skins that are always considered owned (no inventory row required).
   // Includes the SVG default per character AND the new free 'realistic_valor'
   // so kids can flip between Classic and Realistic Sir Valor with no purchase.
-  const FREE_SKIN_IDS = new Set<string>([
+  const defaultSkinIds = useMemo(() => Array.from(new Set<string>([
     ...STORE_ITEMS.filter(s => s.category === 'skin' && s.skinVariant === 'default').map(s => s.id),
     'realistic_valor',
-  ]);
-  const defaultSkinIds = Array.from(FREE_SKIN_IDS);
+  ])), []);
 
-  // Get list of owned item IDs (free skins are always owned)
-  const ownedItems = Array.from(new Set([...inventory.map(item => item.item_id), ...defaultSkinIds]));
+  // Get list of owned item IDs (free skins are always owned).
+  // Memoized: consumers use this in effect/memo dependency arrays, so a fresh
+  // array on every render would cause infinite re-render loops.
+  const ownedItems = useMemo(
+    () => Array.from(new Set([...inventory.map(item => item.item_id), ...defaultSkinIds])),
+    [inventory, defaultSkinIds]
+  );
 
   // Get equipped skin for a specific character (scoped per character, not first-equipped)
-  const getEquippedSkin = (character: string): string | null => {
+  const getEquippedSkin = useCallback((character: string): string | null => {
     for (const inv of inventory) {
       if (!inv.is_equipped) continue;
       const skinData = STORE_ITEMS.find(s => s.id === inv.item_id);
@@ -83,10 +87,10 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
       return 'realistic_default';
     }
     return 'default';
-  };
+  }, [inventory]);
 
   // Get all active permanent upgrades
-  const getActiveUpgrades = (): ActiveUpgrades => {
+  const getActiveUpgrades = useCallback((): ActiveUpgrades => {
     const upgrades: ActiveUpgrades = {
       attack_boost: 0,
       health_boost: 0,
@@ -109,13 +113,14 @@ export const usePlayerInventory = (studentId?: string, gradeMode?: string) => {
     });
 
     return upgrades;
-  };
+  }, [inventory]);
 
   // Get quantity of a specific item
-  const getItemQuantity = (itemId: string): number => {
+  const getItemQuantity = useCallback((itemId: string): number => {
     const item = inventory.find(i => i.item_id === itemId);
     return item?.quantity || 0;
-  };
+  }, [inventory]);
+
 
   // Purchase item mutation
   const purchaseItem = useMutation({
