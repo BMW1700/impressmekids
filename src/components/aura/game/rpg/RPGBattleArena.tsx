@@ -2866,6 +2866,9 @@ export const RPGBattleArena = ({
     bossBreaksFiredRef.current = new Set();
     freeHitRef.current = false;
     setBossBreakLabel(null);
+    setBossPhase(1);
+    setBossPhaseLabel(null);
+    bossPhasesFiredRef.current = new Set();
   }, [enemy.name, enemy.type]);
 
   /**
@@ -2891,6 +2894,57 @@ export const RPGBattleArena = ({
       }
     }
   }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
+  /**
+   * BOSS PHASE GATES — the Magolor moment.
+   *
+   * At 50% the boss TRANSFORMS: the arena desaturates, the sprite scales up
+   * and a new palette takes over. At 15% it goes desperate. These are pure
+   * presentation gates layered on top of the existing HP drain — no damage
+   * math, no victory logic, no reward path is touched.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+
+    if (pct <= 50 && !bossPhasesFiredRef.current.has(2)) {
+      bossPhasesFiredRef.current.add(2);
+      setBossPhase(2);
+      setBossPhaseLabel(`${enemy.name.toUpperCase()} TRANSFORMS!`);
+      playBossTransform({ element: 'shadow' });
+      cameraBossDrift(1400);
+      triggerScreenShake('ultimate');
+      setTimeout(() => setBossPhaseLabel(null), 2400);
+    }
+
+    if (pct <= 15 && !bossPhasesFiredRef.current.has(3)) {
+      bossPhasesFiredRef.current.add(3);
+      setBossPhase(3);
+      setBossPhaseLabel('FINAL STAND — READ FAST!');
+      playSuperAttack({ element: 'arcane', onImpact: () => triggerScreenShake('crit') });
+      cameraBossDrift(1200);
+      setTimeout(() => setBossPhaseLabel(null), 2600);
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, enemy.name, triggerScreenShake]);
+
+  /**
+   * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers.
+   * Fires once when a boss dies, purely over the top of the existing victory
+   * flow (which continues on its own schedule underneath).
+   */
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (!isBossType(enemy.type)) return;
+    if (finalBlowFiredRef.current) return;
+    finalBlowFiredRef.current = true;
+    const cancel = playFinalBlow({
+      element: 'holy',
+      onFreeze: () => triggerScreenShake('ultimate'),
+    });
+    return cancel;
+  }, [phase, enemy.type, triggerScreenShake]);
+
 
   // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
 
