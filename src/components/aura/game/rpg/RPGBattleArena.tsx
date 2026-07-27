@@ -2818,6 +2818,73 @@ export const RPGBattleArena = ({
     }
   }, [allWordsRead, currentAccuracy, phase, enemyHp, isFinalEnemy, enemy, correctWords, wordsRead, triggerVictory, triggerDefeat, setPhaseSafe]);
 
+  // NOTE: these effects must stay ABOVE the early returns below — React
+  // requires a stable hook order across renders.
+  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
+  useEffect(() => {
+    bossBreaksFiredRef.current = new Set();
+    freeHitRef.current = false;
+    setBossBreakLabel(null);
+  }, [enemy.name, enemy.type]);
+
+  /**
+   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
+   * hit-stop, stagger, and a free-hit window where the next correct word hits
+   * for double. Turns a flat HP drain into two memorable spikes.
+   */
+  useEffect(() => {
+    if (!isBossType(enemy.type)) return;
+    if (enemyHp <= 0) return;
+    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
+    const thresholds = [66, 33];
+    for (const t of thresholds) {
+      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
+        bossBreaksFiredRef.current.add(t);
+        freeHitRef.current = true;
+        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
+        triggerScreenShake('break');
+        setEnemyTakingDamage(true);
+        setTimeout(() => setEnemyTakingDamage(false), 700);
+        setTimeout(() => setBossBreakLabel(null), 2200);
+        break;
+      }
+    }
+  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
+
+  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
+
+  useEffect(() => {
+    if (phase !== 'victory') return;
+    if (highlightFiredRef.current) return;
+    if (!isBossType(enemy.type)) return;
+    highlightFiredRef.current = true;
+    const capturedName = enemy.name;
+    const capturedWorld = worldNumber;
+    const capturedDamage = totalDamage;
+    const capturedTurns = wordsRead;
+    const capturedStreak = longestStreak;
+    const capturedCorrect = correctWords;
+    void generateHighlight({
+      enemyId: `w${capturedWorld}-${enemy.type}`,
+      enemyName: capturedName,
+      worldNumber: capturedWorld,
+      damageDealt: capturedDamage,
+      turnsTaken: capturedTurns,
+      perfectBlocks: 0,
+      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
+    }).then((res) => {
+      setHighlightPayload({
+        enemyName: capturedName,
+        worldNumber: capturedWorld,
+        damageDealt: capturedDamage,
+        turnsTaken: capturedTurns,
+        perfectBlocks: 0,
+        shareableSlug: res?.slug ?? null,
+      });
+      setTimeout(() => setHighlightOpen(true), 2000);
+    });
+  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
+
   // If character select is shown for Classic mode, render it instead of battle
   if (showCharacterSelect && battleMode === 'classic') {
     return (
@@ -2935,70 +3002,6 @@ export const RPGBattleArena = ({
     return <RPGCoopBattle story={story} studentId={studentId} worldNumber={worldNumber} gradeMode={gradeMode} onBack={onBack} onComplete={onComplete} />;
   }
 
-  // New enemy = fresh stagger thresholds (multi-enemy battles reuse this component).
-  useEffect(() => {
-    bossBreaksFiredRef.current = new Set();
-    freeHitRef.current = false;
-    setBossBreakLabel(null);
-  }, [enemy.name, enemy.type]);
-
-  /**
-   * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
-   * hit-stop, stagger, and a free-hit window where the next correct word hits
-   * for double. Turns a flat HP drain into two memorable spikes.
-   */
-  useEffect(() => {
-    if (!isBossType(enemy.type)) return;
-    if (enemyHp <= 0) return;
-    const pct = enemy.maxHp > 0 ? (enemyHp / enemy.maxHp) * 100 : 100;
-    const thresholds = [66, 33];
-    for (const t of thresholds) {
-      if (pct <= t && !bossBreaksFiredRef.current.has(t)) {
-        bossBreaksFiredRef.current.add(t);
-        freeHitRef.current = true;
-        setBossBreakLabel('STAGGERED! Next word hits DOUBLE');
-        triggerScreenShake('break');
-        setEnemyTakingDamage(true);
-        setTimeout(() => setEnemyTakingDamage(false), 700);
-        setTimeout(() => setBossBreakLabel(null), 2200);
-        break;
-      }
-    }
-  }, [enemyHp, enemy.type, enemy.maxHp, triggerScreenShake]);
-
-  // RPG v2 Phase 4: Fire Battle Highlight card on boss defeat (once per battle).
-
-  useEffect(() => {
-    if (phase !== 'victory') return;
-    if (highlightFiredRef.current) return;
-    if (!isBossType(enemy.type)) return;
-    highlightFiredRef.current = true;
-    const capturedName = enemy.name;
-    const capturedWorld = worldNumber;
-    const capturedDamage = totalDamage;
-    const capturedTurns = wordsRead;
-    const capturedStreak = longestStreak;
-    const capturedCorrect = correctWords;
-    void generateHighlight({
-      enemyId: `w${capturedWorld}-${enemy.type}`,
-      enemyName: capturedName,
-      worldNumber: capturedWorld,
-      damageDealt: capturedDamage,
-      turnsTaken: capturedTurns,
-      perfectBlocks: 0,
-      stats: { longestStreak: capturedStreak, correctWords: capturedCorrect },
-    }).then((res) => {
-      setHighlightPayload({
-        enemyName: capturedName,
-        worldNumber: capturedWorld,
-        damageDealt: capturedDamage,
-        turnsTaken: capturedTurns,
-        perfectBlocks: 0,
-        shareableSlug: res?.slug ?? null,
-      });
-      setTimeout(() => setHighlightOpen(true), 2000);
-    });
-  }, [phase, enemy.type, enemy.name, worldNumber, totalDamage, wordsRead, longestStreak, correctWords]);
 
   // GAME FEEL: the live impact profile drives shake amplitude, rotation and
   // camera punch. `impactNonce` re-keys the animation so back-to-back hits
