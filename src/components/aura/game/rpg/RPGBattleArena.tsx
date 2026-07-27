@@ -479,7 +479,7 @@ export const RPGBattleArena = ({
       inv['magic_potion'] = 1;
     }
     return inv;
-  }, [playerInventory]);
+  }, [playerInventory.getItemQuantity]);
 
   // PURCHASED POWERS: Convert store power items in inventory to Spell objects
   const purchasedPowerSpells: Spell[] = useMemo(() => {
