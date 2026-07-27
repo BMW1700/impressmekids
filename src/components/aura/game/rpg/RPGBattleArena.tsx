@@ -2993,7 +2993,14 @@ export const RPGBattleArena = ({
         // Hit-stop: freeze VISUALS only for a few frames on contact. Speech
         // recognition, timers and game logic are untouched by this.
         animationPlayState: hitStop ? 'paused' : 'running',
-        filter: hitStop ? 'contrast(1.12) saturate(1.15)' : undefined,
+        // A crit drains the colour out of everything except the damage number,
+        // so the number is the only thing left to look at.
+        filter: hitStop
+          ? (impactIntensity === 'crit' || impactIntensity === 'ultimate' || impactIntensity === 'break')
+            ? 'saturate(0.2) contrast(1.35)'
+            : 'contrast(1.12) saturate(1.15)'
+          : undefined,
+
       }}
     >
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
