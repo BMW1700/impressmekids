@@ -207,18 +207,6 @@ export const RPGLevelSelect = ({
         <p className="text-slate-400">{world.lore}</p>
       </motion.div>
 
-      {/* Empty state — a world can be published before any of its levels are.
-          Without this the page renders as a blank screen with no way back. */}
-      {levels.length === 0 && (
-        <div className="max-w-md mx-auto text-center rounded-2xl border border-border bg-card/60 p-8">
-          <h2 className="text-xl font-bold mb-2">This adventure isn't ready yet</h2>
-          <p className="text-muted-foreground mb-6">
-            New lessons for {world.name} are still being prepared. Check back soon!
-          </p>
-          <Button onClick={onBack} size="lg">Back to the map</Button>
-        </div>
-      )}
-
       {/* Levels Grid */}
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {levels.map((level, index) => {
