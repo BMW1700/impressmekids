@@ -671,7 +671,16 @@ export const RPGBattleArena = ({
   const blockedRef = useRef(false);
   const [showBlockSpark, setShowBlockSpark] = useState(false);
 
+  // Never leave a wind-up hanging once the fight is over.
+  useEffect(() => {
+    if (phase === 'victory' || phase === 'defeat') {
+      setEnemyTelegraph(false);
+      blockWindowRef.current = false;
+    }
+  }, [phase]);
+
   // Prune spent damage numbers so the overlay never accumulates.
+
   useEffect(() => {
     if (floatingDamages.length === 0) return;
     const t = setTimeout(() => {
