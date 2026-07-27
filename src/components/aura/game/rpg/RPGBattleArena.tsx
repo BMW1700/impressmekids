@@ -2391,7 +2391,10 @@ export const RPGBattleArena = ({
           ultReadyAnnouncedRef.current = true;
           battleSounds.ultimateReady();
           haptic('success');
+          setShowUltReadyBanner(true);
+          setTimeout(() => setShowUltReadyBanner(false), 2200);
         }
+
       }
 
       correctWordsRef.current += 1;
