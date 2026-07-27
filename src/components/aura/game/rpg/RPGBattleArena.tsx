@@ -2904,7 +2904,8 @@ export const RPGBattleArena = ({
     setBossPhase(1);
     setBossPhaseLabel(null);
     bossPhasesFiredRef.current = new Set();
-  }, [enemy.name, enemy.type]);
+    finalBlowFiredRef.current = false;
+  }, [enemy.name, enemy.type, enemy.id]);
 
   /**
    * BOSS BREAK MOMENTS — at 66% and 33% health the fight stops dead: full
@@ -2943,7 +2944,7 @@ export const RPGBattleArena = ({
     if (!isBossType(enemy.type)) return;
     if (enemyHp <= 0) return;
     const ratio = enemy.maxHp > 0 ? enemyHp / enemy.maxHp : 1;
-    const spectacle = getBossSpectacle(enemy.type);
+    const spectacle = getBossSpectacle(enemy.id);
 
     spectacle.phases.forEach((ph, i) => {
       // The catalog can list more than two phases; the arena palette only has
@@ -2968,7 +2969,7 @@ export const RPGBattleArena = ({
       cameraBossDrift(1400);
       setTimeout(() => setBossPhaseLabel(null), 2800);
     });
-  }, [enemyHp, enemy.type, enemy.maxHp, enemy.name, triggerScreenShake]);
+  }, [enemyHp, enemy.type, enemy.id, enemy.maxHp, enemy.name, triggerScreenShake]);
 
   /**
    * FINAL BLOW CINEMATIC — freeze, white-out, disintegration, embers, in the
@@ -2980,13 +2981,13 @@ export const RPGBattleArena = ({
     if (!isBossType(enemy.type)) return;
     if (finalBlowFiredRef.current) return;
     finalBlowFiredRef.current = true;
-    const spectacle = getBossSpectacle(enemy.type);
+    const spectacle = getBossSpectacle(enemy.id);
     const cancel = playFinalBlow({
       hue: hexToHslTriplet(spectacle.entranceColor) ?? ELEMENT_HUES.holy,
       onFreeze: () => triggerScreenShake('ultimate'),
     });
     return cancel;
-  }, [phase, enemy.type, triggerScreenShake]);
+  }, [phase, enemy.type, enemy.id, triggerScreenShake]);
 
 
 
