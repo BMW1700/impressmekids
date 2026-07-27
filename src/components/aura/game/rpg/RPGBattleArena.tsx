@@ -3187,7 +3187,40 @@ export const RPGBattleArena = ({
         )}
       </AnimatePresence>
 
+      {/* BOSS PHASE — the arena itself turns against the child. Phase 2 drains
+          the palette; phase 3 adds a pulsing danger vignette. */}
+      {bossPhase >= 2 && (
+        <motion.div
+          className="pointer-events-none absolute inset-0 z-[54]"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: bossPhase >= 3 ? [0.35, 0.6, 0.35] : 0.3 }}
+          transition={bossPhase >= 3 ? { repeat: Infinity, duration: 1.1 } : { duration: 0.8 }}
+          style={{
+            boxShadow: `inset 0 0 ${bossPhase >= 3 ? 180 : 110}px hsl(var(--destructive) / 0.75)`,
+            background:
+              bossPhase >= 3
+                ? 'radial-gradient(circle at 50% 45%, transparent 45%, hsl(var(--destructive) / 0.28) 100%)'
+                : undefined,
+          }}
+        />
+      )}
 
+      {/* Boss phase banner — the transformation announces itself */}
+      <AnimatePresence>
+        {bossPhaseLabel && (
+          <motion.div
+            className="pointer-events-none absolute inset-x-0 top-1/4 z-[59] flex justify-center"
+            initial={{ opacity: 0, scale: 0.5, y: -20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 1.6 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+          >
+            <span className="rounded-xl border-2 border-primary bg-background/90 px-6 py-3 text-xl font-black uppercase tracking-widest text-primary shadow-xl">
+              {bossPhaseLabel}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
       {/* Enemy telegraph — the arena reddens while a blow is being wound up. */}
