@@ -1,38 +1,47 @@
-## What I verified (and what I did not)
+## Brutally honest audit
 
-Verified:
-- `bunx tsgo --noEmit` is clean — both crashes are **runtime-only**, not type/build errors.
-- RPG: `RPGCharacterSelect` is rendered *inside* `RPGBattleArena.tsx:2806`. So "nothing after Choose Your Hero" means the throw happens when the arena falls through to its main battle JSX after `handleCharacterSelect` (`RPGBattleArena.tsx:884-901`). All `rpgGameFeel` imports resolve, and `getCharacterData` always returns a non-null fallback — so the usual suspects are ruled out.
-- Pre-K: World 6 ("Learn About Different Foods With Benny") is a **CMS/database-only** world, not in the hardcoded `campaignWorlds`. The "4/1 Levels" card is real: `AuraPractice.tsx:809-841` computes `levelsCompleted` from historical star/completion rows while `totalLevels` comes from `meta.level_count` (currently-published levels only). They are never reconciled.
-- On entering that level, `YubiEpisodeWrapper.tsx:48-81` tries the DB level, then `hasVideoLevel()` from the hardcoded video data (World 6 isn't there), then falls through to legacy `YubiAdventure` — which has no data for a CMS-only world. That fall-through path is the most likely source of the black screen.
+The unwanted screen is not a loading screen. It is a fallback that was added in `RPGLevelSelect` when `levels.length === 0`.
 
-**Not verified:** the exact throwing line in the RPG battle mount. I could not sign in from the sandbox, so I refuse to name a root cause I haven't seen. Step 1 below exists to get it.
+The deeper problem is that the Pre-K RPG flow currently has two separate sources of truth:
 
-## The plan
+1. `RPGWorldMap` fetches published Pre-K worlds/levels directly from the backend and builds clickable world cards.
+2. `AuraPractice` separately calls `usePublishedPrekLevels` after a world is selected, starts with an empty `Set`, and then filters the selected world's levels through that empty set on first render.
 
-### Step 1 — Make the crash tell us what it is (diagnostic, ships anyway)
-- In `ErrorBoundary`, surface the underlying `error.message` + component stack in preview/dev builds (collapsed "Technical details" block, hidden in production). Right now the fallback throws away the only useful information.
-- Add a `console.error` with the full error object at the boundary so it lands in the console logs I can read next turn.
+That creates the glitch: when you click a world, the normal level-select screen can briefly receive `[]` before the published levels hook finishes. The fallback then shows “This adventure isn’t ready yet,” even when the world actually has levels.
 
-### Step 2 — Fix the RPG battle-mount crash
-With the message in hand, fix the actual throw. Based on what's still unexamined, the prime candidates are the hero sprite branches in `RPGCharacter.tsx` (~287-830, skin-variant/alpha-webm lookups), `RPGCoachMarks`, `RPGGearLocker`/`RPGDailyHubPanel` mounting hooks (`useSeasonPass`, `useActiveSeason`, `useDailyQuests`) before their data resolves. Whatever it is, the fix is applied at the source, plus:
-- Defensive guards on every `.find()`/row-shape access in the post-selection render path so a single bad row can never blank the whole battle.
-- A local error boundary around the battle arena so a future presentation-layer throw degrades to a retryable panel instead of nuking the app.
+There is also a real data-flow bug for database-only Pre-K worlds: `isPreKWorldId()` only recognizes hardcoded worlds `101/102/103`, so DB worlds like “Learn About Different Foods” depend on `world.mode === 'prek'` being carried correctly from `RPGWorldMap`. The flow mostly does that, but the level-loading path is still fragile because it re-fetches and re-filters levels after selection.
 
-### Step 3 — Fix Pre-K CMS worlds rendering black
-- `PreKEpisodeRouter`: when the DB level build returns `null` **and** there is no hardcoded video level, stop falling through to legacy `YubiAdventure`. Render an explicit "This adventure isn't ready yet" card with a Back button instead of nothing.
-- Log which required video URL was missing so the CMS side is diagnosable.
-- Make the world card refuse to open a world with zero playable published levels (locked state) rather than routing into a dead end.
+## Fix plan
 
-### Step 4 — Fix the "4/1 Levels" count
-- Clamp `levelsCompleted` to `totalLevels` in `AuraPractice.tsx:809-841` so completions against unpublished/deleted levels can never exceed the published count. Presentation-only clamp; no data is deleted.
+1. **Remove the unwanted empty-state card**
+   - Delete the “This adventure isn’t ready yet” block from `RPGLevelSelect`.
+   - If a world has no levels, the normal world header and normal level grid area will render with no cards, exactly as requested.
 
-### Step 5 — Re-verify
-- Walk the real signed-in flow: world map → level → hero select → first battle, and Pre-K World 6, capturing console output. I only report these fixed after I see clean runs, not after the code compiles.
+2. **Stop showing false empty levels while Pre-K data is still loading**
+   - Use the `loading` value from `usePublishedPrekLevels` in `AuraPractice`.
+   - For selected Pre-K worlds, do not filter levels down to an empty set while the hook is still loading.
+   - This prevents the fake “empty world” moment caused by async timing.
 
-## Then, the game-feel plan
-Once both crashes are closed, I ship the previously approved pass unchanged: in-battle combat coach-marks (Ultimate meter, streak decay bar, block window), a one-time "BLOCKED!" teaching moment, and the scripted unloseable first battle.
+3. **Make Pre-K world detection reliable for database-only worlds**
+   - Treat any `selectedWorld.mode === 'prek'` as Pre-K, not just the hardcoded `101/102/103` IDs.
+   - Keep the existing hardcoded ID support as a fallback.
 
-## Guardrails
-- Steps 2-4 stay in the presentation/routing layer. No damage math, quest credit, speech pipeline, or database schema changes.
-- The `4/1` clamp is display-only — no progress rows are modified or deleted.
+4. **Keep clickable worlds stable**
+   - In `RPGWorldMap`, stop removing published worlds just because zero published levels were returned during a fetch timing edge.
+   - Render the world card normally; if it truly has no levels, clicking it simply shows the normal empty level-select screen with the Back button/header, not a scary fallback screen.
+
+5. **Verify the RPG route behavior**
+   - Check that the unwanted text is gone from source.
+   - Verify that the normal level-select screen renders after selecting a world, and that empty worlds do not show the fallback card.
+   - Check for leftover temporary RPG smoke routes/files; remove them only if they exist.
+
+## Files to change
+
+- `src/components/aura/game/rpg/RPGLevelSelect.tsx`
+- `src/pages/student/AuraPractice.tsx`
+- `src/components/aura/game/rpg/RPGWorldMap.tsx`
+- Possibly `src/App.tsx` only if a temporary diagnostic route is still present, but the current read did not show one.
+
+## Expected result
+
+Clicking RPG/Pre-K worlds will show the normal level-select screen. No “Adventure isn’t ready yet” card. No fake blank/empty state caused by async level-loading. If a world truly has no levels, it will just show the normal world screen with no level cards yet.
