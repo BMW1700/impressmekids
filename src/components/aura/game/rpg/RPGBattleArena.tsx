@@ -110,6 +110,8 @@ import {
 // SPECTACLE ENGINE — canvas particle/beam layer + camera rig. Presentation
 // only: it draws on top of the arena and never touches damage or speech.
 import { RPGSpectacleCanvas } from "./v2/RPGSpectacleCanvas";
+import { RPGBossSpectacle } from "./v2/RPGBossSpectacle";
+import { setSpectacleAudioEnabled } from "@/lib/rpg/spectacleAudio";
 import { emitSpectacle } from "@/lib/rpg/spectacleEngine";
 import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTransform, playSuperAttack, playFinalBlow, playBossMechanic, hexToHslTriplet } from "@/lib/rpg/attackChoreography";
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
@@ -838,6 +840,7 @@ export const RPGBattleArena = ({
   // Haptics ride the same switch so a classroom can silence buzzing too.
   useEffect(() => {
     battleSounds.setSoundEnabled(soundEnabled);
+    setSpectacleAudioEnabled(soundEnabled);
     setHapticsEnabled(soundEnabled);
   }, [soundEnabled]);
 
@@ -2952,7 +2955,9 @@ export const RPGBattleArena = ({
 
       const hue = hexToHslTriplet(ph.mechanicColor) ?? ELEMENT_HUES.shadow;
       setBossPhase(phaseNo);
-      setBossPhaseLabel(`${ph.mechanicEmoji} ${ph.mechanicName} — ${ph.taunt}`);
+      // The banner itself is rendered by <RPGBossSpectacle/>; the arena only
+      // owns the palette shift so the two don't stack on screen.
+      setBossPhaseLabel(null);
 
       // The transformation stinger, then the boss's own signature set piece.
       playBossTransform({ hue });
@@ -3184,6 +3189,8 @@ export const RPGBattleArena = ({
           Sits above the arena art, below the reading UI, and never takes
           pointer events. Disables itself under reduced motion. */}
       <RPGSpectacleCanvas zIndex={57} />
+      {/* Boss entrance title card + per-phase mechanic banner (boss enemies only). */}
+      <RPGBossSpectacle enemy={enemy as any} currentHp={enemyHp} maxHp={enemy.maxHp} />
 
       {/* Impact flash — one-frame blowout on contact (suppressed under reduced motion) */}
 
