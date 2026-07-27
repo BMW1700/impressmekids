@@ -671,6 +671,36 @@ export const RPGBattleArena = ({
   const blockedRef = useRef(false);
   const [showBlockSpark, setShowBlockSpark] = useState(false);
 
+  // Drain loop for the streak meter. Writes a CSS variable directly, so no
+  // per-frame React render (ref-based counter rule).
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const bar = decayBarRef.current;
+      const s = streakRef.current;
+      if (bar) {
+        if (s <= 0 || !lastCorrectAtRef.current) {
+          bar.style.setProperty('--streak-decay', '0%');
+        } else {
+          const pct = Math.max(0, 1 - (Date.now() - lastCorrectAtRef.current) / STREAK_DECAY_MS);
+          bar.style.setProperty('--streak-decay', `${(pct * 100).toFixed(1)}%`);
+          if (pct <= 0) {
+            // Drop one heat tier — never straight to zero. Struggling readers
+            // should feel urgency, not punishment.
+            const dropped = s >= 8 ? 7 : s >= 5 ? 4 : s >= 3 ? 2 : Math.max(0, s - 1);
+            streakRef.current = dropped;
+            setStreak(dropped);
+            prevStreakTierRef.current = streakTier(dropped);
+            lastCorrectAtRef.current = dropped > 0 ? Date.now() : 0;
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
 
   // Boss break moments: which HP thresholds have already staggered the boss,
   // plus the pending double-damage free hit they grant.
