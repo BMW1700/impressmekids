@@ -39,7 +39,8 @@ export const RPGBossSpectacle = ({ enemy, currentHp, maxHp }: RPGBossSpectaclePr
     return () => clearTimeout(t);
   }, [showEntrance]);
 
-  // Watch HP for phase transitions.
+  // Watch HP for phase transitions. Detection only — the dismiss timer lives
+  // in its own effect so an HP change on the next hit can't cancel it.
   useEffect(() => {
     if (!isBoss || showEntrance || maxHp <= 0) return;
     const ratio = currentHp / maxHp;
@@ -53,11 +54,17 @@ export const RPGBossSpectacle = ({ enemy, currentHp, maxHp }: RPGBossSpectaclePr
           next.add(i);
           return next;
         });
-        const t = setTimeout(() => setActivePhase(null), 1600);
-        return () => clearTimeout(t);
+        return;
       }
     }
   }, [currentHp, maxHp, isBoss, showEntrance, spectacle.phases, firedPhaseIds]);
+
+  // Auto-dismiss the phase banner. Keyed only on the banner itself.
+  useEffect(() => {
+    if (!activePhase) return;
+    const t = setTimeout(() => setActivePhase(null), 1600);
+    return () => clearTimeout(t);
+  }, [activePhase]);
 
   if (!isBoss) return null;
 
