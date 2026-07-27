@@ -168,7 +168,7 @@ export const RPGBattleArena = ({
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
   // STORE INVENTORY: Read real purchased items from database
   const playerInventory = usePlayerInventory(studentId, gradeMode);
-  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory]);
+  const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory.getActiveUpgrades]);
   // EQUIPPED PET — drives passive bonuses + charge attack
   const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
   // EQUIPPED LOOT — RPG v2 Phase 1: adds HP + attack % + mp_regen
