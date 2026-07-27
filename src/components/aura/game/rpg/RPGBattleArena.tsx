@@ -88,7 +88,7 @@ import { usePlayerPets } from "@/hooks/usePlayerPets";
 import { useEquippedStats } from "@/hooks/useEquippedStats";
 import { generateHighlight } from "@/hooks/useHighlightCards";
 import { RPGHighlightCard, type HighlightPayload } from "./v2/RPGHighlightCard";
-import { isBossType } from "@/lib/rpgBossSpectacle";
+import { isBossType, getBossSpectacle } from "@/lib/rpgBossSpectacle";
 import { calculatePetBonus, calculatePetAttackDamage } from "@/lib/petsData";
 import { PetBattleCompanion } from "./PetBattleCompanion";
 import { useVerbAnimation, type VerbTrigger } from "@/hooks/useVerbAnimation";
