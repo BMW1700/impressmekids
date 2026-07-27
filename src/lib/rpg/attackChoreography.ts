@@ -178,10 +178,18 @@ export function playEnemyAttack(opts: ChoreographyOptions = {}): () => void {
  * plasma sweep. These are the moments kids describe to their friends.
  */
 export function playSuperAttack(
-  opts: { origin?: Point; element?: string; onImpact?: () => void; onComplete?: () => void } = {}
+  opts: {
+    origin?: Point;
+    element?: string;
+    /** Per-boss hue override (from the boss catalog's mechanicColor). */
+    hue?: string;
+    onImpact?: () => void;
+    onComplete?: () => void;
+  } = {}
 ): () => void {
   const { origin = ARENA_ANCHORS.enemy, element = 'arcane', onImpact, onComplete } = opts;
-  const hue = ELEMENT_HUES[element] ?? ELEMENT_HUES.arcane;
+  const hue = opts.hue ?? ELEMENT_HUES[element] ?? ELEMENT_HUES.arcane;
+
   const timers: ReturnType<typeof setTimeout>[] = [];
   const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
   const visuals = isSpectacleEnabled();
