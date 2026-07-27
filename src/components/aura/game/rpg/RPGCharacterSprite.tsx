@@ -1339,7 +1339,7 @@ export const RPGCharacterSprite = ({
 
   return (
     <motion.div
-      key={`arc-${attackKey}-${hurtKey}`}
+      
       className={`relative ${sizeClasses[size]} ${isEnemy ? 'scale-x-[-1]' : ''}`}
       animate={{
         x: isAttacking
