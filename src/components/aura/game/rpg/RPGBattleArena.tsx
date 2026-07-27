@@ -168,7 +168,12 @@ export const RPGBattleArena = ({
   const { saveToAuraRecords, triggerQLearningUpdate } = useMLIntegration();
   // STORE INVENTORY: Read real purchased items from database
   const playerInventory = usePlayerInventory(studentId, gradeMode);
+  // Always-current handle to the inventory API. Used inside callbacks so that
+  // react-query's per-render mutation objects never destabilize dependencies.
+  const inventoryApiRef = useRef(playerInventory);
+  inventoryApiRef.current = playerInventory;
   const activeUpgrades = useMemo(() => playerInventory.getActiveUpgrades(), [playerInventory.getActiveUpgrades]);
+
   // EQUIPPED PET — drives passive bonuses + charge attack
   const { equippedPet, equippedPetData } = usePlayerPets(studentId, gradeMode);
   // EQUIPPED LOOT — RPG v2 Phase 1: adds HP + attack % + mp_regen
