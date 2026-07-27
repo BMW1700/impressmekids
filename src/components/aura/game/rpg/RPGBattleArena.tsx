@@ -201,7 +201,9 @@ export const RPGBattleArena = ({
   const [enemyQueue] = useState<EnemyType[]>(() => buildEnemyQueue(enemyType));
   const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
   const currentEnemyType = enemyQueue[currentEnemyIndex];
-  const enemy = (() => {
+  // Memoized: `enemy` is used in many effect dependency arrays. A fresh object
+  // per render would retrigger those effects forever.
+  const enemy = useMemo(() => {
     const theme = getStoredTheme();
     if (theme === 'agent') {
       if (currentEnemyType === 'boss' || currentEnemyType === 'final_boss') {
@@ -210,7 +212,8 @@ export const RPGBattleArena = ({
       return getAgentEnemy(currentEnemyType);
     }
     return getEnemyForBattle(currentEnemyType);
-  })();
+  }, [currentEnemyType, worldNumber]);
+
   const [defeatedEnemy, setDefeatedEnemy] = useState<RPGEnemy | null>(null);
   
   // Battle state
