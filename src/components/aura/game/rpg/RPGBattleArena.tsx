@@ -3054,9 +3054,7 @@ export const RPGBattleArena = ({
   return (
     <motion.div 
       className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
-  return (
-    <motion.div 
-      className="fixed inset-x-0 top-0 h-[100dvh] z-50 overflow-hidden"
+
       animate={screenShake ? {
         x: impactProfile.shakeX,
         rotate: impactProfile.shakeRotate,
