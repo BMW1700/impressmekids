@@ -117,6 +117,7 @@ import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTrans
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
 import { RPGCombatCoachMarks, hasSeenCombatCoach } from "./v2/RPGCombatCoachMarks";
+import { readScopedFlag, writeScopedFlag } from "@/lib/rpg/tutorialScope";
 
 /* ------------------------------------------------------------------ */
 /* Block-training counter                                              */
