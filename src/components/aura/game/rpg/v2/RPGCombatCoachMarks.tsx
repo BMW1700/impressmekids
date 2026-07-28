@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Swords, ShieldCheck, Zap } from 'lucide-react';
+import { readScopedFlag, writeScopedFlag } from '@/lib/rpg/tutorialScope';
 
 /**
  * RPG v2 — combat coach marks.
@@ -10,27 +11,20 @@ import { Swords, ShieldCheck, Zap } from 'lucide-react';
  * ranks. This one teaches the FIGHT: read to attack, read inside the wind-up
  * to block, and save the meter for the Ultimate.
  *
- * Shown once per device, on the student's first battle. Purely presentational:
- * it never mutates battle state and it pauses nothing — the arena waits for
- * speech anyway, so a child can read the cards at their own pace.
+ * Shown once per STUDENT (not per device — shared classroom iPads must teach
+ * every child), on their first battle. Purely presentational: it never mutates
+ * battle state and it pauses nothing — the arena waits for speech anyway, so a
+ * child can read the cards at their own pace.
  */
 
 export const RPG_COMBAT_COACH_KEY = 'yubi.rpg.combatcoach.v1';
 
 export function hasSeenCombatCoach() {
-  try {
-    return localStorage.getItem(RPG_COMBAT_COACH_KEY) === '1';
-  } catch {
-    return true;
-  }
+  return readScopedFlag(RPG_COMBAT_COACH_KEY) === '1';
 }
 
 export function markCombatCoachSeen() {
-  try {
-    localStorage.setItem(RPG_COMBAT_COACH_KEY, '1');
-  } catch {
-    /* private mode — the tour simply shows again next session */
-  }
+  writeScopedFlag(RPG_COMBAT_COACH_KEY, '1');
 }
 
 const STEPS = [

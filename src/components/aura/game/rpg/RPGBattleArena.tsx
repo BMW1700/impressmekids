@@ -117,6 +117,7 @@ import { ARENA_ANCHORS, ELEMENT_HUES, playAttack, playEnemyAttack, playBossTrans
 import { cameraPunch, cameraReset, cameraBossDrift, useSpectacleCamera } from "@/lib/rpg/spectacleCamera";
 import { bumpProgress } from "@/lib/rpg/rpgUnlocks";
 import { RPGCombatCoachMarks, hasSeenCombatCoach } from "./v2/RPGCombatCoachMarks";
+import { readScopedFlag, writeScopedFlag } from "@/lib/rpg/tutorialScope";
 
 /* ------------------------------------------------------------------ */
 /* Block-training counter                                              */
@@ -124,23 +125,17 @@ import { RPGCombatCoachMarks, hasSeenCombatCoach } from "./v2/RPGCombatCoachMark
 // The loud "READ FAST TO BLOCK!" prompt is training wheels. Once a child has
 // actually blocked a few times, it retires to the subtle red flash so the
 // arena stops shouting instructions they already know.
+// Scoped per student, not per device: a shared classroom iPad must teach every
+// child, not just the first one to pick it up.
 const BLOCK_TRAINING_KEY = 'yubi.rpg.blocks.landed.v1';
 const BLOCK_TRAINING_TARGET = 3;
 
 function blockSuccessCount(): number {
-  try {
-    return Number(localStorage.getItem(BLOCK_TRAINING_KEY) ?? 0) || 0;
-  } catch {
-    return BLOCK_TRAINING_TARGET;
-  }
+  return Number(readScopedFlag(BLOCK_TRAINING_KEY) ?? 0) || 0;
 }
 
 function bumpBlockSuccess() {
-  try {
-    localStorage.setItem(BLOCK_TRAINING_KEY, String(blockSuccessCount() + 1));
-  } catch {
-    /* private mode — prompt simply keeps showing */
-  }
+  writeScopedFlag(BLOCK_TRAINING_KEY, String(blockSuccessCount() + 1));
 }
 
 

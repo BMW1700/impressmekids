@@ -1,35 +1,33 @@
-## Brutally honest: the v9 pass landed, but "perfect" is still not the word
+## Honest verdict
 
-Verified in the code right now, not from memory:
+The v10 work landed and is correctly wired. I confirmed each piece in the arena file rather than trusting the summary:
 
-- `attackChoreography.ts:113` calls `cameraPushIn(from.x, beat.anticipation)` — the anticipation lean is live for hero and enemy attacks.
-- `RPGBattleArena.tsx:3159/3164` applies `camera.y` in both the shake and rest transforms — boss drift now reads vertically.
-- `RPGBossSpectacle.tsx:67` has the dismiss timer in its own `[activePhase]` effect — the sticky-banner bug is gone.
-- `RPGSpectacleCanvas.tsx:51` returns `<ReducedMotionHitConfirm/>` instead of `null` — reduced-motion students still get a hit confirm.
-- Full typecheck clean; all touched modules transform in the dev server.
-- `capacitor.config.ts` is already production-shaped: no `server.url` block (Guideline 2.5.2), ATS untouched, splash/keyboard/push configured. `docs/ios-info-plist-additions.md` has the exact mic / speech / camera usage strings, category, and encryption keys. Apple sign-in exists in `src/pages/Auth.tsx`.
+- Combat coach marks mount on first battle, gated by `hasSeenCombatCoach()`.
+- The "READ FAST TO BLOCK" prompt renders during `enemyTelegraph` while `blockTraining` is true.
+- `bumpBlockSuccess()` increments only on an actual parry inside the block window.
+- The "Ultimate ready" banner fires once per battle and resets on new battles.
+- The effects toggle is in the battle header and persists through `setSpectacleEnabled`.
 
-So the spectacle work is done and correct. What is **not** true is "absolutely perfect and nothing missing."
+So: no, nothing from the last pass is half-done. But "ready to ship" is still not true, for two reasons.
 
-## The three real gaps
+## Gap 1 — the tutorial gating is per-device, not per-student
 
-**1. Combat is never taught — this is the biggest one.**
-`RPGCoachMarks.tsx` teaches meta systems only: Gear Locker, Equip, Daily quests, Season Pass, Ranks. It teaches **nothing** about the fight itself. The 1100ms enemy telegraph and the block window (75% damage reduction) and the Ultimate meter are all implemented — and a 7-year-old has no way to discover any of them. They will stand there and eat every boss hit, then decide the game is unfair. An addictive loop that the player can't see is not an addictive loop.
+Both `yubi.rpg.combatcoach.v1` and `yubi.rpg.blocks.landed.v1` live in `localStorage`. On a shared classroom iPad — which is the mandated primary device — the first child through sees the tutorial and lands three blocks. Every child after them on that same iPad gets **zero** combat teaching and **no** block prompt. In a 25-student class that means 24 kids hit the exact problem v10 was built to solve.
 
-**2. Nothing has been verified on a real device.**
-There is no `ios/` or `android/` folder in the repo (correct — those are generated after export on your Mac). That means haptics, `@capacitor-community/speech-recognition`, and the spectacle canvas frame rate on an actual iPad have **never run on hardware**. Every performance claim about the particle engine is a claim about Chrome in a sandbox. `docs/PRE_SUBMISSION_RUNBOOK.md` still has all of Phases 1-5 unchecked.
+This is the difference between "we taught the fight" and "we taught one child per iPad."
 
-**3. No spectacle/motion setting surfaced to schools.**
-`isSpectacleEnabled()` respects OS reduced-motion and an internal flag, but there is no teacher- or parent-facing toggle. A district that asks "can I turn the flashing off for a photosensitive student?" currently gets "change their iOS setting."
+Fix: namespace both keys by the signed-in user id (fall back to the device-wide key only when there is no session). Same components, same UX, one key change plus a small helper.
 
-## Plan — v10 "Teach The Fight + Pre-Flight"
+## Gap 2 — nothing has run on hardware
 
-1. **Combat coach marks (first battle only).** Add a small `RPGCombatCoachMarks` shown inside `RPGBattleArena` on a student's first fight, gated by a `localStorage` seen-flag like the existing coach marks: three beats — "Read to attack", "When the enemy glows, TAP TO BLOCK", "Fill the meter for your Ultimate."
-2. **Live block prompt.** During the enemy telegraph window, show a large, unmissable "TAP TO BLOCK!" pulse over the block target for the first N battles, then fade to the subtle version once the student has blocked successfully a few times. Presentation only — no change to the damage math or the 1100ms window.
-3. **Ultimate ready callout.** When `ultReady` flips true, fire a one-time-per-battle banner + audio sting so the meter is not just a bar nobody reads.
-4. **Spectacle toggle in settings.** Surface an "Extra effects" on/off switch in the existing game header settings (gear icon), wired to `setSpectacleEnabled` and persisted, so the reduced-motion path is a choice, not an OS side effect.
-5. **Device pre-flight pass.** Once you export to GitHub and run `npx cap add ios`, walk the runbook Phase 5 smoke tests together: mic permission prompt, speech recognition on device, haptics on a real hit, one full boss fight at 60fps on iPad, and account deletion reachable.
+There is no `ios/` folder in the repo (correct — it is generated after export). That means haptics, native speech recognition, and the particle canvas frame rate have never executed outside a sandboxed Chrome. Every performance claim is currently a claim about a desktop browser. All of Phase 5 in `docs/PRE_SUBMISSION_RUNBOOK.md` is unchecked.
 
-## Straight answer to the question
+## Plan
 
-RPG mode is mechanically complete and the spectacle is genuinely strong. It is **not** ready to ship until players are taught to block — that single gap is the difference between "this is hard and fun" and "this is unfair." Items 1-4 are a few hours of frontend work. After that, yes: pivot fully to App Store deployment and do the device verification, because that is where the remaining risk actually lives.
+1. **Per-student tutorial keys.** Add a small helper that suffixes the coach-mark and block-training localStorage keys with the current user id. Update `RPGCombatCoachMarks.tsx` and the `BLOCK_TRAINING_KEY` helpers in `RPGBattleArena.tsx` to use it. No behavior change for single-user devices.
+2. **Teacher-side reset (optional, small).** Not required for pilots; skip unless you want it — the per-student key makes it mostly unnecessary.
+3. **Pivot to App Store.** Export to GitHub, `npx cap add ios`, then walk the runbook in order: Phase 1 demo accounts, Phase 2 Apple Developer, Phase 3 App Store Connect, Phase 4 Info.plist + icons, Phase 5 TestFlight smoke tests on a real iPhone and a real iPad.
+
+## Answer to the actual question
+
+RPG mode is mechanically complete, taught, and the spectacle is genuinely strong. It is not "perfect" — item 1 above is a real classroom-blocking defect, and it is roughly 20 minutes of work. After that, yes: the remaining risk is entirely on-device, and that is where your attention should go.
