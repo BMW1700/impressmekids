@@ -1188,6 +1188,10 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
       isRecognitionStartingRef.current = false;
+      micFailureCountRef.current = 0;
+      lastMicActivityRef.current = Date.now();
+      micSuspendedRef.current = false;
+      setMicReconnecting(false);
       processedFinalsRef.current.clear();
       // Reset fast-burst cursor on every fresh start so old consumed counts
       // don't leak into a new batch and skip real words.
