@@ -1096,11 +1096,14 @@ export const RPGWordReader = ({
     handleRetrySuccessRef.current = handleRetrySuccess;
   }, [processResult, handleCorrect, handleRetrySuccess]);
 
-  // Create and start the recognition session (ONE instance, kept alive)
+  // Create and start a recognition session.
+  // A SpeechRecognition object is SINGLE USE — every restart builds a fresh
+  // instance. Reusing an aborted/ended instance throws InvalidStateError in
+  // Chrome/Safari, which used to leave the mic permanently dead mid-battle.
   const startRecognitionSession = useCallback(() => {
     if (disabled) return;
     if (isRecognitionRunningRef.current || isRecognitionStartingRef.current) return;
-    
+
     setMicError(null);
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -1109,13 +1112,41 @@ export const RPGWordReader = ({
       setMicError('Speech recognition not supported in this browser');
       return;
     }
-    
+
+    // Another owner (a mini-game) holds the mic — do not open a second one.
+    const activeOwner = speechManager.getCurrentOwner();
+    if (activeOwner && activeOwner !== 'reader') {
+      console.log('[RPGWordReader] Mic owned by', activeOwner, '— deferring start');
+      micSuspendedRef.current = true;
+      shouldBeListeningRef.current = true;
+      return;
+    }
+
     unlockSpeechSynthesis();
     shouldBeListeningRef.current = true;
+    micSuspendedRef.current = false;
     isRecognitionStartingRef.current = true;
+    lastMicActivityRef.current = Date.now();
     const sessionId = ++speechSessionIdRef.current;
-    
-    // Create ONE recognition instance
+
+    // Claim the mic in the global singleton so mini-games can revoke us
+    // instead of racing us for the same microphone.
+    speechManager.claimExternal('reader', () => {
+      console.log('[RPGWordReader] Mic revoked by another owner — suspending');
+      micSuspendedRef.current = true;
+      speechSessionIdRef.current += 1;
+      const active = recognitionRef.current;
+      recognitionRef.current = null;
+      killRecognition(active);
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+    });
+
+    // Create a fresh recognition instance for this session
     const recognition = new SpeechRecognition();
     recognition.continuous = true;  // KEY: Keep listening continuously
     recognition.interimResults = true;
@@ -1124,27 +1155,30 @@ export const RPGWordReader = ({
 
     const isCurrentSession = () => recognitionRef.current === recognition && speechSessionIdRef.current === sessionId;
 
+    // Cold restart: discard this instance and build a new one.
     const scheduleRestart = (delayMs: number) => {
+      if (!isCurrentSession()) return; // stale sessions must never touch the live timer
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
         restartTimeoutRef.current = null;
       }
 
       restartTimeoutRef.current = setTimeout(() => {
+        restartTimeoutRef.current = null;
         if (!isCurrentSession() || !shouldBeListeningRef.current || isRecognitionRunningRef.current) {
           return;
         }
-
-        try {
-          console.log('[RPGWordReader] Restarting active speech session', { sessionId, wordIndex: currentIndexRef.current, target: getTargetWord(currentIndexRef.current) });
-          isRecognitionStartingRef.current = true;
-          recognition.start();
-        } catch (e) {
-          console.log('[RPGWordReader] Active-session restart skipped:', e);
-          isRecognitionStartingRef.current = false;
-        }
+        console.log('[RPGWordReader] Cold-restarting speech session', { sessionId, wordIndex: currentIndexRef.current, target: getTargetWord(currentIndexRef.current) });
+        // Tear the dead instance down completely, then start a new one.
+        speechSessionIdRef.current += 1;
+        recognitionRef.current = null;
+        killRecognition(recognition);
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        startRecognitionRef.current?.();
       }, delayMs);
     };
+
     
     recognition.onstart = () => {
       if (!isCurrentSession()) {
