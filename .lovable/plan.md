@@ -1,33 +1,46 @@
-## Honest verdict
+## Brutally honest diagnosis
 
-The v10 work landed and is correctly wired. I confirmed each piece in the arena file rather than trusting the summary:
+I read `src/lib/speechRecognitionManager.ts` and `src/components/aura/game/rpg/RPGWordReader.tsx`. The mic failure is not random — there are four real defects, and all of them get worse the longer a battle runs.
 
-- Combat coach marks mount on first battle, gated by `hasSeenCombatCoach()`.
-- The "READ FAST TO BLOCK" prompt renders during `enemyTelegraph` while `blockTraining` is true.
-- `bumpBlockSuccess()` increments only on an actual parry inside the block window.
-- The "Ultimate ready" banner fires once per battle and resets on new battles.
-- The effects toggle is in the battle header and persists through `setSpectacleEnabled`.
+**1. There are two competing mic owners in RPG mode.**
+Every minigame (`RPGQuickBlock`, `RPGFireballDefense`, `RPGBeastSwarm`, `RPGTugOfWar`, ~20 files) goes through the `speechManager` singleton. But `RPGWordReader` — the main reading loop — builds its **own** raw `webkitSpeechRecognition` object (line 1111) and never registers with the manager. So `speechManager.forceStop()` in `RPGBattleArena` physically cannot stop the reader's mic. The reader's auto-restart (`onend → scheduleRestart(100)`) can and does re-open the mic while a minigame is listening. Two live SpeechRecognition sessions on one microphone is exactly what produces the "spazzing/glitching": duplicate transcripts, `audio-capture` / `aborted` error storms, words firing twice or not at all.
 
-So: no, nothing from the last pass is half-done. But "ready to ship" is still not true, for two reasons.
+**2. A single shared restart timer lets a dead session kill the live one.**
+`restartTimeoutRef` is one ref shared by every recognition session. A stale (aborted) session's `onend` fires late, calls `scheduleRestart()`, which **clears the live session's pending restart timer** and installs its own. When that timer runs, the `isCurrentSession()` guard returns early and does nothing. Net result: the real restart was cancelled and no new one was ever scheduled — **the mic silently dies forever** until the user backs out. This is the "after a while it just stops working" bug.
 
-## Gap 1 — the tutorial gating is per-device, not per-student
+**3. Aborted recognition objects are reused.**
+`scheduleRestart` calls `recognition.start()` on the *same* object that was previously `.abort()`ed or errored. Chrome/Safari frequently refuse this with `InvalidStateError`; the catch block sets `isRecognitionStartingRef=false` and **schedules nothing**, so again the mic is permanently dead. A recognition object should be treated as single-use.
 
-Both `yubi.rpg.combatcoach.v1` and `yubi.rpg.blocks.landed.v1` live in `localStorage`. On a shared classroom iPad — which is the mandated primary device — the first child through sees the tutorial and lands three blocks. Every child after them on that same iPad gets **zero** combat teaching and **no** block prompt. In a 25-student class that means 24 kids hit the exact problem v10 was built to solve.
+**4. No backoff and no watchdog.**
+Restarts fire at a flat 100 ms / 300 ms. Chrome rate-limits rapid `start()` calls and its network recognizer degrades after long sessions, so a `network`/`no-speech` storm turns into a hot loop that Chrome eventually stops serving. Nothing anywhere notices "we're supposed to be listening but nothing has run for 4 seconds." Tab backgrounding / iOS audio interruption also kills the session with no recovery path.
 
-This is the difference between "we taught the fight" and "we taught one child per iPad."
+The manager has the same class of bug on its web path: `onend` restarts `this.recognition`, which by then may be a *different* owner's newer instance, and handlers are never detached.
 
-Fix: namespace both keys by the signed-in user id (fall back to the device-wide key only when there is no session). Same components, same UX, one key change plus a small helper.
+## The fix
 
-## Gap 2 — nothing has run on hardware
+**A. One mic owner, enforced**
+- Register `RPGWordReader` with `speechManager` as owner `'reader'` (claim on start, release on stop/unmount) so the singleton is the single source of truth. Minigame `start()` calls will now correctly force-stop the reader instead of racing it.
+- `RPGBattleArena` keeps calling `forceStop()` on transitions; it will now actually stop the reader.
 
-There is no `ios/` folder in the repo (correct — it is generated after export). That means haptics, native speech recognition, and the particle canvas frame rate have never executed outside a sandboxed Chrome. Every performance claim is currently a claim about a desktop browser. All of Phase 5 in `docs/PRE_SUBMISSION_RUNBOOK.md` is unchecked.
+**B. Session-scoped lifecycle in `RPGWordReader`**
+- Replace the shared `restartTimeoutRef` with a **per-session timer** stored on the session object, so a stale session can never cancel the live session's restart.
+- Build a **fresh `SpeechRecognition` instance on every restart** instead of reusing an aborted one.
+- Detach `onstart/onresult/onerror/onend` (set to `null`) on every teardown so dead objects go fully inert.
 
-## Plan
+**C. Backoff + watchdog**
+- Exponential backoff on consecutive failures (150ms → 300 → 600 → 1200, capped ~2.5s), reset on any successful `onstart` or result.
+- A **watchdog heartbeat** (~3s interval): if `shouldBeListening` is true but nothing has started or produced a result within the window, tear the session down and cold-restart it. This is the safety net that guarantees the mic can never stay dead.
+- On `visibilitychange` back to visible (and on Capacitor `resume`), force a cold restart.
+- Surface a small "Mic reconnecting…" state in the reader UI instead of a frozen "Listening…" chip so kids/teachers see recovery instead of a dead button.
 
-1. **Per-student tutorial keys.** Add a small helper that suffixes the coach-mark and block-training localStorage keys with the current user id. Update `RPGCombatCoachMarks.tsx` and the `BLOCK_TRAINING_KEY` helpers in `RPGBattleArena.tsx` to use it. No behavior change for single-user devices.
-2. **Teacher-side reset (optional, small).** Not required for pilots; skip unless you want it — the per-student key makes it mostly unnecessary.
-3. **Pivot to App Store.** Export to GitHub, `npx cap add ios`, then walk the runbook in order: Phase 1 demo accounts, Phase 2 Apple Developer, Phase 3 App Store Connect, Phase 4 Info.plist + icons, Phase 5 TestFlight smoke tests on a real iPhone and a real iPad.
+**D. Harden `speechRecognitionManager`**
+- Per-instance identity guard: `onend`/`onerror` handlers only act if `this.recognition === theirOwnInstance`.
+- Fresh instance per restart, handlers nulled on stop/abort/forceStop.
+- Same backoff + watchdog as the reader so minigames get the same guarantee.
+- Fire `onEnd` before clearing `config` in `stop()` so owners aren't left hanging.
 
-## Answer to the actual question
+## Technical notes
+Files touched: `src/lib/speechRecognitionManager.ts`, `src/components/aura/game/rpg/RPGWordReader.tsx`, plus a small shared helper `src/lib/speech/micWatchdog.ts` for the backoff/heartbeat logic reused by both. No database, no edge functions, no changes to matching strictness (`wordMatchingModes.ts` / Challenge Meter behavior is untouched). Native (Capacitor) path is left behaviorally identical apart from getting the same watchdog restart.
 
-RPG mode is mechanically complete, taught, and the spectacle is genuinely strong. It is not "perfect" — item 1 above is a real classroom-blocking defect, and it is roughly 20 minutes of work. After that, yes: the remaining risk is entirely on-device, and that is where your attention should go.
+## Verification
+Instrumented console logging with a session id + owner on every start/stop/restart, then a long-run RPG battle in the preview browser to confirm: only one owner is ever active, no `InvalidStateError` loops, and the watchdog recovers the mic after a forced kill.
