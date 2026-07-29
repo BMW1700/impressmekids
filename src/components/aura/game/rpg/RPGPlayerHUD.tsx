@@ -41,7 +41,7 @@ export const RPGPlayerHUD = ({
 
   const achievementStats = getTotalStats();
   const { unlocked, justUnlocked, markUnlockSeen } = useRPGUnlocks();
-  const storeUnlocked = unlocked('store');
+  
   const storeJustUnlocked = justUnlocked('store');
 
   const theme = getStoredTheme();
