@@ -1389,6 +1389,66 @@ export const RPGWordReader = ({
     startRecognitionRef.current = startRecognitionSession;
   }, [startRecognitionSession]);
 
+  // ---- Mic watchdog -------------------------------------------------------
+  // Guarantees the mic can never stay dead: if we are supposed to be
+  // listening but nothing has started or produced a result recently, tear the
+  // session down and cold-restart it. Also resumes after a mini-game hands
+  // the mic back.
+  useEffect(() => {
+    const stop = startMicWatchdog({
+      intervalMs: 1500,
+      stallMs: 4000,
+      shouldBeListening: () => shouldBeListeningRef.current && !disabled,
+      msSinceActivity: () => Date.now() - (lastMicActivityRef.current || Date.now()),
+      isBusy: () => isRecognitionRunningRef.current || isRecognitionStartingRef.current,
+      onRecover: () => {
+        const owner = speechManager.getCurrentOwner();
+        if (owner && owner !== 'reader') {
+          // A mini-game legitimately owns the mic — stay suspended.
+          return;
+        }
+        setMicReconnecting(true);
+        speechSessionIdRef.current += 1;
+        const active = recognitionRef.current;
+        recognitionRef.current = null;
+        killRecognition(active);
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        micSuspendedRef.current = false;
+        if (restartTimeoutRef.current) {
+          clearTimeout(restartTimeoutRef.current);
+          restartTimeoutRef.current = null;
+        }
+        lastMicActivityRef.current = Date.now();
+        startRecognitionRef.current?.();
+      },
+    });
+    return stop;
+  }, [disabled]);
+
+  // Tab backgrounding / iOS audio interruption silently kills a session.
+  // Force a cold restart the moment we come back.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!shouldBeListeningRef.current || disabled) return;
+      const owner = speechManager.getCurrentOwner();
+      if (owner && owner !== 'reader') return;
+      console.log('[RPGWordReader] Tab visible again — cold restarting mic');
+      speechSessionIdRef.current += 1;
+      const active = recognitionRef.current;
+      recognitionRef.current = null;
+      killRecognition(active);
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
+      micFailureCountRef.current = 0;
+      lastMicActivityRef.current = Date.now();
+      startRecognitionRef.current?.();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [disabled]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -1398,15 +1458,13 @@ export const RPGWordReader = ({
       clearAllTimeouts();
       const activeRecognition = recognitionRef.current;
       recognitionRef.current = null;
-      if (activeRecognition) {
-        try {
-          activeRecognition.stop();
-        } catch (e) {}
-      }
+      killRecognition(activeRecognition);
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
+      speechManager.releaseExternal('reader');
     };
   }, [clearAllTimeouts, stopInstructionAudio]);
+
 
   // Force-stop recognition the moment `disabled` flips true (e.g. while a
   // PvP RPC is in flight). Without this, an already-running recognition
