@@ -409,18 +409,15 @@ export const RPGWordReader = ({
     speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
-    
+    micSuspendedRef.current = false;
+    setMicReconnecting(false);
+
     const activeRecognition = recognitionRef.current;
     recognitionRef.current = null;
-    if (activeRecognition) {
-      try {
-        activeRecognition.stop();
-      } catch (e) {
-        // Ignore - may already be stopped
-      }
-    }
+    killRecognition(activeRecognition);
     isRecognitionRunningRef.current = false;
     isRecognitionStartingRef.current = false;
+    speechManager.releaseExternal('reader');
   }, [clearAllTimeouts]);
 
   // Advance to next word (UI only, doesn't touch recognition)
