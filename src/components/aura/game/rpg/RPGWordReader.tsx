@@ -7,6 +7,8 @@ import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlaye
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { speakBenny, stopBenny } from "@/lib/bennyVoice";
 import { teachWord, stopBennyTeach } from "@/lib/bennyTeach";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { backoffDelay, killRecognition, startMicWatchdog } from "@/lib/speech/micWatchdog";
 
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
@@ -185,6 +187,12 @@ export const RPGWordReader = ({
   });
   const startRecognitionRef = useRef<(() => void) | null>(null);
   
+  // Mic reliability state (see src/lib/speech/micWatchdog.ts)
+  const micFailureCountRef = useRef(0);
+  const lastMicActivityRef = useRef(0);
+  const micSuspendedRef = useRef(false);
+  const [micReconnecting, setMicReconnecting] = useState(false);
+
   // Timeout refs
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -401,18 +409,15 @@ export const RPGWordReader = ({
     speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;
     clearAllTimeouts();
-    
+    micSuspendedRef.current = false;
+    setMicReconnecting(false);
+
     const activeRecognition = recognitionRef.current;
     recognitionRef.current = null;
-    if (activeRecognition) {
-      try {
-        activeRecognition.stop();
-      } catch (e) {
-        // Ignore - may already be stopped
-      }
-    }
+    killRecognition(activeRecognition);
     isRecognitionRunningRef.current = false;
     isRecognitionStartingRef.current = false;
+    speechManager.releaseExternal('reader');
   }, [clearAllTimeouts]);
 
   // Advance to next word (UI only, doesn't touch recognition)
@@ -1088,11 +1093,14 @@ export const RPGWordReader = ({
     handleRetrySuccessRef.current = handleRetrySuccess;
   }, [processResult, handleCorrect, handleRetrySuccess]);
 
-  // Create and start the recognition session (ONE instance, kept alive)
+  // Create and start a recognition session.
+  // A SpeechRecognition object is SINGLE USE — every restart builds a fresh
+  // instance. Reusing an aborted/ended instance throws InvalidStateError in
+  // Chrome/Safari, which used to leave the mic permanently dead mid-battle.
   const startRecognitionSession = useCallback(() => {
     if (disabled) return;
     if (isRecognitionRunningRef.current || isRecognitionStartingRef.current) return;
-    
+
     setMicError(null);
 
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
@@ -1101,13 +1109,41 @@ export const RPGWordReader = ({
       setMicError('Speech recognition not supported in this browser');
       return;
     }
-    
+
+    // Another owner (a mini-game) holds the mic — do not open a second one.
+    const activeOwner = speechManager.getCurrentOwner();
+    if (activeOwner && activeOwner !== 'reader') {
+      console.log('[RPGWordReader] Mic owned by', activeOwner, '— deferring start');
+      micSuspendedRef.current = true;
+      shouldBeListeningRef.current = true;
+      return;
+    }
+
     unlockSpeechSynthesis();
     shouldBeListeningRef.current = true;
+    micSuspendedRef.current = false;
     isRecognitionStartingRef.current = true;
+    lastMicActivityRef.current = Date.now();
     const sessionId = ++speechSessionIdRef.current;
-    
-    // Create ONE recognition instance
+
+    // Claim the mic in the global singleton so mini-games can revoke us
+    // instead of racing us for the same microphone.
+    speechManager.claimExternal('reader', () => {
+      console.log('[RPGWordReader] Mic revoked by another owner — suspending');
+      micSuspendedRef.current = true;
+      speechSessionIdRef.current += 1;
+      const active = recognitionRef.current;
+      recognitionRef.current = null;
+      killRecognition(active);
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+    });
+
+    // Create a fresh recognition instance for this session
     const recognition = new SpeechRecognition();
     recognition.continuous = true;  // KEY: Keep listening continuously
     recognition.interimResults = true;
@@ -1116,27 +1152,30 @@ export const RPGWordReader = ({
 
     const isCurrentSession = () => recognitionRef.current === recognition && speechSessionIdRef.current === sessionId;
 
+    // Cold restart: discard this instance and build a new one.
     const scheduleRestart = (delayMs: number) => {
+      if (!isCurrentSession()) return; // stale sessions must never touch the live timer
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
         restartTimeoutRef.current = null;
       }
 
       restartTimeoutRef.current = setTimeout(() => {
+        restartTimeoutRef.current = null;
         if (!isCurrentSession() || !shouldBeListeningRef.current || isRecognitionRunningRef.current) {
           return;
         }
-
-        try {
-          console.log('[RPGWordReader] Restarting active speech session', { sessionId, wordIndex: currentIndexRef.current, target: getTargetWord(currentIndexRef.current) });
-          isRecognitionStartingRef.current = true;
-          recognition.start();
-        } catch (e) {
-          console.log('[RPGWordReader] Active-session restart skipped:', e);
-          isRecognitionStartingRef.current = false;
-        }
+        console.log('[RPGWordReader] Cold-restarting speech session', { sessionId, wordIndex: currentIndexRef.current, target: getTargetWord(currentIndexRef.current) });
+        // Tear the dead instance down completely, then start a new one.
+        speechSessionIdRef.current += 1;
+        recognitionRef.current = null;
+        killRecognition(recognition);
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        startRecognitionRef.current?.();
       }, delayMs);
     };
+
     
     recognition.onstart = () => {
       if (!isCurrentSession()) {
@@ -1146,6 +1185,10 @@ export const RPGWordReader = ({
       console.log('[RPGWordReader] Recognition started');
       isRecognitionRunningRef.current = true;
       isRecognitionStartingRef.current = false;
+      micFailureCountRef.current = 0;
+      lastMicActivityRef.current = Date.now();
+      micSuspendedRef.current = false;
+      setMicReconnecting(false);
       processedFinalsRef.current.clear();
       // Reset fast-burst cursor on every fresh start so old consumed counts
       // don't leak into a new batch and skip real words.
@@ -1160,6 +1203,8 @@ export const RPGWordReader = ({
         console.log('[RPGWordReader] Ignoring stale result', { sessionId });
         return;
       }
+      lastMicActivityRef.current = Date.now();
+      micFailureCountRef.current = 0;
       // CRITICAL FIX: Use event.resultIndex to only process NEW results
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -1290,13 +1335,14 @@ export const RPGWordReader = ({
         return;
       }
       
-      // For recoverable errors, try to restart
-      if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') {
-        isRecognitionRunningRef.current = false;
-        
-        if (shouldBeListeningRef.current && !isProcessingRef.current) {
-          scheduleRestart(300);
-        }
+      // For recoverable errors, cold-restart with exponential backoff.
+      // Flat 300ms retries hit Chrome's rate limiter and the recognizer
+      // eventually stops serving requests entirely.
+      isRecognitionRunningRef.current = false;
+      micFailureCountRef.current += 1;
+      if (shouldBeListeningRef.current) {
+        setMicReconnecting(true);
+        scheduleRestart(backoffDelay(micFailureCountRef.current));
       }
     };
     
@@ -1311,7 +1357,7 @@ export const RPGWordReader = ({
       
       // Auto-restart if we should still be listening
       if (shouldBeListeningRef.current && !isProcessingRef.current) {
-        scheduleRestart(100);
+        scheduleRestart(Math.max(120, backoffDelay(micFailureCountRef.current - 1)));
       }
     };
     
@@ -1323,18 +1369,82 @@ export const RPGWordReader = ({
       console.error('[RPGWordReader] Failed to start:', e);
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
+      micFailureCountRef.current += 1;
       
-      // Retry after delay
+      // CRITICAL: always schedule a retry. Returning here without one is what
+      // left the mic permanently dead after an InvalidStateError.
       if (shouldBeListeningRef.current) {
-        scheduleRestart(500);
+        setMicReconnecting(true);
+        scheduleRestart(backoffDelay(micFailureCountRef.current));
       }
     }
   }, [disabled, mode, getTargetWord, handleRetrySuccess, handleCorrect, processResult, applyFastBurst]);
+
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
     startRecognitionRef.current = startRecognitionSession;
   }, [startRecognitionSession]);
+
+  // ---- Mic watchdog -------------------------------------------------------
+  // Guarantees the mic can never stay dead: if we are supposed to be
+  // listening but nothing has started or produced a result recently, tear the
+  // session down and cold-restart it. Also resumes after a mini-game hands
+  // the mic back.
+  useEffect(() => {
+    const stop = startMicWatchdog({
+      intervalMs: 1500,
+      stallMs: 4000,
+      shouldBeListening: () => shouldBeListeningRef.current && !disabled,
+      msSinceActivity: () => Date.now() - (lastMicActivityRef.current || Date.now()),
+      isBusy: () => isRecognitionRunningRef.current || isRecognitionStartingRef.current,
+      onRecover: () => {
+        const owner = speechManager.getCurrentOwner();
+        if (owner && owner !== 'reader') {
+          // A mini-game legitimately owns the mic — stay suspended.
+          return;
+        }
+        setMicReconnecting(true);
+        speechSessionIdRef.current += 1;
+        const active = recognitionRef.current;
+        recognitionRef.current = null;
+        killRecognition(active);
+        isRecognitionRunningRef.current = false;
+        isRecognitionStartingRef.current = false;
+        micSuspendedRef.current = false;
+        if (restartTimeoutRef.current) {
+          clearTimeout(restartTimeoutRef.current);
+          restartTimeoutRef.current = null;
+        }
+        lastMicActivityRef.current = Date.now();
+        startRecognitionRef.current?.();
+      },
+    });
+    return stop;
+  }, [disabled]);
+
+  // Tab backgrounding / iOS audio interruption silently kills a session.
+  // Force a cold restart the moment we come back.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!shouldBeListeningRef.current || disabled) return;
+      const owner = speechManager.getCurrentOwner();
+      if (owner && owner !== 'reader') return;
+      console.log('[RPGWordReader] Tab visible again — cold restarting mic');
+      speechSessionIdRef.current += 1;
+      const active = recognitionRef.current;
+      recognitionRef.current = null;
+      killRecognition(active);
+      isRecognitionRunningRef.current = false;
+      isRecognitionStartingRef.current = false;
+      micFailureCountRef.current = 0;
+      lastMicActivityRef.current = Date.now();
+      startRecognitionRef.current?.();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [disabled]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1345,15 +1455,13 @@ export const RPGWordReader = ({
       clearAllTimeouts();
       const activeRecognition = recognitionRef.current;
       recognitionRef.current = null;
-      if (activeRecognition) {
-        try {
-          activeRecognition.stop();
-        } catch (e) {}
-      }
+      killRecognition(activeRecognition);
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
+      speechManager.releaseExternal('reader');
     };
   }, [clearAllTimeouts, stopInstructionAudio]);
+
 
   // Force-stop recognition the moment `disabled` flips true (e.g. while a
   // PvP RPC is in flight). Without this, an already-running recognition
@@ -1367,12 +1475,12 @@ export const RPGWordReader = ({
     clearAllTimeouts();
     const activeRecognition = recognitionRef.current;
     recognitionRef.current = null;
-    if (activeRecognition) {
-      try { activeRecognition.stop(); } catch (e) {}
-    }
+    killRecognition(activeRecognition);
     isRecognitionRunningRef.current = false;
     isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
+    setMicReconnecting(false);
+    speechManager.releaseExternal('reader');
     setRecognitionState('idle');
   }, [disabled, clearAllTimeouts, stopInstructionAudio]);
 
@@ -1437,18 +1545,20 @@ export const RPGWordReader = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`flex items-center gap-2 px-4 py-2 rounded-full
-            ${isEchoRetry 
+            ${micReconnecting
+              ? 'bg-amber-500/20 border border-amber-500/40'
+              : isEchoRetry 
               ? 'bg-amber-500/20 border border-amber-500/40' 
               : 'bg-emerald-500/20 border border-emerald-500/40'
             }`}
         >
           <motion.div
-            className={`w-3 h-3 rounded-full ${isEchoRetry ? 'bg-amber-400' : 'bg-emerald-400'}`}
+            className={`w-3 h-3 rounded-full ${micReconnecting || isEchoRetry ? 'bg-amber-400' : 'bg-emerald-400'}`}
             animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
             transition={{ repeat: Infinity, duration: 1 }}
           />
-          <span className={`text-sm font-medium ${isEchoRetry ? 'text-amber-300' : 'text-emerald-300'}`}>
-            {isEchoRetry ? 'Try Again!' : 'Mic Active - Keep Reading!'}
+          <span className={`text-sm font-medium ${micReconnecting || isEchoRetry ? 'text-amber-300' : 'text-emerald-300'}`}>
+            {micReconnecting ? 'Mic reconnecting…' : isEchoRetry ? 'Try Again!' : 'Mic Active - Keep Reading!'}
           </span>
         </motion.div>
       )}
