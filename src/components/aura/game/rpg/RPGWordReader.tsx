@@ -187,6 +187,12 @@ export const RPGWordReader = ({
   });
   const startRecognitionRef = useRef<(() => void) | null>(null);
   
+  // Mic reliability state (see src/lib/speech/micWatchdog.ts)
+  const micFailureCountRef = useRef(0);
+  const lastMicActivityRef = useRef(0);
+  const micSuspendedRef = useRef(false);
+  const [micReconnecting, setMicReconnecting] = useState(false);
+
   // Timeout refs
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const echoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
