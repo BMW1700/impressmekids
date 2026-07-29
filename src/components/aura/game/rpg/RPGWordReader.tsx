@@ -7,6 +7,8 @@ import { playCorrectPronunciation, SoundEffects } from "@/lib/pronunciationPlaye
 import { unlockSpeechSynthesis } from "@/lib/pronunciationPlayer";
 import { speakBenny, stopBenny } from "@/lib/bennyVoice";
 import { teachWord, stopBennyTeach } from "@/lib/bennyTeach";
+import { speechManager } from "@/lib/speechRecognitionManager";
+import { backoffDelay, killRecognition, startMicWatchdog } from "@/lib/speech/micWatchdog";
 
 import { MicTroubleshooterModal } from "@/components/mic/MicTroubleshooterModal";
 import { getWordEmoji } from "@/lib/wordEmojiMap";
