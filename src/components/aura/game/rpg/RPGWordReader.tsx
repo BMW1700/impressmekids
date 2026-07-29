@@ -1475,12 +1475,12 @@ export const RPGWordReader = ({
     clearAllTimeouts();
     const activeRecognition = recognitionRef.current;
     recognitionRef.current = null;
-    if (activeRecognition) {
-      try { activeRecognition.stop(); } catch (e) {}
-    }
+    killRecognition(activeRecognition);
     isRecognitionRunningRef.current = false;
     isRecognitionStartingRef.current = false;
     isProcessingRef.current = false;
+    setMicReconnecting(false);
+    speechManager.releaseExternal('reader');
     setRecognitionState('idle');
   }, [disabled, clearAllTimeouts, stopInstructionAudio]);
 
