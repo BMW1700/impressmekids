@@ -1545,18 +1545,20 @@ export const RPGWordReader = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           className={`flex items-center gap-2 px-4 py-2 rounded-full
-            ${isEchoRetry 
+            ${micReconnecting
+              ? 'bg-amber-500/20 border border-amber-500/40'
+              : isEchoRetry 
               ? 'bg-amber-500/20 border border-amber-500/40' 
               : 'bg-emerald-500/20 border border-emerald-500/40'
             }`}
         >
           <motion.div
-            className={`w-3 h-3 rounded-full ${isEchoRetry ? 'bg-amber-400' : 'bg-emerald-400'}`}
+            className={`w-3 h-3 rounded-full ${micReconnecting || isEchoRetry ? 'bg-amber-400' : 'bg-emerald-400'}`}
             animate={{ scale: [1, 1.2, 1], opacity: [1, 0.7, 1] }}
             transition={{ repeat: Infinity, duration: 1 }}
           />
-          <span className={`text-sm font-medium ${isEchoRetry ? 'text-amber-300' : 'text-emerald-300'}`}>
-            {isEchoRetry ? 'Try Again!' : 'Mic Active - Keep Reading!'}
+          <span className={`text-sm font-medium ${micReconnecting || isEchoRetry ? 'text-amber-300' : 'text-emerald-300'}`}>
+            {micReconnecting ? 'Mic reconnecting…' : isEchoRetry ? 'Try Again!' : 'Mic Active - Keep Reading!'}
           </span>
         </motion.div>
       )}
