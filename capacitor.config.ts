@@ -15,7 +15,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
  *   },
  */
 const config: CapacitorConfig = {
-  appId: 'app.lovable.8b261911409a4a0485943e15f3d59496',
+  // Valid Java-package-style bundle id for iOS / Android. The original numeric-only
+  // segment (8b261911...) is invalid because iOS bundle segments must start with a letter.
+  appId: 'app.lovable.yubilearn',
   appName: 'yubilearn',
   webDir: 'dist',
   ios: {
@@ -41,6 +43,11 @@ const config: CapacitorConfig = {
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
+    },
+    AudioSessionPlugin: {
+      category: 'playAndRecord',
+      mode: 'default',
+      options: ['defaultToSpeaker', 'mixWithOthers'],
     },
   },
 };
