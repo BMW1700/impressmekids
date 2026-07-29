@@ -63,26 +63,22 @@ export const RPGPlayerHUD = ({
   return (
     <>
       <div className={`flex items-center gap-2 ${className}`}>
-        {/* Gold Display. The counter is always visible (watching gold climb is
-            the motivation), but the Shop itself only opens once the student has
-            cleared a few levels — otherwise a new player browses an empty store
-            they can't afford instead of fighting. */}
+        {/* Gold Display — always opens the Shop. */}
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={() => {
-              if (!storeUnlocked) return;
               markUnlockSeen('store');
               setShowStore(true);
             }}
-            aria-disabled={!storeUnlocked}
-            title={storeUnlocked ? 'Open the Shop' : 'Win 3 battles to unlock the Shop'}
+            title="Open the Shop"
             variant="ghost"
             size="sm"
             className="relative flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 border border-yellow-500/30 rounded-full px-3 py-1.5"
           >
             <Coins className="w-4 h-4 text-yellow-400" />
             <span className="font-bold text-yellow-400">{gold.toLocaleString()}</span>
-            {storeUnlocked && <ShoppingBag className="w-3 h-3 text-yellow-400/70" />}
+            <ShoppingBag className="w-3 h-3 text-yellow-400/70" />
+
             {storeJustUnlocked && (
               <motion.span
                 className="absolute -top-2 -right-1 rounded-full bg-yellow-400 px-1.5 py-0.5 text-[10px] font-black text-slate-900"
