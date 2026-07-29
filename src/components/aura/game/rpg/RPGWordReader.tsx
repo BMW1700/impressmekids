@@ -1206,6 +1206,8 @@ export const RPGWordReader = ({
         console.log('[RPGWordReader] Ignoring stale result', { sessionId });
         return;
       }
+      lastMicActivityRef.current = Date.now();
+      micFailureCountRef.current = 0;
       // CRITICAL FIX: Use event.resultIndex to only process NEW results
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
