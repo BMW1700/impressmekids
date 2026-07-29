@@ -98,6 +98,9 @@ export function markUnlockSeen(key: UnlockKey) {
 /* Gates                                                               */
 /* ------------------------------------------------------------------ */
 
+// NOTE: gating is disabled — every hub panel (Shop, Gear Locker, Daily/Season,
+// Ranks, Battle Modes) opens from the first session. The "NEW!" flourish logic
+// below still runs so first-time discovery keeps its celebratory moment.
 export const UNLOCK_RULES: Record<
   UnlockKey,
   { label: string; blurb: string; test: (p: RPGProgress) => boolean }
@@ -105,29 +108,30 @@ export const UNLOCK_RULES: Record<
   store: {
     label: 'Shop',
     blurb: 'Spend your gold on gear and skins.',
-    test: (p) => p.levelsCompleted >= 3 || p.battlesWon >= 3,
+    test: () => true,
   },
   gearLocker: {
     label: 'Gear Locker',
     blurb: 'Equip the loot you won in battle.',
-    test: (p) => p.levelsCompleted >= 3 || p.battlesWon >= 3,
+    test: () => true,
   },
   dailyHub: {
     label: 'Daily & Season',
     blurb: 'Come back each day for streak rewards.',
-    test: (p) => p.daysPlayed >= 2,
+    test: () => true,
   },
   leaderboard: {
     label: 'Ranks',
     blurb: 'See how your class stacks up.',
-    test: (p) => p.levelsCompleted >= 5,
+    test: () => true,
   },
   battleModes: {
     label: 'Battle Modes',
     blurb: 'Team up or duel a friend.',
-    test: (p) => p.worldsCleared >= 1,
+    test: () => true,
   },
 };
+
 
 export function isUnlocked(key: UnlockKey, progress = readProgress()): boolean {
   return UNLOCK_RULES[key].test(progress);
