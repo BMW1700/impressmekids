@@ -1338,13 +1338,14 @@ export const RPGWordReader = ({
         return;
       }
       
-      // For recoverable errors, try to restart
-      if (event.error === 'no-speech' || event.error === 'audio-capture' || event.error === 'network') {
-        isRecognitionRunningRef.current = false;
-        
-        if (shouldBeListeningRef.current && !isProcessingRef.current) {
-          scheduleRestart(300);
-        }
+      // For recoverable errors, cold-restart with exponential backoff.
+      // Flat 300ms retries hit Chrome's rate limiter and the recognizer
+      // eventually stops serving requests entirely.
+      isRecognitionRunningRef.current = false;
+      micFailureCountRef.current += 1;
+      if (shouldBeListeningRef.current) {
+        setMicReconnecting(true);
+        scheduleRestart(backoffDelay(micFailureCountRef.current));
       }
     };
     
@@ -1359,7 +1360,7 @@ export const RPGWordReader = ({
       
       // Auto-restart if we should still be listening
       if (shouldBeListeningRef.current && !isProcessingRef.current) {
-        scheduleRestart(100);
+        scheduleRestart(Math.max(120, backoffDelay(micFailureCountRef.current - 1)));
       }
     };
     
@@ -1371,13 +1372,17 @@ export const RPGWordReader = ({
       console.error('[RPGWordReader] Failed to start:', e);
       isRecognitionRunningRef.current = false;
       isRecognitionStartingRef.current = false;
+      micFailureCountRef.current += 1;
       
-      // Retry after delay
+      // CRITICAL: always schedule a retry. Returning here without one is what
+      // left the mic permanently dead after an InvalidStateError.
       if (shouldBeListeningRef.current) {
-        scheduleRestart(500);
+        setMicReconnecting(true);
+        scheduleRestart(backoffDelay(micFailureCountRef.current));
       }
     }
   }, [disabled, mode, getTargetWord, handleRetrySuccess, handleCorrect, processResult, applyFastBurst]);
+
 
   // Set the ref for use in handlers that are defined before startRecognitionSession
   useEffect(() => {
