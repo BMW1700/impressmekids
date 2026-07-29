@@ -1,46 +1,69 @@
-## Brutally honest diagnosis
+# App Store Native iOS Prep — What I will implement here vs. what you run on your Mac
 
-I read `src/lib/speechRecognitionManager.ts` and `src/components/aura/game/rpg/RPGWordReader.tsx`. The mic failure is not random — there are four real defects, and all of them get worse the longer a battle runs.
+## Goal
 
-**1. There are two competing mic owners in RPG mode.**
-Every minigame (`RPGQuickBlock`, `RPGFireballDefense`, `RPGBeastSwarm`, `RPGTugOfWar`, ~20 files) goes through the `speechManager` singleton. But `RPGWordReader` — the main reading loop — builds its **own** raw `webkitSpeechRecognition` object (line 1111) and never registers with the manager. So `speechManager.forceStop()` in `RPGBattleArena` physically cannot stop the reader's mic. The reader's auto-restart (`onend → scheduleRestart(100)`) can and does re-open the mic while a minigame is listening. Two live SpeechRecognition sessions on one microphone is exactly what produces the "spazzing/glitching": duplicate transcripts, `audio-capture` / `aborted` error storms, words firing twice or not at all.
+Move YubiLearn from "web app with Capacitor config" to "iOS project ready to open in Xcode and build." This does NOT include submitting to Apple; it removes the error-prone manual config steps before that point.
 
-**2. A single shared restart timer lets a dead session kill the live one.**
-`restartTimeoutRef` is one ref shared by every recognition session. A stale (aborted) session's `onend` fires late, calls `scheduleRestart()`, which **clears the live session's pending restart timer** and installs its own. When that timer runs, the `isCurrentSession()` guard returns early and does nothing. Net result: the real restart was cancelled and no new one was ever scheduled — **the mic silently dies forever** until the user backs out. This is the "after a while it just stops working" bug.
+## What I will do in this environment (no Xcode needed)
 
-**3. Aborted recognition objects are reused.**
-`scheduleRestart` calls `recognition.start()` on the *same* object that was previously `.abort()`ed or errored. Chrome/Safari frequently refuse this with `InvalidStateError`; the catch block sets `isRecognitionStartingRef=false` and **schedules nothing**, so again the mic is permanently dead. A recognition object should be treated as single-use.
+### 1. Generate and commit the iOS platform folder
 
-**4. No backoff and no watchdog.**
-Restarts fire at a flat 100 ms / 300 ms. Chrome rate-limits rapid `start()` calls and its network recognizer degrades after long sessions, so a `network`/`no-speech` storm turns into a hot loop that Chrome eventually stops serving. Nothing anywhere notices "we're supposed to be listening but nothing has run for 4 seconds." Tab backgrounding / iOS audio interruption also kills the session with no recovery path.
+Run `npx cap add ios` in the project. This produces the `ios/` directory containing the Xcode workspace skeleton. Since `@capacitor/ios` is already installed, this is a file-generation step, not a compile. I will commit the result so you do not need to re-run it on your Mac.
 
-The manager has the same class of bug on its web path: `onend` restarts `this.recognition`, which by then may be a *different* owner's newer instance, and handlers are never detached.
+### 2. Add iOS Info.plist usage strings
 
-## The fix
+Insert the required review strings into the generated `ios/App/App/Info.plist`:
 
-**A. One mic owner, enforced**
-- Register `RPGWordReader` with `speechManager` as owner `'reader'` (claim on start, release on stop/unmount) so the singleton is the single source of truth. Minigame `start()` calls will now correctly force-stop the reader instead of racing it.
-- `RPGBattleArena` keeps calling `forceStop()` on transitions; it will now actually stop the reader.
+- `NSMicrophoneUsageDescription` — child-facing copy explaining mic use for reading practice.
+- `NSSpeechRecognitionUsageDescription` — on-device speech recognition.
+- `NSCameraUsageDescription` — worksheet/assignment photo capture.
+- `LSApplicationCategoryType` = `public.app-category.education`.
+- `ITSAppUsesNonExemptEncryption` = `false`.
 
-**B. Session-scoped lifecycle in `RPGWordReader`**
-- Replace the shared `restartTimeoutRef` with a **per-session timer** stored on the session object, so a stale session can never cancel the live session's restart.
-- Build a **fresh `SpeechRecognition` instance on every restart** instead of reusing an aborted one.
-- Detach `onstart/onresult/onerror/onend` (set to `null`) on every teardown so dead objects go fully inert.
+### 3. Add a native iOS audio-session plugin
 
-**C. Backoff + watchdog**
-- Exponential backoff on consecutive failures (150ms → 300 → 600 → 1200, capped ~2.5s), reset on any successful `onstart` or result.
-- A **watchdog heartbeat** (~3s interval): if `shouldBeListening` is true but nothing has started or produced a result within the window, tear the session down and cold-restart it. This is the safety net that guarantees the mic can never stay dead.
-- On `visibilitychange` back to visible (and on Capacitor `resume`), force a cold restart.
-- Surface a small "Mic reconnecting…" state in the reader UI instead of a frozen "Listening…" chip so kids/teachers see recovery instead of a dead button.
+Create a custom Capacitor plugin in `src/lib/native/ios-audio-session` that sets the iOS `AVAudioSession` category to `playAndRecord` with `defaultToSpeaker` and `mixWithOthers`. This is the single most likely on-device blocker: RPG mode needs the mic open while also playing WebAudio spectacle sounds. Without this, the native speech recognizer may grab exclusive audio access and the battle will feel broken or silent. The plugin is registered in `capacitor.config.ts` and initializes once on app launch.
 
-**D. Harden `speechRecognitionManager`**
-- Per-instance identity guard: `onend`/`onerror` handlers only act if `this.recognition === theirOwnInstance`.
-- Fresh instance per restart, handlers nulled on stop/abort/forceStop.
-- Same backoff + watchdog as the reader so minigames get the same guarantee.
-- Fire `onEnd` before clearing `config` in `stop()` so owners aren't left hanging.
+### 4. Add npm scripts to `package.json`
 
-## Technical notes
-Files touched: `src/lib/speechRecognitionManager.ts`, `src/components/aura/game/rpg/RPGWordReader.tsx`, plus a small shared helper `src/lib/speech/micWatchdog.ts` for the backoff/heartbeat logic reused by both. No database, no edge functions, no changes to matching strictness (`wordMatchingModes.ts` / Challenge Meter behavior is untouched). Native (Capacitor) path is left behaviorally identical apart from getting the same watchdog restart.
+```json
+"cap:ios": "npx cap add ios 2>/dev/null || true; npx cap sync ios",
+"sync:ios": "npx cap sync ios",
+"open:ios": "npx cap open ios",
+"build:ios": "npm run build && npx cap sync ios"
+```
 
-## Verification
-Instrumented console logging with a session id + owner on every start/stop/restart, then a long-run RPG battle in the preview browser to confirm: only one owner is ever active, no `InvalidStateError` loops, and the watchdog recovers the mic after a forced kill.
+This makes the standard workflow one command: `npm run build:ios`, then `npm run open:ios` on your Mac.
+
+### 5. Add a post-sync Info.plist patch script
+
+Create `scripts/patch-ios-plist.js` and wire it to run after `npx cap sync`. This re-applies the usage strings and category keys every time Capacitor regenerates iOS config, so the manual plist edits are never accidentally lost.
+
+### 6. Verify PWA manifest and head metadata are still correct
+
+Ensure `public/site.webmanifest`, `public/apple-touch-icon.png`, and `index.html` head tags are present for users who install via Safari instead of the App Store. This is a no-op if already present, but is checked as part of the same prep pass.
+
+## What you must do on a Mac (I cannot run this here)
+
+1. `git pull` then `npm install`.
+2. `npx cap open ios` → Xcode.
+3. In Xcode, select the **App** target → **Signing & Capabilities** → add:
+   - **Sign in with Apple**
+   - **Push Notifications** (if you want push later)
+   - **Background Modes** → **Remote notifications** (if push is enabled)
+4. Choose your Apple Developer team for signing.
+5. Connect a physical iPad or iPhone, hit **Run** (`Cmd+R`), or choose **Product → Destination** for a simulator.
+6. Run a full RPG battle: verify mic prompt, voice advances combat, haptics fire, and spectacle audio plays.
+7. If that passes: **Product → Archive**, then **Distribute App → App Store Connect**.
+
+## What I will not touch
+
+- I will not upload anything to App Store Connect.
+- I will not generate final icon/splash assets from a placeholder — `resources/icon.png` and `resources/splash.png` already exist.
+- I will not change `capacitor.config.ts` except to register the new audio-session plugin and keep `limitsNavigationsToAppBoundDomains: false` (required for OAuth).
+
+## Verification after my pass
+
+- `npm run build:ios` should complete without errors in this environment (it builds the web assets and syncs native dependencies; it does NOT compile Swift).
+- `plutil -p ios/App/App/Info.plist` should show the five required keys.
+- The new plugin file should appear in the iOS project tree under the Capacitor plugins section.
