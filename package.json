@@ -8,7 +8,11 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:ios": "npx cap add ios 2>/dev/null || true; npx cap sync ios",
+    "sync:ios": "npx cap sync ios && node scripts/patch-ios-plist.js",
+    "open:ios": "npx cap open ios",
+    "build:ios": "npm run build && npx cap sync ios && node scripts/patch-ios-plist.js"
   },
   "dependencies": {
     "@capacitor-community/speech-recognition": "^7.0.1",
