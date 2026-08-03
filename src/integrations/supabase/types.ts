@@ -9462,6 +9462,10 @@ export type Database = {
           zone_slug: string
         }[]
       }
+      claim_initial_role: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
       cleanup_expired_safety_alerts: { Args: never; Returns: undefined }
       cleanup_old_signin_attempts: { Args: never; Returns: undefined }
       compute_audit_row_hash: {

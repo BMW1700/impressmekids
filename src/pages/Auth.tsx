@@ -408,15 +408,17 @@ const Auth = () => {
 
       if (profileError) throw profileError;
 
-      // Insert role into user_roles table (secure role storage)
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: user.id,
-          role: selectedRole
-        }, { onConflict: 'user_id,role' });
+      // Role assignment is owned by the database (handle_new_user trigger).
+      // claim_initial_role is a no-op if a role already exists, and it can
+      // never grant a privileged role.
+      const { error: roleError } = await supabase.rpc('claim_initial_role', {
+        _role: selectedRole as any,
+      });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('[Auth] claim_initial_role failed:', roleError);
+      }
+
 
       // Create verification request
       const { error: requestError } = await supabase
@@ -720,18 +722,17 @@ const Auth = () => {
         throw new Error('Failed to update profile. Please try again.');
       }
 
-      // Insert role into user_roles table (secure role storage)
-      const { error: roleInsertError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: data.user.id,
-          role: role
-        }, { onConflict: 'user_id,role' });
+      // Role assignment is owned by the database trigger; this is a safe
+      // fallback that no-ops when a role already exists.
+      const { error: roleInsertError } = await supabase.rpc('claim_initial_role', {
+        _role: role as any,
+      });
 
       if (roleInsertError) {
-        console.error('Failed to insert role:', roleInsertError);
+        console.error('[Auth] claim_initial_role failed:', roleInsertError);
         // Don't fail signup - the profile trigger may have already created the role
       }
+
 
       // Create verification request for non-admin, non-Student-ID roles
       if (!isStudentIdMode && (role === 'teacher' || role === 'student' || role === 'parent')) {
