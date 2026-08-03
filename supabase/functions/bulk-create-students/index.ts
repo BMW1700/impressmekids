@@ -1,17 +1,32 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Secure bulk student provisioning.
+//
+// - Admins may provision anywhere in their school; teachers may provision
+//   into a classroom they own.
+// - Creates the auth account server-side with email confirmation already
+//   set, so students never receive an email.
+// - Issues a classroom username + 6-digit PIN. The PIN is returned ONCE
+//   (so the teacher can print it) and stored only as a PBKDF2 hash.
+// - Service-role key never leaves this function.
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from '../_shared/cors.ts';
+import { generatePin, generateSalt, hashPin, uniqueUsername } from '../_shared/studentPin.ts';
+import { opLog } from '../_shared/retry.ts';
 
 interface StudentData {
   email?: string;
-  student_id?: string; // 8-digit Student ID for synthetic-email accounts
+  student_id?: string;
   full_name: string;
   classroom_code?: string;
   grade?: string;
+  username?: string;
 }
 
 interface StudentResult {
-  identifier: string; // email or student_id
+  identifier: string;
+  full_name?: string;
+  username?: string;
+  pin?: string;           // plaintext, returned once, never stored
   success: boolean;
   skipped?: boolean;
   reason?: string;
@@ -22,13 +37,12 @@ interface StudentResult {
 const STUDENT_INTERNAL_DOMAIN = 'student.yubilearn.internal';
 const MAX_BATCH = 500;
 
-function isStudentId(v: string): boolean {
-  return /^\d{8}$/.test(v.trim());
-}
+const isStudentId = (v: string) => /^\d{8}$/.test(v.trim());
+const syntheticEmail = (studentId: string) => `${studentId.trim()}@${STUDENT_INTERNAL_DOMAIN}`;
 
-function syntheticEmail(studentId: string): string {
-  return `${studentId.trim()}@${STUDENT_INTERNAL_DOMAIN}`;
-}
+/** Deterministic synthetic email for roster students without an 8-digit ID. */
+const rosterEmail = (username: string, classroomId: string) =>
+  `${username}.${classroomId.slice(0, 8)}@${STUDENT_INTERNAL_DOMAIN}`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -38,60 +52,97 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-    const supabaseClient = createClient(supabaseUrl, anonKey, {
+    const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: userError } = await callerClient.auth.getUser();
     if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceKey);
+    const adminClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
 
-    // Verify caller is admin (role lives on profiles in this project)
     const { data: profile } = await adminClient
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+      .from('profiles').select('role').eq('id', user.id).maybeSingle();
 
-    if (!profile || profile.role !== 'admin') {
+    const callerRole = profile?.role ?? null;
+    const isAdmin = callerRole === 'admin' || callerRole === 'super_admin';
+    const isTeacher = callerRole === 'teacher';
+
+    if (!isAdmin && !isTeacher) {
       return new Response(
-        JSON.stringify({ error: 'Only administrators can bulk import students' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Only teachers and administrators can provision students' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    const { students, sendOnboardingEmails = true } = await req.json() as {
+    const { students, sendOnboardingEmails = false } = await req.json() as {
       students: StudentData[];
       sendOnboardingEmails?: boolean;
     };
 
-    if (!students || !Array.isArray(students) || students.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'No students provided' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!Array.isArray(students) || students.length === 0) {
+      return new Response(JSON.stringify({ error: 'No students provided' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (students.length > MAX_BATCH) {
+      return new Response(JSON.stringify({ error: `Maximum ${MAX_BATCH} students per chunk` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    if (students.length > MAX_BATCH) {
-      return new Response(
-        JSON.stringify({ error: `Maximum ${MAX_BATCH} students per chunk` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    // ---- Resolve + authorize classrooms up front ----------------------------
+    const codes = [...new Set(
+      students.map((s) => (s.classroom_code || '').toUpperCase().trim()).filter(Boolean),
+    )];
+    const classroomByCode = new Map<string, { id: string; teacher_id: string }>();
+
+    if (codes.length > 0) {
+      const { data: rooms } = await adminClient
+        .from('classrooms').select('id, join_code, teacher_id').in('join_code', codes);
+      for (const r of rooms ?? []) {
+        classroomByCode.set(String(r.join_code).toUpperCase(), { id: r.id, teacher_id: r.teacher_id });
+      }
+    }
+
+    if (isTeacher) {
+      for (const [code, room] of classroomByCode) {
+        if (room.teacher_id !== user.id) {
+          return new Response(
+            JSON.stringify({ error: `You do not own classroom ${code}` }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+      }
+      if (classroomByCode.size === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Teachers must provide a valid classroom code for each student' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+    // Preload taken usernames per classroom so generated names never collide.
+    const takenByClassroom = new Map<string, Set<string>>();
+    for (const room of classroomByCode.values()) {
+      const { data: existing } = await adminClient
+        .from('student_credentials').select('username').eq('classroom_id', room.id);
+      takenByClassroom.set(
+        room.id,
+        new Set((existing ?? []).map((r) => String(r.username).toLowerCase())),
       );
     }
 
@@ -100,161 +151,166 @@ Deno.serve(async (req) => {
     for (const student of students) {
       const rawEmail = (student.email || '').trim();
       const rawStudentId = (student.student_id || '').trim();
-      const isSidMode = !rawEmail && isStudentId(rawStudentId);
-      const isEmailMode = !!rawEmail;
-      const identifier = rawEmail || rawStudentId || 'unknown';
+      const fullName = (student.full_name || '').trim();
+      const code = (student.classroom_code || '').toUpperCase().trim();
+      const classroom = code ? classroomByCode.get(code) : undefined;
+      const identifier = rawEmail || rawStudentId || fullName || 'unknown';
 
       try {
-        if (!student.full_name || student.full_name.trim().length < 2) {
+        if (fullName.length < 2) {
           results.push({ identifier, success: false, error: 'Full name required' });
           continue;
         }
-
-        if (!isSidMode && !isEmailMode) {
+        if (code && !classroom) {
+          results.push({ identifier, full_name: fullName, success: false, error: `Unknown classroom code ${code}` });
+          continue;
+        }
+        if (rawEmail && !rawEmail.includes('@')) {
+          results.push({ identifier, full_name: fullName, success: false, error: 'Invalid email format' });
+          continue;
+        }
+        if (rawStudentId && !isStudentId(rawStudentId)) {
+          results.push({ identifier, full_name: fullName, success: false, error: 'student_id must be exactly 8 digits' });
+          continue;
+        }
+        if (!rawEmail && !rawStudentId && !classroom) {
           results.push({
-            identifier,
-            success: false,
-            error: 'Provide either an email or an 8-digit student_id',
+            identifier, full_name: fullName, success: false,
+            error: 'Provide an email, an 8-digit student_id, or a classroom code',
           });
           continue;
         }
 
-        if (isEmailMode && !rawEmail.includes('@')) {
-          results.push({ identifier, success: false, error: 'Invalid email format' });
-          continue;
-        }
-
-        if (rawStudentId && !isSidMode && !isEmailMode) {
-          results.push({ identifier, success: false, error: 'student_id must be exactly 8 digits' });
-          continue;
-        }
-
-        const authEmail = isSidMode ? syntheticEmail(rawStudentId) : rawEmail.toLowerCase();
-
-        // Idempotency: if a profile already exists with this student_id or
-        // synthetic email maps to an existing user, skip without error.
-        if (isSidMode) {
+        // Idempotency on student_id
+        if (rawStudentId) {
           const { data: existing } = await adminClient
-            .from('profiles')
-            .select('id')
-            .eq('student_id', rawStudentId)
-            .maybeSingle();
+            .from('profiles').select('id').eq('student_id', rawStudentId).maybeSingle();
           if (existing) {
-            results.push({ identifier, success: true, skipped: true, reason: 'already_exists' });
+            results.push({ identifier, full_name: fullName, success: true, skipped: true, reason: 'already_exists' });
             continue;
           }
         }
 
-        const tempPassword = crypto.randomUUID().slice(0, 12) + 'Aa1!';
+        const taken = classroom
+          ? (takenByClassroom.get(classroom.id) ?? new Set<string>())
+          : new Set<string>();
+        const username = (student.username || '').toLowerCase().trim() ||
+          uniqueUsername(fullName, taken);
+        if (classroom) takenByClassroom.set(classroom.id, taken.add(username));
+
+        const authEmail = rawEmail
+          ? rawEmail.toLowerCase()
+          : rawStudentId
+            ? syntheticEmail(rawStudentId)
+            : rosterEmail(username, classroom!.id);
+
+        // Long random account password — students never use or see it;
+        // they sign in with class code + username + PIN.
+        const accountPassword = crypto.randomUUID() + crypto.randomUUID() + 'Aa1!';
 
         const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
           email: authEmail,
-          password: tempPassword,
-          email_confirm: true,
+          password: accountPassword,
+          email_confirm: true, // never sends a confirmation email
           user_metadata: {
-            full_name: student.full_name.trim(),
+            full_name: fullName,
             role: 'student',
-            ...(isSidMode ? { student_id: rawStudentId } : {}),
+            ...(rawStudentId ? { student_id: rawStudentId } : {}),
           },
         });
 
         if (authError) {
           const msg = (authError.message || '').toLowerCase();
           if (msg.includes('already') || msg.includes('registered') || msg.includes('duplicate')) {
-            results.push({ identifier, success: true, skipped: true, reason: 'already_exists' });
+            results.push({ identifier, full_name: fullName, success: true, skipped: true, reason: 'already_exists' });
             continue;
           }
-          results.push({ identifier, success: false, error: authError.message });
+          opLog('provision.auth_error', { identifier, message: authError.message });
+          results.push({ identifier, full_name: fullName, success: false, error: authError.message });
           continue;
         }
 
         const newUserId = authData.user?.id;
+        if (!newUserId) {
+          results.push({ identifier, full_name: fullName, success: false, error: 'Account creation returned no user' });
+          continue;
+        }
 
-        // Persist student_id + verified flag for synthetic accounts
-        if (newUserId && isSidMode) {
+        const profileUpdate: Record<string, unknown> = { is_verified: true, full_name: fullName };
+        if (rawStudentId) profileUpdate.student_id = rawStudentId;
+        const gradeNum = student.grade ? parseInt(student.grade, 10) : NaN;
+        if (!isNaN(gradeNum) && gradeNum >= 0 && gradeNum <= 12) profileUpdate.grade = gradeNum;
+        await adminClient.from('profiles').update(profileUpdate).eq('id', newUserId);
+
+        // Role (no client-side privilege escalation path)
+        await adminClient
+          .from('user_roles')
+          .upsert({ user_id: newUserId, role: 'student' }, { onConflict: 'user_id' });
+
+        if (classroom) {
           await adminClient
-            .from('profiles')
-            .update({ student_id: rawStudentId, is_verified: true })
-            .eq('id', newUserId);
+            .from('classroom_students')
+            .insert({ classroom_id: classroom.id, student_id: newUserId });
         }
 
-        // Optional: classroom join
-        if (newUserId && student.classroom_code) {
-          const { data: classroom } = await adminClient
-            .from('classrooms')
-            .select('id')
-            .eq('join_code', student.classroom_code.toUpperCase())
-            .maybeSingle();
-          if (classroom) {
-            await adminClient
-              .from('classroom_students')
-              .insert({ classroom_id: classroom.id, student_id: newUserId });
-          }
+        // Classroom credential (PIN hashed, plaintext returned once)
+        const pin = generatePin();
+        const salt = generateSalt();
+        const pinHash = await hashPin(pin, salt);
+
+        const { error: credError } = await adminClient.from('student_credentials').insert({
+          user_id: newUserId,
+          classroom_id: classroom?.id ?? null,
+          username,
+          pin_hash: pinHash,
+          pin_salt: salt,
+          created_by: user.id,
+        });
+
+        if (credError) {
+          opLog('provision.credential_error', { identifier, message: credError.message });
+          results.push({ identifier, full_name: fullName, username, success: false, error: credError.message });
+          continue;
         }
 
-        // Optional: grade
-        if (newUserId && student.grade) {
-          const gradeNum = parseInt(student.grade, 10);
-          if (!isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 12) {
-            await adminClient
-              .from('profiles')
-              .update({ grade: gradeNum })
-              .eq('id', newUserId);
-          }
-        }
-
-        // Queue onboarding email via Lovable Emails — ONLY for real-email accounts
         let emailQueued = false;
-        if (isEmailMode && sendOnboardingEmails && newUserId) {
+        if (rawEmail && sendOnboardingEmails) {
           try {
-            const { error: invokeErr } = await adminClient.functions.invoke(
-              'send-transactional-email',
-              {
-                body: {
-                  templateName: 'student-onboarding',
-                  recipientEmail: authEmail,
-                  idempotencyKey: `onboarding-${newUserId}`,
-                  templateData: {
-                    fullName: student.full_name.trim(),
-                    setupUrl: 'https://yubilearn.com/auth',
-                  },
-                },
+            const { error: invokeErr } = await adminClient.functions.invoke('send-transactional-email', {
+              body: {
+                templateName: 'student-onboarding',
+                recipientEmail: authEmail,
+                idempotencyKey: `onboarding-${newUserId}`,
+                templateData: { fullName, setupUrl: 'https://yubilearn.com/auth' },
               },
-            );
+            });
             emailQueued = !invokeErr;
-            if (invokeErr) {
-              console.warn('Onboarding email enqueue failed for', authEmail, invokeErr.message);
-            }
-          } catch (e) {
-            console.warn('Onboarding email enqueue exception:', (e as Error).message);
-          }
+          } catch (_e) { /* non-fatal */ }
         }
 
-        results.push({ identifier, success: true, emailQueued });
-      } catch (error: any) {
-        console.error('Unexpected error for:', identifier, error);
-        results.push({ identifier, success: false, error: error.message || 'Unknown error' });
+        results.push({ identifier, full_name: fullName, username, pin, success: true, emailQueued });
+      } catch (error) {
+        opLog('provision.unexpected', { identifier, message: (error as Error).message });
+        results.push({ identifier, full_name: fullName, success: false, error: (error as Error).message });
       }
     }
 
-    const successCount = results.filter(r => r.success && !r.skipped).length;
-    const skippedCount = results.filter(r => r.skipped).length;
-    const failedCount = results.filter(r => !r.success).length;
-    const emailsQueued = results.filter(r => r.emailQueued).length;
+    const successCount = results.filter((r) => r.success && !r.skipped).length;
+    const skippedCount = results.filter((r) => r.skipped).length;
+    const failedCount = results.filter((r) => !r.success).length;
 
-    console.log(
-      `Bulk import: ${successCount} created, ${skippedCount} skipped, ${failedCount} failed, ${emailsQueued} emails queued`,
-    );
+    opLog('provision.batch', {
+      actor_role: callerRole, total: students.length, successCount, skippedCount, failedCount,
+    });
 
     return new Response(
-      JSON.stringify({ results, successCount, skippedCount, failedCount, emailsQueued }),
+      JSON.stringify({ results, successCount, skippedCount, failedCount }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
-  } catch (error: any) {
-    console.error('Bulk create students error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+  } catch (error) {
+    opLog('provision.fatal', { message: (error as Error).message });
+    return new Response(JSON.stringify({ error: (error as Error).message || 'Internal server error' }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

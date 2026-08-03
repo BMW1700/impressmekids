@@ -11,6 +11,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { mirrorToR2Async } from "./r2Mirror";
+import { submitAiEvaluation, makeIdempotencyKey } from "./aiEvaluationJobs";
 
 export interface PreKAuraContext {
   level_id: string;
@@ -53,8 +54,15 @@ export async function submitPreKAuraReading(opts: {
       }
     }
 
-    const { error: fnError } = await supabase.functions.invoke("analyze-aura", {
-      body: {
+    const { error: fnError } = await submitAiEvaluation({
+      idempotencyKey: makeIdempotencyKey([
+        "prek",
+        studentId,
+        context.level_id,
+        context.step_index,
+        context.attempts,
+      ]),
+      payload: {
         transcript: transcript || context.expected_word,
         durationSeconds: Math.max(0.1, durationSeconds),
         audioUrl,
@@ -75,7 +83,7 @@ export async function submitPreKAuraReading(opts: {
       },
     });
     if (fnError) {
-      console.warn("[PreKAura] analyze-aura failed:", fnError.message);
+      console.warn("[PreKAura] queue-ai-evaluation failed:", fnError);
     }
   } catch (err) {
     console.warn("[PreKAura] submission swallowed error:", err);

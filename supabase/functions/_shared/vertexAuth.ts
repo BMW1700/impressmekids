@@ -1,3 +1,5 @@
+import { fetchWithRetry } from './retry.ts';
+
 /**
  * Shared Vertex AI authentication helper
  * Reusable JWT-based authentication for Google Cloud Vertex AI
@@ -113,14 +115,14 @@ export async function getVertexAccessToken(): Promise<{ token: string; projectId
   console.log('Using Google Cloud project:', serviceAccount.project_id);
 
   // Get access token
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+  const tokenResponse = await fetchWithRetry('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion: await createJWT(serviceAccount),
     }),
-  });
+  }, { label: 'google.oauth.token', attempts: 4, timeoutMs: 20_000 });
 
   if (!tokenResponse.ok) {
     throw new Error(`Failed to get access token: ${await tokenResponse.text()}`);
@@ -175,14 +177,14 @@ export async function callVertexAI(
     };
   }
 
-  const response = await fetch(vertexEndpoint, {
+  const response = await fetchWithRetry(vertexEndpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  });
+  }, { label: `vertex.${model}`, attempts: 5, baseDelayMs: 800, maxDelayMs: 20_000, timeoutMs: 90_000 });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -250,14 +252,14 @@ export async function callVertexVision(
     },
   };
 
-  const response = await fetch(vertexEndpoint, {
+  const response = await fetchWithRetry(vertexEndpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  });
+  }, { label: `vertex.${model}`, attempts: 5, baseDelayMs: 800, maxDelayMs: 20_000, timeoutMs: 90_000 });
 
   if (!response.ok) {
     const errorText = await response.text();
