@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart, UserPlus, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Users, Copy, Trophy, Play, Megaphone, BookOpen, GraduationCap, FileText, MoreVertical, Trash2, Mic, Eye, EyeOff, UserCheck, BarChart3, Calendar, Plus, Shield, MessageSquare, Grid3X3, BookHeart, UserPlus, Clock, AlertCircle, KeyRound } from "lucide-react";
 import { SubstituteAccessModal } from "@/components/teacher/SubstituteAccessModal";
 import { TeacherJournalTab } from "@/components/teacher/TeacherJournalTab";
 import { DiscussionBoard } from "@/components/discussions/DiscussionBoard";
@@ -30,6 +30,7 @@ import { useAssignments } from "@/hooks/useAssignments";
 import { useAssignmentSubmissions } from "@/hooks/useAssignmentSubmissions";
 import { useMultiQuestionAssignments } from "@/hooks/useMultiQuestionAssignments";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { StudentPinResetDialog } from "@/components/classroom/StudentPinResetDialog";
 import { SubmissionsList } from "@/components/assignments/SubmissionsList";
 import { AssignmentStatsCard } from "@/components/assignments/AssignmentStatsCard";
 import { StudentAssignmentCard } from "@/components/assignments/StudentAssignmentCard";
@@ -164,6 +165,7 @@ const ClassroomDetail = () => {
   const [studentToRemove, setStudentToRemove] = useState<any>(null);
   const [showRemoveStudentModal, setShowRemoveStudentModal] = useState(false);
   const [currentTab, setCurrentTab] = useState<string | null>(null);
+  const [studentPinTarget, setStudentPinTarget] = useState<{ id: string; name: string } | null>(null);
   const {
     assignments
   } = useAssignments(id);
@@ -1151,6 +1153,8 @@ const ClassroomDetail = () => {
       }} />
 
           <EditClassroomModal open={showEditClassroom} onOpenChange={setShowEditClassroom} onSuccess={loadClassroomData} classroom={classroom} />
+
+          <StudentPinResetDialog open={!!studentPinTarget} onOpenChange={open => !open && setStudentPinTarget(null)} studentUserId={studentPinTarget?.id ?? ""} studentName={studentPinTarget?.name ?? "this student"} />
 
           <ConfirmModal open={showRemoveStudentModal} onOpenChange={open => {
         setShowRemoveStudentModal(open);
