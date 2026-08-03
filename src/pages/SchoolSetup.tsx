@@ -89,11 +89,13 @@ export default function SchoolSetup() {
 
       if (error) throw error;
 
-      // Insert into user_roles
-      await supabase.from("user_roles").upsert(
-        { user_id: profile.id, role: selectedRole as any },
-        { onConflict: "user_id,role" }
-      );
+      // Role assignment is owned by the database; this safe RPC no-ops when a
+      // role already exists and can never grant a privileged role.
+      const { error: roleError } = await supabase.rpc("claim_initial_role", {
+        _role: selectedRole as any,
+      });
+      if (roleError) console.error("[SchoolSetup] claim_initial_role failed:", roleError);
+
 
       // Look up district name
       const districtName = districts.find(d => d.district_code === selectedDistrict)?.name || selectedDistrict;
