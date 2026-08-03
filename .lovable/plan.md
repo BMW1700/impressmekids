@@ -1,75 +1,80 @@
-# Finish the Classroom-Scale Rollout
+# Brutally Honest Deep Dive: Keep It or Revert?
 
-## Plain-English answer to what was just built
+## 1. "What AI? Everything should be free!"
 
-Three things changed:
+The reading/speaking analysis does not run on Lovable AI credits. It runs on
+**your own Google Cloud Vertex AI account** (`GOOGLE_VERTEX_AI_KEY`,
+`gemini-2.5-flash`), called from the `analyze-aura` function. That has always
+been true — this change did not add an AI cost. What it added is a queue in
+front of that same call.
 
-1. **Readings are saved before the AI sees them.** Previously, when a student
-   finished reading, the app called the AI service directly. If that service
-   was busy (rate limited), the reading was gone. Now the reading is written to
-   a database queue first, then a worker picks it up and scores it. A busy AI
-   service delays a score; it can no longer destroy a child's work.
+So: Lovable credits are not the issue. The AI spend is Google's meter, and the
+AI rate limit is Google's per-project quota.
 
-2. **Kid-friendly login.** Students can sign in at `/class-login` with a class
-   code, a username, and a 6-digit PIN instead of an 8-digit ID or an email.
+## 2. Does this fix the rate limit problem? Partly — and not the one you care most about.
 
-3. **Sign-in cards.** After a teacher bulk-imports a roster, they get a
-   one-time CSV of every student's username and PIN to print and hand out.
+There are two completely separate rate limits, and they are often confused:
 
-## Does this fix the rate limit problem?
+| Limit | What breaks | Did this change fix it? |
+| --- | --- | --- |
+| Google Vertex AI quota (30 kids submit readings at once) | Readings fail and are lost | **Yes.** Readings are now saved to a queue before the AI is called, and retried with backoff. |
+| Supabase auth rate limit (30 kids log in from one school IP) | Logins fail | **No.** Nothing in this change raises that ceiling. Only a support-ticket increase does. |
 
-Partly. It fixes the **AI scoring** rate limit: 30 kids reading at once now
-queue up instead of failing, and the AI calls retry with exponential backoff.
+Your main problem — the whole class logging in from one school IP — is
+**not** solved by this work, and cannot be solved by code on our side.
 
-It does **not** yet fix the **auth/login** rate limit — the "whole class on one
-school IP" problem. That is a limit on Lovable/Supabase's auth endpoint and
-still needs the support-ticket increase.
+## 3. Did it break anything? One real regression.
 
-It also is not finished or tested. The gaps below are what remain.
+Verified against the live database: `ai_evaluation_jobs` has **0 rows** and
+`student_credentials` has **0 rows**. Nothing here has ever run in production.
 
-## What still needs to be done
+The real problem: there is **no scheduled worker**. Confirmed — no cron entry
+calls `process-ai-jobs`. Jobs are only processed while a student's browser sits
+on the results screen nudging the worker.
 
-### 1. Background worker sweep (critical)
+- Older kids on the AURA practice screen: fine, their browser nudges the worker.
+- **Pre-K submissions are fire-and-forget.** Their jobs get created and then
+  nobody ever picks them up. Pre-K reading data silently stops reaching
+  analytics and the ML models.
 
-Today, queued jobs are only processed while a student's browser is sitting on
-the results screen nudging the worker. Pre-K submissions are fire-and-forget,
-so those jobs can sit in the queue forever if no browser nudges them.
+That is a genuine regression versus the old code, and it is why this cannot be
+left half-finished.
 
-Add a scheduled sweep that runs the worker every minute regardless of who is
-online, plus a retry rule so a job that failed transiently is picked up again
-with a growing delay instead of being abandoned.
+Three other places still call the AI directly and bypass the queue entirely
+(`AuraReadingGrader`, `StudentQuestionView`, `AuraReadingSection`) — they still
+lose a submission on a busy AI service.
 
-### 2. Teacher PIN reset in the UI
+## 4. Revert or finish?
 
-The `reset-student-pin` backend exists but no teacher-facing button calls it.
-Add a "Reset PIN" action on the class roster that shows the new PIN once.
+**Finish, don't revert.** The remaining work is small and contained, and
+reverting throws away the one thing that genuinely protects student work.
 
-### 3. Route students to the new login
+## Work to complete
 
-`/class-login` exists but nothing links to it. Add a clear "I'm a student in a
-class" entry point on the sign-in screen so kids and teachers can find it.
-
-### 4. End-to-end test on real data
-
-Nothing in this stack has been exercised yet: zero rows exist in either new
-table. Run one full pass — import a small roster, sign in as one of those
-students, complete a reading, confirm the job completes and the score lands.
-
-### 5. Auth rate-limit ticket
-
-Send the support request for a higher auth rate limit for shared school IPs,
-since no code change on our side can raise that ceiling.
+1. **Scheduled worker sweep (fixes the Pre-K regression).** `pg_cron` + `pg_net`
+   calling `process-ai-jobs` every minute so jobs drain whether or not any
+   browser is open. The worker already claims with `FOR UPDATE SKIP LOCKED`, so
+   overlapping runs are safe.
+2. **Route the three remaining AI call sites through the queue** so no
+   submission path can lose data.
+3. **One real end-to-end pass**: import a small roster, sign in one of those
+   students at `/class-login`, complete a reading, confirm the job row goes
+   queued -> completed and the score lands.
+4. **Teacher "Reset PIN" button** on the roster — the backend exists, no UI
+   calls it, so a kid who forgets a PIN is stuck.
+5. **Link `/class-login` from the sign-in screen** — the page exists but nothing
+   points to it.
+6. **Send the auth rate-limit support ticket.** This is the actual fix for the
+   shared-school-IP login problem, and it is the only fix.
 
 ## Technical details
 
-- Sweep: `pg_cron` + `pg_net` calling `process-ai-jobs` on a one-minute
-  schedule; worker already claims with `FOR UPDATE SKIP LOCKED`, so concurrent
-  runs are safe.
-- Retry: add a `next_attempt_at` column to `ai_evaluation_jobs`; failed jobs
-  under the attempt cap get rescheduled with exponential backoff, and
-  `claim_ai_evaluation_jobs` filters on `next_attempt_at <= now()`.
-- Files touched: `supabase/functions/process-ai-jobs/index.ts`,
-  a migration for the retry column and the RPC, a roster component for the PIN
-  reset action, and the sign-in page for the `/class-login` link.
-- Deploy the four new edge functions (`queue-ai-evaluation`, `process-ai-jobs`,
-  `classroom-login`, `reset-student-pin`) as part of this pass.
+- Cron: `cron.schedule('process-ai-jobs-sweep', '* * * * *', ...)` issuing a
+  `net.http_post` to the function URL with the anon key.
+- Retry column `next_attempt_at` already exists on `ai_evaluation_jobs` and is
+  respected by the worker; confirm `claim_ai_evaluation_jobs` filters on it.
+- Files touched: a migration for the cron sweep,
+  `src/components/aura/AuraReadingGrader.tsx`,
+  `src/components/assignments/StudentQuestionView.tsx`,
+  `src/components/student/sections/AuraReadingSection.tsx`, a roster component
+  for the PIN reset action, and the sign-in page for the `/class-login` link.
