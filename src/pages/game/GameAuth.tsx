@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
+import { playerSignUp, playerLogin, directSignUpFallback, directLoginFallback } from "@/lib/playerAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -359,68 +359,57 @@ const GameAuth = () => {
 
     setIsLoading(true);
     try {
-      if (isStudentIdMode) {
-        const { data: existingStudent } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('student_id', studentIdInput)
-          .maybeSingle();
-        if (existingStudent) {
-          toast({ title: "Student ID already in use", description: "That 8-digit ID is already registered.", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      const { data, error } = await withAuthBurstRetry(() => supabase.auth.signUp({
-        email: signupEmail,
+      // Routed through the player-auth edge function: hosted Auth throttles per
+      // public IP, and a classroom of 30 kids shares one IP.
+      const result = await playerSignUp({
+        mode: isStudentIdMode ? "studentId" : "email",
+        email: isStudentIdMode ? undefined : signupEmail,
+        studentId: isStudentIdMode ? studentIdInput : undefined,
         password,
-        options: {
-          data: {
-            full_name: fullName.trim(),
-            role: 'game_player',
-            ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
-          },
-          emailRedirectTo: isStudentIdMode ? undefined : window.location.origin,
-        },
-      }));
+        fullName: fullName.trim(),
+        role: 'game_player',
+        joinCode: isStudentIdMode ? classJoinCode.trim() : undefined,
+        redirectTo: isStudentIdMode ? undefined : window.location.origin,
+        fallback: () =>
+          directSignUpFallback(
+            signupEmail,
+            password,
+            {
+              full_name: fullName.trim(),
+              role: 'game_player',
+              ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
+            },
+            isStudentIdMode ? undefined : window.location.origin,
+          ),
+      });
 
-      if (error) {
-        const msg = (error.message || '').toLowerCase();
-        if (isAuthThrottleError(error)) {
-          toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-        if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
-          toast({ title: "Student ID already in use", description: "That 8-digit ID was just registered. Please pick another.", variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-        throw error;
+      if (!result.success) {
+        toast({
+          title: result.signInRequired ? "Account created" : "Sign up failed",
+          description: result.error ?? "Please try again.",
+          variant: result.signInRequired ? "default" : "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
-      if (data.user && isStudentIdMode) {
-        const { data: sessionData } = await supabase.auth.signInWithPassword({ email: signupEmail, password });
-        if (sessionData?.session) {
-          if (classJoinCode.trim()) {
-            const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
-            if (!redeem.success) {
-              toast({ title: "Joined, but class code didn't work", description: redeem.error ?? "Ask your teacher for the correct code.", variant: "destructive" });
-            } else {
-              toast({ title: "Joined your class!", description: "You're on the roster." });
-            }
-          }
-          navigate('/game/dashboard', { replace: true });
-          return;
-        }
-      }
-
-      if (data.user && !data.session && !isStudentIdMode) {
+      if (result.needsEmailConfirmation) {
         toast({ title: "Check your email!", description: "We sent you a verification link. Please verify your email to continue." });
-      } else if (data.session) {
-        navigate('/game/dashboard', { replace: true });
+        setIsLoading(false);
+        return;
       }
+
+      if (isStudentIdMode && classJoinCode.trim()) {
+        toast({
+          title: result.joinedClass ? "Joined your class!" : "Class code didn't work",
+          description: result.joinedClass
+            ? "You're on the roster."
+            : "Ask your teacher for the correct code.",
+          variant: result.joinedClass ? "default" : "destructive",
+        });
+      }
+
+      navigate('/game/dashboard', { replace: true });
     } catch (error: any) {
       toast({ title: "Sign up failed", description: error.message, variant: "destructive" });
     } finally {
@@ -440,18 +429,28 @@ const GameAuth = () => {
 
     setIsLoading(true);
     try {
-      if (isStudentIdMode) {
-        const gate = await checkStudentIdSigninRate(studentIdInput);
-        if (!gate.allowed) {
-          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
+      const result = await playerLogin({
+        mode: isStudentIdMode ? "studentId" : "email",
+        email: isStudentIdMode ? undefined : loginEmail,
+        studentId: isStudentIdMode ? studentIdInput : undefined,
+        password,
+        fallback: async () => {
+          if (isStudentIdMode) {
+            const gate = await checkStudentIdSigninRate(studentIdInput);
+            if (!gate.allowed) return { success: false, error: gate.error };
+          }
+          const direct = await directLoginFallback(loginEmail, password);
+          if (direct.success && isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
+          return direct;
+        },
+      });
+
+      if (!result.success) {
+        toast({ title: "Login failed", description: result.error ?? "Please try again.", variant: "destructive" });
+        setIsLoading(false);
+        return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-      if (error) throw error;
-      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
       navigate('/game/dashboard', { replace: true });
     } catch (error: any) {
       toast({ title: "Login failed", description: error.message, variant: "destructive" });

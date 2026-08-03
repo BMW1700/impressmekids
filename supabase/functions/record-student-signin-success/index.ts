@@ -12,7 +12,11 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const NO_IP_BUCKET = "no-ip-collected";
+// Per-student bucket. A single shared constant made the RPC's "network"
+// limit global: 10 sign-ins anywhere in the world locked out every student.
+// Scoping the bucket to the Student ID keeps brute-force protection
+// per-child, which is the documented FERPA intent.
+const bucketFor = (studentId: string) => `sid-${studentId}`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -37,7 +41,7 @@ Deno.serve(async (req) => {
     );
 
     const { error } = await supabase.rpc("record_student_id_signin_success", {
-      p_ip_hash: NO_IP_BUCKET,
+      p_ip_hash: bucketFor(studentId),
       p_student_id_attempt: studentId,
     });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
+import { playerLogin, directLoginFallback } from "@/lib/playerAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -873,20 +874,30 @@ const Auth = () => {
       : email;
 
     try {
-      // Pre-flight rate limit on Student ID sign-in to defeat brute-force scans
-      if (isStudentIdMode) {
-        const gate = await checkStudentIdSigninRate(studentIdInput);
-        if (!gate.allowed) {
-          toast({ title: "Slow down", description: gate.error, variant: "destructive" });
-          setIsLoading(false);
-          return;
-        }
-      }
+      // Routed through the player-auth edge function so a building full of
+      // devices on one public IP doesn't share a hosted-Auth throttle bucket.
+      const result = await playerLogin({
+        mode: isStudentIdMode ? "studentId" : "email",
+        email: isStudentIdMode ? undefined : signInEmail,
+        studentId: isStudentIdMode ? studentIdInput : undefined,
+        password,
+        fallback: async () => {
+          if (isStudentIdMode) {
+            const gate = await checkStudentIdSigninRate(studentIdInput);
+            if (!gate.allowed) return { success: false, error: gate.error };
+          }
+          const direct = await directLoginFallback(signInEmail, password);
+          if (direct.success && isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
+          return direct;
+        },
+      });
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email: signInEmail, password });
-      if (error) throw error;
+      if (!result.success) throw new Error(result.error ?? "Sign in failed");
+
+      const { data: userInfo } = await supabase.auth.getUser();
+      const data = { user: userInfo?.user ?? null };
       if (!data.user) throw new Error("Sign in failed");
-      if (isStudentIdMode) await recordStudentIdSigninSuccess(studentIdInput);
+
 
       // Best-effort verification check (never block sign-in if this fails)
       try {
