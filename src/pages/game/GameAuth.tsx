@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -371,7 +372,7 @@ const GameAuth = () => {
         }
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await withAuthBurstRetry(() => supabase.auth.signUp({
         email: signupEmail,
         password,
         options: {
@@ -382,10 +383,15 @@ const GameAuth = () => {
           },
           emailRedirectTo: isStudentIdMode ? undefined : window.location.origin,
         },
-      });
+      }));
 
       if (error) {
         const msg = (error.message || '').toLowerCase();
+        if (isAuthThrottleError(error)) {
+          toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
         if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
           toast({ title: "Student ID already in use", description: "That 8-digit ID was just registered. Please pick another.", variant: "destructive" });
           setIsLoading(false);

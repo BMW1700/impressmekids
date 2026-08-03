@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -623,7 +624,7 @@ const Auth = () => {
       await supabase.auth.signOut();
 
       // Create auth user
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await withAuthBurstRetry(() => supabase.auth.signUp({
         email: signupEmail,
         password,
         options: {
@@ -634,11 +635,16 @@ const Auth = () => {
           },
           emailRedirectTo: isStudentIdMode ? undefined : window.location.origin + '/auth',
         },
-      });
+      }));
 
       if (error) {
         // Translate Postgres unique-violation (23505) on student_id into a friendly toast
         const msg = (error.message || '').toLowerCase();
+        if (isAuthThrottleError(error)) {
+          toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
         if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
           toast({
             title: "Student ID already in use",
