@@ -1,58 +1,61 @@
-# Run the 30-Client Rate-Limit Test
+# Game-Mode Signup at 30 Kids on One Wi-Fi — Audit + Fix
 
-## Honest status before anything runs
+## What I actually checked
 
-I checked the live backend just now. The test cannot be run yet, and here is why:
+- `src/pages/game/GameAuth.tsx` and `src/pages/Auth.tsx` — the real entry portals.
+- Auth logs for HTTP 429: **zero** so far (nobody has load-tested it yet — no evidence either way).
+- `classroom-login` edge logs: empty. `student_credentials`: 0 rows. The roster path is built but unused.
 
-- `student_credentials` has **0 rows**. No student has ever been provisioned with a
-  username + PIN, so there is nobody to log in as.
-- `classroom_login_attempts` has **1 row total, 0 successes**, from 22:32 UTC today.
-- `classroom-login` edge logs are empty — the function has never handled real login traffic.
+## The honest answer: yes, there is a rate limit, and 30 kids in one room will hit it
 
-So the honest answer to "is the rate limit fixed": the fix is in the code and it is the
-right fix, but **zero real logins have gone through it**. Nobody can claim it is proven
-until the test below runs. Running it is a state-changing action (it creates real accounts
-and real sessions), which is why it needs your approval first.
+Hosted Auth throttles **per public IP**, and a classroom is one public IP. Two separate ceilings apply to the game portal:
 
-## What the test will do
+**1. Sign-up + sign-in endpoint: ~30 requests per 5 minutes per IP.**
+This is the one that bites. Worse, our Student-ID signup makes **two** calls per child:
 
-1. **Provision a disposable test class**
-   - Create one classroom, e.g. `RATE TEST`, and bulk-import 30 throwaway students through
-     the existing `bulk-create-students` function (same path a teacher uses).
-   - Capture the 30 username + PIN pairs returned by the import.
+```text
+handle SignUp (Student ID mode)
+  -> supabase.auth.signUp()            <- call 1 (hosted Auth, school IP)
+  -> supabase.auth.signInWithPassword()<- call 2 (hosted Auth, school IP)
+```
 
-2. **Fire 30 concurrent logins from one IP**
-   - A script hits the deployed `classroom-login` function 30 times in parallel from a single
-     egress IP — the same shape as 30 iPads on one school Wi-Fi.
-   - Round A: all 30 at once. Round B: the same 30 spread over 10 seconds. Round C: repeat
-     round A after a short pause to check for cumulative throttling.
+30 kids x 2 = 60 hosted-Auth calls in a few minutes from one IP. That blows straight past the ceiling. Roughly the back half of the class gets "Too many signups at once" and stalls. The jittered retry in `authBurstRetry.ts` softens the spike but cannot create headroom that doesn't exist.
 
-3. **Record everything**
-   - Per request: HTTP status, latency, whether a session came back server-minted
-     (the fixed path) or fell back to `token_hash` (the old, IP-exposed path).
-   - Then pull `classroom-login` edge logs and count any `link_failed` /
-     `server_exchange_failed` entries with status 429.
+**2. Auth email sending: a project-wide hourly cap.**
+Email-mode signup sends a confirmation email per child. Student-ID mode does NOT (synthetic email, no `emailRedirectTo`, auto-confirm trigger) — that part is already correct. So: never run a pilot class on email signup.
 
-4. **Verdict**
-   - **Pass** = 30/30 succeed, 0 responses with HTTP 429, 0 fallbacks to `token_hash`,
-     no crossed sessions. That means the rate-limit problem is fixed and no email to
-     support is needed.
-   - **Fail** = any 429 or any fallback. You then get the exact timestamps, endpoint, and
-     statuses to paste into a support email — which is what actually gets a real answer.
+**What is already safe:** `/class-login` (class code + username + PIN) makes exactly one call to our own edge function and zero hosted-Auth calls from the school IP. That path is immune. It's just not the path the game portal uses.
 
-5. **Clean up**
-   - Delete the 30 test students and the test classroom so nothing pollutes the pilot data.
+## The fix: move game-portal auth behind our own edge function
 
-## Technical notes
+Same pattern that already works for `classroom-login` — the school network talks to our function, our function talks to hosted Auth. The classroom's IP stops being the throttled identity.
 
-- The script runs from the sandbox with the anon key, calling the deployed function URL
-  directly — no local dev server, so it exercises the real production path.
-- It never logs PINs, tokens, or emails; only status, stage, and latency.
-- Sessions minted during the test are discarded (no `persistSession`).
-- Nothing in application code changes. If the test fails, the fix comes in a follow-up.
+1. **New edge function `player-auth`** (`verify_jwt = false`), two actions:
+   - `signup`: validate input, `admin.createUser` with auto-confirm, apply `full_name` / `role` / `student_id`, redeem an optional class join code, then mint a session server-side and return `access_token` + `refresh_token`.
+   - `login`: perform the password check server-side and return the same session shape.
+   Both keep the existing Student-ID uniqueness check and the per-student sign-in rate gate (`check_student_id_signin_rate`) so brute force is still blocked.
 
-## What this touches
+2. **Rewire the portals.** `GameAuth.tsx` and `Auth.tsx` call `player-auth` and apply the result with `supabase.auth.setSession()`. Keep `withAuthBurstRetry` around it. Keep a fallback to the current direct `signUp`/`signInWithPassword` if the function returns no session, so nothing breaks mid-deploy.
 
-- Creates and then deletes: 1 test classroom, 30 test students, their credentials.
-- Read-only against: `classroom_login_attempts`, `classroom-login` edge logs.
-- No schema changes, no changes to existing classes or students.
+3. **Kill the double call.** Even on the fallback path, stop calling `signInWithPassword()` right after `signUp()` in Student-ID mode — auto-confirmed signups already return a session. That alone halves the burst.
+
+4. **Raise the auth email hourly cap** to the maximum for email-mode signups (consumer parents, not classrooms).
+
+5. **Point pilots at the right door.** Add a visible "My teacher gave me a class code" link from the game portal to `/class-login`, and make roster provisioning the documented pilot flow. A pre-provisioned class generates zero signups on the day.
+
+## Then prove it
+
+A script fires 30 concurrent signups and 30 concurrent logins from one IP against the deployed functions, records every status + latency, and reports whether any 429 appears and whether any request fell back to the direct hosted-Auth path. Test accounts are deleted afterwards. Pass = 30/30, zero 429s. If it fails, the log becomes the support ticket.
+
+## Remaining honest caveat
+
+Routing auth through edge functions moves the load off the school IP onto our function's egress. That is how `classroom-login` already works and it is the standard mitigation, but the only proof is the 30-client test above. There is also a per-IP token-refresh limit (far more permissive, ~150 per 5 min) that still applies to signed-in iPads; low risk, but the test will surface it.
+
+## Files this touches
+
+- New: `supabase/functions/player-auth/index.ts`
+- `supabase/config.toml` (declare the new function)
+- `src/pages/game/GameAuth.tsx`, `src/pages/Auth.tsx`
+- `src/lib/authBurstRetry.ts` (reuse, no behavior change)
+
+No schema changes. Test accounts are created and deleted by the test only.
