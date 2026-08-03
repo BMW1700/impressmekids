@@ -25,6 +25,13 @@ interface ImportResult {
   errors: string[];
 }
 
+interface IssuedCredential {
+  full_name: string;
+  username: string;
+  pin: string;
+  classroom_code: string;
+}
+
 const CHUNK_SIZE = 100; // safe per-request size
 
 export function BulkStudentImport() {
@@ -35,6 +42,23 @@ export function BulkStudentImport() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [credentials, setCredentials] = useState<IssuedCredential[]>([]);
+
+  const downloadCredentials = () => {
+    const header = "full_name,class_code,username,pin\n";
+    const body = credentials
+      .map((c) => `"${c.full_name}",${c.classroom_code},${c.username},${c.pin}`)
+      .join("\n");
+    const blob = new Blob([header + body], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student_sign_in_cards.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Sign-in cards downloaded — PINs are not shown again");
+  };
+
 
   const downloadTemplate = () => {
     const template = `email,student_id,full_name,classroom_code,grade
