@@ -100,7 +100,7 @@ export const AudienceTrifurcation = () => {
             const Icon = d.Icon;
             return (
               <motion.div
-                key={d.to}
+                key={`${d.to}-${i}`}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-60px" }}
