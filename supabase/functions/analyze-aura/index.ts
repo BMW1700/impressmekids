@@ -28,6 +28,9 @@ serve(async (req) => {
       assignmentId,
       // NEW: Free mode - skip Vertex AI, just save metrics
       freeMode,
+      // Set only by the durable job worker (service-role call) so the
+      // evaluation is attributed to the original student.
+      _actingUserId,
     } = await req.json();
 
     // Validate based on mode
@@ -53,17 +56,27 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const payloadBase64 = token.split('.')[1];
     const payload = JSON.parse(atob(payloadBase64));
-    const userId = payload.sub;
-    
+    const isServiceRole = payload.role === 'service_role';
+
+    // Worker path: the durable queue calls us with the service-role key and
+    // names the student. Client path: the student's own JWT decides.
+    const userId = isServiceRole ? _actingUserId : payload.sub;
+
     if (!userId) throw new Error('Unauthorized');
-    
-    console.log('[analyze-aura] User:', userId);
-    
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
+
+    console.log('[analyze-aura] User:', userId, isServiceRole ? '(queued job)' : '(direct)');
+
+    const supabase = isServiceRole
+      ? createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+          { auth: { persistSession: false } }
+        )
+      : createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          { global: { headers: { Authorization: authHeader } } }
+        );
 
     // READING MODE: Analyze reading comprehension
     if (readingMode) {

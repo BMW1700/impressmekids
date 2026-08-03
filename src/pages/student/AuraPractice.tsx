@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { runAiEvaluation, makeIdempotencyKey } from "@/lib/aiEvaluationJobs";
+
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { CampaignModeEntry } from "@/components/aura/game/CampaignModeEntry";
@@ -311,24 +313,34 @@ const AuraPractice = () => {
       console.log('Phonemes detected:', phonemes?.length || 0);
       console.log('Audio features:', !!audioFeatures);
       
-      const { data, error } = await supabase.functions.invoke('analyze-aura', {
-        body: {
+      // Durable queue: the submission is persisted server-side before any AI
+      // call, so a temporary rate limit can never lose this reading.
+      const { result, error } = await runAiEvaluation({
+        idempotencyKey: makeIdempotencyKey([
+          'aura',
+          user?.id,
+          audioUrl || text.slice(0, 40),
+          Math.round(durationSeconds * 100),
+        ]),
+        payload: {
           transcript: text,
           durationSeconds,
           audioUrl,
           audioFeatures,
           phonemes,
-          freeMode: isFreeMode, // Pass free mode flag
+          freeMode: isFreeMode,
         },
       });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
 
+      const data = result;
       setLatestAnalysis(data.analysis);
       toast({
         title: "✨ Analysis Complete!",
         description: `Your speaking grade: ${data.analysis.grade}/100`,
       });
+
       
       refetch();
     } catch (error) {

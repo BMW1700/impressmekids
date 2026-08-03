@@ -98,6 +98,71 @@ export type Database = {
           },
         ]
       }
+      ai_evaluation_jobs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          idempotency_key: string
+          job_type: string
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          payload: Json
+          result: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          idempotency_key: string
+          job_type?: string
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          payload?: Json
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          idempotency_key?: string
+          job_type?: string
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          payload?: Json
+          result?: Json | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_evaluation_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       answers: {
         Row: {
           answer_text: string
@@ -1733,6 +1798,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      classroom_login_attempts: {
+        Row: {
+          classroom_code: string | null
+          created_at: string
+          id: string
+          ip_bucket: string
+          success: boolean
+          username: string | null
+        }
+        Insert: {
+          classroom_code?: string | null
+          created_at?: string
+          id?: string
+          ip_bucket?: string
+          success?: boolean
+          username?: string | null
+        }
+        Update: {
+          classroom_code?: string | null
+          created_at?: string
+          id?: string
+          ip_bucket?: string
+          success?: boolean
+          username?: string | null
+        }
+        Relationships: []
       }
       classroom_students: {
         Row: {
@@ -7709,6 +7801,76 @@ export type Database = {
           },
         ]
       }
+      student_credentials: {
+        Row: {
+          classroom_id: string | null
+          created_at: string
+          created_by: string | null
+          failed_attempts: number
+          id: string
+          last_login_at: string | null
+          locked_until: string | null
+          must_reset: boolean
+          pin_hash: string
+          pin_salt: string
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          classroom_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_attempts?: number
+          id?: string
+          last_login_at?: string | null
+          locked_until?: string | null
+          must_reset?: boolean
+          pin_hash: string
+          pin_salt: string
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          classroom_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          failed_attempts?: number
+          id?: string
+          last_login_at?: string | null
+          locked_until?: string | null
+          must_reset?: boolean
+          pin_hash?: string
+          pin_salt?: string
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_credentials_classroom_id_fkey"
+            columns: ["classroom_id"]
+            isOneToOne: false
+            referencedRelation: "classrooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_credentials_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_credentials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_error_patterns: {
         Row: {
           created_at: string | null
@@ -9461,6 +9623,33 @@ export type Database = {
           zone_id: string
           zone_slug: string
         }[]
+      }
+      claim_ai_evaluation_jobs: {
+        Args: { _limit?: number }
+        Returns: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          idempotency_key: string
+          job_type: string
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          payload: Json
+          result: Json | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_evaluation_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       claim_initial_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }

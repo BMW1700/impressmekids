@@ -65,6 +65,7 @@ const NameThatAnimalGame = lazy(() => import("./pages/games/NameThatAnimalGame")
 const USStatesMapQuiz = lazy(() => import("./pages/games/USStatesMapQuiz"));
 const TugOfWarGame = lazy(() => import("./pages/games/TugOfWarGame"));
 const JoinClass = lazy(() => import("./pages/JoinClass"));
+const ClassroomLogin = lazy(() => import("./pages/ClassroomLogin"));
 const ClassroomDetail = lazy(() => import("./pages/classrooms/ClassroomDetail"));
 const QuestionsLibrary = lazy(() => import("./pages/teacher/QuestionsLibrary"));
 const QuestionGroupDetail = lazy(() => import("./pages/teacher/QuestionGroupDetail"));
@@ -195,6 +196,8 @@ const App = () => (
                   <Route path="/for-families" element={<ForFamilies />} />
                   <Route path="/auth" element={<GameAuth />} />
                   <Route path="/school/auth" element={<Auth />} />
+                  <Route path="/class-login" element={<ClassroomLogin />} />
+
                   <Route path="/account/delete" element={<AccountDeletion />} />
                   <Route path="/pending-verification" element={<PendingVerification />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />

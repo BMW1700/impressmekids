@@ -25,6 +25,13 @@ interface ImportResult {
   errors: string[];
 }
 
+interface IssuedCredential {
+  full_name: string;
+  username: string;
+  pin: string;
+  classroom_code: string;
+}
+
 const CHUNK_SIZE = 100; // safe per-request size
 
 export function BulkStudentImport() {
@@ -35,6 +42,23 @@ export function BulkStudentImport() {
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [credentials, setCredentials] = useState<IssuedCredential[]>([]);
+
+  const downloadCredentials = () => {
+    const header = "full_name,class_code,username,pin\n";
+    const body = credentials
+      .map((c) => `"${c.full_name}",${c.classroom_code},${c.username},${c.pin}`)
+      .join("\n");
+    const blob = new Blob([header + body], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "student_sign_in_cards.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Sign-in cards downloaded — PINs are not shown again");
+  };
+
 
   const downloadTemplate = () => {
     const template = `email,student_id,full_name,classroom_code,grade
@@ -111,6 +135,7 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
 
       const totals = { created: 0, skipped: 0, failed: 0, emailsQueued: 0 };
       const allErrors: string[] = [...errors];
+      const issued: IssuedCredential[] = [];
 
       const chunks: CSVRow[][] = [];
       for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
@@ -135,12 +160,26 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
             .filter((r: any) => !r.success)
             .map((r: any) => `${r.identifier}: ${r.error}`);
           allErrors.push(...chunkErrors);
+
+          // PINs are returned exactly once — capture them for the printout.
+          (data?.results || [])
+            .filter((r: any) => r.success && r.pin && r.username)
+            .forEach((r: any, i: number) => {
+              issued.push({
+                full_name: r.full_name || r.identifier,
+                username: r.username,
+                pin: r.pin,
+                classroom_code: chunks[c][i]?.classroom_code || '',
+              });
+            });
         }
 
         setProgress(Math.round(((c + 1) / chunks.length) * 100));
       }
 
+      setCredentials(issued);
       setResult({ ...totals, errors: allErrors });
+
       if (totals.created > 0) {
         toast.success(`Imported ${totals.created} students (${totals.skipped} already existed)`);
       } else if (totals.skipped > 0) {
@@ -264,6 +303,24 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
                 </CardContent>
               </Card>
             </div>
+
+            {credentials.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex flex-col gap-3">
+                  <span>
+                    <strong>{credentials.length} sign-in cards ready.</strong> PINs are shown
+                    only once — download them now and hand them out. You can always reset a
+                    PIN later from the class roster.
+                  </span>
+                  <Button onClick={downloadCredentials} className="w-fit flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Download sign-in cards (CSV)
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
 
             {result.errors.length > 0 && (
               <Alert variant="destructive">
