@@ -106,7 +106,7 @@ export function useChallengeSettings(studentId: string | null | undefined) {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id ?? null;
       const lock_pin_hash = await hashPin(pin);
-      await supabase.from('challenge_settings').upsert(
+      const { error } = await supabase.from('challenge_settings').upsert(
         {
           student_id: studentId,
           // Preserve current level; upsert requires level to exist. Fall back to default if none.
@@ -117,6 +117,10 @@ export function useChallengeSettings(studentId: string | null | undefined) {
         },
         { onConflict: 'student_id' },
       );
+      if (error) {
+        console.error('[challengeSettings] setLock failed:', error);
+        throw error;
+      }
       await refresh();
     },
     [studentId, row?.level, refresh],
@@ -125,11 +129,16 @@ export function useChallengeSettings(studentId: string | null | undefined) {
   /** Remove the PIN lock. Requires current PIN unless there is no lock. */
   const clearLock = useCallback(async () => {
     if (!studentId) return;
-    await supabase
+    const { error } = await supabase
       .from('challenge_settings')
       .update({ lock_enabled: false, lock_pin_hash: null, lock_set_by: null })
       .eq('student_id', studentId);
+    if (error) {
+      console.error('[challengeSettings] clearLock failed:', error);
+      throw error;
+    }
     await refresh();
+
   }, [studentId, refresh]);
 
   /** Client-side PIN check against the stored hash. */
