@@ -626,6 +626,13 @@ const ClassroomDetail = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setStudentPinTarget({
+                          id: student.student_id,
+                          name: student.profiles?.full_name || 'Student'
+                        })}>
+                            <KeyRound className="h-4 w-4 mr-2" />
+                            Reset class PIN
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => {
                           setStudentToRemove(student);
                           setShowRemoveStudentModal(true);
