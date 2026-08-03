@@ -304,6 +304,24 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
               </Card>
             </div>
 
+            {credentials.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex flex-col gap-3">
+                  <span>
+                    <strong>{credentials.length} sign-in cards ready.</strong> PINs are shown
+                    only once — download them now and hand them out. You can always reset a
+                    PIN later from the class roster.
+                  </span>
+                  <Button onClick={downloadCredentials} className="w-fit flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Download sign-in cards (CSV)
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+
             {result.errors.length > 0 && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
