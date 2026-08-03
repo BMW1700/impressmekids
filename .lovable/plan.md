@@ -2,7 +2,52 @@
 
 No code changes in this document. This is the audit, the risks, and the proposed work.
 
+## What implementing this actually does
+
+It turns the current product from a **demonstration/pilot app** into a **classroom-safe system** that can survive a school with 30–300 iPads on one network: students log in without email, teachers reset their PINs, AI evaluations cannot be lost because of a rate limit, and the platform logs enough to diagnose problems.
+
+## Is the whole plan necessary? No.
+
+Below is the honest breakdown of what is **essential**, what is **highly recommended**, and what is **optional polish**.
+
+### Tier 1 — Must do before classrooms use it (safety-critical)
+
+| Item | Why it is required | What breaks if you skip it |
+|---|---|---|
+| Fix bulk-create-students to issue and return PINs | The current function creates Student-ID accounts but throws away the random password. Students cannot sign in. | Bulk-imported accounts are useless. Support burden explodes. |
+| Retry/backoff in `_shared/vertexAuth.ts` | Today a transient Google 429/503 makes a reading submission vanish. | A single rate limit or blip loses a child's score/answer. |
+| Durable AI job queue (idempotency + state) | Prevents duplicate scoring and lets a submission be retried without losing it. | 50 simultaneous submissions = collisions, lost data, and double rewards. |
+| Teacher-scoped student provisioning | Today only admins can bulk-import; teachers must ask admins for every roster. | Pilot deployment is blocked in any real school. |
+| Real per-IP + per-username lockout on student login | The current rate limit is fake (`no-ip-collected`) and fails open. | Credential stuffing, class lockouts, and no audit trail. |
+
+### Tier 2 — Should do before scaling (reliability and support)
+
+| Item | Why it matters | What happens if you skip it |
+|---|---|---|
+| Classroom login flow (class code + username + PIN) | The 8-digit Student-ID route leaks the synthetic email internally and is awkward at scale. | Continue using the current flow; still works but harder to deploy and less secure. |
+| Structured ops event logging | Right now you only have console logs and Sentry. You cannot see patterns across 300 devices. | Debugging classroom-wide failures is manual guesswork. |
+| Clean up redundant `aura_records` indexes | Four overlapping indexes slow every write. | Performance degrades with volume; no immediate correctness problem. |
+| CORS allowlist for privileged functions | Current `*` is wider than needed. | Low actual risk in a school app, but it is flagged in any audit. |
+| Session idle timeout for shared devices | Today a session in `localStorage` persists forever. | Another student could pick up an iPad and see the previous student's data. |
+
+### Tier 3 — Nice to have (operational maturity)
+
+| Item | Why it is optional |
+|---|---|
+| Load-test mode + documented routes | Useful only if you actually run the 35/100/300/50 load tests. Can be added later. |
+| Full switch to OpenAI key | Not required; the current Google Vertex key is your own provider. |
+| Rollback migration scripts | Important for production, but this backend is small enough that manual rollback is acceptable. |
+
+### Recommended scope
+
+**If you want the pilot safe and deployable:** implement Tier 1 + the Classroom login flow (Tier 2). That is roughly 60% of the file list but removes the real failure modes.
+
+**If you want classroom-scale production:** add Tier 2.
+
+**Tier 3** can be deferred until you have a launch date and a load-testing day.
+
 ---
+
 
 ## 1. Current architecture (verified in this repo)
 
