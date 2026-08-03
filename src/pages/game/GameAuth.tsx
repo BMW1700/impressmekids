@@ -475,6 +475,15 @@ const GameAuth = () => {
       </Button>
       <Button
         type="button"
+        onClick={handleAppleSignIn}
+        disabled={isLoading}
+        className="w-full h-11 bg-black text-white hover:bg-black/90 font-medium shadow-md border border-white/20"
+      >
+        <AppleIcon />
+        <span>Continue with Apple</span>
+      </Button>
+      <Button
+        type="button"
         onClick={handleCleverSignIn}
         disabled={isLoading}
         className="w-full h-11 bg-[#436CF5] text-white hover:bg-[#3658D6] font-medium shadow-md"
