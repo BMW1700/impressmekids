@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Button } from "@/components/ui/button";
@@ -371,7 +372,7 @@ const GameAuth = () => {
         }
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await withAuthBurstRetry(() => supabase.auth.signUp({
         email: signupEmail,
         password,
         options: {
@@ -382,7 +383,7 @@ const GameAuth = () => {
           },
           emailRedirectTo: isStudentIdMode ? undefined : window.location.origin,
         },
-      });
+      }));
 
       if (error) {
         const msg = (error.message || '').toLowerCase();
