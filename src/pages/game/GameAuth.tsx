@@ -227,17 +227,12 @@ const GameAuth = () => {
           } as any);
         }
         // Only assign game_player if no role exists — never downgrade an
-        // existing role (e.g. super_admin, teacher).
-        const { data: existingRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', u.id)
-          .maybeSingle();
-        if (!existingRole) {
-          await supabase
-            .from('user_roles')
-            .insert({ user_id: u.id, role: 'game_player' } as any);
-        }
+        // existing role (e.g. super_admin, teacher). Enforced server-side.
+        const { error: roleError } = await supabase.rpc('claim_initial_role', {
+          _role: 'game_player' as any,
+        });
+        if (roleError) console.error('[GameAuth] claim_initial_role failed:', roleError);
+
       } catch (err) {
         console.error('[GameAuth] auto-provision profile failed:', err);
       } finally {
