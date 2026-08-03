@@ -111,6 +111,7 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
 
       const totals = { created: 0, skipped: 0, failed: 0, emailsQueued: 0 };
       const allErrors: string[] = [...errors];
+      const issued: IssuedCredential[] = [];
 
       const chunks: CSVRow[][] = [];
       for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
@@ -135,12 +136,26 @@ student3@school.edu,,Mike Johnson,XYZ456,10`;
             .filter((r: any) => !r.success)
             .map((r: any) => `${r.identifier}: ${r.error}`);
           allErrors.push(...chunkErrors);
+
+          // PINs are returned exactly once — capture them for the printout.
+          (data?.results || [])
+            .filter((r: any) => r.success && r.pin && r.username)
+            .forEach((r: any, i: number) => {
+              issued.push({
+                full_name: r.full_name || r.identifier,
+                username: r.username,
+                pin: r.pin,
+                classroom_code: chunks[c][i]?.classroom_code || '',
+              });
+            });
         }
 
         setProgress(Math.round(((c + 1) / chunks.length) * 100));
       }
 
+      setCredentials(issued);
       setResult({ ...totals, errors: allErrors });
+
       if (totals.created > 0) {
         toast.success(`Imported ${totals.created} students (${totals.skipped} already existed)`);
       } else if (totals.skipped > 0) {
