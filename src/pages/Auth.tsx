@@ -408,15 +408,17 @@ const Auth = () => {
 
       if (profileError) throw profileError;
 
-      // Insert role into user_roles table (secure role storage)
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: user.id,
-          role: selectedRole
-        }, { onConflict: 'user_id,role' });
+      // Role assignment is owned by the database (handle_new_user trigger).
+      // claim_initial_role is a no-op if a role already exists, and it can
+      // never grant a privileged role.
+      const { error: roleError } = await supabase.rpc('claim_initial_role', {
+        _role: selectedRole as any,
+      });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('[Auth] claim_initial_role failed:', roleError);
+      }
+
 
       // Create verification request
       const { error: requestError } = await supabase
