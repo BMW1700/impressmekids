@@ -196,6 +196,8 @@ const App = () => (
                   <Route path="/for-families" element={<ForFamilies />} />
                   <Route path="/auth" element={<GameAuth />} />
                   <Route path="/school/auth" element={<Auth />} />
+                  <Route path="/class-login" element={<ClassroomLogin />} />
+
                   <Route path="/account/delete" element={<AccountDeletion />} />
                   <Route path="/pending-verification" element={<PendingVerification />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
