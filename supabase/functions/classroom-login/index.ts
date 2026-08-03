@@ -113,14 +113,65 @@ Deno.serve(async (req) => {
       return json({ error: 'We could not open your account. Please tell your teacher.' }, 500);
     }
 
+    const linkStarted = Date.now();
     const { data: link, error: linkErr } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: userData.user.email,
     });
 
     if (linkErr || !link?.properties?.hashed_token) {
-      opLog('classroom_login.error', { reason: 'link_failed', message: linkErr?.message });
-      return json({ error: 'We could not open your account. Please tell your teacher.' }, 500);
+      opLog('classroom_login.error', {
+        reason: 'link_failed',
+        stage: 'generate_link',
+        status: (linkErr as { status?: number } | null)?.status ?? null,
+        ms: Date.now() - linkStarted,
+        message: linkErr?.message,
+      });
+      const throttled = (linkErr as { status?: number } | null)?.status === 429;
+      return json({
+        error: throttled
+          ? 'Lots of students are signing in right now. Try again in a moment.'
+          : 'We could not open your account. Please tell your teacher.',
+        retryable: throttled,
+      }, throttled ? 429 : 500);
+    }
+
+    // Redeem the one-time token SERVER-SIDE.
+    //
+    // This is the whole point: if the browser called verifyOtp() itself, thirty
+    // students behind one school NAT would all hit the hosted Auth verify
+    // endpoint from the same public IP and trip its per-IP throttle. Doing the
+    // exchange here means the school network never touches hosted Auth at all —
+    // one student login is one call to this function.
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+    let session: { access_token: string; refresh_token: string } | null = null;
+
+    if (anonKey) {
+      const verifyStarted = Date.now();
+      const exchangeClient = createClient(Deno.env.get('SUPABASE_URL')!, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: verified, error: verifyErr } = await exchangeClient.auth.verifyOtp({
+        token_hash: link.properties.hashed_token,
+        type: 'email',
+      });
+
+      if (verifyErr || !verified?.session?.access_token) {
+        opLog('classroom_login.error', {
+          reason: 'server_exchange_failed',
+          stage: 'verify_otp',
+          status: (verifyErr as { status?: number } | null)?.status ?? null,
+          ms: Date.now() - verifyStarted,
+          message: verifyErr?.message,
+        });
+        // Fall through: the client still has the token hash as a fallback path.
+      } else {
+        session = {
+          access_token: verified.session.access_token,
+          refresh_token: verified.session.refresh_token,
+        };
+        opLog('classroom_login.exchanged', { ms: Date.now() - verifyStarted });
+      }
     }
 
     await admin.from('student_credentials').update({
