@@ -273,6 +273,30 @@ const GameAuth = () => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin + "/auth",
+      });
+      if (result.error) {
+        toast({
+          title: "Apple sign-in failed",
+          description: result.error.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Apple sign-in failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleCleverSignIn = () => {
     const cleverClientId = import.meta.env.VITE_CLEVER_CLIENT_ID || '';
     const redirectUri = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clever-sync-callback`;
