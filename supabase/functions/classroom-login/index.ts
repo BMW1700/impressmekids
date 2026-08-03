@@ -185,7 +185,10 @@ Deno.serve(async (req) => {
 
     return json({
       success: true,
-      token_hash: link.properties.hashed_token,
+      // Preferred path: a ready-made session, exchanged server-side.
+      session,
+      // Legacy fallback for older clients — only usable once.
+      token_hash: session ? undefined : link.properties.hashed_token,
       must_reset_pin: !!cred.must_reset,
     });
   } catch (e) {
