@@ -86,7 +86,14 @@ export function useChallengeSettings(studentId: string | null | undefined) {
         teacher_override_by: opts?.asTeacherOverride ? uid ?? null : null,
         teacher_override_at: opts?.asTeacherOverride ? new Date().toISOString() : null,
       };
-      await supabase.from('challenge_settings').upsert(payload, { onConflict: 'student_id' });
+      const { error } = await supabase
+        .from('challenge_settings')
+        .upsert(payload, { onConflict: 'student_id' });
+      if (error) {
+        console.error('[challengeSettings] setLevel failed:', error);
+        throw error;
+      }
+
       await refresh();
     },
     [studentId, refresh],
