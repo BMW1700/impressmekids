@@ -1,80 +1,83 @@
-# Brutally Honest Deep Dive: Keep It or Revert?
+# Where Vertex AI Actually Is (and how to get to $0)
 
-## 1. "What AI? Everything should be free!"
+## The straight answer
 
-The reading/speaking analysis does not run on Lovable AI credits. It runs on
-**your own Google Cloud Vertex AI account** (`GOOGLE_VERTEX_AI_KEY`,
-`gemini-2.5-flash`), called from the `analyze-aura` function. That has always
-been true — this change did not add an AI cost. What it added is a queue in
-front of that same call.
+You are right that the core gameplay is free. Nothing in Pre-K or RPG calls a
+paid model. But there **is** a paid Google Vertex AI path in the backend, and it
+has been there a long time. It runs on your own Google Cloud key
+(`GOOGLE_VERTEX_AI_KEY`), not on Lovable credits.
 
-So: Lovable credits are not the issue. The AI spend is Google's meter, and the
-AI rate limit is Google's per-project quota.
+Verified by reading the code. Exactly seven backend functions touch Vertex:
 
-## 2. Does this fix the rate limit problem? Partly — and not the one you care most about.
-
-There are two completely separate rate limits, and they are often confused:
-
-| Limit | What breaks | Did this change fix it? |
+| Function | What it does | Who triggers it |
 | --- | --- | --- |
-| Google Vertex AI quota (30 kids submit readings at once) | Readings fail and are lost | **Yes.** Readings are now saved to a queue before the AI is called, and retried with backoff. |
-| Supabase auth rate limit (30 kids log in from one school IP) | Logins fail | **No.** Nothing in this change raises that ceiling. Only a support-ticket increase does. |
+| `analyze-aura` | Deep speaking/reading analysis (premium path only) | AURA practice in "premium" mode; annotation grading |
+| `generate-question-ai` | Teacher generates quiz questions | Teacher |
+| `generate-practice-exercises` | Teacher/intervention exercises | Teacher |
+| `generate-flashcards` | Flashcard generation | Teacher/student |
+| `generate-teacher-summary` | Teacher narrative summaries | Teacher |
+| `extract-text-from-image` | OCR of worksheet photos | Teacher |
+| `_shared/pseudonymize.ts` | Strips names before any of the above | Support code |
 
-Your main problem — the whole class logging in from one school IP — is
-**not** solved by this work, and cannot be solved by code on our side.
+## What is already free (confirmed)
 
-## 3. Did it break anything? One real regression.
+- **RPG mode**: zero AI backend calls. Web Speech + in-house matching only.
+- **Pre-K**: submits with `freeMode: true`, which explicitly **skips Vertex**
+  and uses the in-house metrics (`analyze-aura` line 196: "FREE MODE: Skipping
+  Vertex AI").
+- **The 4 ML models**: trained and run in-house on your own data, not Vertex.
 
-Verified against the live database: `ai_evaluation_jobs` has **0 rows** and
-`student_credentials` has **0 rows**. Nothing here has ever run in production.
+## What actually costs money
 
-The real problem: there is **no scheduled worker**. Confirmed — no cron entry
-calls `process-ai-jobs`. Jobs are only processed while a student's browser sits
-on the results screen nudging the worker.
+1. **AURA practice in "premium" mode** — `practiceMode !== 'free'` sends the
+   transcript to Gemini 2.5 Flash for the narrative feedback.
+2. **Reading-annotation grading** (`readingMode` path in `analyze-aura`) —
+   always calls Vertex, no free branch exists.
+3. **The five teacher content-generation functions** — always Vertex.
 
-- Older kids on the AURA practice screen: fine, their browser nudges the worker.
-- **Pre-K submissions are fire-and-forget.** Their jobs get created and then
-  nobody ever picks them up. Pre-K reading data silently stops reaching
-  analytics and the ML models.
+So: kids playing is free. Teacher tooling and the premium AURA narrative are
+not.
 
-That is a genuine regression versus the old code, and it is why this cannot be
-left half-finished.
+## Decision to make
 
-Three other places still call the AI directly and bypass the queue entirely
-(`AuraReadingGrader`, `StudentQuestionView`, `AuraReadingSection`) — they still
-lose a submission on a busy AI service.
+There is no version of "AI writes a paragraph of feedback" that is free —
+either Google bills your GCP account, or Lovable AI bills workspace credits.
+The only true $0 option is to not call a model and use the in-house engine.
 
-## 4. Revert or finish?
+Three options, pick one:
 
-**Finish, don't revert.** The remaining work is small and contained, and
-reverting throws away the one thing that genuinely protects student work.
+**A. Go 100% free.** Force `freeMode` everywhere, add a free branch to the
+annotation-grading path, and turn the five teacher-generation features into
+in-house/template-driven output. Cost goes to $0. Teacher AI generation gets
+noticeably less impressive, and the AURA narrative feedback becomes canned
+rather than written per student.
 
-## Work to complete
+**B. Free for students, paid only for teachers.** Force `freeMode` on every
+student-facing submission (already true for Pre-K; make it true for AURA
+practice and annotation grading). Leave the five teacher functions on a model.
+Cost drops to near zero at classroom scale, because only teachers trigger spend
+and they trigger it rarely. This is the recommended option.
 
-1. **Scheduled worker sweep (fixes the Pre-K regression).** `pg_cron` + `pg_net`
-   calling `process-ai-jobs` every minute so jobs drain whether or not any
-   browser is open. The worker already claims with `FOR UPDATE SKIP LOCKED`, so
-   overlapping runs are safe.
-2. **Route the three remaining AI call sites through the queue** so no
-   submission path can lose data.
-3. **One real end-to-end pass**: import a small roster, sign in one of those
-   students at `/class-login`, complete a reading, confirm the job row goes
-   queued -> completed and the score lands.
-4. **Teacher "Reset PIN" button** on the roster — the backend exists, no UI
-   calls it, so a kid who forgets a PIN is stuck.
-5. **Link `/class-login` from the sign-in screen** — the page exists but nothing
-   points to it.
-6. **Send the auth rate-limit support ticket.** This is the actual fix for the
-   shared-school-IP login problem, and it is the only fix.
+**C. Keep it as-is** and just watch the GCP bill.
+
+## If you pick B (recommended) — the work
+
+1. Add a free-metrics branch to the `readingMode` path in `analyze-aura` so
+   student annotation grading no longer requires Vertex.
+2. Default AURA practice to `freeMode` for all student submissions; keep the
+   premium narrative behind an explicit teacher/admin opt-in.
+3. Move the five teacher functions off your GCP key onto the Lovable AI
+   Gateway, so there is one metered path instead of a second cloud account with
+   its own quota and billing.
+4. Add a single `AI_SPEND_ENABLED` school setting so a district can switch all
+   paid generation off entirely.
 
 ## Technical details
 
-- Cron: `cron.schedule('process-ai-jobs-sweep', '* * * * *', ...)` issuing a
-  `net.http_post` to the function URL with the anon key.
-- Retry column `next_attempt_at` already exists on `ai_evaluation_jobs` and is
-  respected by the worker; confirm `claim_ai_evaluation_jobs` filters on it.
-- Files touched: a migration for the cron sweep,
-  `src/components/aura/AuraReadingGrader.tsx`,
-  `src/components/assignments/StudentQuestionView.tsx`,
-  `src/components/student/sections/AuraReadingSection.tsx`, a roster component
-  for the PIN reset action, and the sign-in page for the `/class-login` link.
+- Free/premium switch already exists: `analyze-aura` line 196 (`if (freeMode)`).
+  Only the `readingMode` branch (line 598) has no free equivalent.
+- Vertex is reached only through `supabase/functions/_shared/vertexAuth.ts`;
+  swapping providers is a change in that one file plus the model id.
+- Files touched for option B: `analyze-aura/index.ts`,
+  `src/pages/student/AuraPractice.tsx`, `_shared/vertexAuth.ts`, and the five
+  generation functions listed above.
