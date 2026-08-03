@@ -1,210 +1,141 @@
-# Immediate App Store + 30-Student Classroom Plan
+# Rate Limits + 48-Hour App Store Push
 
-## Brutally honest verdict
+## Brutally honest answer to the main question
 
-Stop work on Vertex AI and new features. Vertex is not required for Pre-K, RPG,
-consumer/daycare gameplay, authentication, or App Store submission.
+**Yes — I can fix most of the rate-limit problem in code. You probably do not
+need Lovable support to unblock 30 students on one school Wi-Fi.**
 
-The app is close, but **30 simultaneous users on one school network are not yet
-proven or guaranteed**:
+Here is the actual mechanism, verified in `supabase/functions/classroom-login/index.ts`:
 
-- Our classroom security is correctly per student, not per IP. Five bad PINs
-  lock only that student for 15 minutes.
-- Staff bulk provisioning creates students server-side, avoiding 30 children
-  hitting public signup together.
-- Every classroom PIN login still calls hosted Auth twice: `generateLink()` and
-  then `verifyOtp()`.
-- Normal email/password signup and login also call hosted Auth directly.
-- Lovable’s documentation does not publish the applicable per-IP Auth limits,
-  and app code cannot raise hosted Auth limits.
-- Available logs show no recent Auth 429s, but no real 30-device test has run.
+1. The browser calls our edge function with class code + username + PIN.
+   Our own logic is per-student, not per-IP. This part is already safe.
+2. On success the function returns a `token_hash`, and then **the student's
+   browser** calls hosted Auth `verifyOtp()` directly.
+3. Step 3 is the problem. `verifyOtp` hits the hosted Auth verify endpoint
+   **from the school's public IP**. Hosted Auth throttles that endpoint per IP.
+   Thirty children tapping "Go" in the same minute all land in the same bucket.
+   That is the 429 risk — not our PIN code, not the database.
 
-The solution is: **pre-provision school accounts, obtain written limit
-confirmation from Lovable, instrument Auth 429s, and pass a production 30-client
-same-IP test before promising schools the issue is solved.**
+**The fix is ours to make:** do the token exchange *inside the edge function*,
+server-side, and hand the finished session back to the browser. The school's IP
+then never touches the hosted Auth verify endpoint at all — one student login
+becomes one call to our function, and the Auth traffic originates from the
+backend, not from thirty iPads behind one NAT.
 
-## Verified current state
+That single change removes the only per-IP hosted-Auth call in the classroom
+path. Support becomes a nice-to-have confirmation, not a blocker.
 
-### Classroom account creation
+What code *cannot* fix: hosted admin-API ceilings if we ever hammer them
+(bulk import creating hundreds of accounts in a burst) and any global project
+limit Lovable applies. Those we mitigate by pacing bulk import and, only if a
+real load test still shows 429s, emailing support with timestamps.
 
-1. A teacher/admin imports the roster once.
-2. `bulk-create-students` creates confirmed accounts through the admin Auth API.
-3. Students receive unique usernames and hashed six-digit PINs.
-4. Students use `/class-login`: class code + username + PIN.
+## Phase 1 — Kill the rate-limit risk (code)
 
-For schools, this must be the documented workflow. A class should not use public
-self-signup simultaneously.
+1. **Server-side session exchange in `classroom-login`.**
+   After the PIN check, the function generates the one-time token and
+   immediately redeems it server-side, returning `access_token` +
+   `refresh_token`. The client calls `setSession()` instead of `verifyOtp()`.
+   No hosted-Auth call ever leaves the school network.
+2. **Backward-compatible client** in `src/lib/classroomLogin.ts`: use the
+   returned session when present, fall back to the old `verifyOtp` path
+   otherwise, so nothing breaks mid-deploy.
+3. **Jittered retry on 429.** If the function ever returns a throttle, retry
+   with exponential backoff plus random jitter (0–1.5s) so a class does not
+   retry in lockstep. Show kids "Almost there…" instead of an error.
+4. **Pace bulk import.** `bulk-create-students` creates accounts in small
+   batches with a short delay and is idempotent on re-run, so a 30-child roster
+   import cannot burst the admin API.
+5. **Real 429 telemetry.** Log Auth stage, HTTP status, and latency (no names,
+   no PINs, no tokens) so we can prove pass/fail instead of guessing.
+6. **Retire the dead `ip_bucket`** in `classroom_login_attempts`. It always
+   writes `no-ip-collected` and only creates confusion in audits.
 
-### Classroom login
+## Phase 2 — Prove it with a 30-client test
 
-- Lockout is stored on each `student_credentials` row, not the school IP.
-- `classroom_login_attempts.ip_bucket` is currently inert and defaults to
-  `no-ip-collected`; it neither helps nor blocks classroom concurrency.
-- The unresolved capacity risk is the hosted Auth `generateLink` + `verifyOtp`
-  sequence, not our PIN logic.
+- One test classroom, 30 disposable students via bulk import.
+- 30 concurrent logins from a single egress IP against the published app.
+- Three rounds: all at once, spread over 10 seconds, then logout and repeat.
+- Pass = 100% success, zero 429s, zero crossed sessions, all land on the right
+  student dashboard.
+- Only if this fails do we email Lovable support, and then with exact
+  timestamps and endpoint names rather than a vague complaint.
 
-### Backend capacity
+## Phase 3 — App Store blockers (verified state)
 
-Current backend health is good: database up, 15/90 connections, 1/400 pool
-clients, 30% memory, 17% disk, and no restarts. There is no evidence that a
-larger instance is needed. The unknown is hosted Auth policy.
+Confirmed good: `capacitor.config.ts` has no `server.url` (Guideline 2.5.2),
+bundle id `app.lovable.yubilearn`, audio session configured in
+`AppDelegate.swift`, mic/speech/camera strings present in `Info.plist`,
+Sign in with Apple already wired in `src/pages/Auth.tsx`, and
+`/account/delete` exists (Guideline 5.1.1(v)).
 
-### Vertex / paid AI
+Must fix before archiving:
 
-- RPG has no Vertex dependency.
-- Pre-K submits `freeMode: true`; `analyze-aura` explicitly skips Vertex.
-- Core Web Speech and in-house ML/matching remain the gameplay path.
-- Vertex only supports optional premium AURA narrative analysis and buried
-  teacher generation/OCR tools.
-- Do not migrate these tools to another paid provider now. Keep them outside the
-  App Store v1 critical path; disable them in v1 if necessary.
+1. **`PrivacyInfo.xcprivacy` is missing.** Apple rejects submissions without a
+   privacy manifest. Add it declaring UserDefaults and file-timestamp API usage
+   and "no tracking".
+2. **Apple sign-in parity on the consumer/game login**, not only the school
+   auth screen. Apple requires it wherever Google is offered.
+3. **Link account deletion from a visible settings surface** so a reviewer can
+   reach it in under three taps.
+4. **Fix the duplicate React key** in
+   `src/components/landing/AudienceTrifurcation.tsx` (live console warning).
+5. **Reproduce and fix the Safari/WebKit `EmptyRanges` media exception** before
+   TestFlight — it comes from the video/audio player path, and WKWebView is
+   Safari.
+6. **Seed reviewer demo accounts** and paste the credentials into App Review
+   Information.
+7. **Confirm no unused capabilities are declared** (push is stubbed — do not
+   claim it).
 
-## Phase 1 — Make classroom authentication provably safe
+## Phase 4 — Your exact 48-hour sequence
 
-### 1. Finish the intended school workflow
+Day 1 (mostly me, then you):
 
-- Keep bulk roster provisioning and one-time credential CSV download.
-- Add the missing teacher-facing PIN reset control.
-- Make roster imports resumable/idempotent with clear per-student results.
-- Do not require students to create accounts during class.
+1. I ship Phase 1 and Phase 3 code fixes.
+2. You enroll in the Apple Developer Program if not already ($99, can take a
+   few hours to approve — start this first, it is the only thing with a queue).
+3. Install Xcode from the Mac App Store, open it once, accept the license.
+4. Pull the project to your Mac, then `npm install`, `npm run build:ios`,
+   `npm run open:ios`.
+5. In Xcode: select your Team, confirm bundle id, set display name `YubiLearn`,
+   version `1.0.0`, build `1`, add the Sign in with Apple capability.
+6. Generate icon and splash from `resources/` with `@capacitor/assets`.
 
-### 2. Harden classroom login
+Day 1 evening:
 
-- Preserve per-student PIN lockouts; never add an IP-wide classroom lockout.
-- Retire the misleading unused `ip_bucket` behavior/index.
-- Add non-PII telemetry for Auth stage, status, latency, and 429s.
-- Distinguish `generateLink` failures from `verifyOtp` failures.
-- Show a specific retry message for hosted Auth throttling.
-- Do not hide a persistent 429 behind retries and call it solved.
+7. Run on a real iPhone: mic permission, a full Pre-K level, a full RPG battle,
+   backgrounding mid-session, login, logout, account deletion.
+8. Repeat on a real iPad.
+9. Run the 30-client login test.
 
-### 3. Email Lovable support now
+Day 2:
 
-> **Subject: Production Auth limit confirmation for 30+ students behind one NAT**
->
-> We are launching YubiLearn for classroom use on Lovable Cloud. At least 30
-> students must be able to sign in concurrently from one school NAT IP without
-> HTTP 429 responses. We pre-provision student accounts server-side. Students
-> then use class code, username, and PIN; successful login currently calls
-> managed Auth `generateLink`, followed by `verifyOtp`.
->
-> Please confirm this project's limits for admin user creation, magic-link
-> generation, OTP verification, password grants, and public signup/login,
-> including per-IP and hourly limits. Please raise or exempt the project to
-> support at least 60 concurrent classroom Auth operations from one NAT IP with
-> headroom. Confirm whether token-only `generateLink` calls consume or can be
-> blocked by email-send quotas even when no email is sent.
->
-> Please provide the applied limits in writing so we can document a production
-> readiness test.
+10. Xcode → Any iOS Device → Product → Archive → Distribute → App Store Connect.
+11. In App Store Connect: create the app record, fill App Information, App
+    Privacy, age rating, category Education, screenshots (6.7" iPhone, 13" iPad),
+    reviewer notes plus demo credentials.
+12. Attach the build, answer export compliance ("no"), submit for review.
 
-Support: https://lovable.dev/support
+Realistic expectation: submission inside 48 hours is achievable. **Approval** is
+Apple's clock — typically 24–48 hours after submission, and a rejection costs a
+full cycle. That is why Phase 3 items 1, 2, 3 and 5 are not optional.
 
-### 4. Run a controlled 30-client production test
-
-- Create one test classroom and 30 disposable students through bulk import.
-- Run 30 logins concurrently from one egress IP against the published app.
-- Run three rounds: 30 at once, 30 over 10 seconds, then logout/login again.
-- Verify all sessions are valid, student-scoped, and reach the dashboard.
-- Record stage/status/latency only—never names, PINs, credentials, or tokens.
-- Pass criteria: 100% success, zero 429s, zero data crossover, zero duplicate
-  accounts, and no backend saturation.
-- If hosted Auth returns 429, send Lovable the timestamp and operation and have
-  the platform limit raised before launch.
-
-## Phase 2 — Close App Store blockers in the repository
-
-1. Add `PrivacyInfo.xcprivacy`; it is currently missing.
-2. Add Sign in with Apple to the consumer/game login wherever Google is offered,
-   not only the buried school Auth screen.
-3. Link the existing `/account/delete` page from an obvious authenticated
-   settings surface; the route exists but no normal UI link was found.
-4. Reproduce and fix the current Safari/WebKit media exception
-   `ReferenceError: Can't find variable: EmptyRanges` before TestFlight.
-5. Fix the duplicate React key in `AudienceTrifurcation`.
-6. Verify display name `YubiLearn`, icon set, splash, bundle ID, version/build,
-   permission copy, and iPad orientations.
-7. Test native speech, WebAudio, repeated mic use, interruptions, background/
-   foreground, logout, deletion, and policy links on real iPhone and iPad.
-
-## Phase 3 — Exact Mac-to-App-Store steps
-
-### Apple and Mac setup
-
-1. Enroll in the Apple Developer Program.
-2. Install the latest production Xcode from the Mac App Store.
-3. Open Xcode once, accept the license, and install requested components.
-4. Install Node.js and CocoaPods if missing.
-5. Download/clone this project onto the Mac.
-
-### Build the native app
-
-1. Open Terminal in the project folder.
-2. Run `npm install`.
-3. Run `npm run build:ios`.
-4. Run `npm run open:ios`.
-5. In Xcode select the `App` project and target.
-6. Under Signing & Capabilities select the Apple developer team.
-7. Confirm bundle ID `app.lovable.yubilearn` is registered.
-8. Set display name `YubiLearn`, version `1.0.0`, build `1`.
-9. Add Sign in with Apple capability if used in the final consumer UI.
-10. Confirm microphone, speech, and camera permission text in the built app.
-
-### Device and TestFlight validation
-
-1. Run on a real iPhone and grant mic/speech permissions.
-2. Complete Pre-K and RPG sessions with repeated mic starts, app backgrounding,
-   interruption, audio playback, and rotation.
-3. Repeat on a real iPad.
-4. Test signup, Apple/Google login, classroom login, logout, and deletion.
-5. Complete the 30-client production Auth test.
-6. In Xcode choose Any iOS Device, then Product → Archive.
-7. Validate and upload the archive to App Store Connect.
-8. Add internal TestFlight testers and run a complete regression pass.
-
-### App Store Connect
-
-1. Create the app record with the matching bundle ID.
-2. Add app name, subtitle, description, support URL, privacy-policy URL,
-   Education category, age rating, and copyright.
-3. Complete App Privacy accurately for account, student, diagnostic, and voice
-   data and whether each category is linked to identity.
-4. Upload final iPhone and iPad screenshots.
-5. Supply review notes and a working reviewer account that exposes the consumer
-   experience and mic features.
-6. Select the tested build, answer export-compliance questions, and submit.
-
-## Rollback plan
-
-- Keep current email/password and Student ID login as fallbacks during testing.
-- Ship authentication hardening separately from game/media changes.
-- If the concurrency test fails, keep roster provisioning but do not promote
-  classroom PIN login until Lovable raises the limit; preserve all credentials.
-- If the native build regresses, do not upload it; restore the last known-good
-  native configuration.
-
-## Files expected to change
+## Files this touches
 
 - `supabase/functions/classroom-login/index.ts`
+- `supabase/functions/bulk-create-students/index.ts`
 - `src/lib/classroomLogin.ts`
 - `src/pages/ClassroomLogin.tsx`
-- `src/components/admin/StudentRoster.tsx`
-- `src/components/admin/BulkStudentImport.tsx` (only for resumable reporting)
-- `src/pages/game/GameAuth.tsx`
-- The authenticated settings/navigation surface for account deletion
-- `ios/App/App/PrivacyInfo.xcprivacy`
-- Native config only where the final audit proves a correction is needed
-- The media-player owner of `EmptyRanges`, after reproduction identifies it
+- `ios/App/App/PrivacyInfo.xcprivacy` (new)
+- `scripts/patch-ios-plist.js`
+- consumer/game auth screen (Apple sign-in parity)
 - `src/components/landing/AudienceTrifurcation.tsx`
-- Classroom load-test and iOS release verification files
+- the Pre-K/RPG media player path for the `EmptyRanges` fix
 
-## Definition of ready
+## Rollback
 
-- Lovable confirms or raises the Auth limits.
-- Published production passes 30 same-IP clients with zero 429s.
-- Privacy manifest, Apple login parity, visible deletion, and policy URLs pass.
-- `EmptyRanges` and duplicate-key errors are resolved.
-- Pre-K/RPG mic and audio pass on real iPhone and iPad.
-- Xcode validation and TestFlight regression pass.
-
-Before these checks, “30 students guaranteed” and “App Store ready” would be
-claims without evidence.
+Every change is additive and feature-flagged by shape: the client keeps the old
+`verifyOtp` fallback, bulk import stays idempotent, and the privacy manifest and
+UI fixes are inert if reverted. Any single step can be rolled back from History
+without touching the database.
