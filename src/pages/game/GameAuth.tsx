@@ -387,6 +387,11 @@ const GameAuth = () => {
 
       if (error) {
         const msg = (error.message || '').toLowerCase();
+        if (isAuthThrottleError(error)) {
+          toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
         if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
           toast({ title: "Student ID already in use", description: "That 8-digit ID was just registered. Please pick another.", variant: "destructive" });
           setIsLoading(false);

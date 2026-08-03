@@ -640,6 +640,11 @@ const Auth = () => {
       if (error) {
         // Translate Postgres unique-violation (23505) on student_id into a friendly toast
         const msg = (error.message || '').toLowerCase();
+        if (isAuthThrottleError(error)) {
+          toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
         if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
           toast({
             title: "Student ID already in use",
