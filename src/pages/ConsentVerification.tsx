@@ -127,24 +127,36 @@ export default function ConsentVerification() {
         setStatus('creating_account');
         
         // Create the student account with password entered on this secure page
-        const { data: signupData, error: signupError } = await supabase.auth.signUp({
+        // Routed through player-auth so the account creation call originates
+        // from our edge function, not from the family's (or school's) IP.
+        const metadata = {
+          full_name: consentData.fullName,
+          role: consentData.studentRole || 'student',
+        };
+        const created = await playerSignUp({
+          mode: 'email',
           email: consentData.studentEmail,
-          password: password,
-          options: {
-            data: {
-              full_name: consentData.fullName,
-              role: consentData.studentRole || 'student',
-            },
-            emailRedirectTo: window.location.origin + '/auth',
-          },
+          password,
+          fullName: consentData.fullName,
+          role: (consentData.studentRole || 'student') as any,
+          redirectTo: window.location.origin + '/auth',
+          fallback: () =>
+            directSignUpFallback(
+              consentData.studentEmail,
+              password,
+              metadata,
+              window.location.origin + '/auth',
+            ),
         });
 
-        if (signupError) {
-          console.error('Error creating account:', signupError);
-          toast.error("Consent verified but account creation failed: " + signupError.message);
+        if (!created.success && !created.userId) {
+          console.error('Error creating account:', created.error);
+          toast.error("Consent verified but account creation failed: " + (created.error ?? 'Please try again.'));
           setStatus('success');
           return;
         }
+
+        const signupData = { user: created.userId ? { id: created.userId } : null };
 
         // If we have district_id, update the profile and create verification request
         if (signupData.user && consentData.districtId) {
