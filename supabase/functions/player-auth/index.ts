@@ -116,6 +116,9 @@ Deno.serve(async (req) => {
         if (throttled(error as never)) {
           return json({ error: "Lots of people signing in right now. Try again in a moment.", retryable: true }, 429);
         }
+        if (/email not confirmed|email_not_confirmed/i.test((error as { message?: string })?.message ?? "")) {
+          return json({ error: "Confirm your email first — check your inbox for the link." }, 401);
+        }
         return json({ error: "Wrong details. Please try again." }, 401);
       }
 
@@ -142,7 +145,9 @@ Deno.serve(async (req) => {
     const redirectTo = String(body?.redirect_to ?? "");
 
     if (!fullName) return json({ error: "Please enter a name." }, 400);
-    if (!["game_player", "student"].includes(role)) {
+    // Roles the two public doors can request. Elevated roles (district_manager,
+    // super_admin) are never self-assigned here.
+    if (!["game_player", "student", "teacher", "parent", "admin"].includes(role)) {
       return json({ error: "Invalid account type." }, 400);
     }
 
@@ -168,6 +173,7 @@ Deno.serve(async (req) => {
 
       return json({
         success: true,
+        user_id: data.user?.id ?? null,
         needs_email_confirmation: !data.session,
         session: data.session
           ? { access_token: data.session.access_token, refresh_token: data.session.refresh_token }
@@ -211,10 +217,19 @@ Deno.serve(async (req) => {
 
     const session = await mintSession(email);
     if (!session) {
-      return json({ error: "Account created — please sign in.", account_created: true }, 202);
+      return json(
+        { error: "Account created — please sign in.", account_created: true, user_id: created.user.id },
+        202,
+      );
     }
 
-    return json({ success: true, session, joined_class: joinedClass, needs_email_confirmation: false });
+    return json({
+      success: true,
+      user_id: created.user.id,
+      session,
+      joined_class: joinedClass,
+      needs_email_confirmation: false,
+    });
   } catch (e) {
     console.error("[player-auth] fatal", (e as Error).message);
     return json({ error: "Something went wrong. Please try again." }, 500);

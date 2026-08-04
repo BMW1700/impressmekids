@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
-import { playerLogin, directLoginFallback } from "@/lib/playerAuth";
+import { playerLogin, playerSignUp, directLoginFallback, directSignUpFallback } from "@/lib/playerAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -624,29 +624,38 @@ const Auth = () => {
       // Clear any existing sessions
       await supabase.auth.signOut();
 
-      // Create auth user
-      const { data, error } = await withAuthBurstRetry(() => supabase.auth.signUp({
-        email: signupEmail,
+      // Create the auth user through the player-auth edge function. A whole
+      // building shares one public IP, and hosted Auth throttles signups per
+      // IP — running the call server-side keeps the school out of that bucket.
+      const signupResult = await playerSignUp({
+        mode: isStudentIdMode ? 'studentId' : 'email',
+        email: isStudentIdMode ? undefined : signupEmail,
+        studentId: isStudentIdMode ? studentIdInput : undefined,
         password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: role,
-            ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
-          },
-          emailRedirectTo: isStudentIdMode ? undefined : window.location.origin + '/auth',
-        },
-      }));
+        fullName,
+        role: role as any,
+        redirectTo: isStudentIdMode ? undefined : window.location.origin + '/auth',
+        fallback: () =>
+          directSignUpFallback(
+            signupEmail,
+            password,
+            {
+              full_name: fullName,
+              role,
+              ...(isStudentIdMode ? { student_id: studentIdInput } : {}),
+            },
+            isStudentIdMode ? undefined : window.location.origin + '/auth',
+          ),
+      });
 
-      if (error) {
-        // Translate Postgres unique-violation (23505) on student_id into a friendly toast
-        const msg = (error.message || '').toLowerCase();
-        if (isAuthThrottleError(error)) {
+      if (!signupResult.success && !signupResult.userId) {
+        const msg = (signupResult.error || '').toLowerCase();
+        if (isAuthThrottleError({ message: signupResult.error })) {
           toast({ title: "Too many signups at once", description: AUTH_THROTTLE_MESSAGE, variant: "destructive" });
           setIsLoading(false);
           return;
         }
-        if (isStudentIdMode && (msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
+        if (isStudentIdMode && (msg.includes('already registered') || msg.includes('23505') || msg.includes('duplicate') || msg.includes('profiles_student_id'))) {
           toast({
             title: "Student ID already in use",
             description: "That 8-digit ID was just registered. Please pick another.",
@@ -655,9 +664,13 @@ const Auth = () => {
           setIsLoading(false);
           return;
         }
-        throw error;
+        throw new Error(signupResult.error || 'Failed to create account');
       }
-      if (!data.user) throw new Error('User creation failed');
+
+      const { data: signedInUser } = await supabase.auth.getUser();
+      const newUserId = signupResult.userId ?? signedInUser?.user?.id;
+      if (!newUserId) throw new Error('User creation failed');
+      const data = { user: { id: newUserId }, session: signedInUser?.user ? true : null };
 
       // Synthetic Student-ID accounts are auto-confirmed by a DB trigger on
       // auth.users (auto_confirm_synthetic_student). No edge function call needed.
@@ -777,10 +790,8 @@ const Auth = () => {
 
         navigate('/pending-verification');
       } else if (isStudentIdMode) {
-        // Student ID students are auto-verified by DB trigger; sign in immediately.
-        if (!data.session) {
-          await supabase.auth.signInWithPassword({ email: signupEmail, password });
-        }
+        // player-auth already minted and applied the session for Student-ID
+        // accounts, so no second hosted-Auth call is needed here.
         // Optional: redeem teacher-provided class join code to auto-roster.
         if (classJoinCode.trim()) {
           const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);

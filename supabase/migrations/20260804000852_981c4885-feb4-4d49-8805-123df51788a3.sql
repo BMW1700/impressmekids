@@ -1,0 +1,1 @@
+DELETE FROM auth.users WHERE email LIKE 'loadtest%@yubilearn-test.com' OR email LIKE 'probe%@yubilearn-test.com';
