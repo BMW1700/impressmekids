@@ -116,6 +116,9 @@ Deno.serve(async (req) => {
         if (throttled(error as never)) {
           return json({ error: "Lots of people signing in right now. Try again in a moment.", retryable: true }, 429);
         }
+        if (/email not confirmed|email_not_confirmed/i.test((error as { message?: string })?.message ?? "")) {
+          return json({ error: "Confirm your email first — check your inbox for the link." }, 401);
+        }
         return json({ error: "Wrong details. Please try again." }, 401);
       }
 
