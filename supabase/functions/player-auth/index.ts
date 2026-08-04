@@ -142,7 +142,9 @@ Deno.serve(async (req) => {
     const redirectTo = String(body?.redirect_to ?? "");
 
     if (!fullName) return json({ error: "Please enter a name." }, 400);
-    if (!["game_player", "student"].includes(role)) {
+    // Roles the two public doors can request. Elevated roles (district_manager,
+    // super_admin) are never self-assigned here.
+    if (!["game_player", "student", "teacher", "parent", "admin"].includes(role)) {
       return json({ error: "Invalid account type." }, 400);
     }
 
