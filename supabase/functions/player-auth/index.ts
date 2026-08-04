@@ -170,6 +170,7 @@ Deno.serve(async (req) => {
 
       return json({
         success: true,
+        user_id: data.user?.id ?? null,
         needs_email_confirmation: !data.session,
         session: data.session
           ? { access_token: data.session.access_token, refresh_token: data.session.refresh_token }
