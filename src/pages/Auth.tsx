@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { withAuthBurstRetry, isAuthThrottleError, AUTH_THROTTLE_MESSAGE } from "@/lib/authBurstRetry";
-import { playerLogin, directLoginFallback } from "@/lib/playerAuth";
+import { playerLogin, playerSignUp, directLoginFallback, directSignUpFallback } from "@/lib/playerAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -790,10 +790,8 @@ const Auth = () => {
 
         navigate('/pending-verification');
       } else if (isStudentIdMode) {
-        // Student ID students are auto-verified by DB trigger; sign in immediately.
-        if (!data.session) {
-          await supabase.auth.signInWithPassword({ email: signupEmail, password });
-        }
+        // player-auth already minted and applied the session for Student-ID
+        // accounts, so no second hosted-Auth call is needed here.
         // Optional: redeem teacher-provided class join code to auto-roster.
         if (classJoinCode.trim()) {
           const redeem = await redeemClassJoinCode(data.user.id, classJoinCode);
