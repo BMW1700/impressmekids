@@ -21,6 +21,8 @@ export interface PlayerAuthResult {
   joinedClass?: boolean;
   /** True when the account exists but no session was issued — ask them to sign in. */
   signInRequired?: boolean;
+  /** auth.users id of the account, when the server (or fallback) reported one. */
+  userId?: string;
 }
 
 interface EdgeResponse {
@@ -28,6 +30,7 @@ interface EdgeResponse {
   error?: string;
   retryable?: boolean;
   account_created?: boolean;
+  user_id?: string | null;
   joined_class?: boolean;
   needs_email_confirmation?: boolean;
   session?: { access_token: string; refresh_token: string } | null;
@@ -120,13 +123,18 @@ export async function playerSignUp(args: SignUpArgs): Promise<PlayerAuthResult> 
   const data = outcome.data;
   if (outcome.failure || !data) {
     if (outcome.failure?.status === 202 || data?.account_created) {
-      return { success: false, signInRequired: true, error: outcome.failure?.error };
+      return {
+        success: false,
+        signInRequired: true,
+        error: outcome.failure?.error,
+        userId: data?.user_id ?? undefined,
+      };
     }
     return { success: false, error: outcome.failure?.error ?? "Sign up failed." };
   }
 
   if (data.account_created && !data.session) {
-    return { success: false, signInRequired: true, error: data.error };
+    return { success: false, signInRequired: true, error: data.error, userId: data.user_id ?? undefined };
   }
 
   if (data.session) {
@@ -137,6 +145,7 @@ export async function playerSignUp(args: SignUpArgs): Promise<PlayerAuthResult> 
 
   return {
     success: true,
+    userId: data.user_id ?? undefined,
     needsEmailConfirmation: !!data.needs_email_confirmation,
     joinedClass: data.joined_class,
   };
@@ -183,7 +192,11 @@ export async function directSignUpFallback(
     supabase.auth.signUp({ email, password, options: { data: metadata, emailRedirectTo: redirectTo } }),
   );
   if (error) return { success: false, error: error.message };
-  return { success: true, needsEmailConfirmation: !!data.user && !data.session };
+  return {
+    success: true,
+    userId: data.user?.id,
+    needsEmailConfirmation: !!data.user && !data.session,
+  };
 }
 
 /** Direct browser login, kept only as the unreachable-function fallback. */
