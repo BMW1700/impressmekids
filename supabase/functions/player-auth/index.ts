@@ -214,10 +214,19 @@ Deno.serve(async (req) => {
 
     const session = await mintSession(email);
     if (!session) {
-      return json({ error: "Account created — please sign in.", account_created: true }, 202);
+      return json(
+        { error: "Account created — please sign in.", account_created: true, user_id: created.user.id },
+        202,
+      );
     }
 
-    return json({ success: true, session, joined_class: joinedClass, needs_email_confirmation: false });
+    return json({
+      success: true,
+      user_id: created.user.id,
+      session,
+      joined_class: joinedClass,
+      needs_email_confirmation: false,
+    });
   } catch (e) {
     console.error("[player-auth] fatal", (e as Error).message);
     return json({ error: "Something went wrong. Please try again." }, 500);
