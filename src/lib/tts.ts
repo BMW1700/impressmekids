@@ -1,4 +1,4 @@
-// Browser Web Speech API helper for Pre-K Benny speech bubbles.
+// Browser Web Speech API helper for Pre-K Sir Bookears speech bubbles.
 // $0/month — no server, no key. Respects a user-controlled toggle stored in
 // localStorage under "yubi.tts.enabled" (default ON). When the toggle is off,
 // speak() is a no-op so the rest of the UI stays fully usable.

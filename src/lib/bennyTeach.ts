@@ -125,7 +125,7 @@ export interface TeachWordOptions {
   onDone?: () => void;
 }
 
-/** Teach the child a word, sound by sound, in Benny's voice. */
+/** Teach the child a word, sound by sound, in Sir Bookears' voice. */
 export async function teachWord(word: string, opts: TeachWordOptions = {}): Promise<void> {
   const segs = segmentWord(word);
   if (segs.length === 0) return;

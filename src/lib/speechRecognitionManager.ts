@@ -8,7 +8,7 @@
  *  - iOS/Android   -> @capacitor-community/speech-recognition (native SFSpeechRecognizer)
  *
  * The native adapter emits the same (transcript, alternatives, isFinal) shape
- * as the web path, so RPGWordReader / Benny / AURA see no difference.
+ * as the web path, so RPGWordReader / Sir Bookears / AURA see no difference.
  *
  * Reliability rules (do not regress these — they are why the mic used to die
  * mid-battle):
@@ -375,7 +375,7 @@ class SpeechRecognitionManager {
   // The @capacitor-community/speech-recognition plugin exposes an event-based
   // partial-results stream on iOS/Android. We forward each partial as a
   // non-final result and mark the terminal event as final so callers that
-  // rely on `isFinal` (e.g. Benny word cards) behave identically to web.
+  // rely on `isFinal` (e.g. Sir Bookears word cards) behave identically to web.
 
   private async startNative(config: RecognitionConfig): Promise<void> {
     try {
@@ -418,7 +418,7 @@ class SpeechRecognitionManager {
           if (!this.config || this.currentOwner !== config.owner) return;
           if (data?.status === 'stopped') {
             // Promote the last partial to a final result so downstream
-            // Benny word cards / AURA scoring see isFinal=true.
+            // Sir Bookears word cards / AURA scoring see isFinal=true.
             const last = this.lastPartial;
             if (last) {
               try { this.config.onResult(last.transcript, last.alternatives, true); } catch { /* ignore */ }

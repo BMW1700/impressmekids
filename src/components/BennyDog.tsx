@@ -1,4 +1,4 @@
-// Benny the Dog — Pre-K adventure character.
+// Sir Bookears the Dog — Pre-K adventure character.
 //
 // Idle is a CSS sprite-sheet animation (30 frames, single-row strip). We use
 // background-position steps instead of animated WebP because Safari decodes
@@ -6,7 +6,7 @@
 // sheets composite through the GPU and run identically on every browser.
 //
 // Walk / jump reuse the sprite sheet at faster timing and add a small paw
-// cycle overlay so Benny's legs visibly move even when the source frame is
+// cycle overlay so Sir Bookears' legs visibly move even when the source frame is
 // mostly front-facing. Celebrate / sad keep their still PNGs with CSS motion.
 
 import { useEffect, useRef, useState } from "react";
@@ -135,7 +135,7 @@ export const BennyDog = ({
         ...style,
       }}
     >
-      {/* Idle Benny: original sprite sheet (still pose breathing). */}
+      {/* Idle Sir Bookears: original sprite sheet (still pose breathing). */}
       {(() => {
         const isIdle = mood === "idle";
         return (
@@ -157,14 +157,14 @@ export const BennyDog = ({
                 backgroundSize: `${size * SPRITE_FRAMES}px ${spriteH}px`,
                 ["--benny-sprite-end" as any]: `${-(SPRITE_FRAMES - 1) * size}px`,
               }}
-              aria-label={isIdle ? "Benny the puppy" : undefined}
+              aria-label={isIdle ? "Sir Bookears the puppy" : undefined}
               role={isIdle ? "img" : undefined}
             />
           </div>
         );
       })()}
 
-      {/* Walking Benny (real video-cutout sprite): plays for walk/jump/climb. */}
+      {/* Walking Sir Bookears (real video-cutout sprite): plays for walk/jump/climb. */}
       {(() => {
         const isMoving = mood === "walk" || mood === "jump" || mood === "climb";
         const walkSize = size;
@@ -188,7 +188,7 @@ export const BennyDog = ({
                 backgroundSize: `${walkSize * WALK_FRAMES}px ${walkSize}px`,
                 ["--benny-walk-end" as any]: `${-(WALK_FRAMES - 1) * walkSize}px`,
               }}
-              aria-label={isMoving ? "Benny walking" : undefined}
+              aria-label={isMoving ? "Sir Bookears walking" : undefined}
               role={isMoving ? "img" : undefined}
             />
           </div>
@@ -209,7 +209,7 @@ export const BennyDog = ({
         >
           <img
             src={STILL_SOURCES[m]}
-            alt={m === mood ? `Benny ${m}` : ""}
+            alt={m === mood ? `Sir Bookears ${m}` : ""}
             aria-hidden={m === mood ? undefined : true}
             draggable={false}
             style={{

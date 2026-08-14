@@ -380,7 +380,7 @@ export const RPGWorldMap = ({
         </div>
       )}
 
-      {/* Benny standing on the left (Pre-K only, desktop) */}
+      {/* Sir Bookears standing on the left (Pre-K only, desktop) */}
       {isPrek && (
         <div className="hidden lg:block fixed left-[-160px] xl:left-[-140px] bottom-[-180px] xl:bottom-[-220px] z-[6] pointer-events-none">
           <BennyStanding size={720} />
@@ -458,14 +458,14 @@ export const RPGWorldMap = ({
         {/* Challenge Meter quick-adjust — visible on all modes, first-class on Pre-K */}
         <ChallengeQuickAdjust variant="amber" />
 
-        {/* Pre-K → Benny's Village entry */}
+        {/* Pre-K → Sir Bookears' Village entry */}
         {isPrek && (
           <Button
             onClick={() => navigate('/game/village')}
             className="bg-gradient-to-r from-pink-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-bold shadow-lg"
           >
             <Home className="h-4 w-4 mr-2" />
-            Benny's Village
+            Sir Bookears' Village
           </Button>
         )}
 

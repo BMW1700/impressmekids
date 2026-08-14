@@ -93,7 +93,7 @@ const Index = () => {
                   asChild
                   className="h-14 rounded-full border-white/20 bg-white/5 px-8 text-base font-medium text-white backdrop-blur hover:border-white/40 hover:bg-white/10 hover:text-white"
                 >
-                  <Link to="/for-families">Meet Benny</Link>
+                  <Link to="/for-families">Meet Sir Bookears</Link>
                 </Button>
               </div>
               <p className="mt-8 text-xs uppercase tracking-[0.2em] text-white/40">

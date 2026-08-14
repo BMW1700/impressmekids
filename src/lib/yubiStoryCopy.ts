@@ -1,7 +1,7 @@
-// Pre-K "Benny" copy + demo overrides for worlds 101/102/103.
-// Benny the Dog is the single narrator/hero across all three worlds so the
+// Pre-K "Sir Bookears" copy + demo overrides for worlds 101/102/103.
+// Sir Bookears the Dog is the single narrator/hero across all three worlds so the
 // child hears one consistent character. Matty (bear) and Sally (horse)
-// appear in the data as supporting characters but Benny leads narration.
+// appear in the data as supporting characters but Sir Bookears leads narration.
 // Cosmetic layer ONLY — no game/mic/animation behavior changes.
 
 export interface YubiLevelCopy {
@@ -12,9 +12,9 @@ export interface YubiLevelCopy {
   successMessage: string;
 }
 
-/** Friendly hero name per world (currently Benny everywhere). */
+/** Friendly hero name per world (currently Sir Bookears everywhere). */
 export function getYubiCreatureName(_worldId: number): string {
-  return "Benny";
+  return "Sir Bookears";
 }
 
 /** Soft progress meter label per world — no HP/health framing. */
@@ -27,7 +27,7 @@ export function getYubiMeterLabel(worldId: number): string {
 
 /** Friendly chip label per Pre-K world for level cards. */
 export function getYubiHelpChip(_worldId: number): string {
-  return "Benny 🐶";
+  return "Sir Bookears 🐶";
 }
 
 const isYubiWorld = (worldId: number) =>
@@ -58,7 +58,7 @@ const LEVEL_MISSION_TITLES: Record<number, Record<number, string>> = {
     1: "Space Picnic",
     2: "Sky Friends",
     3: "Find the Star",
-    4: "Brave Benny",
+    4: "Brave Sir Bookears",
     5: "Big Sky Adventure",
   },
 };
@@ -99,22 +99,22 @@ export function getYubiDemoWords(worldId: number, levelId: number): string[] | n
 // ────────────────────────────────────────────────────────────────────────────
 const WORLD_DEFAULT: Record<number, YubiLevelCopy> = {
   101: {
-    title: "Adventure with Benny",
-    prompt: "Read the word to help Benny!",
-    hint: "✨ Your voice helps Benny!",
-    successMessage: "You helped Benny!",
+    title: "Adventure with Sir Bookears",
+    prompt: "Read the word to help Sir Bookears!",
+    hint: "✨ Your voice helps Sir Bookears!",
+    successMessage: "You helped Sir Bookears!",
   },
   102: {
-    title: "Sky Adventure with Benny",
-    prompt: "Read the word to help Benny bounce!",
-    hint: "✨ Your voice helps Benny!",
-    successMessage: "You helped Benny bounce!",
+    title: "Sky Adventure with Sir Bookears",
+    prompt: "Read the word to help Sir Bookears bounce!",
+    hint: "✨ Your voice helps Sir Bookears!",
+    successMessage: "You helped Sir Bookears bounce!",
   },
   103: {
     title: "Big Sky Adventure",
-    prompt: "Read the word to help Benny!",
-    hint: "✨ Your voice helps Benny!",
-    successMessage: "You helped Benny!",
+    prompt: "Read the word to help Sir Bookears!",
+    hint: "✨ Your voice helps Sir Bookears!",
+    successMessage: "You helped Sir Bookears!",
   },
 };
 
@@ -144,15 +144,15 @@ export interface YubiEpisodeOutro {
 }
 
 const WORLD_FALLBACK_INTRO: Record<number, YubiEpisodeIntro> = {
-  101: { line: "Let's help Benny!", cta: "Help Benny" },
-  102: { line: "Let's help Benny!", cta: "Help Benny" },
-  103: { line: "Let's help Benny!", cta: "Help Benny" },
+  101: { line: "Let's help Sir Bookears!", cta: "Help Sir Bookears" },
+  102: { line: "Let's help Sir Bookears!", cta: "Help Sir Bookears" },
+  103: { line: "Let's help Sir Bookears!", cta: "Help Sir Bookears" },
 };
 
 const WORLD_FALLBACK_OUTRO: Record<number, YubiEpisodeOutro> = {
-  101: { title: "Great job!", line: "You helped Benny!" },
-  102: { title: "Great job!", line: "You helped Benny!" },
-  103: { title: "Great job!", line: "You helped Benny!" },
+  101: { title: "Great job!", line: "You helped Sir Bookears!" },
+  102: { title: "Great job!", line: "You helped Sir Bookears!" },
+  103: { title: "Great job!", line: "You helped Sir Bookears!" },
 };
 
 export function getEpisodeOpening(worldId: number, levelId: number): YubiEpisodeIntro | null {

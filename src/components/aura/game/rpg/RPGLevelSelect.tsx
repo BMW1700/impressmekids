@@ -124,7 +124,7 @@ export const RPGLevelSelect = ({
       setPendingLevel(level);
       return;
     }
-    // Pre-K (Benny) mode skips the battle style picker entirely
+    // Pre-K (Sir Bookears) mode skips the battle style picker entirely
     if (world.mode === 'prek') {
       onSelectLevel(level, 'classic');
       return;

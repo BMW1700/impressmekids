@@ -77,8 +77,8 @@ export const campaignWorlds: CampaignWorld[] = [
   },
   {
     id: 102,
-    name: 'Benny\'s Bouncy Day',
-    description: 'Help Benny find his sounds!',
+    name: 'Sir Bookears\'s Bouncy Day',
+    description: 'Help Sir Bookears find his sounds!',
     gradient: 'from-yellow-300 via-amber-300 to-orange-400',
     bgColor: 'bg-yellow-900/10',
     enemyTypes: ['bouncer'],
@@ -86,7 +86,7 @@ export const campaignWorlds: CampaignWorld[] = [
     storyCount: 5,
     unlockRequirement: 0,
     mode: 'prek',
-    lore: 'Benny loves clapping, hopping and spinning. Read each word and Benny does it with you!',
+    lore: 'Sir Bookears loves clapping, hopping and spinning. Read each word and Sir Bookears does it with you!',
     levels: [
       { id: 1, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },
       { id: 2, storyIndex: -1, enemies: ['bouncer'], isBossLevel: false, starThresholds: [50, 70, 90] },

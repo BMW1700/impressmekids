@@ -30,7 +30,7 @@ export const PreKStatsButton = ({ studentId }: PreKStatsButtonProps) => {
           variant="ghost"
           size="sm"
           className="gap-1.5 rounded-full border border-amber-300/40 bg-amber-500/10 px-3 py-1.5 text-amber-100 hover:bg-amber-500/20 hover:text-amber-50"
-          aria-label="View Benny's overall stats"
+          aria-label="View Sir Bookears' overall stats"
         >
           <BarChart3 className="h-4 w-4" />
           <span className="text-xs font-semibold uppercase tracking-wider">
@@ -41,7 +41,7 @@ export const PreKStatsButton = ({ studentId }: PreKStatsButtonProps) => {
       <DialogContent className="border-amber-300/30 bg-[hsl(270_45%_10%)] text-white sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-amber-200">
-            Benny's overall stats
+            Sir Bookears' overall stats
           </DialogTitle>
           <DialogDescription className="text-white/60">
             Your reading journey so far.

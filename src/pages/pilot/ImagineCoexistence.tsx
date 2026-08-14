@@ -9,7 +9,7 @@ export default function ImagineCoexistence() {
     },
     {
       dim: 'Personalization',
-      yubi: 'Real-time story generation adapted to the exact phonemes each child is missing (Pre-K Benny + K-5 RPG).',
+      yubi: 'Real-time story generation adapted to the exact phonemes each child is missing (Pre-K Sir Bookears + K-5 RPG).',
       imagine: '~2,500 pre-authored activities on a fixed adaptive path.',
     },
     {

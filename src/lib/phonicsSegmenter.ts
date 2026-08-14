@@ -4,7 +4,7 @@
 
 export type SegKind =
   | "whole"      // the whole word, spoken naturally
-  | "narration"  // Benny narrator lines like "Let's sound it out."
+  | "narration"  // Sir Bookears narrator lines like "Let's sound it out."
   | "letter"     // a letter name ("C", "S H" for digraphs)
   | "sound"      // isolated phoneme(s), or the full sounded-out word
   | "syllable"   // one syllable of a multi-syllable word

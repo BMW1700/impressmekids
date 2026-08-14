@@ -56,7 +56,7 @@ export const TestimonialSection = () => {
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
                 <Link to="/for-families">
-                  Meet Benny
+                  Meet Sir Bookears
                 </Link>
               </Button>
             </div>

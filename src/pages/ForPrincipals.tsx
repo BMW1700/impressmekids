@@ -56,7 +56,7 @@ export default function ForPrincipals() {
           An early-literacy sprint your teachers actually want to run.
         </h1>
         <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-          YubiLearn's Benny mode is a Tier-1 supplement and Tier-2 intervention layer that plugs into HMH,
+          YubiLearn's Sir Bookears mode is a Tier-1 supplement and Tier-2 intervention layer that plugs into HMH,
           EL, Wit & Wisdom, CKLA, and Fundations classrooms. Free 8-week pilot with printable teacher
           reports on Day 30 and Day 60.
         </p>

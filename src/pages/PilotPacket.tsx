@@ -89,7 +89,7 @@ const sales: Item[] = [
     icon: Rocket,
     title: 'Teacher / Director Quick Start',
     description:
-      'One page, four steps. Get a classroom reading with Benny in under 10 minutes.',
+      'One page, four steps. Get a classroom reading with Sir Bookears in under 10 minutes.',
     badge: 'Day-1 handout',
     href: '/pilot-packet/quick-start',
   },

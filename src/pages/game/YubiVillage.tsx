@@ -83,7 +83,7 @@ export default function YubiVillage() {
       />
       <div className="fixed inset-0 bg-slate-950/55 pointer-events-none z-0" aria-hidden />
 
-      {/* Benny */}
+      {/* Sir Bookears */}
       <div className="hidden lg:block fixed left-[-160px] bottom-[-200px] z-[1] pointer-events-none">
         <BennyStanding size={680} />
       </div>
@@ -115,7 +115,7 @@ export default function YubiVillage() {
       <main className="relative z-10 px-4 sm:px-6 pb-12 lg:pl-[280px]">
         <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Benny's Village
+            Sir Bookears' Village
           </h1>
           <p className="text-white/70 mt-1 mb-6">
             Read levels to earn Village Tokens and unlock new zones & decorations.

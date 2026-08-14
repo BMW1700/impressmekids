@@ -288,7 +288,7 @@ const PreKLevelsList = () => {
               </div>
               <div>
                 <Label>Title</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Help Benny Visit Grandma" />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Help Sir Bookears Visit Grandma" />
               </div>
               <div>
                 <Label>Description</Label>
@@ -296,7 +296,7 @@ const PreKLevelsList = () => {
               </div>
               <div>
                 <Label>Goal (header pill)</Label>
-                <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Help Benny visit Grandma!" />
+                <Input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Help Sir Bookears visit Grandma!" />
               </div>
               <div>
                 <Label>Ending Line</Label>

@@ -61,7 +61,7 @@ export interface VideoLevel {
 }
 
 // ============================================================================
-// W101_L1 — "Help Benny visit Grandma!"
+// W101_L1 — "Help Sir Bookears visit Grandma!"
 //   intro → jump prompt → JUMP word → jump action →
 //   boots prompt → BOOTS word → boots action →
 //   key prompt → KEY word → key action →
@@ -71,7 +71,7 @@ export interface VideoLevel {
 
 const W101_L1: VideoLevel = {
   id: "w101-l1",
-  goal: "Help Benny visit Grandma!",
+  goal: "Help Sir Bookears visit Grandma!",
   endingLine: "We made it to Grandma's!",
   steps: [
     // Intro

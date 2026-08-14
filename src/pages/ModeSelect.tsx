@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
+import { SeriesTitle } from "@/components/landing/SeriesTitle";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { setStoredTheme } from "@/lib/gameTheme";
@@ -114,16 +115,16 @@ const ModeSelect = () => {
       }`}
     >
       <Helmet>
-        <title>YubiLearn — Reading adventures with Benny. K–12 literacy that feels like a game.</title>
+        <title>YubiLearn — Reading adventures with Sir Bookears. K–12 literacy that feels like a game.</title>
         <meta
           name="description"
-          content="Meet Benny — read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG. FERPA, COPPA & SOC 2 aligned."
+          content="Meet Sir Bookears — read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG. FERPA, COPPA & SOC 2 aligned."
         />
         <link rel="canonical" href="https://yubilearn.com/" />
-        <meta property="og:title" content="YubiLearn — Reading adventures with Benny" />
+        <meta property="og:title" content="YubiLearn — Reading adventures with Sir Bookears" />
         <meta
           property="og:description"
-          content="Meet Benny. Read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG."
+          content="Meet Sir Bookears. Read-along adventures for ages 2–5. Plus an AI-powered K–12 literacy RPG."
         />
         <meta property="og:url" content="https://yubilearn.com/" />
         <meta property="og:type" content="website" />
@@ -210,7 +211,7 @@ const ModeSelect = () => {
 
       <main className="flex-1">
 
-        {/* ── Weighted split: Benny vs K–12 RPG. Hover expands the active side and blurs the other. ── */}
+        {/* ── Weighted split: Sir Bookears vs K–12 RPG. Hover expands the active side and blurs the other. ── */}
         <section className="relative isolate overflow-hidden">
           <div
             aria-hidden
@@ -294,12 +295,14 @@ const ModeSelect = () => {
                     isLight ? "text-[hsl(270_30%_28%)]" : "text-white/75"
                   }`}
                 >
-                  Meet Benny Bookears as he takes you on an immersive early
+                  Meet Sir Bookears as he takes you on an immersive early
                   literacy adventure.
                 </p>
 
+                <SeriesTitle light={isLight} className="mt-8" />
+
                 <div
-                  className={`mt-7 overflow-hidden rounded-2xl border shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)] ${
+                  className={`mt-4 overflow-hidden rounded-2xl border shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)] ${
                     isLight ? "border-white/70 bg-white/40 backdrop-blur-md" : "border-white/10"
                   }`}
                 >
@@ -323,7 +326,7 @@ const ModeSelect = () => {
                         : "bg-white text-[hsl(270_45%_8%)] hover:bg-white"
                     }`}
                   >
-                    Start Benny's adventure
+                    Start Sir Bookears' adventure
                     <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 </div>

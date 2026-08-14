@@ -72,9 +72,9 @@ const SuperAdminDashboard = () => {
             <Card className="hover:border-primary transition-colors h-full">
               <CardHeader>
                 <Volume2 className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Benny Voice Prewarm</CardTitle>
+                <CardTitle>Sir Bookears Voice Prewarm</CardTitle>
                 <CardDescription>
-                  Pre-cache every word's audio in Benny's ElevenLabs voice. One credit per word, ever.
+                  Pre-cache every word's audio in Sir Bookears' ElevenLabs voice. One credit per word, ever.
                 </CardDescription>
               </CardHeader>
             </Card>

@@ -1,4 +1,4 @@
-// RedubStudioPanel — Benny voice-swap UI inside the Pre-K level editor.
+// RedubStudioPanel — Sir Bookears voice-swap UI inside the Pre-K level editor.
 //
 // Flow: paste ElevenLabs voice ID → adjust stability/similarity → hit
 // "Redub entire level" (or per-scene). Each row shows spinner → ✓ → ▶ preview.
@@ -73,28 +73,28 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
   const effectiveVoice = voiceIdDraft || redub.settings.worldDefaultVoiceId;
 
   const handleRedubAll = async () => {
-    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (!effectiveVoice) { toast.error("Set a Sir Bookears voice ID (level or world default) first."); return; }
     if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     if (scenes.length === 0) { toast.error("No source videos found to redub."); return; }
-    toast.info(`Redubbing ${scenes.length} clips in Benny's voice… this will take ~${Math.ceil(scenes.length * 45 / 60)} min.`);
+    toast.info(`Redubbing ${scenes.length} clips in Sir Bookears' voice… this will take ~${Math.ceil(scenes.length * 45 / 60)} min.`);
     await redub.redubAll(scenes);
     toast.success("Redub complete. Preview each clip inline.");
   };
 
   const handleRedubOne = async (scene: RedubSceneInput) => {
-    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (!effectiveVoice) { toast.error("Set a Sir Bookears voice ID (level or world default) first."); return; }
     if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     const ok = await redub.redubScene(scene);
-    if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Benny (Redub)" track`);
+    if (ok) toast.success(`Redubbed ${scene.label} → auto-placed on "Sir Bookears (Redub)" track`);
   };
 
   const handleExtractMusic = async (scene: RedubSceneInput) => {
     const ok = await redub.extractMusic(scene);
-    if (ok) toast.success(`Music extracted for ${scene.label} → placed on "Benny (Music)" track`);
+    if (ok) toast.success(`Music extracted for ${scene.label} → placed on "Sir Bookears (Music)" track`);
   };
 
   const handleFullAuto = async () => {
-    if (!effectiveVoice) { toast.error("Set a Benny voice ID (level or world default) first."); return; }
+    if (!effectiveVoice) { toast.error("Set a Sir Bookears voice ID (level or world default) first."); return; }
     if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
     if (scenes.length === 0) { toast.error("No source videos found."); return; }
     toast.info(`Full auto: redubbing voice + extracting music for ${scenes.length} clips…`);
@@ -106,7 +106,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     if (scenes.length === 0) { toast.error("No source videos found."); return; }
     toast.info(`Extracting music/SFX from ${scenes.length} clips via LALAL.AI…`);
     await redub.runMusicAll(scenes);
-    toast.success("Music extraction complete — placed on Benny (Music) lane.");
+    toast.success("Music extraction complete — placed on Sir Bookears (Music) lane.");
   };
 
 
@@ -124,7 +124,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
         <BulkAudioDropzone levelId={levelId} sceneGraph={sceneGraph} />
 
         <div className="rounded-md bg-background/60 p-3 text-xs text-muted-foreground space-y-1">
-          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Benny voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the <strong>Benny (Redub)</strong> timeline track at the same start time as the original clip, and source video audio is muted for you.</p>
+          <p><strong>How it works:</strong> Each clip is cleaned through ElevenLabs Voice Isolator, then re-voiced into the Sir Bookears voice while preserving cadence so mouth movements still match. The final MP3 is auto-layered on the <strong>Sir Bookears (Redub)</strong> timeline track at the same start time as the original clip, and source video audio is muted for you.</p>
           <p><strong>Workflow:</strong> Hit <strong>Redub</strong> per clip → preview <strong>Final Audio</strong> → approve or re-run. Every approved redub is already placed on the timeline lip-to-lip with the video.</p>
           <p><strong>Cost:</strong> ~1 credit per ~1000 characters of source audio + isolation minutes.</p>
         </div>
@@ -134,7 +134,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
         {redub.settings.worldId && (
           <div className="rounded-md border border-purple-500/30 bg-purple-500/5 p-3 space-y-2">
             <Label className="text-xs font-semibold text-purple-900 dark:text-purple-200">
-              World default Benny voice ID (applies to every level in this world unless overridden)
+              World default Sir Bookears voice ID (applies to every level in this world unless overridden)
             </Label>
             <div className="flex gap-2">
               <Input
@@ -280,7 +280,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                     size="sm" variant="outline"
                     className="h-7 px-2 text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300"
                     onClick={() => togglePlay("redub", redubUrl)}
-                    title="Preview final redubbed Benny audio"
+                    title="Preview final redubbed Sir Bookears audio"
                   >
                     {isPlaying("redub") ? <Pause className="h-3 w-3 mr-0.5"/> : <Play className="h-3 w-3 mr-0.5"/>}Voice
                   </Button>
@@ -308,7 +308,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                   size="sm" variant="ghost"
                   disabled={status === "running" || !!redub.batchProgress || !!redub.autoProgress}
                   onClick={() => handleRedubOne(s)}
-                  title={existingRedub ? "Re-run redub" : "Isolate → redub → place on Benny (Redub) track"}
+                  title={existingRedub ? "Re-run redub" : "Isolate → redub → place on Sir Bookears (Redub) track"}
                   className="h-7"
                 >
                   {status === "running"
@@ -319,7 +319,7 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
                   size="sm" variant="ghost"
                   disabled={musicStatus === "running" || !!redub.autoProgress}
                   onClick={() => handleExtractMusic(s)}
-                  title={existingMusic ? "Re-run music extraction" : "Extract music+SFX via LALAL.AI → place on Benny (Music) track"}
+                  title={existingMusic ? "Re-run music extraction" : "Extract music+SFX via LALAL.AI → place on Sir Bookears (Music) track"}
                   className="h-7"
                 >
                   {musicStatus === "running"
