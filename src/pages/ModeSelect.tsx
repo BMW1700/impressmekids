@@ -294,8 +294,8 @@ const ModeSelect = () => {
                     isLight ? "text-[hsl(270_30%_28%)]" : "text-white/75"
                   }`}
                 >
-                  Meet Benny. Adventures kids ask for by name — and the words
-                  they say out loud unlock the story.
+                  Meet Benny Bookears as he takes you on an immersive early
+                  literacy adventure.
                 </p>
 
                 <div
