@@ -85,7 +85,7 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
               preload="metadata"
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
-              className="h-full w-full object-cover origin-center scale-[1.08] -translate-x-[1.5%] -translate-y-[1.5%]"
+              className="h-full w-full object-contain"
             />
             {!playing && (
               <button
