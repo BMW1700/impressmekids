@@ -4,7 +4,7 @@ import videoAsset from "@/assets/yubi-hero-v2.mp4.asset.json";
 import posterAsset from "@/assets/yubi-hero-v2-poster.jpg.asset.json";
 
 /**
- * Cinematic video stage for Benny.
+ * Cinematic video stage for Sir Bookears.
  * - Autoplay-muted-loop on every load (desktop + mobile)
  * - Respects the `paused` prop for explicit pause
  * - Always letterboxed inside a 16:9 frame with a gold radial glow

@@ -101,7 +101,7 @@ export const BulkAudioDropzone = ({ levelId, sceneGraph }: Props) => {
     if (specs.length === 0) { toast.error("No slices to place — check chunk length."); return; }
 
     const trackIndex = target === "redub" ? 90 : 89;
-    const trackName = target === "redub" ? "Benny (Redub)" : "Benny (Music)";
+    const trackName = target === "redub" ? "Sir Bookears (Redub)" : "Sir Bookears (Music)";
     const sourceKind = target === "redub" ? "redub" : "music";
     const batchId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 

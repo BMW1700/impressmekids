@@ -15,7 +15,7 @@ const tiers = [
     priceDetail: "forever",
     description: "Start playing today — no credit card needed.",
     features: [
-      "Pre-K Benny adventures (Level 1)",
+      "Pre-K Sir Bookears adventures (Level 1)",
       "K–12 LexiQuest RPG (first world)",
       "Daily reading streaks & rewards",
       "Basic progress tracking",
@@ -33,7 +33,7 @@ const tiers = [
     description: "The full adventure — every world, every story, every hero.",
     features: [
       "Everything in Free, plus:",
-      "All Benny worlds & episodes",
+      "All Sir Bookears worlds & episodes",
       "All LexiQuest campaigns & boss battles",
       "All 13 heroes + character skins",
       "Custom story generator (parent-authored)",
@@ -80,7 +80,7 @@ const Pricing = () => {
           "@context": "https://schema.org",
           "@type": "Product",
           "name": "YubiLearn",
-          "description": "AI-powered reading adventure for kids ages 2–18. Pre-K Benny stories and a K-12 literacy RPG.",
+          "description": "AI-powered reading adventure for kids ages 2–18. Pre-K Sir Bookears stories and a K-12 literacy RPG.",
           "brand": { "@type": "Organization", "name": "YubiLearn" },
           "offers": [
             { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD" },
@@ -174,7 +174,7 @@ const Pricing = () => {
             <div className="grid sm:grid-cols-3 gap-6 mt-8">
               <div>
                 <div className="text-3xl font-bold text-primary mb-1">Ages 2–18</div>
-                <div className="text-sm text-muted-foreground">Pre-K Benny stories through K-12 RPG</div>
+                <div className="text-sm text-muted-foreground">Pre-K Sir Bookears stories through K-12 RPG</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-primary mb-1">No ads</div>

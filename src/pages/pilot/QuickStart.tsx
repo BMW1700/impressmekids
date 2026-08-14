@@ -4,7 +4,7 @@ export default function QuickStart() {
   return (
     <PilotDoc
       eyebrow="Teacher / Director Quick Start"
-      title="Get your classroom reading with Benny in under 10 minutes"
+      title="Get your classroom reading with Sir Bookears in under 10 minutes"
       subtitle="One page. Four steps. No LMS, no plugin, no district IT ticket."
     >
       <h2>Step 1 — Create your teacher account</h2>
@@ -24,7 +24,7 @@ export default function QuickStart() {
 
       <h2>Step 3 — Open the right mode</h2>
       <ul>
-        <li><strong>Ages 2–5 (daycare / PreK):</strong> Pre-K Mode → pick a Benny video. Kids tap a word and read it aloud.</li>
+        <li><strong>Ages 2–5 (daycare / PreK):</strong> Pre-K Mode → pick a Sir Bookears video. Kids tap a word and read it aloud.</li>
         <li><strong>Grades K-5:</strong> RPG Mode → students pick a world. They read to progress the story and defeat bosses.</li>
         <li><strong>Reading assessment:</strong> AURA runs automatically in the background. You do nothing.</li>
       </ul>

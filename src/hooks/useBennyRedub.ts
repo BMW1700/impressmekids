@@ -230,7 +230,7 @@ export function useBennyRedub(levelId: string | null) {
     const forceReisolate = overrides?.forceReisolate === true;
     const voiceId = overrides?.voiceId ?? settings.voiceId;
     if (!isolateOnly && !voiceId) {
-      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Benny voice ID first." } }));
+      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: "Set a Sir Bookears voice ID first." } }));
       return false;
     }
     setStates((m) => ({ ...m, [scene.sceneKey]: { status: "running", progressMessage: isolate ? "Isolating voice…" : "Redubbing…" } }));
@@ -458,7 +458,7 @@ export function useBennyRedub(levelId: string | null) {
   const redubFromRegion = useCallback(async (args: Omit<RedubFromRegionArgs, "levelId" | "voiceId" | "stability" | "similarityBoost"> & { voiceId?: string }) => {
     if (!levelId) throw new Error("No level");
     const voiceId = args.voiceId || settings.voiceId;
-    if (!voiceId) throw new Error("Set a Benny voice ID first.");
+    if (!voiceId) throw new Error("Set a Sir Bookears voice ID first.");
     setStates((m) => ({ ...m, [args.targetSceneKey]: { status: "running", progressMessage: "Rescuing from region…" } }));
     try {
       const res = await redubFromSourceRegion({

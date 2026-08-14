@@ -309,7 +309,7 @@ const BennyVoicePrewarm = () => {
     } else if (cancelRef.current) {
       toast.warning("Prewarm cancelled.");
     } else {
-      toast.success(`Benny voice prewarm complete — ${queue.length} calls attempted`);
+      toast.success(`Sir Bookears voice prewarm complete — ${queue.length} calls attempted`);
       // Re-probe so seed matches truth.
       probeStorage().catch(() => {});
     }
@@ -431,13 +431,13 @@ const BennyVoicePrewarm = () => {
             <Link to="/super-admin"><ArrowLeft className="h-4 w-4 mr-1" /> Super Admin</Link>
           </Button>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Volume2 className="h-7 w-7 text-primary" /> Benny Voice Prewarm
+            <Volume2 className="h-7 w-7 text-primary" /> Sir Bookears Voice Prewarm
           </h1>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Cache every word in Benny's voice — once</CardTitle>
+            <CardTitle>Cache every word in Sir Bookears' voice — once</CardTitle>
             <CardDescription>
               Serial, one-file-at-a-time. Every clip is generated with
               <b> eleven_multilingual_v2</b> and passed through Voice Isolation.
@@ -452,7 +452,7 @@ const BennyVoicePrewarm = () => {
                 id="voice"
                 value={voiceId}
                 onChange={(e) => setVoiceId(e.target.value)}
-                placeholder="Leave blank to use the default Benny voice"
+                placeholder="Leave blank to use the default Sir Bookears voice"
                 className="font-mono text-sm"
               />
             </div>

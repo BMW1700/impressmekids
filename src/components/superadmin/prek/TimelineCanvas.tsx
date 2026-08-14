@@ -238,7 +238,7 @@ export function TimelineCanvas({
   };
   const onHeaderPointerUp = () => { scrubbingRef.current = false; };
 
-  // Pin the auto-generated "Benny (Redub)" (index 90) and "Benny (Music)"
+  // Pin the auto-generated "Sir Bookears (Redub)" (index 90) and "Sir Bookears (Music)"
   // (index 89) tracks directly beneath the Video lane so redub + extracted
   // music waveforms line up visually with their source scenes.
   const REDUB_TRACK_INDEX = 90;

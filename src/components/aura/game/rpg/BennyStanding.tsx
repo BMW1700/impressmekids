@@ -7,7 +7,7 @@ interface BennyStandingProps {
 }
 
 /**
- * Benny standing on the left side of the Pre-K world map.
+ * Sir Bookears standing on the left side of the Pre-K world map.
  * Idle animations: slow head/body tilt, eye blink, tail wag.
  * Respects prefers-reduced-motion.
  */
@@ -24,7 +24,7 @@ export const BennyStanding = ({ size = 260, className }: BennyStandingProps) => 
         pointerEvents: "none",
         userSelect: "none",
       }}
-      aria-label="Benny the puppy"
+      aria-label="Sir Bookears the puppy"
       role="img"
     >
       {/* Whole-body slow tilt */}

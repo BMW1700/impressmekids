@@ -26,7 +26,7 @@ type ScenePhase = "problem" | "ask" | "reading" | "solved" | "transition";
 const BennyMoodContext = createContext<BennyMood | null>(null);
 
 // Sprite-sheet geometry — bottom 30px of every source frame was cropped so
-// Benny's feet sit flush with the bottom edge of each cell.
+// Sir Bookears' feet sit flush with the bottom edge of each cell.
 const BENNY_SPRITE_CELL_W = 420;
 const BENNY_SPRITE_CELL_H = 450;
 const BENNY_SPRITE_ASPECT = BENNY_SPRITE_CELL_H / BENNY_SPRITE_CELL_W; // ≈1.0714
@@ -77,7 +77,7 @@ const yubiAnim = (phase: ScenePhase) => {
   }
   if (phase === "solved") {
     // Stay grounded after the word is accepted. Reward FX can celebrate, but
-    // Benny's body must not hop before the walking handoff begins.
+    // Sir Bookears' body must not hop before the walking handoff begins.
     return YUBI_IDLE_ANIM;
   }
   // problem / ask / reading: the sprite-sheet animation is the only idle motion.
@@ -152,7 +152,7 @@ const YubiSprite = ({
 }) => {
   const ctxMood = useContext(BennyMoodContext);
   // Walking sprite ONLY during actual travel (`transition`). During `solved`,
-  // Benny remains the same grounded idle dog so the walk handoff is invisible.
+  // Sir Bookears remains the same grounded idle dog so the walk handoff is invisible.
   const isMovingPhase = phase === "transition";
   const movementAction: BennyMood = isMovingPhase ? action ?? "walk" : "idle";
   const bennyMood: BennyMood = ctxMood === "sad" && phase !== "transition" ? "sad" : movementAction;
@@ -268,7 +268,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
   const stillAnim = isStill ? bennyMoodAnim(mood) : null;
 
   return (
-    <g aria-label="Benny" role="img">
+    <g aria-label="Sir Bookears" role="img">
       {/* Idle layer: always mounted, fades out instantly when walking/still. */}
       <g style={{ opacity: isIdle ? 1 : 0, transition: "opacity 80ms linear" }}>
         <svg
@@ -332,7 +332,7 @@ const BennySvgImage = ({ mood, size = 280 }: { mood: BennyMood; size?: number })
           <div style={{ width: w, height: h, transformOrigin: "50% 100%" }}>
             <motion.img
               src={stillSrc}
-              alt={`Benny ${mood}`}
+              alt={`Sir Bookears ${mood}`}
               draggable={false}
               animate={stillAnim.animate}
               transition={stillAnim.transition}
@@ -735,7 +735,7 @@ const LadderScene = ({ phase }: { phase: ScenePhase }) => {
           <rect key={i} x="595" y={GROUND_Y - 30 - i * 30} width="36" height="5" fill="#92400e" />
         ))}
       </motion.g>
-      {/* Benny climbs up without swapping/remounting the character tree. */}
+      {/* Sir Bookears climbs up without swapping/remounting the character tree. */}
       <YubiSprite phase={phase} anim={climbToAnim(612, GROUND_Y - 260)} action="climb" />
     </Stage>
   );
@@ -901,7 +901,7 @@ const LightScene = ({ phase, kind }: { phase: ScenePhase; kind: "STAR" | "LAMP" 
   );
 };
 
-// ── Generic "Benny carries the object" scene for everything else ──────────
+// ── Generic "Sir Bookears carries the object" scene for everything else ──────────
 // Renders the solutionEmoji as a huge animated centerpiece so EVERY word has
 // a believable visual without needing a hand-built scene.
 const GenericScene = ({

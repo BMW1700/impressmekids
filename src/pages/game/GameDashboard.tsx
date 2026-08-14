@@ -192,7 +192,7 @@ const GameDashboard = () => {
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed">
-                        Big friendly words with Benny, Maddy, and Yubi Village. Made for our youngest readers.
+                        Big friendly words with Sir Bookears, Maddy, and Yubi Village. Made for our youngest readers.
                       </p>
                       <Button className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold">
                         ✨ Start Pre-K

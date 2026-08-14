@@ -1,14 +1,14 @@
-// Pre-K obstacle-adventure experience for Benny the Dog.
+// Pre-K obstacle-adventure experience for Sir Bookears the Dog.
 //
 // Loop (Dora-style):
-//   1. Scene shows an obstacle (Benny reacts).
-//   2. Benny says the problem + asks for help (spoken aloud).
+//   1. Scene shows an obstacle (Sir Bookears reacts).
+//   2. Sir Bookears says the problem + asks for help (spoken aloud).
 //   3. A single big WORD card appears — the SOLUTION word.
 //   4. The child reads the word into the mic. (After 2 misses a giant
 //      "Tap to continue" button appears so a broken mic is never a dead end.
 //      After 3 misses we auto-pass with a kind line.)
 //   5. Solution emoji animates in, obstacle is solved (sparkle + chime).
-//   6. Benny cheers, hops forward, next obstacle appears.
+//   6. Sir Bookears cheers, hops forward, next obstacle appears.
 //   7. After all obstacles: a big celebration screen + onComplete.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +34,7 @@ interface Props {
 type Phase = "intro" | "problem" | "ask" | "reading" | "solved" | "transition" | "ending";
 
 const FALLBACK: PreKAdventure = {
-  goal: "Adventure with Benny!",
+  goal: "Adventure with Sir Bookears!",
   endingEmoji: "🎉",
   endingLine: "We did it!",
   endingSky: "from-amber-200 via-rose-200 to-pink-200",
@@ -145,11 +145,11 @@ export const YubiAdventure = ({ world, level, onBack, onComplete }: Props) => {
   useEffect(() => {
     if (!current && phase !== "ending") return;
 
-    // Single fixed voice profile so Benny sounds like Benny in every phase.
+    // Single fixed voice profile so Sir Bookears sounds like Sir Bookears in every phase.
     const BENNY = { rate: 0.95, pitch: 1.15 } as const;
 
     if (phase === "intro") {
-      // Goal already names Benny — don't double-say it.
+      // Goal already names Sir Bookears — don't double-say it.
       speak(adventure.goal, BENNY);
       queue(() => setPhase("problem"), 2000);
       return;

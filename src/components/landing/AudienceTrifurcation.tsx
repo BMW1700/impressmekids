@@ -18,9 +18,9 @@ const DOORS: Door[] = [
   {
     to: "/for-families",
     eyebrow: "For Families & Daycares",
-    title: "Meet Benny.",
+    title: "Meet Sir Bookears.",
     body: "Read-along adventures for ages 2–5. Built for parents and daycare centers.",
-    cta: "Explore Benny",
+    cta: "Explore Sir Bookears",
     Icon: Heart,
     accent: "48 100% 60%",
   },

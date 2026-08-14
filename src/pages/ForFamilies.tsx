@@ -14,16 +14,16 @@ const STEPS = [
   {
     Icon: BookOpen,
     title: "Watch the scene",
-    body: "Benny's adventure unfolds in cinematic clips — like a Pixar short.",
+    body: "Sir Bookears' adventure unfolds in cinematic clips — like a Pixar short.",
   },
   {
     Icon: Mic,
     title: "Say the word",
-    body: "When Benny needs help, your child says the word out loud. The mic listens.",
+    body: "When Sir Bookears needs help, your child says the word out loud. The mic listens.",
   },
   {
     Icon: Sparkles,
-    title: "Benny's world responds",
+    title: "Sir Bookears' world responds",
     body: "Bridges appear. Doors unlock. The story moves forward because they read.",
   },
 ];
@@ -38,13 +38,13 @@ const ForFamilies = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[hsl(270_45%_6%)] text-white">
       <Helmet>
-        <title>Benny's Reading Adventures — YubiLearn for Families</title>
+        <title>Sir Bookears' Reading Adventures — YubiLearn for Families</title>
         <meta
           name="description"
-          content="Meet Benny. Read-along cinematic adventures for ages 2–5. Built for parents and daycare centers. No ads, COPPA-safe."
+          content="Meet Sir Bookears. Read-along cinematic adventures for ages 2–5. Built for parents and daycare centers. No ads, COPPA-safe."
         />
         <link rel="canonical" href="https://yubilearn.com/for-families" />
-        <meta property="og:title" content="Benny's Reading Adventures — YubiLearn for Families" />
+        <meta property="og:title" content="Sir Bookears' Reading Adventures — YubiLearn for Families" />
         <meta
           property="og:description"
           content="Cinematic read-along adventures for ages 2–5. The first reading app your child asks for by name."
@@ -85,7 +85,7 @@ const ForFamilies = () => {
                 </span>
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-white/70 md:text-xl">
-                Meet Benny Bookears as he takes you on an immersive early literacy adventure.
+                Meet Sir Bookears as he takes you on an immersive early literacy adventure.
               </p>
             </motion.div>
 
@@ -103,7 +103,7 @@ const ForFamilies = () => {
                 className="group h-14 rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white"
               >
                 <Link to="/game">
-                  Start Benny's first adventure
+                  Start Sir Bookears' first adventure
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </Button>
@@ -123,12 +123,12 @@ const ForFamilies = () => {
           </div>
         </section>
 
-        {/* ===== Meet Benny ===== */}
+        {/* ===== Meet Sir Bookears ===== */}
         <section className="border-t border-white/5 py-24 md:py-28">
           <div className="container mx-auto px-4">
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <p className="mb-4 text-xs uppercase tracking-[0.24em] text-white/50">
-                Meet Benny
+                Meet Sir Bookears
               </p>
               <h2 className="text-balance text-3xl font-bold leading-tight tracking-tight md:text-5xl">
                 A friend kids{" "}
@@ -316,7 +316,7 @@ const ForFamilies = () => {
                 className="group h-14 rounded-full bg-white px-8 text-base font-semibold text-[hsl(270_45%_8%)] hover:bg-white"
               >
                 <Link to="/game">
-                  Start Benny's first adventure
+                  Start Sir Bookears' first adventure
                   <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </Button>

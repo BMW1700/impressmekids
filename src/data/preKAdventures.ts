@@ -1,15 +1,15 @@
 // Pre-K Adventures: continuous, Dora-style obstacle → word → solution stories.
-// Each level is a small mission for Benny the Dog. The CHILD reads the word
-// that names the tool Benny needs to solve the obstacle in front of him.
+// Each level is a small mission for Sir Bookears the Dog. The CHILD reads the word
+// that names the tool Sir Bookears needs to solve the obstacle in front of him.
 //
 // Authoring rules (Pre-K cloze style):
 //  - askLine MUST be a sentence STEM that the target `word` literally completes.
-//    Example: word "JUMP" → askLine "I need to..." (so Benny "asks" and the
+//    Example: word "JUMP" → askLine "I need to..." (so Sir Bookears "asks" and the
 //    child says JUMP). The trailing ellipsis matters — TTS pauses on it.
 //  - Words must be decodable Pre-K vocabulary (CVC, CVCC, or common sight
 //    nouns). No multi-syllable schwas like LADDER, no silent-E like AXE.
 //  - 4–6 obstacles per level. One ending celebration.
-//  - Keep Benny's lines under ~8 words each — these are 3–4 year olds.
+//  - Keep Sir Bookears' lines under ~8 words each — these are 3–4 year olds.
 
 export interface PreKObstacle {
   /** Short scene description for the visual. */
@@ -17,7 +17,7 @@ export interface PreKObstacle {
   /** Friendly background color tokens (Tailwind classes). */
   sky: string;                   // e.g. "from-sky-200 via-cyan-200 to-emerald-200"
   ground: string;                // e.g. "from-emerald-300 to-emerald-500"
-  /** What Benny sees / why he's stuck — spoken aloud. */
+  /** What Sir Bookears sees / why he's stuck — spoken aloud. */
   problemLine: string;           // "Oh no! A river!"
   /** Sentence STEM the target word completes. Ends with "..." so TTS pauses. */
   askLine: string;               // "I need to..."
@@ -29,13 +29,13 @@ export interface PreKObstacle {
   solutionPlacement?: "over" | "replace" | "onYubi";
   /** Optional looping video background for special scenes (e.g. flowing river). */
   backgroundVideo?: "riverStream";
-  /** Benny's cheer after success. */
+  /** Sir Bookears' cheer after success. */
   successLine: string;           // "We did it! Thank you!"
 }
 
 export interface PreKAdventure {
   /** Big mission goal — shown in header + spoken at start. */
-  goal: string;                  // "Help Benny get to Grandma's house!"
+  goal: string;                  // "Help Sir Bookears get to Grandma's house!"
   /** Final scene shown after the last obstacle is solved. */
   endingEmoji: string;           // "🏡"
   endingLine: string;            // "Yay! We made it to Grandma's!"
@@ -72,7 +72,7 @@ const ground = {
 // ============================================================================
 
 const W101_L1: PreKAdventure = {
-  goal: "Help Benny visit Grandma!",
+  goal: "Help Sir Bookears visit Grandma!",
   endingEmoji: "🏡",
   endingLine: "We made it to Grandma's!",
   endingSky: sky.morning,
@@ -161,7 +161,7 @@ const W101_L2: PreKAdventure = {
 };
 
 const W101_L3: PreKAdventure = {
-  goal: "Wake up Benny's Village!",
+  goal: "Wake up Sir Bookears' Village!",
   endingEmoji: "🌅",
   endingLine: "Good morning, village!",
   endingSky: sky.morning,
@@ -242,7 +242,7 @@ const W101_L4: PreKAdventure = {
 };
 
 const W101_L5: PreKAdventure = {
-  goal: "Pick berries with Benny!",
+  goal: "Pick berries with Sir Bookears!",
   endingEmoji: "🥧",
   endingLine: "Berry pie for everyone!",
   endingSky: sky.morning,
@@ -298,7 +298,7 @@ const W101_L5: PreKAdventure = {
 // ============================================================================
 
 const W102_L1: PreKAdventure = {
-  goal: "Help Benny fly to the moon!",
+  goal: "Help Sir Bookears fly to the moon!",
   endingEmoji: "🌕",
   endingLine: "We made it to the moon!",
   endingSky: sky.night,
@@ -315,7 +315,7 @@ const W102_L1: PreKAdventure = {
       problemLine: "Wind blows me back!",
       askLine: "I need a super...",
       word: "CAPE", solutionEmoji: "🦸", solutionPlacement: "onYubi",
-      successLine: "Whoosh! Super Benny!",
+      successLine: "Whoosh! Super Sir Bookears!",
     },
     {
       sceneEmoji: "⭐", sky: sky.dusk, ground: ground.clouds,
@@ -342,7 +342,7 @@ const W102_L1: PreKAdventure = {
 };
 
 const W102_L2: PreKAdventure = {
-  goal: "Catch a cloud with Benny!",
+  goal: "Catch a cloud with Sir Bookears!",
   endingEmoji: "☁️",
   endingLine: "A fluffy cloud friend!",
   endingSky: sky.sky,
@@ -379,7 +379,7 @@ const W102_L2: PreKAdventure = {
 };
 
 const W102_L3: PreKAdventure = {
-  goal: "Help Benny through the storm!",
+  goal: "Help Sir Bookears through the storm!",
   endingEmoji: "🌈",
   endingLine: "Hello, rainbow!",
   endingSky: sky.morning,
@@ -460,7 +460,7 @@ const W102_L4: PreKAdventure = {
 };
 
 const W102_L5: PreKAdventure = {
-  goal: "Space picnic with Benny!",
+  goal: "Space picnic with Sir Bookears!",
   endingEmoji: "🪐",
   endingLine: "Best picnic in space!",
   endingSky: sky.night,

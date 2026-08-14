@@ -87,9 +87,9 @@ Verify:
 - [ ] Sign in with Google succeeds (returns to app)
 - [ ] Sign in with Apple succeeds
 - [ ] Sign in with Clever succeeds
-- [ ] **Benny world 1, level 1**: mic prompt appears, saying the word advances
-- [ ] **Benny retry flow**: miss on purpose → tap Retry → say word → advances
-- [ ] **Benny skip flow**: miss twice → Skip button appears → tap advances
+- [ ] **Sir Bookears world 1, level 1**: mic prompt appears, saying the word advances
+- [ ] **Sir Bookears retry flow**: miss on purpose → tap Retry → say word → advances
+- [ ] **Sir Bookears skip flow**: miss twice → Skip button appears → tap advances
 - [ ] Level completion registers on world map (star + progress)
 - [ ] Videos play smoothly (no black frames, no MOV errors in Xcode console)
 - [ ] Account deletion route reachable + completes

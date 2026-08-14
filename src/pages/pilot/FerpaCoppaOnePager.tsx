@@ -10,7 +10,7 @@ export default function FerpaCoppaOnePager() {
       <h2>Who we are</h2>
       <p>
         YubiLearn is a US-based literacy platform for children ages 2–8. We help kids read
-        aloud with an animated character named Benny and give teachers/parents a simple
+        aloud with an animated character named Sir Bookears and give teachers/parents a simple
         progress view.
       </p>
 

@@ -679,7 +679,7 @@ export const RPGWordReader = ({
     setRecognitionState('waiting_action');
     setPendingIncorrectWord({ word: expectedWord, spoken: spokenWord, index: wordIndex });
     setShowFeedbackOverlay(true);
-    // Play correct pronunciation (Benny voice, cached; falls back to Web Speech)
+    // Play correct pronunciation (Sir Bookears voice, cached; falls back to Web Speech)
     if (pronunciationTimeoutRef.current) clearTimeout(pronunciationTimeoutRef.current);
     pronunciationTimeoutRef.current = setTimeout(() => {
       pronunciationTimeoutRef.current = null;
@@ -696,7 +696,7 @@ export const RPGWordReader = ({
     if (!pendingIncorrectWord) return;
     stopInstructionAudio();
     // stopInstructionAudio() already calls stopBennyTeach + stopBenny, so no
-    // residual Benny audio leaks into the mic on retry. Log for field diagnosis.
+    // residual Sir Bookears audio leaks into the mic on retry. Log for field diagnosis.
     console.log('[RPGWordReader] retry re-arming target=', pendingIncorrectWord.word, 'index=', currentIndexRef.current);
 
     // Kill any stale Web Speech instance first. Browser recognition.stop() ends
