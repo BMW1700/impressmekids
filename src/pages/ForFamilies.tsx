@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
+import { SeriesTitle } from "@/components/landing/SeriesTitle";
 import bennyCelebrate from "@/assets/benny-book-ears.png.asset.json";
 import bennyIdle from "@/assets/benny-book-ears.png.asset.json";
 import bennySad from "@/assets/benny-book-ears.png.asset.json";
@@ -88,6 +89,8 @@ const ForFamilies = () => {
                 Meet Sir Bookears as he takes you on an immersive early literacy adventure.
               </p>
             </motion.div>
+
+            <SeriesTitle className="mb-6" />
 
             <BennyVideoHero />
 

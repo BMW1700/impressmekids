@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
+import { SeriesTitle } from "@/components/landing/SeriesTitle";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { setStoredTheme } from "@/lib/gameTheme";
@@ -298,8 +299,10 @@ const ModeSelect = () => {
                   literacy adventure.
                 </p>
 
+                <SeriesTitle light={isLight} className="mt-8" />
+
                 <div
-                  className={`mt-7 overflow-hidden rounded-2xl border shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)] ${
+                  className={`mt-4 overflow-hidden rounded-2xl border shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)] ${
                     isLight ? "border-white/70 bg-white/40 backdrop-blur-md" : "border-white/10"
                   }`}
                 >
