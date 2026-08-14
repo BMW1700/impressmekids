@@ -1,26 +1,25 @@
-# Pre-K Phonemic Awareness & Letter-Sounds
+# Swap in the new Benny "Book Ears" design (stills only)
 
-Optional follow-up to the curriculum audit. Only build this if you want to convert the schools the audit marked "No."
+Replace the static Benny artwork across the app with the new uploaded design. Sprite-sheet animations (idle/walk) and the hero video keep the old art for now.
 
-## Why
+## What changes
 
-The audit found one gap responsible for nearly every rejection: our Pre-K mode teaches oral vocabulary but no phonemic awareness and no letter-sound knowledge. That single gap is what loses Joyful Noise, Einstein Daycare, and Harbor Country Day, and what keeps every Creative Curriculum center at "language supplement" instead of "literacy supplement."
+- Upload the new Benny art as a CDN asset (`benny-book-ears.png`).
+- Point every **still image** use of Benny at the new asset:
+  - `src/components/aura/game/rpg/BennyStanding.tsx` — Pre-K world-map Benny (currently `benny-standing.png`).
+  - `src/pages/ForFamilies.tsx` — the idle / celebrate / sad stills shown on the families page.
+  - `src/components/BennyDog.tsx` — the celebrate and sad still poses (the 30-frame idle and walk sprite animations stay untouched).
+  - `src/components/aura/game/rpg/YubiScene.tsx` — the celebrate and sad still poses only.
 
-## What to build
+Mood-specific stills (celebrate, sad) will use the same new artwork; motion/tilt/bounce CSS already applied to those states keeps them feeling distinct.
 
-1. **Rhyme world** — pick the word that rhymes; spoken response, Benny video framing, same runner as today's Pre-K levels.
-2. **First-sound world** — isolate the initial phoneme of a spoken word.
-3. **Blending world** — hear c-a-t, say "cat." Oral only, no letters required.
-4. **Letter-sound world** — see a letter, say its sound. Reuses the existing word-card and mic loop.
-5. **Standards crosswalk** — extend the Curriculum Alignment page to cover Pre-K, mapping the new worlds to Creative Curriculum Literacy objectives 15-17, the NY Prekindergarten Foundation, and NJ Preschool Teaching and Learning Standards.
+## What stays the same
+
+- Idle and walk sprite-sheet animations (`benny-idle-sprite`, `benny-walk-sprite`) — a single still can't drive a 30-frame strip.
+- Landing-page hero video and all Pre-K adventure video clips.
+- Old asset pointers stay in the repo (still referenced by the animations), so nothing breaks.
 
 ## Technical notes
 
-- New worlds slot into the existing Pre-K world routing and reuse the DB-driven level CMS, so content is authored in Super Admin rather than hardcoded.
-- Content follows the same shape as the current Pre-K word banks, with a new content kind for rhyme and blend pairs.
-- Speech matching reuses the existing phoneme-fallback matcher.
-- No new backend tables required; stars and progress use the current Pre-K tracking.
-
-## Out of scope
-
-Letter formation and handwriting (needs tracing input), math, and SEL.
+- Asset created with `lovable-assets create` from the upload; components import the resulting `.asset.json` and use `.url`, matching the existing pattern.
+- No layout, sizing, or animation-timing changes — only the image source swaps, so aspect handling (`objectFit: contain`) carries over.
