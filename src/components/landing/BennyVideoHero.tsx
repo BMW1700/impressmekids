@@ -71,8 +71,7 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
             loop
             playsInline
             preload="metadata"
-            // scale + translate to push the Veo watermark off the cropped frame
-            className="h-full w-full object-cover origin-center scale-[1.08] -translate-x-[1.5%] -translate-y-[1.5%]"
+            className="h-full w-full object-contain"
           />
         ) : (
           <>
