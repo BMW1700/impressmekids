@@ -16,8 +16,8 @@ import { motion } from "framer-motion";
 import { type BennyMood } from "@/components/BennyDog";
 import bennyIdleSprite from "@/assets/benny-idle-sprite.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
-import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
-import sadAsset from "@/assets/benny-sad.png.asset.json";
+import celebrateAsset from "@/assets/benny-book-ears.png.asset.json";
+import sadAsset from "@/assets/benny-book-ears.png.asset.json";
 
 const BENNY_SPRITE_FRAMES = 30;
 

@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import bennyAsset from "@/assets/benny-standing.png.asset.json";
+import bennyAsset from "@/assets/benny-book-ears.png.asset.json";
 
 interface BennyStandingProps {
   size?: number;

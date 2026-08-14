@@ -12,9 +12,9 @@
 import { useEffect, useRef, useState } from "react";
 import bennySprite from "@/assets/benny-idle-sprite.png.asset.json";
 import bennyWalkSprite from "@/assets/benny-walk-sprite.png.asset.json";
-import idleAsset from "@/assets/benny-idle.png.asset.json";
-import celebrateAsset from "@/assets/benny-celebrate.png.asset.json";
-import sadAsset from "@/assets/benny-sad.png.asset.json";
+import idleAsset from "@/assets/benny-book-ears.png.asset.json";
+import celebrateAsset from "@/assets/benny-book-ears.png.asset.json";
+import sadAsset from "@/assets/benny-book-ears.png.asset.json";
 
 export type BennyMood = "idle" | "walk" | "jump" | "climb" | "celebrate" | "sad";
 
