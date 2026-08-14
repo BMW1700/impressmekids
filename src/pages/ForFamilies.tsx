@@ -6,9 +6,9 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
-import bennyCelebrate from "@/assets/benny-celebrate.png.asset.json";
-import bennyIdle from "@/assets/benny-idle.png.asset.json";
-import bennySad from "@/assets/benny-sad.png.asset.json";
+import bennyCelebrate from "@/assets/benny-book-ears.png.asset.json";
+import bennyIdle from "@/assets/benny-book-ears.png.asset.json";
+import bennySad from "@/assets/benny-book-ears.png.asset.json";
 
 const STEPS = [
   {
