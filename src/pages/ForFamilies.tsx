@@ -85,8 +85,7 @@ const ForFamilies = () => {
                 </span>
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg text-white/70 md:text-xl">
-                Meet Benny. Adventures kids ask for by name — and the words they
-                say out loud are the words that unlock the story.
+                Meet Benny Bookears as he takes you on an immersive early literacy adventure.
               </p>
             </motion.div>
 
