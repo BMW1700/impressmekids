@@ -41,6 +41,9 @@ export const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} YubiLearn. {t('footer.copyright').replace('© {year} YubiLearn. ', '')}
+            <span className="block text-xs">
+              Sir Bookears™ is a trademark of YubiLearn. All rights reserved.
+            </span>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <Link to="/scope-and-sequence" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
