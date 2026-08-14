@@ -11,7 +11,7 @@ Use this document as the source of truth for the App Store Connect submission.
 - **Age rating:** 4+ (no objectionable content)
 - **Kids Category:** No (we serve mixed K-12 + teachers/parents, and we have
   parent-managed accounts rather than a self-contained kids experience)
-- **Bundle ID:** `app.lovable.8b261911409a4a0485943e15f3d59496`
+- **Bundle ID:** `app.lovable.yubilearn`
 - **Encryption (ITSAppUsesNonExemptEncryption):** `false` (HTTPS only, no
   custom crypto)
 
