@@ -15,11 +15,31 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+
+    v.defaultMuted = true;
+    v.muted = true;
+
     if (paused) {
       v.pause();
-    } else {
-      v.play().catch(() => undefined);
+      return;
     }
+
+    const startPlayback = () => {
+      if (!paused && v.paused) v.play().catch(() => undefined);
+    };
+
+    startPlayback();
+    v.addEventListener("loadedmetadata", startPlayback);
+    v.addEventListener("canplay", startPlayback);
+    window.addEventListener("pageshow", startPlayback);
+    document.addEventListener("visibilitychange", startPlayback);
+
+    return () => {
+      v.removeEventListener("loadedmetadata", startPlayback);
+      v.removeEventListener("canplay", startPlayback);
+      window.removeEventListener("pageshow", startPlayback);
+      document.removeEventListener("visibilitychange", startPlayback);
+    };
   }, [paused]);
 
   return (
@@ -45,10 +65,11 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
           src={videoAsset.url}
           poster={posterAsset.url}
           autoPlay
+          defaultMuted
           muted
           loop
           playsInline
-          preload="metadata"
+          preload="auto"
           className="h-full w-full object-contain"
         />
 
