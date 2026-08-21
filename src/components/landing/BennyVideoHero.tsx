@@ -18,29 +18,55 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
 
     v.defaultMuted = true;
     v.muted = true;
+    v.volume = 0;
+    (v as HTMLVideoElement & { playsInline: boolean }).playsInline = true;
 
     if (paused) {
       v.pause();
       return;
     }
 
-    const startPlayback = () => {
-      if (!paused && v.paused) v.play().catch(() => undefined);
+    let cancelled = false;
+
+    const tryPlay = () => {
+      if (cancelled || paused) return;
+      const el = videoRef.current;
+      if (!el || !el.paused) return;
+      el.muted = true;
+      const p = el.play();
+      if (p && typeof p.catch === "function") p.catch(() => undefined);
     };
 
-    startPlayback();
-    v.addEventListener("loadedmetadata", startPlayback);
-    v.addEventListener("canplay", startPlayback);
-    window.addEventListener("pageshow", startPlayback);
-    document.addEventListener("visibilitychange", startPlayback);
+    // Immediate + repeated attempts (covers slow metadata, Low Power Mode, bfcache).
+    tryPlay();
+    const interval = window.setInterval(tryPlay, 700);
+    const stopAfter = window.setTimeout(() => window.clearInterval(interval), 15000);
+
+    const mediaEvents = ["loadedmetadata", "loadeddata", "canplay", "canplaythrough", "suspend", "pause"];
+    mediaEvents.forEach((e) => v.addEventListener(e, tryPlay));
+
+    // Any first user gesture anywhere on the page unblocks playback instantly.
+    const gestureEvents = ["pointerdown", "touchstart", "keydown", "scroll", "mousemove"];
+    gestureEvents.forEach((e) =>
+      document.addEventListener(e, tryPlay, { passive: true, capture: true })
+    );
+
+    window.addEventListener("pageshow", tryPlay);
+    document.addEventListener("visibilitychange", tryPlay);
 
     return () => {
-      v.removeEventListener("loadedmetadata", startPlayback);
-      v.removeEventListener("canplay", startPlayback);
-      window.removeEventListener("pageshow", startPlayback);
-      document.removeEventListener("visibilitychange", startPlayback);
+      cancelled = true;
+      window.clearInterval(interval);
+      window.clearTimeout(stopAfter);
+      mediaEvents.forEach((e) => v.removeEventListener(e, tryPlay));
+      gestureEvents.forEach((e) =>
+        document.removeEventListener(e, tryPlay, { capture: true } as EventListenerOptions)
+      );
+      window.removeEventListener("pageshow", tryPlay);
+      document.removeEventListener("visibilitychange", tryPlay);
     };
   }, [paused]);
+
 
   return (
     <div className="relative mx-auto w-full max-w-5xl">
