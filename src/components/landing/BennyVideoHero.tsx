@@ -92,11 +92,19 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
           poster={posterAsset.url}
           autoPlay
           muted
+          defaultValue=""
           loop
           playsInline
+          controls={false}
+          disablePictureInPicture
+          disableRemotePlayback
+          // @ts-expect-error legacy iOS/webview autoplay hints
+          webkit-playsinline="true"
+          x5-playsinline="true"
           preload="auto"
           className="h-full w-full object-contain"
         />
+
 
         {/* Cinema letterboxing (subtle inner bars) */}
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-3 bg-black/80" />
