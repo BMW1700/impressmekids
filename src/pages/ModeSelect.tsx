@@ -95,7 +95,6 @@ const ModeSelect = () => {
 
   const bennyActive = hover === "benny";
   const rpgActive = hover === "rpg";
-  const bennyPaused = hover === "rpg";
   const rpgPaused = hover === "benny";
 
   const inactiveFx = (side: "benny" | "rpg") => {
@@ -306,7 +305,7 @@ const ModeSelect = () => {
                     isLight ? "border-white/70 bg-white/40 backdrop-blur-md" : "border-white/10"
                   }`}
                 >
-                  <BennyVideoHero paused={bennyPaused} />
+                  <BennyVideoHero />
                 </div>
 
                 <div className="mt-7">
