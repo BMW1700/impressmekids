@@ -92,7 +92,7 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
           poster={posterAsset.url}
           autoPlay
           muted
-          defaultValue=""
+          
           loop
           playsInline
           controls={false}
