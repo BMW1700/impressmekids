@@ -98,7 +98,7 @@ export const BennyVideoHero = ({ paused = false }: { paused?: boolean } = {}) =>
           controls={false}
           disablePictureInPicture
           disableRemotePlayback
-          // @ts-expect-error legacy iOS/webview autoplay hints
+          
           webkit-playsinline="true"
           x5-playsinline="true"
           preload="auto"
