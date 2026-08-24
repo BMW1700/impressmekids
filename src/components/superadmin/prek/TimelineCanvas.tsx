@@ -11,7 +11,7 @@
 //   • Drag span-end handle → re-anchor end of span-videos clip
 //   • Drop onto bottom "+" lane → create a new track and move the clip there
 
-import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Fragment, type PointerEvent as RPointerEvent } from "react";
 import { Zap, Play, Pause, Trash2, Scissors } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
@@ -82,12 +82,26 @@ export function TimelineCanvas({
     if (a) { try { a.pause(); } catch { /* noop */ } }
     setPreviewingClipId(null);
   }, []);
-  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number) => {
+  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number, trimEnd?: number | null) => {
     onBeforeIsolatedPreview?.();
     stopClipPreview();
     const a = new Audio(url);
     a.playbackRate = rate || 1;
-    try { a.currentTime = trim || 0; } catch { /* noop */ }
+    const inSec = Math.max(0, trim || 0);
+    const outSec = trimEnd != null && trimEnd > inSec ? trimEnd : null;
+    const seek = () => { try { a.currentTime = inSec; } catch { /* noop */ } };
+    seek();
+    a.addEventListener("loadedmetadata", seek, { once: true });
+    if (outSec != null) {
+      // Audition exactly what the level will play: hard-stop at the crop-out.
+      a.ontimeupdate = () => {
+        if (a.currentTime >= outSec - 0.02) {
+          try { a.pause(); } catch { /* noop */ }
+          a.ontimeupdate = null;
+          setPreviewingClipId((id) => (id === clipId ? null : id));
+        }
+      };
+    }
     previewAudioRef.current = a;
     a.onended = () => setPreviewingClipId((id) => id === clipId ? null : id);
     a.play().catch(() => setPreviewingClipId(null));
@@ -410,19 +424,49 @@ export function TimelineCanvas({
                     "bg-primary/30 border-primary/70";
                   const audioUrl = signedUrls?.[c.storage_path] ?? null;
                   const isPreviewing = previewingClipId === c.id;
-                  const audioDurTL = Math.max(0.0001, res.endSec - res.startSec);
+                  // Map timeline seconds -> fraction of the SOURCE audio file so
+                  // the waveform shows only the audio that survives the crop
+                  // (instead of squeezing the whole file into the block).
+                  const rate = Math.max(0.05, c.playback_rate || 1);
+                  const trimIn = Math.max(0, c.trim_start_seconds || 0);
+                  const rawDur = Math.max(
+                    0.0001,
+                    c.duration_seconds ?? (trimIn + Math.max(0.1, res.endSec - res.startSec) * rate),
+                  );
+                  const trimOut = c.trim_end_seconds != null
+                    ? Math.min(rawDur, Math.max(trimIn + 0.05, c.trim_end_seconds))
+                    : rawDur;
+                  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+                  const srcFrac = (timelineSec: number) =>
+                    clamp01((trimIn + (timelineSec - res.startSec) * rate) / rawDur);
 
                   // Build visual segments: while dragging, a single block
                   // tracks the pointer; otherwise the clip is split around any
                   // zero-width card notches so the audio teleports across.
                   type Seg = { leftPx: number; widthPx: number; peakStart: number; peakEnd: number };
                   const segments: Seg[] = [];
+                  // Region being discarded by the current crop drag (ghost).
+                  let ghost: { leftPx: number; widthPx: number } | null = null;
                   if (dragging) {
                     const startPx = secToPx(res.startSec);
                     const endPx = secToPx(res.endSec);
-                    const lp = drag!.mode === "body" ? startPx + dx : startPx;
-                    const rp = drag!.mode === "end" ? endPx + dx : drag!.mode === "body" ? endPx + dx : endPx;
-                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart: 0, peakEnd: 1 });
+                    const lp = drag!.mode === "body" ? startPx + dx
+                      : drag!.mode === "trim-start" ? startPx + dx
+                      : startPx;
+                    const rp = drag!.mode === "end" || drag!.mode === "body" ? endPx + dx
+                      : drag!.mode === "trim-end" ? endPx + dx
+                      : endPx;
+                    let peakStart = trimIn / rawDur;
+                    let peakEnd = trimOut / rawDur;
+                    if (drag!.mode === "trim-start") {
+                      peakStart = srcFrac(pxToSec(startPx + dx));
+                      if (dx > 0) ghost = { leftPx: startPx, widthPx: Math.max(1, dx) };
+                    } else if (drag!.mode === "trim-end") {
+                      peakEnd = srcFrac(pxToSec(endPx + dx));
+                      if (dx < 0) ghost = { leftPx: endPx + dx, widthPx: Math.max(1, -dx) };
+                    }
+                    if (peakEnd < peakStart) peakEnd = peakStart;
+                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart, peakEnd });
                   } else {
                     for (const it of segs.items) {
                       if (it.isCard) continue;
@@ -433,24 +477,32 @@ export function TimelineCanvas({
                       const localEnd = segEnd - it.realStart;
                       const leftPx = it.left + localStart * it.pxPerSec;
                       const widthPx = Math.max(8, (localEnd - localStart) * it.pxPerSec);
-                      const peakStart = (segStart - res.startSec) / audioDurTL;
-                      const peakEnd = (segEnd - res.startSec) / audioDurTL;
-                      segments.push({ leftPx, widthPx, peakStart, peakEnd });
+                      segments.push({ leftPx, widthPx, peakStart: srcFrac(segStart), peakEnd: srcFrac(segEnd) });
                     }
                     if (segments.length === 0) {
-                      segments.push({ leftPx: secToPx(res.startSec), widthPx: 24, peakStart: 0, peakEnd: 1 });
+                      segments.push({
+                        leftPx: secToPx(res.startSec), widthPx: 24,
+                        peakStart: trimIn / rawDur, peakEnd: trimOut / rawDur,
+                      });
                     }
                   }
 
                   return segments.map((seg, segIdx) => {
                     const isFirst = segIdx === 0;
                     const isLast = segIdx === segments.length - 1;
-                    const waveLeft = isFirst ? 28 : 8;
-                    const waveRight = isLast ? 8 : 4;
                     const canCrop = Boolean(onTrimClip && c.duration_mode !== "fill-level" && seg.widthPx >= 28);
+                    const waveLeft = isFirst ? (canCrop ? 42 : 28) : 8;
+                    const waveRight = isLast ? (canCrop ? 16 : 8) : 4;
                     return (
+                      <Fragment key={`${c.id}-${segIdx}`}>
+                      {dragging && ghost && (
+                        <div
+                          className="absolute top-5 bottom-2 rounded-md border-2 border-dashed border-destructive/70 bg-destructive/15 pointer-events-none"
+                          style={{ left: ghost.leftPx, width: ghost.widthPx, zIndex: 49 }}
+                          title="Discarded by this crop"
+                        />
+                      )}
                       <div
-                        key={`${c.id}-${segIdx}`}
                         onPointerDown={(e) => beginDrag(e, c, "body")}
                         className={`absolute top-5 bottom-2 rounded-md border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing shadow-sm`}
                         style={{
@@ -475,14 +527,14 @@ export function TimelineCanvas({
                           />
                         </div>
                         {isFirst && (
-                          <div className="absolute left-1 top-1 z-[3] flex items-center gap-1">
+                          <div className="absolute top-1 z-[3] flex items-center gap-1" style={{ left: canCrop ? 16 : 4 }}>
                             <button
                               type="button"
                               onPointerDown={(e) => { e.stopPropagation(); }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (isPreviewing) stopClipPreview();
-                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, trimIn, trimOut);
                               }}
                               title={isPreviewing ? "Stop preview" : "Preview this clip"}
                               className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
@@ -539,18 +591,23 @@ export function TimelineCanvas({
                         {canCrop && isFirst && (
                           <div
                             onPointerDown={(e) => beginDrag(e, c, "trim-start")}
-                            className="absolute left-0 top-0 bottom-0 w-2 bg-background/95 border-r border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
-                            title="Crop start"
-                          />
+                            className="absolute left-0 top-0 bottom-0 w-3.5 bg-background/95 border-r-2 border-primary cursor-ew-resize z-[6] touch-none hover:bg-primary/25 flex items-center justify-center"
+                            title="Crop start — drag to discard audio before this point"
+                          >
+                            <span className="block h-4 w-0.5 rounded bg-primary/80" />
+                          </div>
                         )}
                         {canCrop && isLast && (
                           <div
                             onPointerDown={(e) => beginDrag(e, c, "trim-end")}
-                            className="absolute right-0 top-0 bottom-0 w-2 bg-background/95 border-l border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
-                            title="Crop end"
-                          />
+                            className="absolute right-0 top-0 bottom-0 w-3.5 bg-background/95 border-l-2 border-primary cursor-ew-resize z-[6] touch-none hover:bg-primary/25 flex items-center justify-center"
+                            title="Crop end — drag to discard audio after this point"
+                          >
+                            <span className="block h-4 w-0.5 rounded bg-primary/80" />
+                          </div>
                         )}
                       </div>
+                      </Fragment>
                     );
                   });
                 })}
