@@ -5239,6 +5239,8 @@ export type Database = {
           id: string
           level_id: string
           loop_clip: boolean
+          manual_crop_end_seconds: number
+          manual_crop_start_seconds: number
           pause_on_word_card: boolean
           playback_rate: number
           sort_order: number
@@ -5267,6 +5269,8 @@ export type Database = {
           id?: string
           level_id: string
           loop_clip?: boolean
+          manual_crop_end_seconds?: number
+          manual_crop_start_seconds?: number
           pause_on_word_card?: boolean
           playback_rate?: number
           sort_order?: number
@@ -5295,6 +5299,8 @@ export type Database = {
           id?: string
           level_id?: string
           loop_clip?: boolean
+          manual_crop_end_seconds?: number
+          manual_crop_start_seconds?: number
           pause_on_word_card?: boolean
           playback_rate?: number
           sort_order?: number
