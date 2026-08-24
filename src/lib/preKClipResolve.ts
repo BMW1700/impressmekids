@@ -72,11 +72,6 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
   // original absolute timeline position. The persisted anchor remains the
   // uncropped baseline so dragging the handle back can restore the source.
   const startSec = Math.min(totalDur, baselineStartSec + manualStartTimelineSeconds);
-  const effectiveAudioSeconds = bounds.length;
-  const isMusicStem = clip.source_kind === "music" || clip.track_index === 89;
-  if (isMusicStem && anchor.scene.timelineDurationSeconds > 0 && effectiveAudioSeconds <= 1.05) {
-    return { startSec, endSec: Math.min(totalDur, baselineStartSec + anchor.scene.timelineDurationSeconds), anchorScene: anchor.scene };
-  }
   const baselineAudioSeconds = Math.max(0.1, bounds.baseEnd - bounds.baseStart);
   const endSec = Math.min(
     totalDur,
