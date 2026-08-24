@@ -40,9 +40,8 @@ async function loadSceneMap(levelId: string): Promise<SceneMap | null> {
 }
 
 /**
- * For each redub/music clip on this level, set trim_start / trim_end to match
- * the scene's current video trim. Do NOT overwrite duration_seconds here: that
- * column represents the audio file's actual duration, not the video duration.
+ * Set the source-alignment baseline to the current video trim. Dedicated
+ * manual_crop_* columns are intentionally untouched so editor crops survive.
  *
  * Returns the number of clips that were actually patched (drift found).
  */

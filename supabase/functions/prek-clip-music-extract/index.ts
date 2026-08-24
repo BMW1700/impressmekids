@@ -393,6 +393,8 @@ async function ensureMusicClip(
     pause_on_word_card: true,
     trim_start_seconds: trimStart,
     trim_end_seconds: Math.min(rawDuration, trimEnd),
+    manual_crop_start_seconds: 0,
+    manual_crop_end_seconds: 0,
     playback_rate: 1.0,
     source_kind: "music" as const,
   };

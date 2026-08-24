@@ -16,6 +16,7 @@ import { Zap, Play, Pause, Trash2, Scissors } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
+import { audioBoundsForClip } from "@/lib/preKAudioBounds";
 import { ClipWaveform } from "./ClipWaveform";
 
 const PX_PER_SEC_FULL = 48;
@@ -200,11 +201,9 @@ export function TimelineCanvas({
     // Compute RAW media bounds in timeline seconds so trim handles can drag
     // both directions (shrink AND grow back to the original media length).
     const rate = Math.max(0.05, clip.playback_rate || 1);
-    const trimStart = Math.max(0, clip.trim_start_seconds || 0);
-    const rawDur = clip.duration_seconds ?? ((res.endSec - res.startSec) * rate + trimStart);
-    const currentTrimEnd = clip.trim_end_seconds != null ? Math.min(rawDur, clip.trim_end_seconds) : rawDur;
-    const rawStartSec = res.startSec - trimStart / rate;
-    const rawEndSec = res.endSec + Math.max(0, rawDur - currentTrimEnd) / rate;
+    const bounds = audioBoundsForClip(clip);
+    const rawStartSec = res.startSec - Math.max(0, clip.manual_crop_start_seconds || 0) / rate;
+    const rawEndSec = res.endSec + Math.max(0, clip.manual_crop_end_seconds || 0) / rate;
 
     if (d.mode === "end") {
       const newEndSec = Math.max(0.1, Math.min(graph.nominalDurationTotal, pxToSec(endPx + d.dx)));
@@ -428,14 +427,13 @@ export function TimelineCanvas({
                   // the waveform shows only the audio that survives the crop
                   // (instead of squeezing the whole file into the block).
                   const rate = Math.max(0.05, c.playback_rate || 1);
-                  const trimIn = Math.max(0, c.trim_start_seconds || 0);
+                  const bounds = audioBoundsForClip(c);
+                  const trimIn = bounds.start;
                   const rawDur = Math.max(
                     0.0001,
                     c.duration_seconds ?? (trimIn + Math.max(0.1, res.endSec - res.startSec) * rate),
                   );
-                  const trimOut = c.trim_end_seconds != null
-                    ? Math.min(rawDur, Math.max(trimIn + 0.05, c.trim_end_seconds))
-                    : rawDur;
+                  const trimOut = bounds.end;
                   const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
                   const srcFrac = (timelineSec: number) =>
                     clamp01((trimIn + (timelineSec - res.startSec) * rate) / rawDur);

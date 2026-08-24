@@ -198,7 +198,7 @@ export async function auditPreKLevelIntegrity(
 
   const { data: clipRows } = await supabase
     .from("prek_level_audio_clips")
-    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, duration_seconds")
+    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, manual_crop_start_seconds, manual_crop_end_seconds, duration_seconds")
     .eq("level_id", level.id)
     .is("deleted_at", null)
     .in("track_index", [PREK_MUSIC_TRACK_INDEX, PREK_REDUB_TRACK_INDEX]);
