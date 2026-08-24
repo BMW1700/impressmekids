@@ -899,6 +899,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           videoScenes={videoScenes}
           track={selectedTrack}
           masterVolume={mix.settings.audio_master_volume}
+          playheadSec={effectivePlayhead}
+          onTrim={(c, edge, atSec) => trimClip(c, edge, atSec)}
           onUpdate={(c, patch) => updateClip(c, patch)}
           onDelete={deleteClip}
         />
