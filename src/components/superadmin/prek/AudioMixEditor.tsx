@@ -928,11 +928,13 @@ interface InspectorProps {
   videoScenes: Scene[];
   track: PreKAudioTrack | null;
   masterVolume: number;
+  playheadSec?: number;
+  onTrim?: (clip: PreKAudioClip, edge: "start" | "end", atSec: number) => Promise<void> | void;
   onUpdate: (clip: PreKAudioClip, patch: Partial<PreKAudioClip>) => Promise<void> | void;
   onDelete: (clip: PreKAudioClip) => Promise<void> | void;
 }
 
-const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, onUpdate, onDelete }: InspectorProps) => {
+const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, playheadSec, onTrim, onUpdate, onDelete }: InspectorProps) => {
   const isSpan = clip.duration_mode === "span-videos";
   const anchorScenes = isSpan ? videoScenes : scenes;
   const effective = clip.volume * (track ? track.volume * (track.muted ? 0 : 1) : 1) * masterVolume;
