@@ -11,7 +11,7 @@
 //   • Drag span-end handle → re-anchor end of span-videos clip
 //   • Drop onto bottom "+" lane → create a new track and move the clip there
 
-import { useEffect, useMemo, useRef, useState, useCallback, type PointerEvent as RPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, Fragment, type PointerEvent as RPointerEvent } from "react";
 import { Zap, Play, Pause, Trash2, Scissors } from "lucide-react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
