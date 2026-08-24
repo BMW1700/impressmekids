@@ -372,7 +372,10 @@ export function usePreKAudioMixerRuntime({
 
       for (const clip of clips) {
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "start") continue;
-        const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
+        const cropDelaySeconds = clip.duration_mode === "fixed"
+          ? Math.max(0, Number(clip.manual_crop_start_seconds || 0)) / Math.max(0.05, clip.playback_rate || 1)
+          : 0;
+        const delayMs = Math.max(0, (clip.anchor_offset_seconds + cropDelaySeconds) * 1000);
         const fire = () => {
           if (eventGenerationRef.current !== eventGeneration || activeSceneKeyRef.current !== sceneKey) return;
           if (clip.duration_mode === "span-videos") {
@@ -431,7 +434,10 @@ export function usePreKAudioMixerRuntime({
       }
       for (const clip of clips) {
         if (clip.anchor_scene_key !== sceneKey || clip.anchor_edge !== "end") continue;
-        const delayMs = Math.max(0, clip.anchor_offset_seconds * 1000);
+        const cropDelaySeconds = clip.duration_mode === "fixed"
+          ? Math.max(0, Number(clip.manual_crop_start_seconds || 0)) / Math.max(0.05, clip.playback_rate || 1)
+          : 0;
+        const delayMs = Math.max(0, (clip.anchor_offset_seconds + cropDelaySeconds) * 1000);
         const fire = () => {
           if (eventGenerationRef.current !== eventGeneration) return;
           if (clip.duration_mode === "fixed") playClip(clip);
