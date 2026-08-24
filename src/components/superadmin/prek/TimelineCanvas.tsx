@@ -527,14 +527,14 @@ export function TimelineCanvas({
                           />
                         </div>
                         {isFirst && (
-                          <div className="absolute left-1 top-1 z-[3] flex items-center gap-1">
+                          <div className="absolute top-1 z-[3] flex items-center gap-1" style={{ left: canCrop ? 16 : 4 }}>
                             <button
                               type="button"
                               onPointerDown={(e) => { e.stopPropagation(); }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (isPreviewing) stopClipPreview();
-                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, c.trim_start_seconds || 0);
+                                else if (audioUrl) startClipPreview(c.id, audioUrl, c.playback_rate || 1, trimIn, trimOut);
                               }}
                               title={isPreviewing ? "Stop preview" : "Preview this clip"}
                               className="h-5 w-5 rounded-sm bg-background/90 hover:bg-background text-foreground grid place-items-center shadow-sm border border-border/60"
