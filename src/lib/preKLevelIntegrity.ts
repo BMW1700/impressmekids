@@ -55,6 +55,8 @@ interface AudioClipRow {
   anchor_scene_key: string;
   trim_start_seconds: number | null;
   trim_end_seconds: number | null;
+  manual_crop_start_seconds: number | null;
+  manual_crop_end_seconds: number | null;
   duration_seconds: number | null;
 }
 
@@ -218,6 +220,12 @@ export async function auditPreKLevelIntegrity(
     const actualTrimStart = Number(c.trim_start_seconds ?? 0);
     if (Math.abs(actualTrimStart - expectedTrim.trimIn) > 0.05) {
       issues.push({ severity: "error", code: "audio-trim-drift", message: `${c.anchor_scene_key} audio trim (${actualTrimStart.toFixed(2)}s) does not match video trim (${expectedTrim.trimIn.toFixed(2)}s).` });
+    }
+    const baseEnd = Number(c.trim_end_seconds ?? c.duration_seconds ?? 0);
+    const manualStart = Number(c.manual_crop_start_seconds ?? 0);
+    const manualEnd = Number(c.manual_crop_end_seconds ?? 0);
+    if (manualStart < 0 || manualEnd < 0 || manualStart + manualEnd >= Math.max(0.1, baseEnd - actualTrimStart)) {
+      issues.push({ severity: "error", code: "bad-audio-crop", message: `${c.anchor_scene_key} has an invalid manual audio crop.` });
     }
   });
 

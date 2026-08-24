@@ -556,12 +556,14 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         end_anchor_offset_seconds: eSnap.offset,
         duration_seconds: rawDur,
         trim_end_seconds: splitAudioTime,
+        manual_crop_end_seconds: 0,
       };
     } else {
       leftPatch = {
         duration_mode: "fixed",
         duration_seconds: rawDur,
         trim_end_seconds: splitAudioTime,
+        manual_crop_end_seconds: 0,
       };
     }
     await updateClip(c, leftPatch);
@@ -587,6 +589,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       pause_on_word_card: c.pause_on_word_card,
       trim_start_seconds: splitAudioTime,
       trim_end_seconds: c.trim_end_seconds,
+      manual_crop_start_seconds: 0,
+      manual_crop_end_seconds: c.manual_crop_end_seconds || 0,
       playback_rate: c.playback_rate,
     };
     const { data, error } = await supabase.from("prek_level_audio_clips").insert(insertPayload as never).select("id").maybeSingle();
@@ -904,7 +908,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           masterVolume={mix.settings.audio_master_volume}
           playheadSec={effectivePlayhead}
           onTrim={(c, edge, atSec) => trimClip(c, edge, atSec)}
-          onUpdate={(c, patch) => updateClip(c, patch)}
+          onUpdate={async (c, patch) => { await updateClip(c, patch); }}
           onDelete={deleteClip}
         />
       )}
@@ -1083,11 +1087,11 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, playhea
         )}
         <div>
           <Label>Crop beginning (s)</Label>
-          <Input key={`crop-start-${clip.id}-${clip.manual_crop_start_seconds}`} type="number" step="0.1" min="0" value={clip.manual_crop_start_seconds || 0} onChange={(e) => onUpdate(clip, { manual_crop_start_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
+          <Input key={`crop-start-${clip.id}-${clip.manual_crop_start_seconds}`} type="number" step="0.1" min="0" defaultValue={clip.manual_crop_start_seconds || 0} onBlur={(e) => onUpdate(clip, { manual_crop_start_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
         </div>
         <div>
           <Label>Crop ending (s)</Label>
-          <Input key={`crop-end-${clip.id}-${clip.manual_crop_end_seconds}`} type="number" step="0.1" min="0" value={clip.manual_crop_end_seconds || 0} onChange={(e) => onUpdate(clip, { manual_crop_end_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
+          <Input key={`crop-end-${clip.id}-${clip.manual_crop_end_seconds}`} type="number" step="0.1" min="0" defaultValue={clip.manual_crop_end_seconds || 0} onBlur={(e) => onUpdate(clip, { manual_crop_end_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
         </div>
         {onTrim && playheadSec != null && (
           <div className="md:col-span-2 flex flex-wrap items-center gap-2">
