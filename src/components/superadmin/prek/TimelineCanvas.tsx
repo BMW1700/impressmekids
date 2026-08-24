@@ -424,19 +424,49 @@ export function TimelineCanvas({
                     "bg-primary/30 border-primary/70";
                   const audioUrl = signedUrls?.[c.storage_path] ?? null;
                   const isPreviewing = previewingClipId === c.id;
-                  const audioDurTL = Math.max(0.0001, res.endSec - res.startSec);
+                  // Map timeline seconds -> fraction of the SOURCE audio file so
+                  // the waveform shows only the audio that survives the crop
+                  // (instead of squeezing the whole file into the block).
+                  const rate = Math.max(0.05, c.playback_rate || 1);
+                  const trimIn = Math.max(0, c.trim_start_seconds || 0);
+                  const rawDur = Math.max(
+                    0.0001,
+                    c.duration_seconds ?? (trimIn + Math.max(0.1, res.endSec - res.startSec) * rate),
+                  );
+                  const trimOut = c.trim_end_seconds != null
+                    ? Math.min(rawDur, Math.max(trimIn + 0.05, c.trim_end_seconds))
+                    : rawDur;
+                  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+                  const srcFrac = (timelineSec: number) =>
+                    clamp01((trimIn + (timelineSec - res.startSec) * rate) / rawDur);
 
                   // Build visual segments: while dragging, a single block
                   // tracks the pointer; otherwise the clip is split around any
                   // zero-width card notches so the audio teleports across.
                   type Seg = { leftPx: number; widthPx: number; peakStart: number; peakEnd: number };
                   const segments: Seg[] = [];
+                  // Region being discarded by the current crop drag (ghost).
+                  let ghost: { leftPx: number; widthPx: number } | null = null;
                   if (dragging) {
                     const startPx = secToPx(res.startSec);
                     const endPx = secToPx(res.endSec);
-                    const lp = drag!.mode === "body" ? startPx + dx : startPx;
-                    const rp = drag!.mode === "end" ? endPx + dx : drag!.mode === "body" ? endPx + dx : endPx;
-                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart: 0, peakEnd: 1 });
+                    const lp = drag!.mode === "body" ? startPx + dx
+                      : drag!.mode === "trim-start" ? startPx + dx
+                      : startPx;
+                    const rp = drag!.mode === "end" || drag!.mode === "body" ? endPx + dx
+                      : drag!.mode === "trim-end" ? endPx + dx
+                      : endPx;
+                    let peakStart = trimIn / rawDur;
+                    let peakEnd = trimOut / rawDur;
+                    if (drag!.mode === "trim-start") {
+                      peakStart = srcFrac(pxToSec(startPx + dx));
+                      if (dx > 0) ghost = { leftPx: startPx, widthPx: Math.max(1, dx) };
+                    } else if (drag!.mode === "trim-end") {
+                      peakEnd = srcFrac(pxToSec(endPx + dx));
+                      if (dx < 0) ghost = { leftPx: endPx + dx, widthPx: Math.max(1, -dx) };
+                    }
+                    if (peakEnd < peakStart) peakEnd = peakStart;
+                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart, peakEnd });
                   } else {
                     for (const it of segs.items) {
                       if (it.isCard) continue;
@@ -447,12 +477,13 @@ export function TimelineCanvas({
                       const localEnd = segEnd - it.realStart;
                       const leftPx = it.left + localStart * it.pxPerSec;
                       const widthPx = Math.max(8, (localEnd - localStart) * it.pxPerSec);
-                      const peakStart = (segStart - res.startSec) / audioDurTL;
-                      const peakEnd = (segEnd - res.startSec) / audioDurTL;
-                      segments.push({ leftPx, widthPx, peakStart, peakEnd });
+                      segments.push({ leftPx, widthPx, peakStart: srcFrac(segStart), peakEnd: srcFrac(segEnd) });
                     }
                     if (segments.length === 0) {
-                      segments.push({ leftPx: secToPx(res.startSec), widthPx: 24, peakStart: 0, peakEnd: 1 });
+                      segments.push({
+                        leftPx: secToPx(res.startSec), widthPx: 24,
+                        peakStart: trimIn / rawDur, peakEnd: trimOut / rawDur,
+                      });
                     }
                   }
 
