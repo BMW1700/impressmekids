@@ -448,10 +448,13 @@ export function TimelineCanvas({
                   if (dragging) {
                     const startPx = secToPx(res.startSec);
                     const endPx = secToPx(res.endSec);
-                    const lp = drag!.mode === "body" ? startPx + dx
-                      : drag!.mode === "trim-start" ? startPx + dx
-                      : startPx;
+                    // Crops are slip edits: the scene anchor stays fixed. A
+                    // beginning crop therefore advances the source waveform
+                    // while shortening the block's end instead of moving the
+                    // line later on the timeline.
+                    const lp = drag!.mode === "body" ? startPx + dx : startPx;
                     const rp = drag!.mode === "end" || drag!.mode === "body" ? endPx + dx
+                      : drag!.mode === "trim-start" ? endPx - dx
                       : drag!.mode === "trim-end" ? endPx + dx
                       : endPx;
                     let peakStart = trimIn / rawDur;
