@@ -448,26 +448,37 @@ export function TimelineCanvas({
                   if (dragging) {
                     const startPx = secToPx(res.startSec);
                     const endPx = secToPx(res.endSec);
-                    // Crops are slip edits: the scene anchor stays fixed. A
-                    // beginning crop therefore advances the source waveform
-                    // while shortening the block's end instead of moving the
-                    // line later on the timeline.
+                    const rawStartSec = res.startSec - Math.max(0, c.manual_crop_start_seconds || 0) / rate;
+                    const rawEndSec = res.endSec + Math.max(0, c.manual_crop_end_seconds || 0) / rate;
+                    const proposedStartSec = Math.max(
+                      rawStartSec,
+                      Math.min(res.endSec - 0.1 / rate, pxToSec(startPx + dx)),
+                    );
+                    const proposedEndSec = Math.max(
+                      res.startSec + 0.1 / rate,
+                      Math.min(rawEndSec, pxToSec(endPx + dx)),
+                    );
+                    const proposedStartPx = secToPx(proposedStartSec);
+                    const proposedEndPx = secToPx(proposedEndSec);
+                    // Crops are non-ripple edge trims. The source's baseline
+                    // placement stays fixed: a start crop moves only the left
+                    // edge and an end crop moves only the right edge.
                     const lp = drag!.mode === "body" ? startPx + dx : startPx;
                     const rp = drag!.mode === "end" || drag!.mode === "body" ? endPx + dx
-                      : drag!.mode === "trim-start" ? endPx - dx
-                      : drag!.mode === "trim-end" ? endPx + dx
+                      : drag!.mode === "trim-end" ? proposedEndPx
                       : endPx;
                     let peakStart = trimIn / rawDur;
                     let peakEnd = trimOut / rawDur;
                     if (drag!.mode === "trim-start") {
-                      peakStart = srcFrac(pxToSec(startPx + dx));
-                      if (dx > 0) ghost = { leftPx: startPx, widthPx: Math.max(1, dx) };
+                      peakStart = srcFrac(proposedStartSec);
+                      if (proposedStartPx > startPx) ghost = { leftPx: startPx, widthPx: proposedStartPx - startPx };
                     } else if (drag!.mode === "trim-end") {
-                      peakEnd = srcFrac(pxToSec(endPx + dx));
-                      if (dx < 0) ghost = { leftPx: endPx + dx, widthPx: Math.max(1, -dx) };
+                      peakEnd = srcFrac(proposedEndSec);
+                      if (proposedEndPx < endPx) ghost = { leftPx: proposedEndPx, widthPx: endPx - proposedEndPx };
                     }
                     if (peakEnd < peakStart) peakEnd = peakStart;
-                    segments.push({ leftPx: lp, widthPx: Math.max(24, rp - lp), peakStart, peakEnd });
+                    const croppedLeft = drag!.mode === "trim-start" ? proposedStartPx : lp;
+                    segments.push({ leftPx: croppedLeft, widthPx: Math.max(8, rp - croppedLeft), peakStart, peakEnd });
                   } else {
                     for (const it of segs.items) {
                       if (it.isCard) continue;
@@ -492,8 +503,12 @@ export function TimelineCanvas({
                     const isFirst = segIdx === 0;
                     const isLast = segIdx === segments.length - 1;
                     const canCrop = Boolean(onTrimClip && c.duration_mode !== "fill-level" && seg.widthPx >= 28);
-                    const waveLeft = isFirst ? (canCrop ? 42 : 28) : 8;
-                    const waveRight = isLast ? (canCrop ? 16 : 8) : 4;
+                    // Draw the waveform across the complete time-scaled block.
+                    // Reserving horizontal space for buttons changes its scale
+                    // whenever a crop changes the block width, which visually
+                    // looks like the audio is being compressed.
+                    const waveLeft = 0;
+                    const waveRight = 0;
                     return (
                       <Fragment key={`${c.id}-${segIdx}`}>
                       {dragging && ghost && (

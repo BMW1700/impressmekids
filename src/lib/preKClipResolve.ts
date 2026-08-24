@@ -47,7 +47,7 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
 
   const anchor = find(spans, clip.anchor_scene_key) ?? spans[0];
   const startBase = clip.anchor_edge === "start" ? anchor.start : anchor.end;
-  const startSec = Math.max(0, Math.min(totalDur, startBase + clip.anchor_offset_seconds));
+  const baselineStartSec = Math.max(0, Math.min(totalDur, startBase + clip.anchor_offset_seconds));
 
   if (clip.duration_mode === "fill-scene") {
     return { startSec: anchor.start, endSec: anchor.end, anchorScene: anchor.scene, endAnchorScene: anchor.scene };
@@ -56,8 +56,8 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
   if (clip.duration_mode === "span-videos") {
     const endAnchor = clip.end_anchor_scene_key ? find(spans, clip.end_anchor_scene_key) ?? anchor : anchor;
     const endBase = (clip.end_anchor_edge ?? "end") === "start" ? endAnchor.start : endAnchor.end;
-    const endSec = Math.max(startSec + 0.1, Math.min(totalDur, endBase + (clip.end_anchor_offset_seconds ?? 0)));
-    return { startSec, endSec, anchorScene: anchor.scene, endAnchorScene: endAnchor.scene };
+    const endSec = Math.max(baselineStartSec + 0.1, Math.min(totalDur, endBase + (clip.end_anchor_offset_seconds ?? 0)));
+    return { startSec: baselineStartSec, endSec, anchorScene: anchor.scene, endAnchorScene: endAnchor.scene };
   }
 
   // fixed — endSec extends past any card boundary naturally because cards are
@@ -65,13 +65,19 @@ export function resolveClip(clip: PreKAudioClip, graph: SceneGraph): ResolvedCli
   // multiple segments split around the notch so the waveform appears to
   // teleport across.
   const rate = Math.max(0.05, clip.playback_rate || 1);
-  const effectiveAudioSeconds = audioBoundsForClip(clip).length;
-  const isMusicStem = clip.source_kind === "music" || clip.track_index === 89;
-  if (isMusicStem && anchor.scene.timelineDurationSeconds > 0 && effectiveAudioSeconds <= 1.05) {
-    return { startSec, endSec: Math.min(totalDur, startSec + anchor.scene.timelineDurationSeconds), anchorScene: anchor.scene };
-  }
-  const effective = effectiveAudioSeconds / rate;
-  return { startSec, endSec: Math.min(totalDur, startSec + effective), anchorScene: anchor.scene };
+  const bounds = audioBoundsForClip(clip);
+  const manualStartTimelineSeconds = Math.max(0, Number(clip.manual_crop_start_seconds || 0)) / rate;
+  // A fixed clip is a source file placed on a timeline. Cropping its beginning
+  // moves only the visible left edge; the surviving source audio keeps its
+  // original absolute timeline position. The persisted anchor remains the
+  // uncropped baseline so dragging the handle back can restore the source.
+  const startSec = Math.min(totalDur, baselineStartSec + manualStartTimelineSeconds);
+  const baselineAudioSeconds = Math.max(0.1, bounds.baseEnd - bounds.baseStart);
+  const endSec = Math.min(
+    totalDur,
+    baselineStartSec + (baselineAudioSeconds - Math.max(0, Number(clip.manual_crop_end_seconds || 0))) / rate,
+  );
+  return { startSec, endSec: Math.max(startSec + 0.1 / rate, endSec), anchorScene: anchor.scene };
 }
 
 export interface SceneHit { scene: Scene; sceneStart: number; sceneEnd: number }
