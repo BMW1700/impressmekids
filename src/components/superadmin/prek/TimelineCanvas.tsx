@@ -503,7 +503,6 @@ export function TimelineCanvas({
                         />
                       )}
                       <div
-                        key={`${c.id}-${segIdx}`}
                         onPointerDown={(e) => beginDrag(e, c, "body")}
                         className={`absolute top-5 bottom-2 rounded-md border-2 ${color} ${selected ? "ring-2 ring-primary" : ""} text-[10px] font-medium overflow-hidden cursor-grab active:cursor-grabbing shadow-sm`}
                         style={{
