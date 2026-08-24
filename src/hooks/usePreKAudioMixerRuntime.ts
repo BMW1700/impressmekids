@@ -21,6 +21,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
+import { audioBoundsForClip } from "@/lib/preKAudioBounds";
 
 const FADE_RAMP_SEC = 0.03;
 const CARD_FADE_SEC = 0.15;
@@ -65,13 +66,6 @@ interface ClipState {
   durationMode: PreKAudioClip["duration_mode"];
   sourceKind: string | null;
   generation: number;
-}
-
-function audioBoundsForClip(clip: PreKAudioClip) {
-  const start = Math.max(0, clip.trim_start_seconds || 0);
-  const rawEnd = clip.trim_end_seconds ?? clip.duration_seconds ?? Number.POSITIVE_INFINITY;
-  const end = Math.max(start + 0.1, rawEnd);
-  return { start, end, length: Math.max(0.1, end - start), finite: Number.isFinite(end) };
 }
 
 function isMusicStem(clip: PreKAudioClip): boolean {

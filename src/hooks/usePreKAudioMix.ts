@@ -43,6 +43,8 @@ export interface PreKAudioClip {
 
   trim_start_seconds: number;
   trim_end_seconds: number | null;
+  manual_crop_start_seconds: number;
+  manual_crop_end_seconds: number;
 
   playback_rate: number;
   source_kind?: string | null;
@@ -87,8 +89,10 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     mute_source_video_audio: false,
   });
   const [loading, setLoading] = useState(true);
+  const reloadSequenceRef = useRef(0);
 
   const reload = useCallback(async () => {
+    const sequence = ++reloadSequenceRef.current;
     if (!levelId) {
       signedUrlsRef.current = {};
       setTracks([]); setClips([]); setSignedUrls({}); setLoading(false);
@@ -105,6 +109,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     ]);
     const tracksRows = (ts ?? []) as unknown as PreKAudioTrack[];
     const clipsRows = (cs ?? []) as unknown as PreKAudioClip[];
+    if (sequence !== reloadSequenceRef.current) return;
     setTracks(tracksRows);
     setClips(clipsRows);
     if (lv) setSettings({

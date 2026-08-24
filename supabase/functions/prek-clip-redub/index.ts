@@ -362,6 +362,8 @@ async function ensureRedubClip(
     pause_on_word_card: true,
     trim_start_seconds: trimStart,
     trim_end_seconds: redubTrimEnd,
+    manual_crop_start_seconds: 0,
+    manual_crop_end_seconds: 0,
     playback_rate: 1.0,
     source_kind: "redub" as const,
   };

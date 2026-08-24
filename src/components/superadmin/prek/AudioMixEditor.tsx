@@ -32,6 +32,7 @@ import { usePreKAudioTimelineTransport } from "@/hooks/usePreKAudioTimelineTrans
 import { uploadPreKAudio, probeAudioDuration } from "@/lib/preKAudioUpload";
 import { buildSceneGraph, isVideoScene, type Scene } from "@/lib/preKSceneGraph";
 import { resolveClip, snapToAnchor, snapToVideoAnchor } from "@/lib/preKClipResolve";
+import { audioBoundsForClip } from "@/lib/preKAudioBounds";
 import { TimelineCanvas } from "./TimelineCanvas";
 import { TimelinePreviewPlayer } from "./TimelinePreviewPlayer";
 import { usePreKLevelVideoUrls } from "@/hooks/usePreKLevelVideoUrls";
@@ -349,8 +350,21 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       }
       pushUndo({ kind: "clip", id: c.id, before });
     }
-    const { error } = await supabase.from("prek_level_audio_clips").update(patch).eq("id", c.id);
-    if (error) toast.error(error.message); else mix.reload();
+    const { data, error } = await supabase
+      .from("prek_level_audio_clips")
+      .update(patch)
+      .eq("id", c.id)
+      .select("*")
+      .maybeSingle();
+    if (error || !data) {
+      toast.error(error?.message ?? "Crop was not saved. No clip row was updated.");
+      return false;
+    }
+    await mix.reload();
+    if ("manual_crop_start_seconds" in patch || "manual_crop_end_seconds" in patch) {
+      toast.success("Crop saved");
+    }
+    return true;
   };
 
   // ── Undo / Redo ────────────────────────────────────────────────────────────
@@ -471,48 +485,37 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   const rawAudioDuration = (c: PreKAudioClip, resolvedSeconds?: number) => {
     const rate = Math.max(0.05, c.playback_rate || 1);
-    const trimStart = Math.max(0, c.trim_start_seconds || 0);
-    const trimEnd = c.trim_end_seconds != null ? Math.max(trimStart + 0.1, c.trim_end_seconds) : null;
-    return Math.max(trimEnd ?? 0, c.duration_seconds ?? (trimStart + Math.max(0.1, resolvedSeconds ?? 1) * rate));
+    return Math.max(c.trim_end_seconds ?? 0, c.duration_seconds ?? (Math.max(0, c.trim_start_seconds || 0) + Math.max(0.1, resolvedSeconds ?? 1) * rate));
   };
 
   const audioTimeAtTimelineSecond = (c: PreKAudioClip, startSec: number, atSec: number) => {
     const rate = Math.max(0.05, c.playback_rate || 1);
-    return Math.max(0, (c.trim_start_seconds || 0) + Math.max(0, atSec - startSec) * rate);
+    return Math.max(0, audioBoundsForClip(c).start + Math.max(0, atSec - startSec) * rate);
   };
 
   const trimClip = async (c: PreKAudioClip, edge: "start" | "end", atSec: number) => {
     const res = resolveClip(c, sceneGraph);
     const rate = Math.max(0.05, c.playback_rate || 1);
-    const rawDur = rawAudioDuration(c, res.endSec - res.startSec);
-    const currentTrimStart = Math.max(0, c.trim_start_seconds || 0);
-    const currentTrimEnd = c.trim_end_seconds != null ? Math.min(rawDur, c.trim_end_seconds) : rawDur;
+    const bounds = audioBoundsForClip(c);
 
     if (edge === "start") {
-      // atSec = new visible start on the timeline. May be < res.startSec to
-      // GROW the clip back toward the raw media start (i.e. reveal audio we
-      // previously cropped away). Positive delta shrinks; negative delta grows.
       const deltaTimelineSec = atSec - res.startSec;
-      const newTrimStart = Math.max(0, Math.min(currentTrimEnd - 0.1, currentTrimStart + deltaTimelineSec * rate));
-      const snap = snapToAnchor(sceneGraph, atSec);
+      const maxManualStart = Math.max(0, bounds.baseEnd - bounds.baseStart - (c.manual_crop_end_seconds || 0) - 0.1);
+      const nextManualStart = Math.max(0, Math.min(maxManualStart, (c.manual_crop_start_seconds || 0) + deltaTimelineSec * rate));
       await updateClip(c, {
-        anchor_scene_key: snap.scene_key,
-        anchor_edge: snap.edge,
-        anchor_offset_seconds: snap.offset,
         duration_mode: c.duration_mode === "fill-scene" ? "fixed" : c.duration_mode,
-        duration_seconds: rawDur,
-        trim_start_seconds: Math.round(newTrimStart * 100) / 100,
+        manual_crop_start_seconds: Math.round(nextManualStart * 100) / 100,
       });
       return;
     }
 
     // edge === "end". atSec = new visible end. May be > res.endSec to grow.
     const deltaTimelineSec = atSec - res.endSec;
-    const newTrimEnd = Math.max(currentTrimStart + 0.1, Math.min(rawDur, currentTrimEnd + deltaTimelineSec * rate));
+    const maxManualEnd = Math.max(0, bounds.baseEnd - bounds.baseStart - (c.manual_crop_start_seconds || 0) - 0.1);
+    const nextManualEnd = Math.max(0, Math.min(maxManualEnd, (c.manual_crop_end_seconds || 0) - deltaTimelineSec * rate));
     const patch: Partial<PreKAudioClip> = {
       duration_mode: c.duration_mode === "fill-scene" ? "fixed" : c.duration_mode,
-      duration_seconds: rawDur,
-      trim_end_seconds: Math.round(newTrimEnd * 100) / 100,
+      manual_crop_end_seconds: Math.round(nextManualEnd * 100) / 100,
     };
     if (c.duration_mode === "span-videos") {
       const eSnap = snapToVideoAnchor(sceneGraph, atSec);
@@ -553,12 +556,14 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         end_anchor_offset_seconds: eSnap.offset,
         duration_seconds: rawDur,
         trim_end_seconds: splitAudioTime,
+        manual_crop_end_seconds: 0,
       };
     } else {
       leftPatch = {
         duration_mode: "fixed",
         duration_seconds: rawDur,
         trim_end_seconds: splitAudioTime,
+        manual_crop_end_seconds: 0,
       };
     }
     await updateClip(c, leftPatch);
@@ -584,6 +589,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       pause_on_word_card: c.pause_on_word_card,
       trim_start_seconds: splitAudioTime,
       trim_end_seconds: c.trim_end_seconds,
+      manual_crop_start_seconds: 0,
+      manual_crop_end_seconds: c.manual_crop_end_seconds || 0,
       playback_rate: c.playback_rate,
     };
     const { data, error } = await supabase.from("prek_level_audio_clips").insert(insertPayload as never).select("id").maybeSingle();
@@ -901,7 +908,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           masterVolume={mix.settings.audio_master_volume}
           playheadSec={effectivePlayhead}
           onTrim={(c, edge, atSec) => trimClip(c, edge, atSec)}
-          onUpdate={(c, patch) => updateClip(c, patch)}
+          onUpdate={async (c, patch) => { await updateClip(c, patch); }}
           onDelete={deleteClip}
         />
       )}
@@ -1079,12 +1086,12 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, playhea
           </div>
         )}
         <div>
-          <Label>Trim start (s)</Label>
-          <Input type="number" step="0.1" defaultValue={clip.trim_start_seconds} onBlur={(e) => onUpdate(clip, { trim_start_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
+          <Label>Crop beginning (s)</Label>
+          <Input key={`crop-start-${clip.id}-${clip.manual_crop_start_seconds}`} type="number" step="0.1" min="0" defaultValue={clip.manual_crop_start_seconds || 0} onBlur={(e) => onUpdate(clip, { manual_crop_start_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
         </div>
         <div>
-          <Label>Trim end (s)</Label>
-          <Input type="number" step="0.1" defaultValue={clip.trim_end_seconds ?? ""} onBlur={(e) => onUpdate(clip, { trim_end_seconds: e.target.value === "" ? null : Math.max(0, Number(e.target.value) || 0) })}/>
+          <Label>Crop ending (s)</Label>
+          <Input key={`crop-end-${clip.id}-${clip.manual_crop_end_seconds}`} type="number" step="0.1" min="0" defaultValue={clip.manual_crop_end_seconds || 0} onBlur={(e) => onUpdate(clip, { manual_crop_end_seconds: Math.max(0, Number(e.target.value) || 0) })}/>
         </div>
         {onTrim && playheadSec != null && (
           <div className="md:col-span-2 flex flex-wrap items-center gap-2">
@@ -1097,7 +1104,7 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, playhea
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onUpdate(clip, { trim_start_seconds: 0, trim_end_seconds: null })}
+              onClick={() => onUpdate(clip, { manual_crop_start_seconds: 0, manual_crop_end_seconds: 0 })}
             >
               Undo crop
             </Button>
