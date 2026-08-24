@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PreKAudioClip, PreKAudioTrack } from "@/hooks/usePreKAudioMix";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
+import { audioBoundsForClip } from "@/lib/preKAudioBounds";
 
 interface UseArgs {
   graph: SceneGraph;
@@ -40,14 +41,7 @@ const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 function audioTimeForClip(clip: PreKAudioClip, clipStartSec: number, playheadSec: number) {
   const rate = Math.max(0.05, clip.playback_rate || 1);
   const timelineOffset = Math.max(0, playheadSec - clipStartSec);
-  return Math.max(0, (clip.trim_start_seconds || 0) + timelineOffset * rate);
-}
-
-function audioBoundsForClip(clip: PreKAudioClip) {
-  const start = Math.max(0, clip.trim_start_seconds || 0);
-  const rawEnd = clip.trim_end_seconds ?? clip.duration_seconds ?? Number.POSITIVE_INFINITY;
-  const end = Math.max(start + 0.1, rawEnd);
-  return { start, end, length: Math.max(0.1, end - start), finite: Number.isFinite(end) };
+  return Math.max(0, audioBoundsForClip(clip).start + timelineOffset * rate);
 }
 
 export function usePreKAudioTimelineTransport({
