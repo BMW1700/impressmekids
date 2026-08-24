@@ -591,18 +591,23 @@ export function TimelineCanvas({
                         {canCrop && isFirst && (
                           <div
                             onPointerDown={(e) => beginDrag(e, c, "trim-start")}
-                            className="absolute left-0 top-0 bottom-0 w-2 bg-background/95 border-r border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
-                            title="Crop start"
-                          />
+                            className="absolute left-0 top-0 bottom-0 w-3.5 bg-background/95 border-r-2 border-primary cursor-ew-resize z-[6] touch-none hover:bg-primary/25 flex items-center justify-center"
+                            title="Crop start — drag to discard audio before this point"
+                          >
+                            <span className="block h-4 w-0.5 rounded bg-primary/80" />
+                          </div>
                         )}
                         {canCrop && isLast && (
                           <div
                             onPointerDown={(e) => beginDrag(e, c, "trim-end")}
-                            className="absolute right-0 top-0 bottom-0 w-2 bg-background/95 border-l border-primary/80 cursor-ew-resize z-[4] hover:bg-primary/25"
-                            title="Crop end"
-                          />
+                            className="absolute right-0 top-0 bottom-0 w-3.5 bg-background/95 border-l-2 border-primary cursor-ew-resize z-[6] touch-none hover:bg-primary/25 flex items-center justify-center"
+                            title="Crop end — drag to discard audio after this point"
+                          >
+                            <span className="block h-4 w-0.5 rounded bg-primary/80" />
+                          </div>
                         )}
                       </div>
+                      </Fragment>
                     );
                   });
                 })}
