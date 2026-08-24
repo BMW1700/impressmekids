@@ -490,10 +490,18 @@ export function TimelineCanvas({
                   return segments.map((seg, segIdx) => {
                     const isFirst = segIdx === 0;
                     const isLast = segIdx === segments.length - 1;
-                    const waveLeft = isFirst ? 28 : 8;
-                    const waveRight = isLast ? 8 : 4;
                     const canCrop = Boolean(onTrimClip && c.duration_mode !== "fill-level" && seg.widthPx >= 28);
+                    const waveLeft = isFirst ? (canCrop ? 42 : 28) : 8;
+                    const waveRight = isLast ? (canCrop ? 16 : 8) : 4;
                     return (
+                      <Fragment key={`${c.id}-${segIdx}`}>
+                      {dragging && ghost && (
+                        <div
+                          className="absolute top-5 bottom-2 rounded-md border-2 border-dashed border-destructive/70 bg-destructive/15 pointer-events-none"
+                          style={{ left: ghost.leftPx, width: ghost.widthPx, zIndex: 49 }}
+                          title="Discarded by this crop"
+                        />
+                      )}
                       <div
                         key={`${c.id}-${segIdx}`}
                         onPointerDown={(e) => beginDrag(e, c, "body")}
