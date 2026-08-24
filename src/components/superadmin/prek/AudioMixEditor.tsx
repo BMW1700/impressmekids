@@ -1086,6 +1086,26 @@ const ClipInspector = ({ clip, scenes, videoScenes, track, masterVolume, playhea
           <Label>Trim end (s)</Label>
           <Input type="number" step="0.1" defaultValue={clip.trim_end_seconds ?? ""} onBlur={(e) => onUpdate(clip, { trim_end_seconds: e.target.value === "" ? null : Math.max(0, Number(e.target.value) || 0) })}/>
         </div>
+        {onTrim && playheadSec != null && (
+          <div className="md:col-span-2 flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => onTrim(clip, "start", playheadSec)}>
+              Crop start to playhead
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onTrim(clip, "end", playheadSec)}>
+              Crop end to playhead
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onUpdate(clip, { trim_start_seconds: 0, trim_end_seconds: null })}
+            >
+              Undo crop
+            </Button>
+            <span className="text-[10px] text-muted-foreground">
+              Playhead at {playheadSec.toFixed(2)}s — cropped audio is discarded, not compressed.
+            </span>
+          </div>
+        )}
         <div className="md:col-span-2">
           <div className="flex items-center justify-between">
             <Label>Playback speed ({(clip.playback_rate || 1).toFixed(2)}×)</Label>
