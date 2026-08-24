@@ -82,12 +82,26 @@ export function TimelineCanvas({
     if (a) { try { a.pause(); } catch { /* noop */ } }
     setPreviewingClipId(null);
   }, []);
-  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number) => {
+  const startClipPreview = useCallback((clipId: string, url: string, rate: number, trim: number, trimEnd?: number | null) => {
     onBeforeIsolatedPreview?.();
     stopClipPreview();
     const a = new Audio(url);
     a.playbackRate = rate || 1;
-    try { a.currentTime = trim || 0; } catch { /* noop */ }
+    const inSec = Math.max(0, trim || 0);
+    const outSec = trimEnd != null && trimEnd > inSec ? trimEnd : null;
+    const seek = () => { try { a.currentTime = inSec; } catch { /* noop */ } };
+    seek();
+    a.addEventListener("loadedmetadata", seek, { once: true });
+    if (outSec != null) {
+      // Audition exactly what the level will play: hard-stop at the crop-out.
+      a.ontimeupdate = () => {
+        if (a.currentTime >= outSec - 0.02) {
+          try { a.pause(); } catch { /* noop */ }
+          a.ontimeupdate = null;
+          setPreviewingClipId((id) => (id === clipId ? null : id));
+        }
+      };
+    }
     previewAudioRef.current = a;
     a.onended = () => setPreviewingClipId((id) => id === clipId ? null : id);
     a.play().catch(() => setPreviewingClipId(null));
