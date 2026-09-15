@@ -121,7 +121,7 @@ export function TimelinePreviewPlayer({
             )}
             <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-md bg-amber-500/90 text-white px-2 py-1 text-[11px] font-medium shadow-lg">
               <Zap className="h-3 w-3" />
-              Word card{cardWord ? `: ${cardWord.toUpperCase()}` : ""}
+              Word card{cardWord ? `: ${cardWord.toLowerCase()}` : ""}
             </div>
           </>
         )}

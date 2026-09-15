@@ -241,7 +241,7 @@ const PreKLevelBuilder = () => {
             .from("prek_level_words")
             .update({
               sort_order: w.sort_order,
-              word: (w.word ?? "").trim(),
+              word: (w.word ?? "").trim().toLowerCase(),
               ask_line: w.ask_line ?? "",
               success_line: w.success_line ?? "",
               first_trim_in_seconds: w.first_trim_in_seconds,
@@ -442,7 +442,7 @@ const PreKLevelBuilder = () => {
     const sort_order = (words.at(-1)?.sort_order ?? 0) + 1;
     const { error } = await supabase
       .from("prek_level_words")
-      .insert({ level_id: level.id, sort_order, word: "NEW", ask_line: "", success_line: "" });
+      .insert({ level_id: level.id, sort_order, word: "new", ask_line: "", success_line: "" });
     if (error) toast.error(error.message);
     else {
       invalidatePreKLevelCacheByDbId(level.id);
@@ -676,9 +676,10 @@ const PreKLevelBuilder = () => {
                   <Label>Word (spoken)</Label>
                   <Input
                     value={w.word}
-                    onChange={(e) => setWords((cur) => cur.map((x) => (x.id === w.id ? { ...x, word: e.target.value } : x)))}
-                    onBlur={(e) => updateWord(w.id, { word: e.target.value.trim() })}
-                    placeholder="JUMP"
+                    onChange={(e) => setWords((cur) => cur.map((x) => (x.id === w.id ? { ...x, word: e.target.value.toLowerCase() } : x)))}
+                    onBlur={(e) => updateWord(w.id, { word: e.target.value.trim().toLowerCase() })}
+                    placeholder="jump"
+                    className="lowercase"
                   />
                 </div>
                 <div>
