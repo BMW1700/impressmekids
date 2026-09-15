@@ -192,7 +192,7 @@ async function buildLevelEntry(
     });
     steps.push({
       kind: "word",
-      word: w.word,
+      word: (w.word || "").toLowerCase(),
       askLine: w.ask_line,
       successLine: w.success_line || undefined,
       holdPoster: poster?.src ?? undefined,

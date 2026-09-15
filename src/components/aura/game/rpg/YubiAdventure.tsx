@@ -424,8 +424,8 @@ export const YubiAdventure = ({ world, level, onBack, onComplete }: Props) => {
                   transition={{ type: "spring", stiffness: 240, damping: 18 }}
                   className="relative mx-auto w-full max-w-md rounded-2xl border-4 border-amber-300 bg-white px-6 py-3 text-center shadow-2xl"
                 >
-                  <div className="text-5xl sm:text-6xl font-black uppercase tracking-wide text-slate-900">
-                    {current.word}
+                  <div className="text-5xl sm:text-6xl font-black lowercase tracking-wide text-slate-900">
+                    {current.word.toLowerCase()}
                   </div>
                   <div className="mt-1 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-600">
                     <Mic className="h-3 w-3" /> Your turn!
