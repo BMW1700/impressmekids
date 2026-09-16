@@ -29,7 +29,19 @@ const SuperAdminAccess = () => {
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke("manage-super-admin", { body });
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Surface the real reason instead of "non-2xx status code".
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const payload = await ctx.json();
+          if (payload?.error) throw new Error(String(payload.error));
+        } catch (parseErr) {
+          if (parseErr instanceof Error && parseErr.message) throw parseErr;
+        }
+      }
+      throw new Error(error.message);
+    }
     if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
     return data as Record<string, unknown>;
   };
