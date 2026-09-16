@@ -112,3 +112,5 @@ project_id = "sjigkjwkgovculkovcjy"
     verify_jwt = false
   [functions.player-auth]
     verify_jwt = false
+  [functions.manage-super-admin]
+    verify_jwt = false
