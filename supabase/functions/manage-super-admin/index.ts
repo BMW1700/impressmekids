@@ -1,5 +1,9 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+// Super admin access management: list / search / grant / revoke.
+//
+// The caller's JWT is verified with the service-role client (never with an
+// RLS-scoped anon client) so role checks can't be blocked by row policies.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const json = (body: unknown, status = 200) =>
@@ -8,40 +12,56 @@ const json = (body: unknown, status = 200) =>
     status,
   });
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    const url = Deno.env.get("SUPABASE_URL") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!url || !serviceKey) {
+      console.error("manage-super-admin: missing SUPABASE_URL or service role key");
+      return json({ error: "Server is not configured" }, 500);
+    }
 
-    const callerClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } },
-    );
+    const admin = createClient(url, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
-    const { data: { user }, error: authError } = await callerClient.auth.getUser();
-    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+    const token = authHeader?.replace(/^Bearer\s+/i, "").trim();
+    if (!token) {
+      console.error("manage-super-admin: no authorization header");
+      return json({ error: "You are signed out. Please sign in again." }, 401);
+    }
 
-    const { data: callerRole } = await callerClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
+    const { data: userData, error: authError } = await admin.auth.getUser(token);
+    const user = userData?.user;
+    if (authError || !user) {
+      console.error("manage-super-admin: token rejected", authError?.message);
+      return json({ error: "Your session expired. Please sign in again." }, 401);
+    }
 
-    if (!callerRole) return json({ error: "Super admin access required" }, 403);
+    // Role check with service role (bypasses RLS entirely).
+    const [{ data: roleRows }, { data: callerProfile }] = await Promise.all([
+      admin.from("user_roles").select("role").eq("user_id", user.id),
+      admin.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    ]);
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { autoRefreshToken: false, persistSession: false } },
-    );
+    const isSuperAdmin =
+      (roleRows ?? []).some((r: { role: string }) => r.role === "super_admin") ||
+      callerProfile?.role === "super_admin";
 
-    const { action, query, targetUserId } = await req.json();
+    if (!isSuperAdmin) {
+      console.error("manage-super-admin: caller is not a super admin", user.id);
+      return json({ error: "Super admin access required" }, 403);
+    }
+
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const action = String((body as { action?: string }).action ?? "");
+    const query = (body as { query?: string }).query;
+    const targetUserId = (body as { targetUserId?: string }).targetUserId;
 
     if (action === "list") {
       const { data: roles, error } = await admin
@@ -50,7 +70,7 @@ serve(async (req) => {
         .eq("role", "super_admin");
       if (error) throw error;
 
-      const ids = (roles ?? []).map((r) => r.user_id);
+      const ids = [...new Set((roles ?? []).map((r: { user_id: string }) => r.user_id))];
       if (ids.length === 0) return json({ admins: [] });
 
       const { data: profiles } = await admin
@@ -60,14 +80,14 @@ serve(async (req) => {
 
       return json({
         admins: ids.map((id) => {
-          const p = profiles?.find((x) => x.id === id);
+          const p = profiles?.find((x: { id: string }) => x.id === id);
           return { id, email: p?.email ?? "(unknown)", full_name: p?.full_name ?? "" };
         }),
       });
     }
 
     if (action === "search") {
-      const term = String(query ?? "").trim();
+      const term = String(query ?? "").trim().replace(/[%,()]/g, "");
       if (term.length < 2) return json({ results: [] });
 
       const { data, error } = await admin
@@ -77,51 +97,50 @@ serve(async (req) => {
         .limit(15);
       if (error) throw error;
 
-      const ids = (data ?? []).map((p) => p.id);
-      const { data: roles } = await admin
-        .from("user_roles")
-        .select("user_id, role")
-        .in("user_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
+      const ids = (data ?? []).map((p: { id: string }) => p.id);
+      const { data: roles } = ids.length
+        ? await admin.from("user_roles").select("user_id, role").in("user_id", ids)
+        : { data: [] as { user_id: string; role: string }[] };
 
       return json({
-        results: (data ?? []).map((p) => ({
+        results: (data ?? []).map((p: { id: string; role?: string | null }) => ({
           ...p,
           current_role: roles?.find((r) => r.user_id === p.id)?.role ?? p.role ?? null,
-          is_super_admin: roles?.some((r) => r.user_id === p.id && r.role === "super_admin") ?? false,
+          is_super_admin:
+            roles?.some((r) => r.user_id === p.id && r.role === "super_admin") ?? false,
         })),
       });
     }
 
     if (action === "grant") {
-      if (!targetUserId) return json({ error: "targetUserId is required" }, 400);
+      if (!targetUserId) return json({ error: "Pick a person first" }, 400);
 
-      const { data: existing } = await admin
+      const { data: existingRows } = await admin
         .from("user_roles")
         .select("role")
-        .eq("user_id", targetUserId)
-        .maybeSingle();
+        .eq("user_id", targetUserId);
+      const existingRole = existingRows?.[0]?.role ?? null;
 
-      if (existing?.role === "super_admin") return json({ success: true, alreadyGranted: true });
+      if (existingRole === "super_admin") return json({ success: true, alreadyGranted: true });
 
-      await admin.from("super_admin_grants").upsert(
-        {
-          user_id: targetUserId,
-          previous_role: existing?.role ?? null,
-          granted_by: user.id,
-        },
+      const { error: grantLogError } = await admin.from("super_admin_grants").upsert(
+        { user_id: targetUserId, previous_role: existingRole, granted_by: user.id },
         { onConflict: "user_id" },
       );
+      if (grantLogError) console.error("grant log failed (non-fatal):", grantLogError.message);
 
       const { error } = await admin
         .from("user_roles")
         .upsert({ user_id: targetUserId, role: "super_admin" }, { onConflict: "user_id" });
       if (error) throw error;
 
+      await admin.from("profiles").update({ role: "super_admin" }).eq("id", targetUserId);
+
       return json({ success: true });
     }
 
     if (action === "revoke") {
-      if (!targetUserId) return json({ error: "targetUserId is required" }, 400);
+      if (!targetUserId) return json({ error: "Pick a person first" }, 400);
       if (targetUserId === user.id) {
         return json({ error: "You cannot remove your own super admin access" }, 400);
       }
@@ -139,6 +158,7 @@ serve(async (req) => {
         .upsert({ user_id: targetUserId, role: previous }, { onConflict: "user_id" });
       if (error) throw error;
 
+      await admin.from("profiles").update({ role: previous }).eq("id", targetUserId);
       await admin.from("super_admin_grants").delete().eq("user_id", targetUserId);
 
       return json({ success: true, restoredRole: previous });
