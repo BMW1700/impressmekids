@@ -125,6 +125,7 @@ const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
 const PreKLevelBuilder = lazy(() => import("./pages/superadmin/PreKLevelBuilder"));
 const BennyVoicePrewarm = lazy(() => import("./pages/superadmin/BennyVoicePrewarm"));
 const RPGSeasonsAdmin = lazy(() => import("./pages/superadmin/RPGSeasonsAdmin"));
+const SuperAdminAccess = lazy(() => import("./pages/superadmin/SuperAdminAccess"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -323,6 +324,7 @@ const App = () => (
                     <Route path="/super-admin/r2-migration" element={<RequireSuperAdmin><R2Migration /></RequireSuperAdmin>} />
                     <Route path="/super-admin/benny-voice" element={<RequireSuperAdmin><BennyVoicePrewarm /></RequireSuperAdmin>} />
                     <Route path="/super-admin/rpg-seasons" element={<RequireSuperAdmin><RPGSeasonsAdmin /></RequireSuperAdmin>} />
+                    <Route path="/super-admin/access" element={<RequireSuperAdmin><SuperAdminAccess /></RequireSuperAdmin>} />
                   </Route>
 
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

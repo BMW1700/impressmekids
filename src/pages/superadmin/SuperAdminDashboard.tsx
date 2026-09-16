@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Baby, GraduationCap, Swords, Volume2, Cloud } from "lucide-react";
+import { ArrowLeft, Baby, GraduationCap, Swords, Volume2, Cloud, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsSection } from "@/components/student/sections/SiteSettingsSection";
 
@@ -99,6 +99,18 @@ const SuperAdminDashboard = () => {
                 <CardTitle>RPG Seasons</CardTitle>
                 <CardDescription>
                   Create and go live with the next Season Pass — no code deploy required.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to="/super-admin/access">
+            <Card className="hover:border-primary transition-colors h-full">
+              <CardHeader>
+                <ShieldCheck className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>Super Admin Access</CardTitle>
+                <CardDescription>
+                  Give or remove super admin access for any account with one click.
                 </CardDescription>
               </CardHeader>
             </Card>
