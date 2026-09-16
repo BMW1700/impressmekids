@@ -113,6 +113,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Safety valve: if session restore stalls (e.g. a stale refresh token whose
+    // network refresh never resolves), stop blocking the UI. Otherwise the header
+    // renders neither "Sign in" nor "Sign out" forever.
+    const stallGuard = window.setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 3000);
+
     // Auth listener only syncs session/user state.
     // Profile fetching is handled in a separate effect to avoid auth callback timing issues.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
@@ -137,9 +144,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       isMounted = false;
+      window.clearTimeout(stallGuard);
       subscription.unsubscribe();
     };
   }, []);
+
 
   useEffect(() => {
     let isActive = true;
