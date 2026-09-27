@@ -1,38 +1,36 @@
-# The flashing homepage — what I found and how to fix it
+# Chasing the flashing — catch it, then kill it
 
-## Brutally honest status
+## Where I actually am
 
-I tested the live site (yubilearn.com) directly, both signed out and signed in as you, and watched it for 10+ seconds at a time. **I could not make it flash in my test browser.** So I am not going to pretend I have a confirmed root cause. Here is what I *did* verify:
+I loaded yubilearn.com myself — signed out, signed in as you, on the homepage and on the Super Admin page — and sampled the screen every fraction of a second for 10+ seconds each time. No reloads, no page bouncing, no theme flipping, nothing strobing. **I have not reproduced it, so I am not going to name a cause I can't prove.**
 
-- The live site has **not** been republished since my last change. It is still serving the same build as before, so nothing I changed today is on yubilearn.com. That change is not the cause.
-- The site access gate ("Private Preview Gate") has not been touched since 2:24 AM and is off. Not the cause.
-- No page reloads, no redirect bouncing, and no repeated navigation on the homepage in my tests.
-- There are real console errors on the live homepage (invalid shape values in the illustrated demo), but those are cosmetic and don't cause flashing.
+What I did rule out:
+- Nothing I changed today is on yubilearn.com. The live site has not been republished — it's still the older build. My change is not the trigger.
+- The Private Preview Gate hasn't been touched since 2:24 AM and is off. Not it.
+- No redirect loop between the homepage and a dashboard.
 
-## The one real suspect in the code
+## Step 1 — Catch it on your machine
 
-The Sir Bookears hero video on the homepage has a retry loop that can fight itself:
+I add a small, temporary recorder to the app that runs only for you (super admin) and logs the things that cause visible flashing: how often the page re-renders, video play/pause events, theme changes, live-data updates, and route changes. It writes a timestamped trail you can see.
 
-When the video pauses for any reason, the code immediately tries to play it again — with no limit. On Safari (especially with Low Power Mode, a backgrounded tab, or a slow video load), the browser pauses the video right back. Play → pause → play → pause, many times a second. On screen that reads as the hero area strobing, and because the whole homepage sits on a blurred animated background, the flicker can look like the whole page is flashing.
+You then load yubilearn.com, let it flash for ten seconds, and I read the trail. That turns "it's flashing" into an exact culprit instead of me guessing.
 
-This matches your symptoms: Safari, live site, homepage, nothing deployed to trigger it — it depends on the moment-to-moment state of your machine, which is why it comes and goes.
+## Step 2 — Fix the defects I already found while I'm in there
 
-## The fix
+These are real regardless of whether they're your flash:
 
-1. **Stop the play/pause fight.** Remove the automatic "restart on pause" behaviour and replace it with a bounded retry: at most a few attempts, spaced out, and only when the video is genuinely stalled — never as a direct reaction to a pause.
-2. **Fall back gracefully.** If the video still won't play after those attempts, show the still poster image instead of continuing to thrash. Visually near-identical, zero flicker.
-3. **Stop re-triggering on every window event.** Today focus, page-show, visibility change and the first pointer tap all kick off a play attempt. Keep only the visibility-change retry, and only when the video is actually paused and the page is actually visible.
-4. **Clean up the console errors** on the homepage demo (negative and undefined shape values) so the browser isn't logging errors on every animation frame.
+1. **The Sir Bookears hero video fights itself.** Every time the video pauses, the code instantly tries to play it again with no limit. In Safari (Low Power Mode, backgrounded tab, slow load) the browser pauses it right back — a play/pause strobe. Replace with at most 3 spaced retries, then fall back cleanly to the still image.
+2. **Two separate live connections watch the same settings row** — one from the site-access gate, one from the Super Admin panel. If one can't connect it silently retries forever. Consolidate to a single shared watcher.
+3. **Console errors on every animation frame** on the homepage demo (invalid shape values). Clamp them so the browser isn't erroring continuously.
 
-## Verification before I call it done
+## Step 3 — Remove the recorder
 
-- Load yubilearn.com in a real browser session and record the hero for 15 seconds, checking that the video's play/pause count stays at one play and zero pauses.
-- Repeat with the video source blocked, to confirm it lands cleanly on the poster instead of looping.
-- Re-check the console is clean.
-- Then you publish, and if it still flashes on your Mac, I need one thing from you: whether the flashing stops when you scroll the hero video off screen. That single answer tells me definitively whether it's the video or something else, and I'll chase the something else.
+Once the culprit is confirmed and fixed, the recorder comes out. It never ships to students or teachers — it's gated to your account only.
 
 ## Technical notes
 
-- `src/components/landing/BennyVideoHero.tsx` — `onPause={startPlayback}` (line ~91) is the loop. `startPlayback` is also wired to `onLoadedMetadata`, `onCanPlay`, `visibilitychange`, `pageshow`, `focus`, and a one-shot `pointerdown`. Replace with a `retryCount` ref capped at 3, a 400ms delay between attempts, and `setVideoFailed(true)` after the cap.
-- Console errors originate in the K-12 RPG demo panel rendered by `ModeSelect` — negative `r` on `<circle>` and `undefined` on `<ellipse rx>` / `<path d>`; clamp those values at the source.
-- No backend, auth, or routing changes. Presentation layer only.
+- Recorder: a dev-only hook mounted in `App.tsx` behind `useIsSuperAdmin`, logging to `console` and an in-memory ring buffer: React commit counts per second (Profiler `onRender`), `play`/`pause`/`stalled`/`waiting` on every `<video>`, `documentElement.className` mutations via MutationObserver, Supabase realtime channel state changes, and `location.pathname` changes.
+- `src/components/landing/BennyVideoHero.tsx`: `onPause={startPlayback}` is the loop; also remove the `focus` / `pageshow` / `pointerdown` retry listeners, keep a guarded `visibilitychange`, cap retries with a ref, then `setVideoFailed(true)`.
+- `src/components/DemoGate.tsx` (`app_settings_gate`) and `src/components/student/sections/SiteSettingsSection.tsx` (`app_settings_admin`) both subscribe to `public.app_settings` — merge into one shared subscription module.
+- `ModeSelect`'s K-12 demo panel emits negative `<circle r>` and undefined `<ellipse rx>` / `<path d>`; clamp at the source.
+- No backend, auth, schema, or routing changes.
