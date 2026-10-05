@@ -1463,12 +1463,29 @@ export const RPGWordReader = ({
   }, [clearAllTimeouts, stopInstructionAudio]);
 
 
+  const resumeAfterDisableRef = useRef(false);
   // Force-stop recognition the moment `disabled` flips true (e.g. while a
   // PvP RPC is in flight). Without this, an already-running recognition
   // session can keep emitting results during the sync window and cause
   // double submissions or stale word advancement.
   useEffect(() => {
-    if (!disabled) return;
+    if (!disabled) {
+      // Wake-up: if we were listening when a mini-game/sync disabled us,
+      // reopen the mic right away instead of waiting on the 4s watchdog.
+      if (!resumeAfterDisableRef.current) return;
+      resumeAfterDisableRef.current = false;
+      const t = setTimeout(() => {
+        const owner = speechManager.getCurrentOwner();
+        if (owner && owner !== 'reader') return;
+        micSuspendedRef.current = false;
+        micFailureCountRef.current = 0;
+        shouldBeListeningRef.current = true;
+        lastMicActivityRef.current = Date.now();
+        startRecognitionRef.current?.();
+      }, 200);
+      return () => clearTimeout(t);
+    }
+    if (shouldBeListeningRef.current) resumeAfterDisableRef.current = true;
     stopInstructionAudio();
     speechSessionIdRef.current += 1;
     shouldBeListeningRef.current = false;

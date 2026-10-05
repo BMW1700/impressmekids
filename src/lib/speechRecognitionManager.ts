@@ -124,6 +124,9 @@ class SpeechRecognitionManager {
       this.config = config;
       return true;
     }
+    // Did we just tear down a live session? The audio device needs ~100ms
+    // to release, or the next .start() throws InvalidStateError.
+    const needsDrain = !!(this.externalOwner || this.recognition || this.isRunning || this.isStarting);
     // Force stop any existing recognition first (including external owners)
     this.forceStop();
 
@@ -140,10 +143,20 @@ class SpeechRecognitionManager {
       return true;
     }
 
+    if (needsDrain) {
+      const owner = config.owner;
+      this.drainTimer = setTimeout(() => {
+        this.drainTimer = null;
+        if (this.currentOwner !== owner || this.config !== config) return;
+        if (this.startWebInstance()) this.armWatchdog();
+      }, 120);
+      return true;
+    }
     const ok = this.startWebInstance();
     if (ok) this.armWatchdog();
     return ok;
   }
+  private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
   private clearRestartTimer(): void {
     if (this.restartTimeout) {
@@ -343,6 +356,7 @@ class SpeechRecognitionManager {
   }
 
   private forceStopInternal(): void {
+    if (this.drainTimer) { clearTimeout(this.drainTimer); this.drainTimer = null; }
     console.log('[SpeechManager] Force stopping. Current owner:', this.currentOwner);
     this.shouldRestart = false;
     this.clearRestartTimer();
