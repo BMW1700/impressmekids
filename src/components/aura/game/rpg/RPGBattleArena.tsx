@@ -1005,7 +1005,12 @@ export const RPGBattleArena = ({
                       gameType === 'tug_of_war' ? 15 :
                       gameType === 'goblin_horde' ? 6 :
                       gameType === 'rhyme_chain' ? 6 : 5;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    let availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    // Near the end of a passage the slice can be empty/short — wrap around so
+    // a mini-game never mounts with zero words and instantly auto-fails.
+    if (availableWords.length < wordCount && words.length > 0) {
+      availableWords = [...availableWords, ...words.slice(0, wordCount - availableWords.length)];
+    }
     setBarrageWords(availableWords.slice(0, wordCount));
     
     // Different announcements per mini-game
@@ -1171,7 +1176,12 @@ export const RPGBattleArena = ({
   // Trigger Tug of War - for use in tug_of_war battle mode only
   const triggerTugOfWar = useCallback(() => {
     const wordCount = 15;
-    const availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    let availableWords = words.slice(batchStartIndex, batchStartIndex + wordCount + 10);
+    // Near the end of a passage the slice can be empty/short — wrap around so
+    // a mini-game never mounts with zero words and instantly auto-fails.
+    if (availableWords.length < wordCount && words.length > 0) {
+      availableWords = [...availableWords, ...words.slice(0, wordCount - availableWords.length)];
+    }
     setBarrageWords(availableWords.slice(0, wordCount));
     setEnemyAbilityMessage(`TUG OF WAR! Pull the rope with reading power!`);
     battleSounds.miniGameStart();
@@ -4109,7 +4119,7 @@ export const RPGBattleArena = ({
                           onResult={handleWordResult}
                           onRetrySuccess={handleRetrySuccess}
                           onMiss={handleMiss}
-                          disabled={!isPlayerTurn}
+                          disabled={!isPlayerTurn || phase !== 'reading'}
                           streak={streak}
                           batchSize={5}
                           enableEchoRetry={selectedCharacter !== 'elara' && selectedCharacter !== 'cipher'}
