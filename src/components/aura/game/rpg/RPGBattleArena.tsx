@@ -1148,7 +1148,10 @@ export const RPGBattleArena = ({
     
     // Trigger quick block!
     setLastAttackCheck(correctWords);
-    const blockWordSelection = words.slice(batchStartIndex, batchStartIndex + 3);
+    let blockWordSelection = words.slice(batchStartIndex, batchStartIndex + 3);
+    if (blockWordSelection.length < 3 && words.length > 0) {
+      blockWordSelection = [...blockWordSelection, ...words.slice(0, 3 - blockWordSelection.length)];
+    }
     setQuickBlockWords(blockWordSelection);
     setEnemyAbilityMessage(`${enemy.name} ATTACKS!`);
     battleSounds.incorrectWord(); // Use as attack warning sound
