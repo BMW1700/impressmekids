@@ -15,36 +15,42 @@ export const BennyVideoHero = () => {
   const [videoFailed, setVideoFailed] = useState(false);
   const showPoster = reduceMotion || videoFailed;
 
+  const attemptsRef = useRef(0);
+  const MAX_ATTEMPTS = 3;
+
   const startPlayback = useCallback(() => {
     const video = videoRef.current;
     if (!video || reduceMotion || videoFailed) return;
+    if (!video.paused) return;
+    if (attemptsRef.current >= MAX_ATTEMPTS) {
+      setVideoFailed(true);
+      return;
+    }
+    attemptsRef.current += 1;
 
     // iOS/WebKit checks the live DOM properties, not only the JSX attributes.
     video.muted = true;
     video.defaultMuted = true;
     video.playsInline = true;
-    void video.play().catch(() => {
-      // Low-power/background states can temporarily reject autoplay. Keep the
-      // video mounted and retry when it becomes playable or the page resumes.
-    });
+    video
+      .play()
+      .then(() => {
+        attemptsRef.current = 0;
+      })
+      .catch(() => {
+        // Blocked autoplay: stop after a few tries and show the still image.
+      });
   }, [reduceMotion, videoFailed]);
 
   useEffect(() => {
     if (showPoster) return;
 
     startPlayback();
-    const retryPlayback = () => startPlayback();
-    document.addEventListener("visibilitychange", retryPlayback);
-    window.addEventListener("pageshow", retryPlayback);
-    window.addEventListener("focus", retryPlayback);
-    document.addEventListener("pointerdown", retryPlayback, { once: true });
-
-    return () => {
-      document.removeEventListener("visibilitychange", retryPlayback);
-      window.removeEventListener("pageshow", retryPlayback);
-      window.removeEventListener("focus", retryPlayback);
-      document.removeEventListener("pointerdown", retryPlayback);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") startPlayback();
     };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [showPoster, startPlayback]);
 
   return (
