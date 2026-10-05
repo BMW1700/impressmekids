@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Shield, Zap } from "lucide-react";
@@ -37,6 +38,7 @@ export const RPGWordBarrage = ({
   const [wordsMissed, setWordsMissed] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('word_barrage', recognitionRef);
   const animationRef = useRef<number | null>(null);
   const destroyedRef = useRef(0);
   const missedRef = useRef(0);

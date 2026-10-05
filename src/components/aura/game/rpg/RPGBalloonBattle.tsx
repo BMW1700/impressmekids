@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Skull, Heart, Coins, Star, Mic, MicOff, Pause, Play, AlertCircle, HelpCircle } from "lucide-react";
@@ -114,6 +115,7 @@ export const RPGBalloonBattle = ({
   const rewardIdRef = useRef(0);
 
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('balloon_battle', recognitionRef);
   const isListeningRef = useRef(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [showTroubleshooter, setShowTroubleshooter] = useState(false);

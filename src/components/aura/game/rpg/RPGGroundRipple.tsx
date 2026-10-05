@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Mountain, Radio } from "lucide-react";
@@ -34,6 +35,7 @@ export const RPGGroundRipple = ({
   const [shakeScreen, setShakeScreen] = useState(false);
 
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('ground_ripple', recognitionRef);
   const isListeningRef = useRef(false);
   const gameWordsRef = useRef<string[]>([]);
   const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
