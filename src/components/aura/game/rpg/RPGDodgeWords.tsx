@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
@@ -42,6 +43,7 @@ export const RPGDodgeWords = ({
   const [dodged, setDodged] = useState(0);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('dodge_words', recognitionRef);
   const spawnedRef = useRef(false);
 
   // Initialize flying words - all start INVISIBLE

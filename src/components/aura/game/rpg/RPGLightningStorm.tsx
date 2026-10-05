@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Zap, Cloud, Plug } from "lucide-react";
@@ -36,6 +37,7 @@ export const RPGLightningStorm = ({
   const [isActive, setIsActive] = useState(true);
   const [flashScreen, setFlashScreen] = useState(false);
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('lightning_storm', recognitionRef);
   const struckRef = useRef(0);
   const missedRef = useRef(0);
   const wordTimerRef = useRef<NodeJS.Timeout | null>(null);

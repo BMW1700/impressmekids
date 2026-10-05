@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Timer } from "lucide-react";
@@ -31,6 +32,7 @@ export const RPGWordBlitz = ({
   const [timeLeft, setTimeLeft] = useState(20); // 20 second time limit
   const [gameOver, setGameOver] = useState(false);
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('word_blitz', recognitionRef);
   const isListeningRef = useRef(false);
 
   // Initialize words

@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Flame, Crosshair } from "lucide-react";
@@ -38,6 +39,7 @@ export const RPGFireballBarrage = ({
   const [nextTargetWord, setNextTargetWord] = useState("");
   
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('fireball_barrage', recognitionRef);
   const isListeningRef = useRef(false);
   const animationRef = useRef<number | null>(null);
   const destroyedRef = useRef(0);

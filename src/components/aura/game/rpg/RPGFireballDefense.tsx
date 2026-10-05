@@ -1,3 +1,4 @@
+import { useMinigameMicOwnership } from "@/hooks/useMinigameMicOwnership";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SoundEffects } from "@/lib/pronunciationPlayer";
@@ -64,6 +65,7 @@ export const RPGFireballDefense = ({
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const animationRef = useRef<number>();
   const recognitionRef = useRef<any>(null);
+  useMinigameMicOwnership('fireball_defense', recognitionRef);
   const completionTriggeredRef = useRef(false);
   const gameActiveRef = useRef(true);
   const safetyTimerRef = useRef<NodeJS.Timeout | null>(null);
