@@ -119,6 +119,7 @@ const PhonicsFoundations = lazy(() => import("./pages/game/PhonicsFoundations"))
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const GameLegal = lazy(() => import("./pages/game/legal/GameLegal"));
 const SuperAdminDashboard = lazy(() => import("./pages/superadmin/SuperAdminDashboard"));
+const SpeechLab = lazy(() => import("./pages/superadmin/SpeechLab"));
 const PreKWorldsList = lazy(() => import("./pages/superadmin/PreKWorldsList"));
 const R2Migration = lazy(() => import("./pages/superadmin/R2Migration"));
 const PreKLevelsList = lazy(() => import("./pages/superadmin/PreKLevelsList"));
@@ -318,6 +319,7 @@ const App = () => (
 
                     {/* Super Admin CMS — auth required, but NOT gated by school profile or MFA */}
                     <Route path="/super-admin" element={<RequireSuperAdmin><SuperAdminDashboard /></RequireSuperAdmin>} />
+                    <Route path="/speech-lab" element={<RequireSuperAdmin><SpeechLab /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek" element={<RequireSuperAdmin><PreKWorldsList /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek/:worldId" element={<RequireSuperAdmin><PreKLevelsList /></RequireSuperAdmin>} />
                     <Route path="/super-admin/prek/:worldId/:levelId/edit" element={<RequireSuperAdmin><PreKLevelBuilder /></RequireSuperAdmin>} />
