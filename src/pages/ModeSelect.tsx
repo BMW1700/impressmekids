@@ -8,7 +8,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
-import { SeriesTitle } from "@/components/landing/SeriesTitle";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { setStoredTheme } from "@/lib/gameTheme";
@@ -258,7 +257,7 @@ const ModeSelect = () => {
                   }`}
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Ages 2–5 · Pre-K
+                  Playful word adventures for ages 2–5
                 </div>
                 <p
                   className={`mb-5 text-sm font-medium transition-all duration-300 translate-y-0 ${
@@ -271,14 +270,14 @@ const ModeSelect = () => {
                       : "text-white/55"
                   }`}
                 >
-                  For daycares, preschools &amp; 2–5 year-olds
+                  For curious kids at home, in preschool, and at daycare.
                 </p>
                 <h1
                   className={`text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl ${
                     isLight ? "text-[hsl(270_45%_15%)]" : ""
                   }`}
                 >
-                  Reading. With their{" "}
+                  Little voices.{" "}
                   <span
                     className={
                       isLight
@@ -286,7 +285,7 @@ const ModeSelect = () => {
                         : "bg-gradient-to-r from-[hsl(48_100%_78%)] via-[hsl(48_100%_62%)] to-[hsl(30_100%_60%)] bg-clip-text text-transparent"
                     }
                   >
-                    first best friend.
+                    Big discoveries.
                   </span>
                 </h1>
                 <p
@@ -294,11 +293,19 @@ const ModeSelect = () => {
                     isLight ? "text-[hsl(270_30%_28%)]" : "text-white/75"
                   }`}
                 >
-                  Meet Sir Bookears as he takes you on an immersive early
-                  literacy adventure.
+                  Meet Benny Bookears, your child’s new adventure buddy.
+                  Together, they’ll explore colorful worlds, name what they see,
+                  and connect the words they say with the words on screen.
                 </p>
 
-                <SeriesTitle light={isLight} className="mt-8" />
+                <div className="mt-8 text-center">
+                  <h2 className="text-balance text-3xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-[hsl(28_95%_45%)] via-[hsl(20_95%_50%)] to-[hsl(340_85%_55%)] md:text-4xl">
+                    Meet Benny Bookears
+                  </h2>
+                  <p className={`mt-1 text-sm tracking-[0.18em] ${isLight ? "text-[hsl(270_30%_28%)]" : "text-white/70"}`}>
+                    A world of words to explore.
+                  </p>
+                </div>
 
                 <div
                   className={`mt-4 overflow-hidden rounded-2xl border shadow-[0_20px_80px_-20px_hsl(48_100%_55%/0.35)] ${
@@ -307,6 +314,9 @@ const ModeSelect = () => {
                 >
                   <BennyVideoHero />
                 </div>
+                <p className={`mt-3 text-center text-sm ${isLight ? "text-[hsl(270_30%_28%)]" : "text-white/70"}`}>
+                  Watch Benny’s introduction
+                </p>
 
                 <div className="mt-7">
                   <Button
@@ -367,7 +377,7 @@ const ModeSelect = () => {
                   }`}
                 >
                   <Swords className="h-3.5 w-3.5" />
-                  Ages 6–18 · Grades K–12
+                  Grades K–12
                 </div>
                 <p
                   className={`mb-5 text-sm font-medium transition-all duration-300 ${
@@ -380,14 +390,14 @@ const ModeSelect = () => {
                       : "text-white/55"
                   }`}
                 >
-                  For K–12 students, at-home learning, schools &amp; districts
+                  For families, schools, and districts.
                 </p>
                 <h2
                   className={`text-balance text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl lg:text-6xl ${
                     isLight ? "text-[hsl(270_45%_15%)]" : ""
                   }`}
                 >
-                  Reading IS the{" "}
+                  Read aloud.{" "}
                   <span
                     className={
                       isLight
@@ -395,7 +405,7 @@ const ModeSelect = () => {
                         : "bg-gradient-to-r from-[hsl(280_90%_75%)] via-[hsl(265_90%_65%)] to-[hsl(220_90%_65%)] bg-clip-text text-transparent"
                     }
                   >
-                    combat mechanic.
+                    Become the hero.
                   </span>
                 </h2>
                 <p
@@ -403,9 +413,8 @@ const ModeSelect = () => {
                     isLight ? "text-[hsl(270_30%_28%)]" : "text-white/75"
                   }`}
                 >
-                  An AI-powered literacy RPG. Speak words to cast spells,
-                  defeat dark forces, and level up. The stronger your words,
-                  the stronger your power.
+                  A fantasy adventure powered by reading. Use your voice to
+                  cast spells, defeat dark forces, and level up.
                 </p>
 
                 <div
