@@ -23,7 +23,7 @@ Child reads sentence
 2. **Add the backup check to the RPG sentence reader:** the old mic keeps lighting words live, and the new engine rescues missed words in the current sentence. It can only approve words, never take a correct one away.
 3. **Quiet loading:** the engine loads in the background when a student opens the game. Only on their very first visit do they see a short "Getting your reading ears ready…" screen.
 4. **Roll out in order:** sentence reader, then Shield, then Quick Block, then the other mini-games. Each step can be turned off.
-5. **Super-admin on/off switch,** so you can turn it off for everyone instantly without a new app release.
+5. **Off by default.** It starts on only for super-admin accounts, then one test class, then everyone. A super-admin switch turns it off for everyone instantly, without a new app release.
 6. **Then the App Store work** (Sign in with Apple, account deletion inside the app, hiding pricing in the app, and so on).
 
 ## Honest risks
