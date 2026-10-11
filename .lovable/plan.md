@@ -1,36 +1,31 @@
-# Chasing the flashing — catch it, then kill it
+# YubiLearn iPhone/iPad App: App Store Readiness
 
-## Where I actually am
+## Honest answer: are we ready?
+Mostly. The app is already set up to become a native app: the iOS project, app ID `app.lovable.yubilearn`, microphone and speech permission text, privacy file, and native speech recognition all exist. Some things still need work before Apple will approve it. Some steps can only happen on your Mac and need your Apple Developer account.
 
-I loaded yubilearn.com myself — signed out, signed in as you, on the homepage and on the Super Admin page — and sampled the screen every fraction of a second for 10+ seconds each time. No reloads, no page bouncing, no theme flipping, nothing strobing. **I have not reproduced it, so I am not going to name a cause I can't prove.**
+## What I will fix in the project
+1. **Device setting:** the app says it needs "armv7", an old chip type. Change it to "arm64" so every current iPhone and iPad can install it.
+2. **Sign in with Apple:** Apple requires it when an app offers Google sign-in (rule 4.8). Add an "Sign in with Apple" button next to Google on the sign-in screens.
+3. **Account deletion inside the app:** Apple requires users to be able to delete their account from inside the app. Make sure the existing deletion page is reachable from the account and settings menu on the phone, not just from the website.
+4. **No outside payment links in the app:** hide the Pricing page and the "contact sales" email links when running as the app, so Apple doesn't flag them (rule 3.1).
+5. **Mic hand-off on iPhone:** make the mic checks that already run on the website also run on the phone (permission prompt, recovery when another app takes the mic).
+6. **Splash screen and status bar:** match the colors to the current brand instead of the old purple.
+7. **Hide test pages:** the Speech Lab and super-admin pages stay hidden in the app build.
+8. **Updated checklist:** one up-to-date step-by-step guide for your Mac: pull, `npm install`, `npm run build`, `npx cap sync ios`, open Xcode, archive, upload to TestFlight.
 
-What I did rule out:
-- Nothing I changed today is on yubilearn.com. The live site has not been republished — it's still the older build. My change is not the trigger.
-- The Private Preview Gate hasn't been touched since 2:24 AM and is off. Not it.
-- No redirect loop between the homepage and a dashboard.
+## What only you can do
+- Enroll in the Apple Developer Program ($99/year). This is required.
+- On a Mac with Xcode: sign the app, turn on the "Sign in with Apple" setting, archive and upload.
+- In App Store Connect: screenshots, description, the privacy questions (children's category / COPPA), a demo login for Apple's reviewer, and a support web address.
+- Test on a real iPad through TestFlight, especially reading out loud in RPG battles.
 
-## Step 1 — Catch it on your machine
+## Risks
+- Apps for children (Kids Category) get the strictest review. Apple may ask about sign-in for kids, links to outside websites, and data collection. Listing the app under Education rather than Kids is the safer first submission.
+- The mic can only be properly tested on a real device.
 
-I add a small, temporary recorder to the app that runs only for you (super admin) and logs the things that cause visible flashing: how often the page re-renders, video play/pause events, theme changes, live-data updates, and route changes. It writes a timestamped trail you can see.
-
-You then load yubilearn.com, let it flash for ten seconds, and I read the trail. That turns "it's flashing" into an exact culprit instead of me guessing.
-
-## Step 2 — Fix the defects I already found while I'm in there
-
-These are real regardless of whether they're your flash:
-
-1. **The Sir Bookears hero video fights itself.** Every time the video pauses, the code instantly tries to play it again with no limit. In Safari (Low Power Mode, backgrounded tab, slow load) the browser pauses it right back — a play/pause strobe. Replace with at most 3 spaced retries, then fall back cleanly to the still image.
-2. **Two separate live connections watch the same settings row** — one from the site-access gate, one from the Super Admin panel. If one can't connect it silently retries forever. Consolidate to a single shared watcher.
-3. **Console errors on every animation frame** on the homepage demo (invalid shape values). Clamp them so the browser isn't erroring continuously.
-
-## Step 3 — Remove the recorder
-
-Once the culprit is confirmed and fixed, the recorder comes out. It never ships to students or teachers — it's gated to your account only.
-
-## Technical notes
-
-- Recorder: a dev-only hook mounted in `App.tsx` behind `useIsSuperAdmin`, logging to `console` and an in-memory ring buffer: React commit counts per second (Profiler `onRender`), `play`/`pause`/`stalled`/`waiting` on every `<video>`, `documentElement.className` mutations via MutationObserver, Supabase realtime channel state changes, and `location.pathname` changes.
-- `src/components/landing/BennyVideoHero.tsx`: `onPause={startPlayback}` is the loop; also remove the `focus` / `pageshow` / `pointerdown` retry listeners, keep a guarded `visibilitychange`, cap retries with a ref, then `setVideoFailed(true)`.
-- `src/components/DemoGate.tsx` (`app_settings_gate`) and `src/components/student/sections/SiteSettingsSection.tsx` (`app_settings_admin`) both subscribe to `public.app_settings` — merge into one shared subscription module.
-- `ModeSelect`'s K-12 demo panel emits negative `<circle r>` and undefined `<ellipse rx>` / `<path d>`; clamp at the source.
-- No backend, auth, schema, or routing changes.
+## Technical details
+- `ios/App/App/Info.plist`: change `UIRequiredDeviceCapabilities` to `arm64`.
+- Apple OAuth through Lovable Cloud social auth (`lovable.auth.signInWithOAuth("apple")`), with the button shown on `/auth` and `/game/auth`.
+- An `isNativeApp()` helper (`Capacitor.isNativePlatform()`) hides pricing, mailto sales links, `/speech-lab` and `/super-admin` routes.
+- `capacitor.config.ts`: update the splash `backgroundColor` to the brand token color.
+- Update `docs/APP_STORE_LAUNCH_CHECKLIST.md` to be the one source of truth for the steps.
