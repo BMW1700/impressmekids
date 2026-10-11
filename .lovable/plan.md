@@ -18,7 +18,7 @@ The Speech Lab runs **Whisper-tiny**, not Sherpa. I couldn't find a Sherpa web v
 ## Honest risks
 - Whisper-tiny can be slow on old Chromebooks. If it takes longer than about 1.5 seconds per word there, those devices stay on the old mic.
 - The first download is about 40 MB per device. It's saved afterwards, but 30 iPads on school Wi-Fi all loading it the first day will be slow.
-- It hears short bursts, not a live stream, so it can't highlight words while the child is still speaking. The final judgement will be much more accurate.
+- It hears short bursts, not a live stream. So we split the jobs: the old mic keeps lighting up words live while the child speaks (purely visual), and the new on-device engine makes the final right/wrong ruling in under a second per word. Highlighting stays exactly as it is today; only the judging gets more accurate.
 
 ## Technical details
 - New `src/lib/speech/onDeviceEngine.ts`: a shared `@huggingface/transformers` ASR pipeline (`onnx-community/whisper-tiny.en`, q8, WebGPU when available otherwise WASM) loaded once and cached.
