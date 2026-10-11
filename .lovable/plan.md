@@ -27,7 +27,8 @@ Child reads sentence
 6. **Then the App Store work** (Sign in with Apple, account deletion inside the app, hiding pricing in the app, and so on).
 
 ## Honest risks
-- On old iPads and cheap Chromebooks, the rescue may take 1–2 seconds. If it's too slow, those devices automatically stay on today's mic.
+- **Biggest unknown: iPad.** Running a second listener at the same time as the browser's mic can make Safari stop one of them. If step 1 shows that on an iPad, iPads stay on today's mic and only get the improvement later, inside the App Store app.
+- **Speed:** the rescue check uses the device's processor. On old iPads and cheap Chromebooks it could make battle animations stutter. Devices that are too slow are detected and kept on today's mic.
 - The first load is about 40 MB per device, once. 30 iPads on slow school Wi-Fi the first day will feel it.
 - Nothing has been tested with real children's voices yet. That's why step 1 comes first.
 
