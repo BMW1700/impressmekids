@@ -1,5 +1,10 @@
 # YubiLearn iPhone/iPad App: App Store Readiness
 
+## Order of work
+1. **Now, at the same time as the mic work:** enroll in the Apple Developer Program. Approval can take a few days, so starting early costs nothing.
+2. **Next:** finish moving the new speech engine into the live game. Apple's reviewer will play the game, and the mic is the first thing they'll judge. A bad first review slows every resubmission after it.
+3. **Then:** the App Store fixes below, followed by testing on a real iPad and submitting.
+
 ## Honest answer: are we ready?
 Mostly. The app is already set up to become a native app: the iOS project, app ID `app.lovable.yubilearn`, microphone and speech permission text, privacy file, and native speech recognition all exist. Some things still need work before Apple will approve it. Some steps can only happen on your Mac and need your Apple Developer account.
 
