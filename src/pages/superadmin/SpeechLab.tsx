@@ -3,12 +3,14 @@ import { Mic, Square, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * Speech Lab — isolated test room. Compares the browser's built-in speech
  * recognition against an on-device model (Whisper tiny, runs locally, cached
- * after first load) whose output is snapped to the words on screen.
- * Nothing here touches the live game.
+ * after first load). Both run at the SAME time, exactly like the planned
+ * hybrid in the RPG reader, so this also tests whether a device (iPad) can
+ * run both at once. Nothing here touches the live game.
  */
 
 const MODEL_ID = "onnx-community/whisper-tiny.en";
@@ -29,7 +31,7 @@ function loadModel(onProgress: (p: number) => void) {
   return pipePromise;
 }
 
-const clean = (s: string) => s.toLowerCase().replace(/[^a-z]/g, "");
+const clean = (s: string) => s.toLowerCase().replace(/[^a-z']/g, "").replace(/'/g, "");
 
 function lev(a: string, b: string) {
   const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
@@ -39,17 +41,18 @@ function lev(a: string, b: string) {
       d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
   return d[a.length][b.length];
 }
+const sim = (a: string, b: string) => 1 - lev(a, b) / Math.max(a.length, b.length, 1);
+const tokens = (s: string) => s.split(/\s+/).map(clean).filter(Boolean);
 
-/** Snap a raw transcript onto the allowed word list (on-screen words only). */
-function snap(raw: string, allowed: string[]) {
-  const spoken = raw.split(/\s+/).map(clean).filter(Boolean);
-  let best = { word: "", score: 0 };
-  for (const s of spoken)
-    for (const w of allowed) {
-      const score = 1 - lev(s, w) / Math.max(s.length, w.length);
-      if (score > best.score) best = { word: w, score };
-    }
-  return best.score >= 0.5 ? best : { word: "", score: best.score };
+/** Which target words did a transcript cover? exact = browser rule, fuzzy = model rule. */
+function covered(targets: string[], transcript: string, fuzzy: boolean) {
+  const spoken = tokens(transcript);
+  const used = new Set<number>();
+  return targets.map((t) => {
+    const idx = spoken.findIndex((s, i) => !used.has(i) && (fuzzy ? sim(s, t) >= 0.75 : s === t));
+    if (idx >= 0) used.add(idx);
+    return idx >= 0;
+  });
 }
 
 async function toMono16k(blob: Blob) {
@@ -60,11 +63,26 @@ async function toMono16k(blob: Blob) {
   return data;
 }
 
-type Row = { target: string; webSpeech: string; model: string; snapped: string; ms: number };
+type Row = {
+  target: string;
+  webSpeech: string;
+  webError: string;
+  model: string;
+  webHits: boolean[];
+  modelHits: boolean[];
+  ms: number;
+};
 
 export default function SpeechLab() {
+  const [mode, setMode] = useState<"sentence" | "word">("sentence");
+  const [sentencesText, setSentencesText] = useState(
+    "The cat sat on the mat.\nA big dog ran up the hill.\nThe ship is in the fog.\nI can jump and hop.",
+  );
   const [wordsText, setWordsText] = useState("cat, ship, jump, frog, sit");
-  const words = wordsText.split(/[,\s]+/).map(clean).filter(Boolean);
+  const items =
+    mode === "sentence"
+      ? sentencesText.split("\n").map((s) => s.trim()).filter(Boolean)
+      : wordsText.split(/[,\s]+/).map(clean).filter(Boolean);
   const [target, setTarget] = useState(0);
   const [loadPct, setLoadPct] = useState(0);
   const [ready, setReady] = useState(false);
@@ -75,7 +93,7 @@ export default function SpeechLab() {
   const recRef = useRef<MediaRecorder | null>(null);
   const webRef = useRef<any>(null);
   const webTextRef = useRef("");
-  const t0 = useRef(0);
+  const webErrRef = useRef("");
 
   useEffect(() => {
     const t = performance.now();
@@ -84,7 +102,11 @@ export default function SpeechLab() {
       .catch((e) => setLoadErr(String(e?.message ?? e)));
   }, []);
 
+  const current = items[target % Math.max(items.length, 1)] ?? "";
+
   const start = async () => {
+    const targetText = current;
+    const targetWords = tokens(targetText);
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
     const chunks: Blob[] = [];
     const mr = new MediaRecorder(stream);
@@ -96,24 +118,35 @@ export default function SpeechLab() {
       try {
         const pipe = await loadModel(setLoadPct);
         const audio = await toMono16k(new Blob(chunks, { type: mr.mimeType }));
-        t0.current = performance.now();
+        const t0 = performance.now();
         const out = await pipe(audio);
-        const ms = Math.round(performance.now() - t0.current);
+        const ms = Math.round(performance.now() - t0);
         const raw = String(out?.text ?? "").trim();
         await new Promise((r) => setTimeout(r, 300)); // let web speech finalize
-        const s = snap(raw, words);
-        setRows((r) => [{ target: words[target], webSpeech: webTextRef.current || "—", model: raw || "—", snapped: s.word || "no match", ms }, ...r]);
-        setTarget((i) => (i + 1) % Math.max(words.length, 1));
+        setRows((r) => [{
+          target: targetText,
+          webSpeech: webTextRef.current.trim() || "—",
+          webError: webErrRef.current,
+          model: raw || "—",
+          webHits: covered(targetWords, webTextRef.current, false),
+          modelHits: covered(targetWords, raw, true),
+          ms,
+        }, ...r]);
+        setTarget((i) => (i + 1) % Math.max(items.length, 1));
       } finally { setBusy(false); }
     };
-    // Run the browser's built-in recognizer side-by-side for comparison
+    // Browser's built-in recognizer runs at the same time (same as the planned hybrid).
     webTextRef.current = "";
+    webErrRef.current = "";
     const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (Ctor) {
       const w = new Ctor();
       w.lang = "en-US"; w.interimResults = false; w.continuous = true;
-      w.onresult = (e: any) => { for (let i = e.resultIndex; i < e.results.length; i++) webTextRef.current += " " + e.results[i][0].transcript; };
-      try { w.start(); webRef.current = w; } catch { /* ignore */ }
+      w.onresult = (e: any) => { for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) webTextRef.current += " " + e.results[i][0].transcript; };
+      w.onerror = (e: any) => { webErrRef.current = String(e?.error ?? "error"); };
+      try { w.start(); webRef.current = w; } catch (err: any) { webErrRef.current = String(err?.message ?? "could not start"); }
+    } else {
+      webErrRef.current = "not supported on this browser";
     }
     mr.start();
     recRef.current = mr;
@@ -122,60 +155,78 @@ export default function SpeechLab() {
 
   const stop = () => { recRef.current?.stop(); setRecording(false); };
 
-  const hit = (r: Row, v: string) => clean(v.split(/\s+/).find((x) => clean(x) === r.target) ?? "") === r.target;
-  const webScore = rows.filter((r) => hit(r, r.webSpeech)).length;
-  const modelScore = rows.filter((r) => r.snapped === r.target).length;
+  const total = rows.reduce((n, r) => n + r.webHits.length, 0);
+  const webScore = rows.reduce((n, r) => n + r.webHits.filter(Boolean).length, 0);
+  const hybridScore = rows.reduce((n, r) => n + r.webHits.filter((h, i) => h || r.modelHits[i]).length, 0);
+  const rescued = hybridScore - webScore;
+  const browserFailures = rows.filter((r) => r.webError || r.webSpeech === "—").length;
+  const avgMs = rows.length ? Math.round(rows.reduce((n, r) => n + r.ms, 0) / rows.length) : 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Speech Lab</h1>
-          <p className="text-muted-foreground">Test room only. Read the big word, then compare both engines.</p>
+          <p className="text-muted-foreground">
+            Test room only. Read the sentence out loud like a student would, then tap Stop.
+          </p>
         </div>
 
-        <Card className="p-4 space-y-2">
-          <label className="text-sm font-medium">Words on screen</label>
-          <Input value={wordsText} onChange={(e) => { setWordsText(e.target.value); setTarget(0); }} />
+        <Card className="p-4 space-y-3">
+          <div className="flex gap-2">
+            <Button size="sm" variant={mode === "sentence" ? "default" : "outline"} onClick={() => { setMode("sentence"); setTarget(0); }}>Sentences (like RPG)</Button>
+            <Button size="sm" variant={mode === "word" ? "default" : "outline"} onClick={() => { setMode("word"); setTarget(0); }}>Single words</Button>
+          </div>
+          {mode === "sentence" ? (
+            <Textarea rows={4} value={sentencesText} onChange={(e) => { setSentencesText(e.target.value); setTarget(0); }} placeholder="One sentence per line" />
+          ) : (
+            <Input value={wordsText} onChange={(e) => { setWordsText(e.target.value); setTarget(0); }} />
+          )}
           <p className="text-sm text-muted-foreground">
-            {loadErr ? `Model failed to load: ${loadErr}` : ready ? "On-device model ready (cached for next time)." : `Loading on-device model… ${Math.round(loadPct)}%`}
+            {loadErr ? `Model failed to load: ${loadErr}` : ready ? "On-device model ready (saved on this device for next time)." : `Loading on-device model… ${Math.round(loadPct)}%`}
           </p>
         </Card>
 
         <Card className="p-10 flex flex-col items-center gap-6">
-          <div className="text-7xl font-bold lowercase">{words[target] ?? "—"}</div>
+          <div className={`${mode === "sentence" ? "text-4xl" : "text-7xl"} font-bold lowercase text-center`}>{current || "—"}</div>
           {recording ? (
             <Button size="lg" variant="destructive" onClick={stop}><Square className="mr-2 h-5 w-5" />Stop</Button>
           ) : (
-            <Button size="lg" onClick={start} disabled={busy || words.length === 0}>
+            <Button size="lg" onClick={start} disabled={busy || items.length === 0}>
               {busy ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Mic className="mr-2 h-5 w-5" />}
-              {busy ? "Checking…" : "Hold to read — tap to start"}
+              {busy ? "Checking…" : "Tap to start reading"}
             </Button>
           )}
         </Card>
 
         {rows.length > 0 && (
-          <Card className="p-4 space-y-3">
-            <div className="flex gap-6 text-sm font-medium">
-              <span>Browser built-in: {webScore}/{rows.length}</span>
-              <span>On-device + snapped: {modelScore}/{rows.length}</span>
+          <Card className="p-4 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div><div className="text-muted-foreground">Today's mic</div><div className="text-xl font-bold">{webScore}/{total}</div></div>
+              <div><div className="text-muted-foreground">With rescue</div><div className="text-xl font-bold">{hybridScore}/{total}</div></div>
+              <div><div className="text-muted-foreground">Words rescued</div><div className="text-xl font-bold text-primary">{rescued}</div></div>
+              <div><div className="text-muted-foreground">Avg check time</div><div className="text-xl font-bold">{avgMs}ms</div></div>
             </div>
-            <table className="w-full text-sm">
-              <thead className="text-muted-foreground text-left">
-                <tr><th>Target</th><th>Browser heard</th><th>Model heard</th><th>Snapped</th><th>Time</th></tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-t border-border">
-                    <td className="py-1 font-medium">{r.target}</td>
-                    <td className={hit(r, r.webSpeech) ? "text-primary" : "text-destructive"}>{r.webSpeech}</td>
-                    <td>{r.model}</td>
-                    <td className={r.snapped === r.target ? "text-primary" : "text-destructive"}>{r.snapped}</td>
-                    <td>{r.ms}ms</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {browserFailures > 0 && (
+              <p className="text-sm text-destructive">
+                Today's mic heard nothing or errored on {browserFailures} of {rows.length} tries. On an iPad, that means both listeners can't run at the same time on this device.
+              </p>
+            )}
+            <div className="space-y-3">
+              {rows.map((r, i) => (
+                <div key={i} className="border-t border-border pt-3 text-sm space-y-1">
+                  <div className="flex flex-wrap gap-1">
+                    {tokens(r.target).map((w, j) => {
+                      const web = r.webHits[j], mod = r.modelHits[j];
+                      const cls = web ? "bg-primary/15 text-primary" : mod ? "bg-accent text-accent-foreground ring-1 ring-primary" : "bg-destructive/15 text-destructive";
+                      return <span key={j} className={`px-2 py-0.5 rounded ${cls}`}>{w}{!web && mod ? " ✓ rescued" : ""}</span>;
+                    })}
+                  </div>
+                  <div className="text-muted-foreground">Today's mic heard: {r.webSpeech}{r.webError ? ` (error: ${r.webError})` : ""}</div>
+                  <div className="text-muted-foreground">On-device heard: {r.model} · {r.ms}ms</div>
+                </div>
+              ))}
+            </div>
           </Card>
         )}
       </div>
