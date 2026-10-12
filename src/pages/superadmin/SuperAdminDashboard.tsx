@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Baby, GraduationCap, Swords, Volume2, Cloud, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Baby, GraduationCap, Swords, Volume2, Cloud, ShieldCheck, Mic } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SiteSettingsSection } from "@/components/student/sections/SiteSettingsSection";
 
