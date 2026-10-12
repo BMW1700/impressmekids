@@ -116,6 +116,19 @@ const SuperAdminDashboard = () => {
             </Card>
           </Link>
 
+          <Link to="/speech-lab">
+            <Card className="hover:border-primary transition-colors h-full">
+              <CardHeader>
+                <Mic className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>Speech Lab</CardTitle>
+                <CardDescription>
+                  Test the new on-device reading engine against today's mic. Read a sentence, see which words each one hears. Nothing here touches the live game.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+
         </div>
       </div>
     </div>
