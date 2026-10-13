@@ -335,7 +335,7 @@ const ModeSelect = () => {
                         : "bg-white text-[hsl(270_45%_8%)] hover:bg-white"
                     }`}
                   >
-                    Start Sir Bookears' adventure
+                    Start Benny Bookears Adventure
                     <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 </div>
