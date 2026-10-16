@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsSuperAdmin } from "@/hooks/useIsSuperAdmin";
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
 import { AudienceTrifurcation } from "@/components/landing/AudienceTrifurcation";
@@ -147,7 +148,8 @@ const ModeSelect = () => {
             <ThemeToggle />
             {session ? (
               <>
-                <Button
+                {!IS_NATIVE_APP && (
+<Button
                   variant="ghost"
                   asChild
                   className={
@@ -158,6 +160,7 @@ const ModeSelect = () => {
                 >
                   <Link to="/pricing">Pricing</Link>
                 </Button>
+)}
                 <Button
                   variant="ghost"
                   onClick={async () => {

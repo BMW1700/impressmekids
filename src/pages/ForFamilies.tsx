@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Shield, Heart, BookOpen, Mic } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
 import { Button } from "@/components/ui/button";
 import { BennyVideoHero } from "@/components/landing/BennyVideoHero";
 import { SeriesTitle } from "@/components/landing/SeriesTitle";
@@ -265,13 +266,15 @@ const ForFamilies = () => {
                   <li>· Parent-share links for weekly milestones</li>
                   <li>· Volume pricing for centers and franchise groups</li>
                 </ul>
-                <Button
+                {!IS_NATIVE_APP && (
+<Button
                   asChild
                   variant="outline"
                   className="rounded-full border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur hover:border-white/40 hover:bg-white/10 hover:text-white"
                 >
                   <Link to="/pricing">Talk to us</Link>
                 </Button>
+)}
               </motion.div>
             </div>
           </div>

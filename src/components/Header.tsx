@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
 import { Button } from "@/components/ui/button";
 import { Home } from "lucide-react";
 import { ReactNode } from "react";
@@ -110,9 +111,11 @@ export const Header = ({ showAuthButtons = true, onSignOut, children, studentId 
             {/* Show Pricing + Sign Out when logged in */}
             {shouldShowSignOut && (
               <>
-                <Button variant="ghost" asChild>
+                {!IS_NATIVE_APP && (
+<Button variant="ghost" asChild>
                   <Link to="/pricing">Pricing</Link>
                 </Button>
+)}
                 <Button variant="outline" onClick={handleSignOut}>
                   {t('nav.signOut')}
                 </Button>

@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { RequireSchoolProfile } from "@/components/auth/RequireSchoolProfile";
 import { RequireMFA } from "@/components/auth/RequireMFA";
 import { RequireSuperAdmin } from "@/components/auth/RequireSuperAdmin";
+import { NativeRouteGuard } from "@/components/native/NativeRouteGuard";
 import { DemoGate } from "@/components/DemoGate";
 import { PushNotificationPrompt } from "@/components/notifications/PushNotificationPrompt";
 import { OfflineIndicator } from "@/components/safety/OfflineIndicator";
@@ -192,6 +193,7 @@ const App = () => (
             <DemoGate>
             <RouteAwareProviders>
               <Suspense fallback={<PageLoader />}>
+                <NativeRouteGuard />
                 <Routes>
                   <Route path="/" element={<ModeSelect />} />
                   <Route path="/school" element={<Index />} />
