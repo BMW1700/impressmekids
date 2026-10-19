@@ -1,3 +1,4 @@
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { playerSignUp, playerLogin, directSignUpFallback, directLoginFallback } from "@/lib/playerAuth";
@@ -469,6 +470,7 @@ const GameAuth = () => {
 
   const SsoButtons = () => (
     <div className="space-y-2.5">
+      {!IS_NATIVE_APP && (<>
       <Button
         type="button"
         onClick={handleGoogleSignIn}
@@ -496,6 +498,7 @@ const GameAuth = () => {
         <CleverIcon />
         <span>Continue with Clever</span>
       </Button>
+      </>)}
       <div className="relative py-1">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
           <div className="w-full border-t border-white/20" />

@@ -1120,6 +1120,7 @@ const Auth = () => {
 
           <TabsContent value="signin" className="space-y-4">
             {/* SSO Buttons */}
+            {!Capacitor.isNativePlatform() && (<>
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1155,6 +1156,7 @@ const Auth = () => {
               <Apple className="mr-3 h-5 w-5 fill-white" />
               Sign in with Apple
             </Button>
+            </>)}
 
             {!Capacitor.isNativePlatform() && (
               <TooltipProvider delayDuration={300}>
@@ -1401,6 +1403,7 @@ const Auth = () => {
 
           <TabsContent value="signup" className="space-y-4">
             {/* SSO Buttons */}
+            {!Capacitor.isNativePlatform() && (<>
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -1436,6 +1439,7 @@ const Auth = () => {
               <Apple className="mr-3 h-5 w-5 fill-white" />
               Sign up with Apple
             </Button>
+            </>)}
 
 
             {!Capacitor.isNativePlatform() && (
