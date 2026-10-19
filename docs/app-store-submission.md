@@ -128,3 +128,11 @@ Capture these scenes:
 - [ ] App Privacy form filled out in App Store Connect (Section 2 above)
 - [ ] Reviewer notes pasted (Section 7)
 - [ ] Demo accounts seeded and reachable
+
+## Sign-in inside the iPhone/iPad app (updated 2026-10-19)
+- Google, Apple, and Clever sign-in are hidden inside the native app; they stay on the website.
+  Reason: web sign-in redirects back to `capacitor://localhost`, and Google blocks sign-in in embedded web views.
+  With no third-party login offered in the app, Guideline 4.8 (Sign in with Apple) does not apply.
+- Reviewer login: use email/password or Student ID accounts. Create and test them on a real device before submitting.
+- No Xcode "Sign in with Apple" capability is needed for this build.
+- The app ID is `app.lovable.yubilearn`. Videos stream from the backend, so the app needs an internet connection.
