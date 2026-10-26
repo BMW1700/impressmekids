@@ -19,6 +19,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getCdnUrl } from "@/lib/cdn";
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
+import { resolveMediaAssetUrl } from "@/lib/native/mediaAssetUrl";
 import type { VideoLevel, VideoStep } from "@/data/preKAdventuresVideo";
 
 export const PREK_VIDEO_BUCKET = "prek-level-videos";
@@ -52,7 +54,9 @@ interface ResolvedUrl {
 
 async function resolveUrl(value: string | null | undefined): Promise<ResolvedUrl | null> {
   if (!value) return null;
-  if (/^https?:\/\//i.test(value) || value.startsWith("/")) return { src: value };
+  if (/^https?:\/\//i.test(value) || value.startsWith("/")) {
+    return { src: resolveMediaAssetUrl(value, IS_NATIVE_APP) };
+  }
   const { data, error } = await supabase.storage
     .from(PREK_VIDEO_BUCKET)
     .createSignedUrl(value, 60 * 60 * 24 * 7);
