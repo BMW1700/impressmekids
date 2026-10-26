@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { getCdnUrl } from "@/lib/cdn";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
+import { IS_NATIVE_APP } from "@/lib/native/isNativeApp";
+import { resolveMediaAssetUrl } from "@/lib/native/mediaAssetUrl";
 
 // 7 days — Pre-K videos are immutable (new upload = new path), so a long TTL
 // lets a CDN / browser cache hold the bytes between sessions.
@@ -91,7 +93,7 @@ export function usePreKLevelVideoUrls(level: LevelInput | null | undefined, word
 
       const resolve = (v: string | null | undefined): string | null => {
         if (!v) return null;
-        if (isAbsolute(v)) return v;
+        if (isAbsolute(v)) return resolveMediaAssetUrl(v, IS_NATIVE_APP);
         return resolvedByPath.get(v) ?? null;
       };
 

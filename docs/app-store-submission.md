@@ -136,3 +136,31 @@ Capture these scenes:
 - Reviewer login: use email/password or Student ID accounts. Create and test them on a real device before submitting.
 - No Xcode "Sign in with Apple" capability is needed for this build.
 - The app ID is `app.lovable.yubilearn`. Videos stream from the backend, so the app needs an internet connection.
+
+## Phone media fix (2026-10-26)
+
+`npm run build:ios` now uses the native build mode, which converts imported
+Lovable asset pointer URLs to `https://yubilearn.com/__l5e/assets-v1/...`.
+This covers the homepage Benny video, its poster, and imported game media.
+Database-supplied Lovable media paths use the same resolver. Existing signed
+private storage URLs are unchanged. Website builds remain same-origin.
+
+To install this update on your connected phone, run in the project on your Mac:
+
+```bash
+git pull
+npm install --legacy-peer-deps
+npm run build:ios
+npx cap sync ios
+npx cap open ios
+```
+
+Then select your connected phone in Xcode and press Play. Existing installed
+apps do not automatically receive bundled code updates; published App Store
+apps require a new build and release for these changes.
+
+Google and Apple buttons remain hidden in the native app. Restoring them
+requires a secure external-browser login and session handoff back into the
+app; merely unhiding web buttons would leave sign-in broken. That flow and
+real-device verification are still outstanding. Do not claim native social
+login or App Store readiness is verified by this media fix.
