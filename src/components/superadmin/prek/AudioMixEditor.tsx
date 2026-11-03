@@ -7,6 +7,7 @@
 //   ├ Track mixer strips (name, M, S, volume, add audio, reorder, delete)
 //   └ Clip Inspector (anchor, mode, fades, trim, effective gain)
 
+import { filterClipsForOriginalAudio, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
@@ -83,7 +84,7 @@ const MODE_LABELS: Record<PreKAudioDurationMode, string> = {
 type UndoEntry =
   | { kind: "clip"; id: string; before: Partial<PreKAudioClip> }
   | { kind: "track"; id: string; before: Partial<PreKAudioTrack> }
-  | { kind: "level"; before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> }
+  | { kind: "level"; before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean; original_audio_scene_keys: PreKOriginalAudioMap }> }
   | { kind: "track-soft-delete"; id: string }      // undo = restore (clear deleted_at)
   | { kind: "track-restore"; id: string }          // undo = re-soft-delete (set deleted_at)
   | { kind: "clip-soft-delete"; id: string }
@@ -139,11 +140,11 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
 
   // ── Level settings ─────────────────────────────────────────────────────────
   const updateLevelSetting = async (
-    patch: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }>,
+    patch: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean; original_audio_scene_keys: PreKOriginalAudioMap }>,
     skipUndo = false,
   ) => {
     if (!skipUndo) {
-      const before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> = {};
+      const before: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean; original_audio_scene_keys: PreKOriginalAudioMap }> = {};
       for (const k of Object.keys(patch) as Array<keyof typeof patch>) {
         (before as Record<string, unknown>)[k] = mix.settings[k];
       }
@@ -391,7 +392,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       return { kind: "track", id: entry.id, before: inverse };
     }
     if (entry.kind === "level") {
-      const inverse: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean }> = {};
+      const inverse: Partial<{ audio_master_volume: number; mute_source_video_audio: boolean; original_audio_scene_keys: PreKOriginalAudioMap }> = {};
       for (const k of Object.keys(entry.before) as Array<keyof typeof entry.before>) {
         (inverse as Record<string, unknown>)[k] = mix.settings[k];
       }
@@ -616,7 +617,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   const mixer = usePreKAudioTimelineTransport({
     graph: sceneGraph,
     tracks: mix.tracks,
-    clips: mix.clips,
+    clips: filterClipsForOriginalAudio(mix.clips, mix.settings.original_audio_scene_keys),
     signedUrls: mix.signedUrls,
     masterVolume: mix.settings.audio_master_volume,
     enabled: previewPlaying,
@@ -774,6 +775,36 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
         </Card>
       )}
 
+      {/* Per-clip original audio overrides */}
+      {videoScenes.length > 0 && (
+        <Card>
+          <CardHeader className="py-3">
+            <CardTitle className="text-base flex items-center gap-2"><Volume2 className="h-4 w-4"/> Original audio per clip</CardTitle>
+            <p className="text-xs text-muted-foreground">Original video sound is muted after a redub. Turn it back on for any clip where the redub went wrong.</p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {videoScenes.map((sc) => {
+              const mode = mix.settings.original_audio_scene_keys[sc.key];
+              const setMode = (next: "muted" | "mix" | "original_only") => {
+                const map = { ...mix.settings.original_audio_scene_keys };
+                if (next === "muted") delete map[sc.key]; else map[sc.key] = next;
+                updateLevelSetting({ original_audio_scene_keys: map });
+              };
+              return (
+                <div key={sc.key} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+                  <span className="text-sm font-medium">{sc.label}</span>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant={!mode ? "default" : "outline"} onClick={() => setMode("muted")}><VolumeX className="h-3 w-3 mr-1"/>Original muted</Button>
+                    <Button size="sm" variant={mode === "mix" ? "default" : "outline"} onClick={() => setMode("mix")}>Mix original + redub</Button>
+                    <Button size="sm" variant={mode === "original_only" ? "default" : "outline"} onClick={() => setMode("original_only")}>Original only</Button>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Video preview synced to the timeline playhead */}
       <Card>
         <CardHeader className="py-3">
@@ -788,7 +819,8 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             fallbackPosterUrls={videoUrlsState.fallbackPosterUrls}
             playheadSec={effectivePlayhead}
             playing={previewPlaying && dragPreviewSec === null}
-            muteSourceVideo={mix.settings.mute_source_video_audio}
+            muteSourceVideo={mix.settings.mute_source_video_audio || mix.clips.some((c) => c.track_index === 89 || c.track_index === 90)}
+            originalAudioMap={mix.settings.original_audio_scene_keys}
             wordsByIndex={wordsByIndex}
           />
         </CardContent>

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { parseOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
 
@@ -229,8 +230,15 @@ export async function auditPreKLevelIntegrity(
     }
   });
 
+  const { data: origRow } = await supabase.from("prek_levels").select("original_audio_scene_keys").eq("id", level.id).maybeSingle();
+  const originalAudioMap = parseOriginalAudioMap((origRow as { original_audio_scene_keys?: unknown } | null)?.original_audio_scene_keys);
+
   if (hasOverlayAudio) {
     expectedSceneKeys.forEach((key) => {
+      if (originalAudioMap[key]) {
+        issues.push({ severity: "warning", code: "original-audio", message: `${key} is using original audio${originalAudioMap[key] === "mix" ? " mixed with the redub" : ""}.` });
+        return;
+      }
       if (!redubAnchors.has(key)) {
         issues.push({ severity: "error", code: "missing-redub", message: `${key} has no redub audio, but overlay audio exists so source video audio will be muted.` });
       }

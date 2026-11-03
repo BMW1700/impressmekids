@@ -15,6 +15,7 @@
 //   videos are actually playing during the dissolve, so the audience never
 //   sees a freeze or a black frame.
 
+import { filterClipsForOriginalAudio, shouldMuteSourceForScene } from "@/lib/preKOriginalAudio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mic, SkipForward, Volume2 } from "lucide-react";
@@ -119,9 +120,14 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const emitScene = useCallback((sceneKey: string, edge: "start" | "end") => {
     setSceneEvent({ sceneKey, edge, isWordCard: sceneKey.endsWith("-card") });
   }, []);
+  const originalAudioMap = mix.settings.original_audio_scene_keys;
+  const runtimeClips = useMemo(
+    () => filterClipsForOriginalAudio(mix.clips, originalAudioMap),
+    [mix.clips, originalAudioMap]
+  );
   const mixerHandle = usePreKAudioMixerRuntime({
     tracks: mix.tracks,
-    clips: mix.clips,
+    clips: runtimeClips,
     signedUrls: mix.signedUrls,
     masterVolume: mix.settings.audio_master_volume,
     enabled: !!dbLevelId,
@@ -134,7 +140,9 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     () => mix.clips.some((c) => c.track_index === 89 || c.track_index === 90),
     [mix.clips]
   );
-  const muteSourceVideo = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
+  const levelMutesSource = (!!dbLevelId && mix.settings.mute_source_video_audio) || hasOverlayAudio;
+  // Per-clip override: chosen scenes keep their original video audio.
+  const muteSourceVideo = shouldMuteSourceForScene(levelMutesSource, sceneEvent?.sceneKey, originalAudioMap);
   const overlayAudioReady = useMemo(
     () => !dbLevelId || (!mix.loading && mixerHandle.ready && mix.clips.every((c) => !!mix.signedUrls[c.storage_path])),
     [dbLevelId, mix.clips, mix.loading, mix.signedUrls, mixerHandle.ready]
@@ -562,7 +570,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       try {
         // Respect the per-level mute_source_video_audio setting; only unmute
         // when the level keeps its baked-in narration.
-        v.muted = muteSourceVideo;
+        v.muted = shouldMuteSourceForScene(levelMutesSource, sceneKeyForStep(0, wordCount), originalAudioMap);
         slotStepIndexRef.current[activeSlotRef.current] = 0;
         const trim = trimForStep(0);
         v.currentTime = trim?.trimIn ?? 0;
