@@ -1,6 +1,6 @@
 /** Per-scene override that lets the original video audio play on chosen clips. */
 export type PreKOriginalAudioMode = "mix" | "original_only";
-export interface PreKOriginalAudioEntry {
+export type PreKOriginalAudioEntry = {
   mode: PreKOriginalAudioMode;
   /** Seconds of the original sound cut from the clip's start (video time). */
   trimStartSec: number;
@@ -8,7 +8,7 @@ export interface PreKOriginalAudioEntry {
   trimEndSec: number;
   fadeInSec: number;
   fadeOutSec: number;
-}
+};
 export type PreKOriginalAudioMap = Record<string, PreKOriginalAudioEntry>;
 
 export const PREK_REDUB_TRACK_INDEX = 90;
