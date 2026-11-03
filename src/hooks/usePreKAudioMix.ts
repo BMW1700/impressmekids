@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
+import { parseOriginalAudioMap, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 
 export interface PreKAudioTrack {
   id: string;
@@ -53,6 +54,7 @@ export interface PreKAudioClip {
 export interface PreKLevelAudioSettings {
   audio_master_volume: number;
   mute_source_video_audio: boolean;
+  original_audio_scene_keys: PreKOriginalAudioMap;
 }
 
 export interface PreKAudioMix {
@@ -87,6 +89,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
   const [settings, setSettings] = useState<PreKLevelAudioSettings>({
     audio_master_volume: 1,
     mute_source_video_audio: false,
+    original_audio_scene_keys: {},
   });
   const [loading, setLoading] = useState(true);
   const reloadSequenceRef = useRef(0);
@@ -105,7 +108,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     const [{ data: ts }, { data: cs }, { data: lv }] = await Promise.all([
       supabase.from("prek_level_audio_tracks").select("*").eq("level_id", levelId).is("deleted_at", null).order("track_index"),
       supabase.from("prek_level_audio_clips").select("*").eq("level_id", levelId).is("deleted_at", null).order("sort_order"),
-      supabase.from("prek_levels").select("audio_master_volume, mute_source_video_audio").eq("id", levelId).maybeSingle(),
+      supabase.from("prek_levels").select("audio_master_volume, mute_source_video_audio, original_audio_scene_keys").eq("id", levelId).maybeSingle(),
     ]);
     const tracksRows = (ts ?? []) as unknown as PreKAudioTrack[];
     const clipsRows = (cs ?? []) as unknown as PreKAudioClip[];
@@ -115,6 +118,7 @@ export function usePreKAudioMix(levelId: string | undefined | null): PreKAudioMi
     if (lv) setSettings({
       audio_master_volume: Number((lv as { audio_master_volume?: number }).audio_master_volume ?? 1),
       mute_source_video_audio: Boolean((lv as { mute_source_video_audio?: boolean }).mute_source_video_audio ?? false),
+      original_audio_scene_keys: parseOriginalAudioMap((lv as { original_audio_scene_keys?: unknown }).original_audio_scene_keys),
     });
     // Preserve existing signed URLs for paths we've already signed, but await
     // genuinely-new paths before marking the mix loaded. The runtime player
