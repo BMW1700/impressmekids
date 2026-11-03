@@ -2,6 +2,7 @@
 // current `playheadSec` so authors can visually line up sound effects with
 // what the child sees. Plays during preview, scrubs while dragging.
 
+import { shouldMuteSourceForScene, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { useEffect, useMemo, useRef } from "react";
 import { Zap, Film } from "lucide-react";
 import { resolveTimelineFrame } from "@/lib/preKTimelineFrameResolver";
@@ -16,12 +17,13 @@ interface Props {
   playheadSec: number;
   playing: boolean;
   muteSourceVideo: boolean;
+  originalAudioMap?: PreKOriginalAudioMap;
   /** Approx label of the word being shown on a card scene (e.g. "JUMP"). */
   wordsByIndex?: Record<number, string>;
 }
 
 export function TimelinePreviewPlayer({
-  graph, videoUrls, posterUrls, fallbackVideoUrls, fallbackPosterUrls, playheadSec, playing, muteSourceVideo, wordsByIndex,
+  graph, videoUrls, posterUrls, fallbackVideoUrls, fallbackPosterUrls, playheadSec, playing, muteSourceVideo, originalAudioMap, wordsByIndex,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastSrcRef = useRef<string | null>(null);
@@ -80,13 +82,13 @@ export function TimelinePreviewPlayer({
   // Play / pause based on transport state and whether we're on a video scene.
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
-    v.muted = muteSourceVideo;
+    v.muted = shouldMuteSourceForScene(muteSourceVideo, lookup.sceneKey, originalAudioMap ?? {});
     if (playing && !lookup.isCard && lookup.src) {
       v.play().catch(() => { /* autoplay-blocked, fine for preview */ });
     } else {
       try { v.pause(); } catch { /* noop */ }
     }
-  }, [playing, lookup.isCard, lookup.src, muteSourceVideo]);
+  }, [playing, lookup.isCard, lookup.src, lookup.sceneKey, muteSourceVideo, originalAudioMap]);
 
   const wordIdxMatch = lookup.sceneKey.match(/^word-(\d+)-card$/);
   const cardWord = wordIdxMatch ? wordsByIndex?.[Number(wordIdxMatch[1])] : undefined;
