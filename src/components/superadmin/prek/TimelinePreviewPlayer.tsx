@@ -80,13 +80,18 @@ export function TimelinePreviewPlayer({
   }, [lookup.localTime, lookup.isCard, lookup.src]);
 
   // Follow the per-clip trim/fade window on the original sound.
-  const sceneKeyRef = useRef(lookup.sceneKey);
-  sceneKeyRef.current = lookup.sceneKey;
+  const scene = graph.scenes.find((sc) => sc.key === lookup.sceneKey);
+  const windowRef = useRef({ sceneKey: lookup.sceneKey as string | null, start: 0, end: null as number | null });
+  windowRef.current = {
+    sceneKey: lookup.sceneKey,
+    start: scene?.sourceTrimInSeconds ?? 0,
+    end: scene?.sourceTrimOutSeconds ?? null,
+  };
   const mapRef = useRef(originalAudioMap ?? {});
   mapRef.current = originalAudioMap ?? {};
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
-    return followOriginalAudioGain(v, () => sceneKeyRef.current, () => mapRef.current);
+    return followOriginalAudioGain(v, () => windowRef.current, () => mapRef.current);
   }, []);
 
   // Play / pause based on transport state and whether we're on a video scene.

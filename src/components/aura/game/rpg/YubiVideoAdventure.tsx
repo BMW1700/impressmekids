@@ -181,6 +181,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const videoRefs = useRef<{ A: HTMLVideoElement | null; B: HTMLVideoElement | null }>({ A: null, B: null });
   // Per-clip trim/fade on the original sound, for each video slot.
   const originalAudioMapRef = useRef(originalAudioMap);
+  const trimForStepRef = useRef<((i: number | null) => { trimIn: number; trimOut: number | null } | null) | null>(null);
   originalAudioMapRef.current = originalAudioMap;
   useEffect(() => {
     const stops: Array<() => void> = [];
@@ -189,7 +190,11 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
       if (!v) return;
       stops.push(followOriginalAudioGain(
         v,
-        () => { const i = slotStepIndexRef.current[slot]; return i == null ? null : sceneKeyForStep(i, wordCount); },
+        () => {
+          const i = slotStepIndexRef.current[slot];
+          const trim = trimForStepRef.current?.(i);
+          return { sceneKey: i == null ? null : sceneKeyForStep(i, wordCount), start: trim?.trimIn ?? 0, end: trim?.trimOut ?? null };
+        },
         () => originalAudioMapRef.current,
       ));
     });
@@ -300,6 +305,7 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
     const trimOut = typeof s.trimOut === "number" && s.trimOut > 0 ? s.trimOut : null;
     return { trimIn, trimOut };
   }, [steps]);
+  trimForStepRef.current = trimForStep;
 
   const fallbackBySrc = useMemo(() => {
     const m = new Map<string, string>();
