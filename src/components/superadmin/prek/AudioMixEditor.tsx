@@ -7,7 +7,7 @@
 //   ├ Track mixer strips (name, M, S, volume, add audio, reorder, delete)
 //   └ Clip Inspector (anchor, mode, fades, trim, effective gain)
 
-import { filterClipsForOriginalAudio, makeOriginalAudioEntry, type PreKOriginalAudioMap, type PreKOriginalAudioEntry } from "@/lib/preKOriginalAudio";
+import { filterClipsForOriginalAudio, makeOriginalAudioEntry, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import {
   Plus, Trash2, Upload, Loader2, Music, Volume2, VolumeX,
@@ -791,11 +791,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
                 if (next === "muted") delete map[sc.key]; else map[sc.key] = makeOriginalAudioEntry(next, map[sc.key]);
                 updateLevelSetting({ original_audio_scene_keys: map });
               };
-              const patchEntry = (p: Partial<PreKOriginalAudioEntry>) => {
-                if (!entry) return;
-                updateLevelSetting({ original_audio_scene_keys: { ...mix.settings.original_audio_scene_keys, [sc.key]: { ...entry, ...p } } });
-              };
-              const fadeOpts = [{ v: 0, l: "Off" }, { v: 0.15, l: "Short" }, { v: 0.4, l: "Smooth" }];
               return (
                 <div key={sc.key} className="rounded-md border px-3 py-2 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -806,30 +801,6 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
                     <Button size="sm" variant={mode === "original_only" ? "default" : "outline"} onClick={() => setMode("original_only")}>Original only</Button>
                   </div>
                 </div>
-                {entry && (
-                  <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                    {([
-                      { label: "Cut original start", key: "trimStartSec", fade: "fadeInSec", fadeLabel: "Fade in" },
-                      { label: "Cut original end", key: "trimEndSec", fade: "fadeOutSec", fadeLabel: "Fade out" },
-                    ] as const).map((f) => (
-                      <div key={f.key} className="space-y-1">
-                        <div className="flex justify-between"><span>{f.label}</span><span className="tabular-nums">{entry[f.key].toFixed(2)}s</span></div>
-                        <input type="range" min={0} max={8} step={0.05} value={entry[f.key]}
-                          onChange={(e) => patchEntry({ [f.key]: Number(e.target.value) })}
-                          className="w-full accent-primary" aria-label={`${f.label} for ${sc.label}`} />
-                        <div className="flex items-center gap-1">
-                          <span className="text-muted-foreground mr-1">{f.fadeLabel}:</span>
-                          {fadeOpts.map((o) => (
-                            <Button key={o.l} size="sm" className="h-6 px-2 text-xs" variant={entry[f.fade] === o.v ? "default" : "outline"} onClick={() => patchEntry({ [f.fade]: o.v })}>{o.l}</Button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                    <div className="sm:col-span-2">
-                      <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => patchEntry({ trimStartSec: 0, trimEndSec: 0 })}>Reset trim</Button>
-                    </div>
-                  </div>
-                )}
                 </div>
               );
             })}
@@ -882,6 +853,13 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
             onDeleteClip={deleteClip}
             onSplitClip={splitClip}
             onTrimClip={trimClip}
+            originalAudioMap={mix.settings.original_audio_scene_keys}
+            onTrimOriginal={(sceneKey, edge, cutSec) => {
+              const map = mix.settings.original_audio_scene_keys;
+              // Cropping the original means you want to hear it: default to "Mix".
+              const entry = map[sceneKey] ?? makeOriginalAudioEntry("mix");
+              updateLevelSetting({ original_audio_scene_keys: { ...map, [sceneKey]: { ...entry, [edge === "start" ? "trimStartSec" : "trimEndSec"]: cutSec } } });
+            }}
             onScrub={scrubTo}
             onDragPreview={setDragPreviewSec}
             onBeforeIsolatedPreview={pausePreview}
