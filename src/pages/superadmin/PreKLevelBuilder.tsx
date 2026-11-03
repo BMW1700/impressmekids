@@ -612,7 +612,7 @@ const PreKLevelBuilder = () => {
             {health ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={health.ready ? "default" : "destructive"}>{health.ready ? "Ready to publish" : "Fix before publish"}</Badge>
+                  <Badge variant={health.ready ? "default" : "destructive"}>{health.ready ? "Ready to publish" : "Has issues (can still publish)"}</Badge>
                   <Badge variant="outline">Videos {health.requiredVideoCount}</Badge>
                   <Badge variant="outline">Redub {health.generatedRedubCount}/{health.videoSceneCount}</Badge>
                   <Badge variant="outline">Music {health.generatedMusicCount}/{health.videoSceneCount}</Badge>
