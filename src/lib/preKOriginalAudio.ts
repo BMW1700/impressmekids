@@ -83,24 +83,55 @@ export function originalAudioGainAt(
 
 export type OriginalAudioSceneWindow = { sceneKey: string | null | undefined; start: number; end: number | null };
 
-/** Keeps a video's volume following the trim window. Returns a stop function. */
+/**
+ * Should the video element be hard-muted right now? Cropped parts of the
+ * original sound are removed with `muted` (works everywhere, including iPad
+ * where `volume` is read-only), not just faded with volume.
+ */
+export function shouldHardMuteOriginal(
+  globalMute: boolean,
+  sceneKey: string | null | undefined,
+  videoTime: number,
+  sceneStart: number,
+  sceneEnd: number,
+  map: PreKOriginalAudioMap,
+): boolean {
+  if (shouldMuteSourceForScene(globalMute, sceneKey, map)) return true;
+  return originalAudioGainAt(sceneKey, videoTime, sceneStart, sceneEnd, map) <= 0.001;
+}
+
+/**
+ * Keeps a video's sound following the crop window: muted outside the crop,
+ * volume fades inside it. `getVideo` is read every frame so videos that mount
+ * later are still covered. Returns a stop function.
+ */
 export function followOriginalAudioGain(
-  video: HTMLVideoElement,
+  getVideo: () => HTMLVideoElement | null,
   getWindow: () => OriginalAudioSceneWindow,
   getMap: () => PreKOriginalAudioMap,
+  getGlobalMute: () => boolean,
 ): () => void {
   let raf = 0;
+  let last: HTMLVideoElement | null = null;
   const tick = () => {
-    const w = getWindow();
-    const end = w.end ?? video.duration;
-    const target = originalAudioGainAt(w.sceneKey, video.currentTime || 0, w.start, end, getMap());
-    const cur = video.volume;
-    const next = Math.abs(target - cur) < 0.02 ? target : cur + (target - cur) * 0.35;
-    if (next !== cur) { try { video.volume = next; } catch { /* iOS: volume is read-only */ } }
+    const video = getVideo();
+    last = video ?? last;
+    if (video) {
+      const w = getWindow();
+      const map = getMap();
+      const end = w.end ?? video.duration;
+      const t = video.currentTime || 0;
+      const mute = shouldHardMuteOriginal(getGlobalMute(), w.sceneKey, t, w.start, end, map);
+      if (video.muted !== mute) video.muted = mute;
+      const target = mute ? 0 : originalAudioGainAt(w.sceneKey, t, w.start, end, map);
+      const cur = video.volume;
+      const next = Math.abs(target - cur) < 0.02 ? target : cur + (target - cur) * 0.35;
+      if (next !== cur) { try { video.volume = next; } catch { /* iOS: volume is read-only */ } }
+    }
     raf = requestAnimationFrame(tick);
   };
   raf = requestAnimationFrame(tick);
-  return () => { cancelAnimationFrame(raf); try { video.volume = 1; } catch { /* noop */ } };
+  return () => { cancelAnimationFrame(raf); try { if (last) last.volume = 1; } catch { /* noop */ } };
 }
 
 /** Drop redub clips on scenes set to "original only". Music/SFX stays. */
