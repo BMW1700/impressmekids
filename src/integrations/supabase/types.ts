@@ -5515,6 +5515,7 @@ export type Database = {
           opening_trim_out_seconds: number | null
           opening_video_duration_seconds: number | null
           opening_video_url: string | null
+          original_audio_scene_keys: Json
           redub_audio_paths: Json
           redub_generated_at: string | null
           redub_isolated_paths: Json
@@ -5554,6 +5555,7 @@ export type Database = {
           opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
+          original_audio_scene_keys?: Json
           redub_audio_paths?: Json
           redub_generated_at?: string | null
           redub_isolated_paths?: Json
@@ -5593,6 +5595,7 @@ export type Database = {
           opening_trim_out_seconds?: number | null
           opening_video_duration_seconds?: number | null
           opening_video_url?: string | null
+          original_audio_scene_keys?: Json
           redub_audio_paths?: Json
           redub_generated_at?: string | null
           redub_isolated_paths?: Json

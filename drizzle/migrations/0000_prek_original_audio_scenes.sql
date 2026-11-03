@@ -1,0 +1,1 @@
+ALTER TABLE public.prek_levels ADD COLUMN IF NOT EXISTS original_audio_scene_keys jsonb NOT NULL DEFAULT '{}'::jsonb;
