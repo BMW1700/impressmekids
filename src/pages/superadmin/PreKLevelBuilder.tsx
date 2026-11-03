@@ -551,8 +551,12 @@ const PreKLevelBuilder = () => {
     if (!saved) return;
     const currentHealth = await refreshHealth();
     if (!level.is_published && currentHealth && !currentHealth.ready) {
-      toast.error(currentHealth.issues.find((i) => i.severity === "error")?.message ?? "Fix Level Health errors before publishing.");
-      return;
+      const errorCount = currentHealth.issues.filter((i) => i.severity === "error").length;
+      const first = currentHealth.issues.find((i) => i.severity === "error")?.message;
+      const ok = window.confirm(
+        `Level Health still shows ${errorCount} issue${errorCount === 1 ? "" : "s"}${first ? ` (e.g. "${first}")` : ""}.\n\nPublish anyway?`
+      );
+      if (!ok) return;
     }
     const { error } = await supabase
       .from("prek_levels")
@@ -608,7 +612,7 @@ const PreKLevelBuilder = () => {
             {health ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={health.ready ? "default" : "destructive"}>{health.ready ? "Ready to publish" : "Fix before publish"}</Badge>
+                  <Badge variant={health.ready ? "default" : "destructive"}>{health.ready ? "Ready to publish" : "Has issues (can still publish)"}</Badge>
                   <Badge variant="outline">Videos {health.requiredVideoCount}</Badge>
                   <Badge variant="outline">Redub {health.generatedRedubCount}/{health.videoSceneCount}</Badge>
                   <Badge variant="outline">Music {health.generatedMusicCount}/{health.videoSceneCount}</Badge>
