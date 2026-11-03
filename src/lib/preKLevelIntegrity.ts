@@ -236,7 +236,7 @@ export async function auditPreKLevelIntegrity(
   if (hasOverlayAudio) {
     expectedSceneKeys.forEach((key) => {
       if (originalAudioMap[key]) {
-        issues.push({ severity: "warning", code: "original-audio", message: `${key} is using original audio${originalAudioMap[key] === "mix" ? " mixed with the redub" : ""}.` });
+        issues.push({ severity: "warning", code: "original-audio", message: `${key} is using original audio${originalAudioMap[key].mode === "mix" ? " mixed with the redub" : ""}.` });
         return;
       }
       if (!redubAnchors.has(key)) {

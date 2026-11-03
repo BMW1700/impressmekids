@@ -15,7 +15,7 @@
 //   videos are actually playing during the dissolve, so the audience never
 //   sees a freeze or a black frame.
 
-import { filterClipsForOriginalAudio, shouldMuteSourceForScene } from "@/lib/preKOriginalAudio";
+import { filterClipsForOriginalAudio, shouldMuteSourceForScene, followOriginalAudioGain } from "@/lib/preKOriginalAudio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mic, SkipForward, Volume2 } from "lucide-react";
@@ -179,6 +179,22 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
 
   // Refs
   const videoRefs = useRef<{ A: HTMLVideoElement | null; B: HTMLVideoElement | null }>({ A: null, B: null });
+  // Per-clip trim/fade on the original sound, for each video slot.
+  const originalAudioMapRef = useRef(originalAudioMap);
+  originalAudioMapRef.current = originalAudioMap;
+  useEffect(() => {
+    const stops: Array<() => void> = [];
+    (["A", "B"] as const).forEach((slot) => {
+      const v = videoRefs.current[slot];
+      if (!v) return;
+      stops.push(followOriginalAudioGain(
+        v,
+        () => { const i = slotStepIndexRef.current[slot]; return i == null ? null : sceneKeyForStep(i, wordCount); },
+        () => originalAudioMapRef.current,
+      ));
+    });
+    return () => stops.forEach((s) => s());
+  }, [wordCount]);
   const timers = useRef<number[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
