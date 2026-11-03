@@ -2,7 +2,7 @@
 // current `playheadSec` so authors can visually line up sound effects with
 // what the child sees. Plays during preview, scrubs while dragging.
 
-import { shouldMuteSourceForScene, followOriginalAudioGain, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
+import { followOriginalAudioGain, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { useEffect, useMemo, useRef } from "react";
 import { Zap, Film } from "lucide-react";
 import { resolveTimelineFrame } from "@/lib/preKTimelineFrameResolver";
@@ -89,15 +89,17 @@ export function TimelinePreviewPlayer({
   };
   const mapRef = useRef(originalAudioMap ?? {});
   mapRef.current = originalAudioMap ?? {};
-  useEffect(() => {
-    const v = videoRef.current; if (!v) return;
-    return followOriginalAudioGain(v, () => windowRef.current, () => mapRef.current);
-  }, []);
+  const globalMuteRef = useRef(muteSourceVideo);
+  globalMuteRef.current = muteSourceVideo;
+  useEffect(
+    () => followOriginalAudioGain(() => videoRef.current, () => windowRef.current, () => mapRef.current, () => globalMuteRef.current),
+    [],
+  );
 
   // Play / pause based on transport state and whether we're on a video scene.
+  // (Muting, including cropped parts of the original sound, is handled above.)
   useEffect(() => {
     const v = videoRef.current; if (!v) return;
-    v.muted = shouldMuteSourceForScene(muteSourceVideo, lookup.sceneKey, originalAudioMap ?? {});
     if (playing && !lookup.isCard && lookup.src) {
       v.play().catch(() => { /* autoplay-blocked, fine for preview */ });
     } else {
@@ -116,6 +118,7 @@ export function TimelinePreviewPlayer({
           ref={videoRef}
           className={`absolute inset-0 w-full h-full object-contain ${lookup.isCard ? "opacity-0" : "opacity-100"}`}
           playsInline
+          muted
           preload="auto"
           onError={handleVideoError}
         />
