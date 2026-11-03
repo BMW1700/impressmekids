@@ -2,7 +2,7 @@
 // current `playheadSec` so authors can visually line up sound effects with
 // what the child sees. Plays during preview, scrubs while dragging.
 
-import { shouldMuteSourceForScene, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
+import { shouldMuteSourceForScene, followOriginalAudioGain, type PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { useEffect, useMemo, useRef } from "react";
 import { Zap, Film } from "lucide-react";
 import { resolveTimelineFrame } from "@/lib/preKTimelineFrameResolver";
@@ -78,6 +78,16 @@ export function TimelinePreviewPlayer({
     }, 30);
     return () => { if (seekTimerRef.current) window.clearTimeout(seekTimerRef.current); };
   }, [lookup.localTime, lookup.isCard, lookup.src]);
+
+  // Follow the per-clip trim/fade window on the original sound.
+  const sceneKeyRef = useRef(lookup.sceneKey);
+  sceneKeyRef.current = lookup.sceneKey;
+  const mapRef = useRef(originalAudioMap ?? {});
+  mapRef.current = originalAudioMap ?? {};
+  useEffect(() => {
+    const v = videoRef.current; if (!v) return;
+    return followOriginalAudioGain(v, () => sceneKeyRef.current, () => mapRef.current);
+  }, []);
 
   // Play / pause based on transport state and whether we're on a video scene.
   useEffect(() => {
