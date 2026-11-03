@@ -45,17 +45,18 @@ test("new object values parse with trims", () => {
 
 const trimmed = { a: { mode: "mix" as const, trimStartSec: 2, trimEndSec: 1, fadeInSec: 0.4, fadeOutSec: 0.4 } };
 
+// Scene plays video seconds 5–15; 2s cut from start, 1s from end.
 test("original is silent before the start cut and after the end cut", () => {
-  assert.equal(originalAudioGainAt("a", 1.9, 10, trimmed), 0);
-  assert.equal(originalAudioGainAt("a", 9.5, 10, trimmed), 0);
+  assert.equal(originalAudioGainAt("a", 6.9, 5, 15, trimmed), 0);
+  assert.equal(originalAudioGainAt("a", 14.5, 5, 15, trimmed), 0);
 });
 
 test("original fades in and out around the cuts", () => {
-  assert.ok(Math.abs(originalAudioGainAt("a", 2.2, 10, trimmed) - 0.5) < 1e-9);
-  assert.equal(originalAudioGainAt("a", 5, 10, trimmed), 1);
-  assert.ok(Math.abs(originalAudioGainAt("a", 8.8, 10, trimmed) - 0.5) < 1e-9);
+  assert.ok(Math.abs(originalAudioGainAt("a", 7.2, 5, 15, trimmed) - 0.5) < 1e-9);
+  assert.equal(originalAudioGainAt("a", 10, 5, 15, trimmed), 1);
+  assert.ok(Math.abs(originalAudioGainAt("a", 13.8, 5, 15, trimmed) - 0.5) < 1e-9);
 });
 
 test("scenes without an override keep full volume", () => {
-  assert.equal(originalAudioGainAt("b", 0, 10, trimmed), 1);
+  assert.equal(originalAudioGainAt("b", 0, 5, 15, trimmed), 1);
 });

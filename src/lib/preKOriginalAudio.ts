@@ -2,9 +2,9 @@
 export type PreKOriginalAudioMode = "mix" | "original_only";
 export type PreKOriginalAudioEntry = {
   mode: PreKOriginalAudioMode;
-  /** Seconds of the original sound cut from the clip's start (video time). */
+  /** Seconds of the original sound cut from the scene's start. */
   trimStartSec: number;
-  /** Seconds of the original sound cut from the clip's end. */
+  /** Seconds of the original sound cut from the scene's end. */
   trimEndSec: number;
   fadeInSec: number;
   fadeOutSec: number;
@@ -59,38 +59,41 @@ export function shouldMuteSourceForScene(
 }
 
 /**
- * Volume (0–1) for the original sound at video time `tSec`. Scenes without an
- * override return 1 (mute is handled separately by shouldMuteSourceForScene).
+ * Volume (0–1) for the original sound. Trims are seconds cut from the scene's
+ * own start/end (scene-local), so they line up with the timeline block.
+ * `videoTime` / `sceneStart` / `sceneEnd` are all in source-video seconds.
  */
 export function originalAudioGainAt(
   sceneKey: string | null | undefined,
-  tSec: number,
-  durationSec: number,
+  videoTime: number,
+  sceneStart: number,
+  sceneEnd: number,
   map: PreKOriginalAudioMap,
 ): number {
   const e = sceneKey ? map[sceneKey] : undefined;
   if (!e) return 1;
-  const start = e.trimStartSec;
-  const end = Number.isFinite(durationSec) && durationSec > 0 ? durationSec - e.trimEndSec : Infinity;
-  if (tSec < start || tSec > end) return 0;
+  const start = sceneStart + e.trimStartSec;
+  const end = Number.isFinite(sceneEnd) && sceneEnd > 0 ? sceneEnd - e.trimEndSec : Infinity;
+  if (videoTime < start || videoTime > end) return 0;
   let g = 1;
-  if (e.fadeInSec > 0) g = Math.min(g, (tSec - start) / e.fadeInSec);
-  if (e.fadeOutSec > 0 && end !== Infinity) g = Math.min(g, (end - tSec) / e.fadeOutSec);
+  if (e.fadeInSec > 0) g = Math.min(g, (videoTime - start) / e.fadeInSec);
+  if (e.fadeOutSec > 0 && end !== Infinity) g = Math.min(g, (end - videoTime) / e.fadeOutSec);
   return Math.max(0, Math.min(1, g));
 }
 
-/**
- * Keeps a video's volume following the trim window. Returns a stop function.
- * A short per-frame ramp avoids clicks.
- */
+export type OriginalAudioSceneWindow = { sceneKey: string | null | undefined; start: number; end: number | null };
+
+/** Keeps a video's volume following the trim window. Returns a stop function. */
 export function followOriginalAudioGain(
   video: HTMLVideoElement,
-  getSceneKey: () => string | null | undefined,
+  getWindow: () => OriginalAudioSceneWindow,
   getMap: () => PreKOriginalAudioMap,
 ): () => void {
   let raf = 0;
   const tick = () => {
-    const target = originalAudioGainAt(getSceneKey(), video.currentTime || 0, video.duration, getMap());
+    const w = getWindow();
+    const end = w.end ?? video.duration;
+    const target = originalAudioGainAt(w.sceneKey, video.currentTime || 0, w.start, end, getMap());
     const cur = video.volume;
     const next = Math.abs(target - cur) < 0.02 ? target : cur + (target - cur) * 0.35;
     if (next !== cur) { try { video.volume = next; } catch { /* iOS: volume is read-only */ } }
