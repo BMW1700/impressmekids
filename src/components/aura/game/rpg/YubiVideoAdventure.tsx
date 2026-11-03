@@ -183,19 +183,21 @@ export const YubiVideoAdventure = ({ world, level, onBack, onComplete, overrideL
   const originalAudioMapRef = useRef(originalAudioMap);
   const trimForStepRef = useRef<((i: number | null) => { trimIn: number; trimOut: number | null } | null) | null>(null);
   originalAudioMapRef.current = originalAudioMap;
+  const levelMutesSourceRef = useRef(levelMutesSource);
+  levelMutesSourceRef.current = levelMutesSource;
   useEffect(() => {
     const stops: Array<() => void> = [];
     (["A", "B"] as const).forEach((slot) => {
-      const v = videoRefs.current[slot];
-      if (!v) return;
+      // Video elements may mount after this effect; the follower re-reads them each frame.
       stops.push(followOriginalAudioGain(
-        v,
+        () => videoRefs.current[slot],
         () => {
           const i = slotStepIndexRef.current[slot];
           const trim = trimForStepRef.current?.(i);
           return { sceneKey: i == null ? null : sceneKeyForStep(i, wordCount), start: trim?.trimIn ?? 0, end: trim?.trimOut ?? null };
         },
         () => originalAudioMapRef.current,
+        () => levelMutesSourceRef.current,
       ));
     });
     return () => stops.forEach((s) => s());
