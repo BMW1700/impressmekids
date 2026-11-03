@@ -18,6 +18,7 @@ import type { SceneGraph } from "@/lib/preKSceneGraph";
 import { resolveClip } from "@/lib/preKClipResolve";
 import { audioBoundsForClip } from "@/lib/preKAudioBounds";
 import { ClipWaveform } from "./ClipWaveform";
+import type { PreKOriginalAudioMap } from "@/lib/preKOriginalAudio";
 
 const PX_PER_SEC_FULL = 48;
 const PX_PER_SEC_COMPACT_CARD = 10; // collapse card scenes when wall-clock is off
@@ -53,6 +54,10 @@ interface Props {
   onDragPreview?: (sec: number | null) => void;
   /** Stops the main transport before isolated clip-button playback. */
   onBeforeIsolatedPreview?: () => void;
+  /** Per-scene original-audio settings (trims shown on the Video lane). */
+  originalAudioMap?: PreKOriginalAudioMap;
+  /** Drag-crop the original sound: seconds cut from that scene's start/end. */
+  onTrimOriginal?: (sceneKey: string, edge: "start" | "end", cutSec: number) => void;
 }
 
 
@@ -68,8 +73,36 @@ interface DragState {
 
 export function TimelineCanvas({
   graph, tracks, clips, selectedClipId, wallClock, playheadSec, signedUrls, videoUrls,
-  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onTrimClip, onScrub, onDragPreview, onBeforeIsolatedPreview,
+  onSelectClip, onMoveClipStart, onMoveSpanEnd, onDropOnNewTrack, onDeleteClip, onSplitClip, onTrimClip, onScrub, onDragPreview, onBeforeIsolatedPreview, originalAudioMap, onTrimOriginal,
 }: Props) {
+  const [origDrag, setOrigDrag] = useState<{ sceneKey: string; edge: "start" | "end"; startX: number; dx: number; base: number; pxPerSec: number; maxCut: number } | null>(null);
+  const beginOrigDrag = (e: RPointerEvent, sceneKey: string, edge: "start" | "end", pxPerSec: number, maxCut: number) => {
+    if (!onTrimOriginal || pxPerSec <= 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const entry = originalAudioMap?.[sceneKey];
+    const base = edge === "start" ? entry?.trimStartSec ?? 0 : entry?.trimEndSec ?? 0;
+    const st = { sceneKey, edge, startX: e.clientX, dx: 0, base, pxPerSec, maxCut };
+    setOrigDrag(st);
+    const move = (ev: PointerEvent) => setOrigDrag((d) => (d ? { ...d, dx: ev.clientX - d.startX } : d));
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      const dx = ev.clientX - st.startX;
+      const delta = (edge === "start" ? dx : -dx) / pxPerSec;
+      const cut = Math.max(0, Math.min(maxCut, base + delta));
+      setOrigDrag(null);
+      onTrimOriginal(sceneKey, edge, Math.round(cut * 100) / 100);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const origCut = (sceneKey: string, edge: "start" | "end") => {
+    const entry = originalAudioMap?.[sceneKey];
+    const base = edge === "start" ? entry?.trimStartSec ?? 0 : entry?.trimEndSec ?? 0;
+    if (!origDrag || origDrag.sceneKey !== sceneKey || origDrag.edge !== edge) return base;
+    const delta = (edge === "start" ? origDrag.dx : -origDrag.dx) / origDrag.pxPerSec;
+    return Math.max(0, Math.min(origDrag.maxCut, base + delta));
+  };
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   dragRef.current = drag;
@@ -362,6 +395,38 @@ export function TimelineCanvas({
                 <div className="absolute left-0 right-0 bottom-0 h-3.5 px-1.5 bg-background/80 border-t border-background/40 flex items-center pointer-events-none">
                   <span className="truncate text-[9px] leading-none opacity-90">{scene.label}</span>
                 </div>
+                {onTrimOriginal && (() => {
+                  const pps = blockWidth / Math.max(0.1, scene.timelineDurationSeconds);
+                  const maxCut = Math.max(0, scene.timelineDurationSeconds - 0.2);
+                  const cutS = origCut(scene.key, "start");
+                  const cutE = origCut(scene.key, "end");
+                  const sPx = cutS * pps; const ePx = cutE * pps;
+                  const isDrag = origDrag?.sceneKey === scene.key;
+                  const ghostCls = isDrag ? "border-2 border-dashed border-destructive/70 bg-destructive/15" : "bg-background/70";
+                  return (
+                    <>
+                      {sPx > 0 && <div className={`absolute top-0 bottom-0 left-0 ${ghostCls}`} style={{ width: sPx }} title="Original audio cut" />}
+                      {ePx > 0 && <div className={`absolute top-0 bottom-0 right-0 ${ghostCls}`} style={{ width: ePx }} title="Original audio cut" />}
+                      <div
+                        onPointerDown={(e) => beginOrigDrag(e, scene.key, "start", pps, maxCut - cutE)}
+                        className="absolute top-0 bottom-0 w-3 pointer-events-auto cursor-ew-resize flex items-center justify-center border-r-2 border-slate-400 bg-background/40 hover:bg-background/70"
+                        style={{ left: sPx }}
+                        title="Drag to crop the start of the original audio"
+                      ><div className="h-5 w-1 rounded-full bg-slate-300" /></div>
+                      <div
+                        onPointerDown={(e) => beginOrigDrag(e, scene.key, "end", pps, maxCut - cutS)}
+                        className="absolute top-0 bottom-0 w-3 pointer-events-auto cursor-ew-resize flex items-center justify-center border-l-2 border-slate-400 bg-background/40 hover:bg-background/70"
+                        style={{ right: ePx }}
+                        title="Drag to crop the end of the original audio"
+                      ><div className="h-5 w-1 rounded-full bg-slate-300" /></div>
+                      {isDrag && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 rounded bg-background/90 px-1 text-[9px] pointer-events-none">
+                          cut {(origDrag!.edge === "start" ? cutS : cutE).toFixed(2)}s
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             );
           })}
