@@ -9634,6 +9634,10 @@ export type Database = {
         Args: { _tournament_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_teacher_office_hours: {
+        Args: { _teacher_id: string }
+        Returns: boolean
+      }
       check_consent_exists: {
         Args: { p_student_email: string }
         Returns: {

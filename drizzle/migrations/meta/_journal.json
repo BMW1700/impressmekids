@@ -15,6 +15,13 @@
       "when": 1795640462437,
       "tag": "0001_security_hardening_batch",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795640575457,
+      "tag": "0002_scope_shared_reads",
+      "breakpoints": true
     }
   ]
 }
