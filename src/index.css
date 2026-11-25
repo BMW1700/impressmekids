@@ -1108,3 +1108,46 @@ All colors MUST be HSL.
   animation: enemy-attack-swing 0.6s ease-in-out infinite;
   transform-origin: 50% 80%;
 }
+
+/* Pre-K level map */
+:root {
+  --prek-new-from: 262 70% 66%;
+  --prek-new-to: 228 72% 64%;
+  --prek-pass-from: 142 62% 52%;
+  --prek-pass-to: 152 58% 40%;
+  --prek-retry-from: 2 82% 70%;
+  --prek-retry-to: 350 70% 58%;
+  --prek-panel: 268 45% 30%;
+  --prek-tile-text: 0 0% 100%;
+}
+.prek-map-panel {
+  background: hsl(var(--prek-panel) / 0.82);
+  border: 2px solid hsl(var(--prek-new-from) / 0.55);
+  border-radius: 1.75rem;
+  box-shadow: 0 0 40px hsl(var(--prek-new-from) / 0.35), inset 0 1px 0 hsl(0 0% 100% / 0.12);
+  backdrop-filter: blur(6px);
+}
+.prek-map-bar { background: hsl(var(--prek-panel) / 0.7); border-radius: 9999px; border: 1px solid hsl(var(--prek-new-from) / 0.4); }
+.prek-map-badge { background: linear-gradient(135deg, hsl(var(--prek-retry-from)), hsl(var(--prek-new-from))); color: hsl(var(--prek-tile-text)); }
+.prek-map-progress { background: hsl(var(--prek-panel) / 0.9); border: 1px solid hsl(var(--prek-new-from) / 0.4); }
+.prek-progress-fill { background: linear-gradient(90deg, hsl(var(--prek-pass-from)), hsl(var(--prek-pass-to))); }
+.prek-tile {
+  position: relative;
+  color: hsl(var(--prek-tile-text));
+  text-shadow: 0 2px 3px hsl(0 0% 0% / 0.25);
+  border: 2px solid hsl(0 0% 100% / 0.35);
+  transition: box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.prek-tile:hover, .prek-tile:focus-visible { border-color: hsl(48 100% 75%); box-shadow: 0 0 22px hsl(48 100% 70% / 0.6); outline: none; }
+.prek-tile--new { background: linear-gradient(160deg, hsl(var(--prek-new-from)), hsl(var(--prek-new-to))); box-shadow: 0 0 14px hsl(var(--prek-new-from) / 0.45); }
+.prek-tile--passed { background: linear-gradient(160deg, hsl(var(--prek-pass-from)), hsl(var(--prek-pass-to))); box-shadow: 0 0 14px hsl(var(--prek-pass-from) / 0.45); }
+.prek-tile--retry { background: linear-gradient(160deg, hsl(var(--prek-retry-from)), hsl(var(--prek-retry-to))); box-shadow: 0 0 14px hsl(var(--prek-retry-from) / 0.45); }
+.prek-tile-badge {
+  position: absolute; top: 0.4rem; right: 0.4rem;
+  height: 1.6rem; width: 1.6rem; border-radius: 9999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: hsl(var(--prek-tile-text)); border: 2px solid hsl(0 0% 100% / 0.85);
+}
+.prek-tile-badge.static { position: static; height: 1.1rem; width: 1.1rem; border-width: 1px; }
+.prek-tile-badge--passed { background: hsl(var(--prek-pass-to)); }
+.prek-tile-badge--retry { background: hsl(var(--prek-retry-to)); }

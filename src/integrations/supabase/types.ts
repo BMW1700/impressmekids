@@ -5221,6 +5221,33 @@ export type Database = {
           },
         ]
       }
+      prek_level_attempts: {
+        Row: {
+          grade_mode: string
+          id: string
+          level_number: number
+          started_at: string
+          user_id: string
+          world_number: number
+        }
+        Insert: {
+          grade_mode?: string
+          id?: string
+          level_number: number
+          started_at?: string
+          user_id: string
+          world_number: number
+        }
+        Update: {
+          grade_mode?: string
+          id?: string
+          level_number?: number
+          started_at?: string
+          user_id?: string
+          world_number?: number
+        }
+        Relationships: []
+      }
       prek_level_audio_clips: {
         Row: {
           anchor_edge: string

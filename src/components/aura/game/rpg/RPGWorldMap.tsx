@@ -10,6 +10,7 @@ import { agentCampaignWorlds } from "@/lib/agentCampaignData";
 import { getGradeTitle } from "@/lib/gradeUtils";
 import { getStoredTheme, setStoredTheme, type GameTheme } from "@/lib/gameTheme";
 import { PreKStatsButton } from "@/components/prek/PreKStatsButton";
+import { PreKLevelGrid } from "@/components/prek/PreKLevelGrid";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -617,13 +618,21 @@ export const RPGWorldMap = ({
 
       {/* World Cards with Enhanced Connecting Paths */}
       <div className={`max-w-4xl mx-auto relative z-[5] ${isPrek ? 'lg:ml-[480px] xl:ml-[540px] lg:mr-auto' : ''}`}>
+        {isPrek ? (
+          <PreKLevelGrid
+            worlds={publishedPrekWorlds}
+            userId={studentId}
+            gradeMode={gradeMode}
+            onOpen={onSelectWorld}
+          />
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {(() => {
             const theme = mapTheme;
             let displayedWorlds: CampaignWorld[];
             if (theme === 'agent') {
               displayedWorlds = agentCampaignWorlds;
-            } else if (theme === 'prek') {
+            } else if ((theme as string) === 'prek') {
               displayedWorlds = [...(publishedPrekWorlds ?? [])].sort((a, b) => a.id - b.id);
             } else {
               displayedWorlds = campaignWorlds.filter((w) => w.mode !== 'prek');
@@ -820,6 +829,7 @@ export const RPGWorldMap = ({
           });
           })()}
         </div>
+        )}
       </div>
 
       {/* Reading Progress Panel - Fixed position on left side (non-Pre-K) */}

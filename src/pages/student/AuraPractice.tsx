@@ -701,6 +701,13 @@ const AuraPractice = () => {
 
       // Pre-K worlds: skip the standard battle and go straight to the One-Word Reader
       if (isPreKWorld) {
+        // Remember the start so the level map can show "Try again" if it isn't finished.
+        void supabase.from('prek_level_attempts').insert({
+          user_id: user.id,
+          grade_mode: currentGradeMode,
+          world_number: selectedWorld.id,
+          level_number: Number(level.id),
+        });
         setRpgView('prek_reader');
         return;
       }
