@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { findSharedSourceIssues, isPreCutAudioClip } from "../preKSharedSource";
+import { findSharedSourceIssues, isPreCutAudioClip } from "../preKSharedSource.ts";
 
 describe("shared source video rules", () => {
   it("flags overlapping windows in the same file (food/drink word-1 case)", () => {

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   filterClipsForOriginalAudio, shouldMuteSourceForScene, parseOriginalAudioMap, originalAudioGainAt, makeOriginalAudioEntry,
-} from "../preKOriginalAudio";
+} from "../preKOriginalAudio.ts";
 
 const mix = makeOriginalAudioEntry("mix");
 const only = makeOriginalAudioEntry("original_only");
@@ -62,26 +62,26 @@ test("scenes without an override keep full volume", () => {
 });
 
 test("cropped start of the original sound is hard-muted, the rest plays", async () => {
-  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio");
+  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio.ts");
   const map = { a: { ...mix, trimStartSec: 3, trimEndSec: 0, fadeInSec: 0, fadeOutSec: 0 } };
   assert.equal(shouldHardMuteOriginal(true, "a", 1.5, 0, 6, map), true);
   assert.equal(shouldHardMuteOriginal(true, "a", 4, 0, 6, map), false);
 });
 
 test("cropped end of the original sound is hard-muted", async () => {
-  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio");
+  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio.ts");
   const map = { a: { ...mix, trimStartSec: 0, trimEndSec: 2, fadeInSec: 0, fadeOutSec: 0 } };
   assert.equal(shouldHardMuteOriginal(true, "a", 4.5, 0, 6, map), true);
   assert.equal(shouldHardMuteOriginal(true, "a", 3, 0, 6, map), false);
 });
 
 test("uncropping brings the original sound back", async () => {
-  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio");
+  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio.ts");
   const map = { a: { ...mix, trimStartSec: 0, trimEndSec: 0, fadeInSec: 0, fadeOutSec: 0 } };
   assert.equal(shouldHardMuteOriginal(true, "a", 0.5, 0, 6, map), false);
 });
 
 test("scenes without original audio stay muted after a redub", async () => {
-  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio");
+  const { shouldHardMuteOriginal } = await import("../preKOriginalAudio.ts");
   assert.equal(shouldHardMuteOriginal(true, "b", 2, 0, 6, { a: mix }), true);
 });
