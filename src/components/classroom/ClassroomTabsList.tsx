@@ -120,6 +120,7 @@ export const ClassroomTabsList = ({
     return orderedTabs.filter((tabId: string) => {
       const config = TAB_CONFIG[tabId];
       if (!config) return false;
+      if (tabId === "ai-insights") return false; // AI turned off (Nov 2026)
       if (config.isToolkit) {
         return isFeatureEnabled(tabId);
       }

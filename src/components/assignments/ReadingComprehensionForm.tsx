@@ -221,33 +221,7 @@ export const ReadingComprehensionForm = ({ data, onChange }: ReadingComprehensio
         />
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <Label htmlFor="image-upload" className="cursor-pointer">
-            <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg hover:bg-accent transition-colors">
-              {isExtracting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-                  <span>Extracting text...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4" />
-                  <span>Upload Image for OCR</span>
-                </>
-              )}
-            </div>
-            <Input 
-              id="image-upload"
-              type="file" 
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              disabled={isExtracting}
-            />
-          </Label>
-        </div>
-      </div>
+      {/* Photo-to-text upload removed with the Google AI connection (Nov 2026). */}
 
       <div className="flex items-center justify-between p-4 border rounded-lg">
         <div className="space-y-1">

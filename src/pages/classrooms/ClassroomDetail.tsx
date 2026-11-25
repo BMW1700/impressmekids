@@ -690,7 +690,7 @@ const ClassroomDetail = () => {
             }))} />
               </TabsContent>}
 
-            {canViewAsTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
+            {false && canViewAsTeacher && isFeatureEnabled("ai-insights") && <TabsContent value="ai-insights" className="mt-6">
                 <ClassroomAIInsights classroomId={id!} />
               </TabsContent>}
 

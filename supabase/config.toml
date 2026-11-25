@@ -34,16 +34,6 @@ project_id = "sjigkjwkgovculkovcjy"
     verify_jwt = false
   [functions.escalation-engine]
     verify_jwt = false
-  [functions.extract-text-from-image]
-    verify_jwt = false
-  [functions.generate-flashcards]
-    verify_jwt = false
-  [functions.generate-practice-exercises]
-    verify_jwt = false
-  [functions.generate-question-ai]
-    verify_jwt = false
-  [functions.generate-teacher-summary]
-    verify_jwt = false
   [functions.generate-world-backgrounds]
     verify_jwt = false
   [functions.list-cold-storage-backups]

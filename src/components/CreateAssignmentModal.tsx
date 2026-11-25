@@ -379,14 +379,10 @@ export const CreateAssignmentModal = ({
             <div className="grid gap-2">
               <Label>Reading Passage</Label>
               <Tabs defaultValue="manual" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-1">
                   <TabsTrigger value="manual">
                     <FileText className="mr-2 h-4 w-4" />
                     Type/Paste Text
-                  </TabsTrigger>
-                  <TabsTrigger value="ocr">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload Image (OCR)
                   </TabsTrigger>
                 </TabsList>
 

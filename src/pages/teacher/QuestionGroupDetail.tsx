@@ -212,14 +212,6 @@ const QuestionGroupDetail = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => setShowFlashcardsModal(true)}
-                    disabled={questions.length === 0}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Flashcards
-                  </Button>
-                  <Button
-                    variant="outline"
                     onClick={() => setShowAddQuestionsModal(true)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -232,12 +224,6 @@ const QuestionGroupDetail = () => {
                     <Plus className="mr-2 h-4 w-4" />
                     Create Manually
                   </Button>
-                  <Button
-                    onClick={() => setShowGenerateModal(true)}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate with AI
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -248,13 +234,13 @@ const QuestionGroupDetail = () => {
               <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-bold mb-2">No Questions in This Group</h3>
               <p className="text-muted-foreground mb-4">
-                Add questions with AI to get started
+                Add or create questions to get started
               </p>
               <Button
-                onClick={() => setShowGenerateModal(true)}
+                onClick={() => setShowCreateModal(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Questions with AI
+                Create a Question
               </Button>
             </Card>
           ) : (

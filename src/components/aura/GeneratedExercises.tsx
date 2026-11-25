@@ -15,7 +15,10 @@ interface GeneratedExercisesProps {
   studentGrade?: number;
 }
 
-const GeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: GeneratedExercisesProps) => {
+// AI-generated exercises were turned off (Nov 2026).
+const GeneratedExercises = (_props: GeneratedExercisesProps) => null;
+
+const LegacyGeneratedExercises = ({ problematicPhonemes, studentGrade = 5 }: GeneratedExercisesProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { updateQLearning } = useQLearningUpdate();

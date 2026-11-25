@@ -193,7 +193,8 @@ AUDIO FEATURES (Real-time analysis):
     let clarity: number;
     let confidence: number;
     
-    if (freeMode) {
+    // Google AI removed (Nov 2026): always use on-device metrics.
+    if (true) {
       console.log('🆓 FREE MODE: Skipping Vertex AI, using basic metrics only');
       
       // Calculate scores from basic metrics (no AI cost)
@@ -249,81 +250,6 @@ AUDIO FEATURES (Real-time analysis):
       };
       
       console.log(`📊 FREE MODE Grade: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, grade=${grade}`);
-    } else {
-      // PREMIUM MODE: Call Vertex AI for deep analysis with enhanced data
-      const aiPrompt = `You are an expert speech coach with expertise in phonetics, prosody, and public speaking. Analyze this student's speech performance using advanced acoustic and linguistic data.
-
-TRANSCRIPT: "${transcript}"
-${contextText ? `\nCONTEXT/QUESTION: "${contextText}"` : ''}
-
-BASIC METRICS:
-- Duration: ${durationSeconds}s
-- Words: ${words}
-- Speaking rate: ${wpm.toFixed(1)} WPM
-- Pauses: ${pauseCount} (avg ${avgSilenceMs.toFixed(0)}ms silence)
-${phonemeSection}${audioSection}
-
-Based on this comprehensive data, provide a detailed analysis with:
-1. Pronunciation quality (rate 1-5)
-2. Clarity score (rate 1-5)
-3. Confidence level (rate 1-5)
-4. List 3-5 specific pronunciation issues or problem words
-5. List 3-5 strengths
-6. Provide 3 personalized feedback messages
-7. Suggest 3 targeted practice exercises
-
-Format as JSON:
-{
-  "pronunciation": <1-5>,
-  "clarity": <1-5>,
-  "confidence": <1-5>,
-  "pronunciationFlags": ["word1: issue", "word2: issue"],
-  "strengths": ["strength1", "strength2"],
-  "feedback": ["message1", "message2", "message3"],
-  "suggestedExercises": [
-    {"title": "Exercise 1", "description": "details", "difficulty": "easy|medium|hard"},
-    ...
-  ],
-  "evidence": {
-    "pace_analysis": "explanation",
-    "clarity_analysis": "explanation",
-    "confidence_analysis": "explanation"
-  }
-}`;
-
-      // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
-      const { callVertexAI } = await import('../_shared/vertexAuth.ts');
-      const { scrubPII } = await import('../_shared/pseudonymize.ts');
-
-      const systemInstruction = 'You are an expert speech analysis AI. Always respond with valid JSON.';
-      
-      const aiContent = await callVertexAI(scrubPII(aiPrompt), systemInstruction, {
-        model: 'gemini-2.5-flash',
-        temperature: 0.7,
-      });
-      
-      // Strip markdown code blocks if present (AI sometimes wraps JSON in ```json ... ```)
-      let cleanedContent = aiContent.trim();
-      if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      }
-      aiAnalysis = JSON.parse(cleanedContent);
-
-      // Calculate overall grade (weighted average)
-      // Clamp individual scores to 1-5 range to prevent invalid grades
-      pronunciation = Math.max(1, Math.min(5, aiAnalysis.pronunciation));
-      clarity = Math.max(1, Math.min(5, aiAnalysis.clarity));
-      confidence = Math.max(1, Math.min(5, aiAnalysis.confidence));
-      const paceClamped = Math.max(1, Math.min(5, pace));
-      
-      grade = Math.max(0, Math.min(100, Math.round(
-        (pronunciation * 0.3 +
-         clarity * 0.3 +
-         confidence * 0.2 +
-         paceClamped * 0.2) * 20
-      )));
-      
-      console.log(`📊 PREMIUM Grade: pronunciation=${pronunciation}, clarity=${clarity}, confidence=${confidence}, pace=${paceClamped}, grade=${grade}`);
     }
 
     // COPPA COMPLIANCE: Log AURA record creation for audit trail
@@ -594,18 +520,19 @@ Format as JSON:
   }
 }`;
 
-  // Import Vertex AI helper + PII scrubber (FERPA/COPPA defense-in-depth)
-  const { callVertexAI } = await import('../_shared/vertexAuth.ts');
-  const { scrubPII } = await import('../_shared/pseudonymize.ts');
-  
-  const systemInstruction = 'You are an expert reading comprehension AI with proprietary analysis algorithms. Always respond with valid JSON.';
-  
-  const aiContent = await callVertexAI(scrubPII(aiPrompt), systemInstruction, {
-    model: 'gemini-2.5-flash',
-    temperature: 0.7,
-  });
-  
-  const aiAnalysis = JSON.parse(aiContent);
+  // Google AI removed (Nov 2026): scores come from the on-device algorithms above.
+  void aiPrompt;
+  const depth = Math.round(Math.min(100, ((conceptCoverage || 0) + cognitiveDistribution.sophisticationScore) / 2));
+  const aiAnalysis = {
+    comprehension_depth: depth,
+    highlight_quality: Math.round(adaptiveScore.adjustedScore),
+    critical_thinking: Math.round(cognitiveDistribution.sophisticationScore),
+    predicted_speaking_score: Math.round((depth + adaptiveScore.adjustedScore) / 2),
+    strengths: [highlights.length >= 3 ? 'Highlighted several key ideas' : null, annotations.length > 0 ? 'Added your own notes' : null].filter(Boolean),
+    improvements: [annotations.length === 0 ? 'Add a short note to explain each highlight' : null, highlights.length < 3 ? 'Try highlighting more key ideas' : null].filter(Boolean),
+    feedback: [cognitiveFeedback].flat().filter(Boolean).slice(0, 3),
+    reasoning: { comprehension_analysis: 'Calculated from highlight coverage and thinking level.', highlight_analysis: 'Calculated from highlight quality.', cross_modal_prediction: 'Average of comprehension and highlight quality.' },
+  };
 
   // Calculate overall comprehension score
   const comprehensionScore = Math.round(

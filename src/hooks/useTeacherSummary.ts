@@ -28,13 +28,9 @@ export const useTeacherSummary = (classroomId?: string) => {
 
   // Generate new summary
   const generateSummary = useMutation({
-    mutationFn: async (classroomId: string) => {
-      const { data, error } = await supabase.functions.invoke('generate-teacher-summary', {
-        body: { classroom_id: classroomId }
-      });
-
-      if (error) throw error;
-      return data;
+    // AI summaries were turned off (Nov 2026); existing saved summaries still display.
+    mutationFn: async (_classroomId: string): Promise<{ cached?: boolean; hours_ago?: number }> => {
+      throw new Error("AI summaries are turned off.");
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['teacher-summary', classroomId] });
@@ -52,6 +48,7 @@ export const useTeacherSummary = (classroomId?: string) => {
       }
     },
     onError: (error: Error) => {
+      if (error.message === "AI summaries are turned off.") return;
       toast({
         title: "Generation Failed",
         description: error.message,

@@ -72,14 +72,6 @@ export function QuestionGroupCard({
             <Button onClick={onViewQuestions} className="flex-1">
               View Questions
             </Button>
-            <Button 
-              onClick={onGenerateFlashcards} 
-              variant="outline"
-              disabled={questionCount === 0}
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              Flashcards
-            </Button>
           </div>
         </div>
       </CardContent>
