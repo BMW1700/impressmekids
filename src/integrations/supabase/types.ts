@@ -10133,6 +10133,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      has_any_role: { Args: { _user_id: string }; Returns: boolean }
       has_aura_consent: {
         Args: { _student_id: string; _teacher_id: string }
         Returns: boolean

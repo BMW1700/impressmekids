@@ -22,6 +22,13 @@
       "when": 1795640575457,
       "tag": "0002_scope_shared_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795640664876,
+      "tag": "0003_harden_definer_functions_and_reads",
+      "breakpoints": true
     }
   ]
 }
