@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { findSharedSourceIssues } from "@/lib/preKSharedSource";
+import { redubPreflightIssues } from "@/lib/preKSharedSource";
 import { uploadTrimmedSourceWav, clipNeedsSourceCut } from "@/lib/preKRedubRegion";
 // useBennyRedub — orchestrator for calling the prek-clip-redub edge function.
 //
@@ -134,16 +134,6 @@ async function buildClipSource(levelId: string, scene: RedubSceneInput) {
   };
 }
 
-// Stop before spending credits when shared-video crops overlap or have no end.
-export function redubPreflightIssues(scenes: RedubSceneInput[]) {
-  return findSharedSourceIssues(scenes.map((s) => ({
-    sceneKey: s.sceneKey,
-    fileId: s.sourceStoragePath,
-    trimIn: s.sourceTrimStartSeconds ?? 0,
-    trimOut: s.sourceTrimEndSeconds && s.sourceTrimEndSeconds > 0 ? s.sourceTrimEndSeconds : null,
-    raw: s.sourceRawDurationSeconds ?? null,
-  })));
-}
 function blockedByPreflight(scenes: RedubSceneInput[]): boolean {
   const issues = redubPreflightIssues(scenes);
   if (issues.length === 0) return false;

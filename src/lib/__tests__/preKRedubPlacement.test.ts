@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { resolveClip } from "@/lib/preKClipResolve";
-import { redubPreflightIssues } from "@/hooks/useBennyRedub";
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { resolveClip } from "../preKClipResolve.ts";
+import { redubPreflightIssues } from "../preKSharedSource.ts";
 import type { SceneGraph } from "@/lib/preKSceneGraph";
 import type { PreKAudioClip } from "@/hooks/usePreKAudioMix";
 
@@ -24,34 +25,34 @@ const redub = (scene: string, len: number) => ({
 
 describe("redub clip placement", () => {
   it("each redub starts exactly at its own video's start", () => {
-    expect(resolveClip(redub("opening", 5), graph).startSec).toBe(0);
-    expect(resolveClip(redub("word_1_first", 3.5), graph).startSec).toBe(5);
-    expect(resolveClip(redub("word_1_second", 8.6), graph).startSec).toBe(8.5);
+    assert.equal(resolveClip(redub("opening", 5), graph).startSec, 0);
+    assert.equal(resolveClip(redub("word_1_first", 3.5), graph).startSec, 5);
+    assert.equal(resolveClip(redub("word_1_second", 8.6), graph).startSec, 8.5);
   });
   it("a pre-cut redub is as long as its cropped video", () => {
     const r = resolveClip(redub("word_1_first", 3.5), graph);
-    expect(r.endSec - r.startSec).toBeCloseTo(3.5);
+    assert.ok(Math.abs(r.endSec - r.startSec - 3.5) < 0.01);
   });
 });
 
 describe("Full auto crop check", () => {
   const base = { sourceStoragePath: "same.mp4", label: "", sourceRawDurationSeconds: 31 };
   it("blocks overlapping crops on a shared video", () => {
-    expect(redubPreflightIssues([
+    assert.ok(redubPreflightIssues([
       { ...base, sceneKey: "a", sourceTrimStartSeconds: 5.3, sourceTrimEndSeconds: 8.9 },
       { ...base, sceneKey: "b", sourceTrimStartSeconds: 6.2, sourceTrimEndSeconds: 14.8 },
-    ]).length).toBeGreaterThan(0);
+    ]).length > 0);
   });
   it("blocks a shared-video crop with no end point", () => {
-    expect(redubPreflightIssues([
+    assert.ok(redubPreflightIssues([
       { ...base, sceneKey: "a", sourceTrimStartSeconds: 0, sourceTrimEndSeconds: 5 },
       { ...base, sceneKey: "b", sourceTrimStartSeconds: 20 },
-    ]).length).toBeGreaterThan(0);
+    ]).length > 0);
   });
   it("allows clean side-by-side crops", () => {
-    expect(redubPreflightIssues([
+    assert.deepEqual(redubPreflightIssues([
       { ...base, sceneKey: "a", sourceTrimStartSeconds: 0, sourceTrimEndSeconds: 5 },
       { ...base, sceneKey: "b", sourceTrimStartSeconds: 5, sourceTrimEndSeconds: 9 },
-    ])).toEqual([]);
+    ]), []);
   });
 });

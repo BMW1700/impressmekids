@@ -50,3 +50,17 @@ export function isPreCutAudioClip(clipDurationSeconds: number | null | undefined
   if (sceneRawSeconds == null || !(sceneRawSeconds > 0)) return false;
   return clipDurationSeconds < sceneRawSeconds - 0.05;
 }
+
+/** Crop problems that should stop a Full auto redub before it spends credits. */
+export function redubPreflightIssues(scenes: Array<{
+  sceneKey: string; sourceStoragePath: string;
+  sourceTrimStartSeconds?: number; sourceTrimEndSeconds?: number; sourceRawDurationSeconds?: number;
+}>): SharedSourceIssue[] {
+  return findSharedSourceIssues(scenes.map((s) => ({
+    sceneKey: s.sceneKey,
+    fileId: s.sourceStoragePath,
+    trimIn: s.sourceTrimStartSeconds ?? 0,
+    trimOut: s.sourceTrimEndSeconds && s.sourceTrimEndSeconds > 0 ? s.sourceTrimEndSeconds : null,
+    raw: s.sourceRawDurationSeconds ?? null,
+  })));
+}
