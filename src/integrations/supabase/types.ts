@@ -5273,6 +5273,8 @@ export type Database = {
           sort_order: number
           source_kind: string
           source_pre_cut: boolean
+          source_trim_end_seconds: number | null
+          source_trim_start_seconds: number | null
           storage_path: string
           track_index: number
           trim_end_seconds: number | null
@@ -5304,6 +5306,8 @@ export type Database = {
           sort_order?: number
           source_kind?: string
           source_pre_cut?: boolean
+          source_trim_end_seconds?: number | null
+          source_trim_start_seconds?: number | null
           storage_path: string
           track_index: number
           trim_end_seconds?: number | null
@@ -5335,6 +5339,8 @@ export type Database = {
           sort_order?: number
           source_kind?: string
           source_pre_cut?: boolean
+          source_trim_end_seconds?: number | null
+          source_trim_start_seconds?: number | null
           storage_path?: string
           track_index?: number
           trim_end_seconds?: number | null

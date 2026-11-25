@@ -27,6 +27,9 @@ const REDUB_TRACK_NAME = "Benny (Redub)";
 const REDUB_TRACK_INDEX = 90; // high index so it sits on top of manual tracks
 
 interface Body {
+  /** Video crop this audio is made from (before any pre-cut). */
+  cropStartSeconds?: number;
+  cropEndSeconds?: number | null;
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
@@ -263,6 +266,8 @@ Deno.serve(async (req) => {
       sourceTrimStartSeconds: body.clipIsPreTrimmed ? 0 : body.sourceTrimStartSeconds,
       sourceTrimEndSeconds: body.clipIsPreTrimmed ? undefined : body.sourceTrimEndSeconds,
       clipIsPreTrimmed: body.clipIsPreTrimmed === true,
+      cropStartSeconds: body.cropStartSeconds,
+      cropEndSeconds: body.cropEndSeconds,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -290,6 +295,8 @@ async function ensureRedubClip(
     sourceTrimStartSeconds?: number;
     sourceTrimEndSeconds?: number;
     clipIsPreTrimmed?: boolean;
+    cropStartSeconds?: number;
+    cropEndSeconds?: number | null;
   },
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
@@ -369,6 +376,7 @@ async function ensureRedubClip(
     playback_rate: 1.0,
     source_kind: "redub" as const,
     source_pre_cut: args.clipIsPreTrimmed === true,
+    ...cropSnapshot(args.cropStartSeconds, args.cropEndSeconds),
   };
 
   if (existingClip?.id) {
@@ -427,4 +435,18 @@ function mirrorToR2Async(
       console.warn(`[prek-clip-redub] R2 mirror failed for ${bucket}/${path}:`, e);
     }
   })();
+}
+
+// Remember which part of the video this audio came from, so Level Health can
+// flag it when someone changes the crop later. Unknown stays null.
+function cropSnapshot(start: unknown, end: unknown) {
+  const s = Number(start);
+  if (start == null || !Number.isFinite(s) || s < 0) {
+    return { source_trim_start_seconds: null, source_trim_end_seconds: null };
+  }
+  const e = Number(end);
+  return {
+    source_trim_start_seconds: s,
+    source_trim_end_seconds: end != null && Number.isFinite(e) && e > s ? e : null,
+  };
 }

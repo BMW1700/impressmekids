@@ -102,6 +102,14 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
     toast.success("Full auto complete — voice on Redub lane, music on Music lane.");
   };
 
+  const handleRedoChanged = async () => {
+    if (!effectiveVoice) { toast.error("Set a Sir Bookears voice ID (level or world default) first."); return; }
+    if (voiceIdDraft !== redub.settings.levelVoiceId) await redub.saveVoiceSettings({ voiceId: voiceIdDraft });
+    const res = await redub.redoChangedClips(scenes);
+    if (res.redub + res.music === 0) toast.success("No clips need redoing. Every voice and music track matches its video's crop.");
+    else toast.success(`Redid ${res.redub} voice and ${res.music} music track(s) whose crop changed.`);
+  };
+
   const handleMusicAll = async () => {
     if (scenes.length === 0) { toast.error("No source videos found."); return; }
     toast.info(`Extracting music/SFX from ${scenes.length} clips via LALAL.AI…`);
@@ -208,6 +216,15 @@ export const RedubStudioPanel = ({ levelId, sceneGraph, sourcePathsByScene }: Pr
               ? <><Loader2 className="h-3 w-3 mr-1 animate-spin"/> Full auto {redub.autoProgress.done}/{redub.autoProgress.total}…</>
               : <><Zap className="h-3 w-3 mr-1"/> Full auto: Redub + Music ({scenes.length} clips)</>
             }
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleRedoChanged}
+            disabled={!!redub.autoProgress || !!redub.batchProgress || !!redub.musicBatchProgress || scenes.length === 0}
+            title="Only redoes clips whose video crop changed after their voice or music was made"
+          >
+            <RotateCw className="h-3 w-3 mr-1"/> Redo changed clips
           </Button>
           <Button
             size="sm"

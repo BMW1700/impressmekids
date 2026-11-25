@@ -33,6 +33,9 @@ const PREMIUM_REQUIRED_COPY =
   "LALAL API access is blocked: Premium license required to access this feature. Upgrade/replace LALAL_API_KEY with a Pro/API-enabled license.";
 
 interface Body {
+  /** Video crop this audio is made from (before any pre-cut). */
+  cropStartSeconds?: number;
+  cropEndSeconds?: number | null;
   levelId: string;
   sceneKey: string;
   sourceStoragePath: string;
@@ -298,6 +301,8 @@ Deno.serve(async (req) => {
       sourceTrimStartSeconds: body.sourceTrimStartSeconds,
       sourceTrimEndSeconds: body.sourceTrimEndSeconds,
       clipIsPreTrimmed: body.clipIsPreTrimmed === true,
+      cropStartSeconds: body.cropStartSeconds,
+      cropEndSeconds: body.cropEndSeconds,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -323,6 +328,8 @@ async function ensureMusicClip(
     sourceTrimStartSeconds?: number;
     sourceTrimEndSeconds?: number;
     clipIsPreTrimmed?: boolean;
+    cropStartSeconds?: number;
+    cropEndSeconds?: number | null;
   },
 ) {
   // Idempotent track upsert — safe when parallel workers race for the same
@@ -402,6 +409,7 @@ async function ensureMusicClip(
     manual_crop_start_seconds: 0,
     manual_crop_end_seconds: 0,
     source_pre_cut: args.clipIsPreTrimmed === true,
+    ...cropSnapshot(args.cropStartSeconds, args.cropEndSeconds),
     playback_rate: 1.0,
     source_kind: "music" as const,
   };
@@ -454,4 +462,18 @@ function mirrorToR2Async(
       console.warn(`[prek-clip-music-extract] R2 mirror failed for ${bucket}/${path}:`, e);
     }
   })();
+}
+
+// Remember which part of the video this audio came from, so Level Health can
+// flag it when someone changes the crop later. Unknown stays null.
+function cropSnapshot(start: unknown, end: unknown) {
+  const s = Number(start);
+  if (start == null || !Number.isFinite(s) || s < 0) {
+    return { source_trim_start_seconds: null, source_trim_end_seconds: null };
+  }
+  const e = Number(end);
+  return {
+    source_trim_start_seconds: s,
+    source_trim_end_seconds: end != null && Number.isFinite(e) && e > s ? e : null,
+  };
 }

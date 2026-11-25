@@ -1,4 +1,4 @@
-import { findSharedSourceIssues, isPreCutAudioClip } from "@/lib/preKSharedSource";
+import { findSharedSourceIssues, isPreCutAudioClip, cropChangedSinceRedub } from "@/lib/preKSharedSource";
 import { supabase } from "@/integrations/supabase/client";
 import { parseOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
@@ -228,7 +228,7 @@ export async function auditPreKLevelIntegrity(
 
   const { data: clipRows } = await supabase
     .from("prek_level_audio_clips")
-    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, manual_crop_start_seconds, manual_crop_end_seconds, duration_seconds, source_pre_cut")
+    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, manual_crop_start_seconds, manual_crop_end_seconds, duration_seconds, source_pre_cut, source_trim_start_seconds, source_trim_end_seconds")
     .eq("level_id", level.id)
     .is("deleted_at", null)
     .in("track_index", [PREK_MUSIC_TRACK_INDEX, PREK_REDUB_TRACK_INDEX]);
@@ -246,6 +246,14 @@ export async function auditPreKLevelIntegrity(
     const expectedTrim = trimMap.get(c.anchor_scene_key);
     if (!expectedTrim) return;
     const actualTrimStart = Number(c.trim_start_seconds ?? 0);
+    const saved = c as unknown as { source_trim_start_seconds?: number | null; source_trim_end_seconds?: number | null };
+    if (cropChangedSinceRedub(
+      { start: saved.source_trim_start_seconds, end: saved.source_trim_end_seconds },
+      { trimIn: expectedTrim.trimIn, trimOut: expectedTrim.trimOut, raw: expectedTrim.raw },
+    )) {
+      const what = c.source_kind === "music" || c.track_index === PREK_MUSIC_TRACK_INDEX ? "music" : "redub";
+      issues.push({ severity: "warning", code: "crop-changed-since-redub", message: `${c.anchor_scene_key}: crop changed since this ${what} was made. Redo this clip (or click "Redo changed clips").` });
+    }
     const preCut = (c as any).source_pre_cut === true || isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), expectedTrim.raw);
     if (!preCut && Math.abs(actualTrimStart - expectedTrim.trimIn) > 0.05) {
       issues.push({ severity: "error", code: "audio-trim-drift", message: `${c.anchor_scene_key} audio trim (${actualTrimStart.toFixed(2)}s) does not match video trim (${expectedTrim.trimIn.toFixed(2)}s).` });

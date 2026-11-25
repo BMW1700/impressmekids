@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { redubPreflightIssues } from "@/lib/preKSharedSource";
+import { redubPreflightIssues, cropChangedSinceRedub } from "@/lib/preKSharedSource";
 import { uploadTrimmedSourceWav, clipNeedsSourceCut } from "@/lib/preKRedubRegion";
 // useBennyRedub — orchestrator for calling the prek-clip-redub edge function.
 //
@@ -101,6 +101,11 @@ export interface LevelRedubSettings {
 // uses part of its video (common when one long video fills several slots),
 // cut that part out first so each box gets its own audio.
 async function buildClipSource(levelId: string, scene: RedubSceneInput) {
+  // The crop this audio is made from, so we can tell later if it changed.
+  const crop = {
+    cropStartSeconds: scene.sourceTrimStartSeconds ?? 0,
+    cropEndSeconds: scene.sourceTrimEndSeconds && scene.sourceTrimEndSeconds > 0 ? scene.sourceTrimEndSeconds : null,
+  };
   if (!clipNeedsSourceCut(scene.sourceTrimStartSeconds, scene.sourceTrimEndSeconds, scene.sourceRawDurationSeconds)) {
     return {
       preCut: false,
@@ -110,6 +115,7 @@ async function buildClipSource(levelId: string, scene: RedubSceneInput) {
         sourceRawDurationSeconds: scene.sourceRawDurationSeconds,
         sourceTrimStartSeconds: scene.sourceTrimStartSeconds,
         sourceTrimEndSeconds: scene.sourceTrimEndSeconds,
+        ...crop,
       } as Record<string, unknown>,
     };
   }
@@ -130,6 +136,7 @@ async function buildClipSource(levelId: string, scene: RedubSceneInput) {
       sourceRawDurationSeconds: lengthSeconds,
       sourceTrimStartSeconds: 0,
       sourceTrimEndSeconds: lengthSeconds,
+      ...crop,
     } as Record<string, unknown>,
   };
 }
@@ -509,6 +516,35 @@ export function useBennyRedub(levelId: string | null) {
     await reload();
   }, [extractMusic, reload]);
 
+  // Redo only the clips whose video crop changed after their voice/music
+  // track was made. Returns how many clips were redone.
+  const redoChangedClips = useCallback(async (scenes: RedubSceneInput[]) => {
+    if (!levelId) return { redub: 0, music: 0 };
+    const { data } = await supabase
+      .from("prek_level_audio_clips")
+      .select("anchor_scene_key, source_kind, source_trim_start_seconds, source_trim_end_seconds")
+      .eq("level_id", levelId)
+      .is("deleted_at", null)
+      .in("source_kind", ["redub", "music"]);
+    const { redubScenes, musicScenes } = scenesWithChangedCrop(scenes, (data ?? []) as ClipCropRow[]);
+    if (redubScenes.length === 0 && musicScenes.length === 0) return { redub: 0, music: 0 };
+    if (blockedByPreflight(scenes)) return { redub: 0, music: 0 };
+    const keys = new Set([...redubScenes, ...musicScenes].map((s) => s.sceneKey));
+    const total = keys.size;
+    let done = 0;
+    setAutoProgress({ done, total });
+    for (const key of keys) {
+      const r = redubScenes.find((s) => s.sceneKey === key);
+      const m = musicScenes.find((s) => s.sceneKey === key);
+      await Promise.allSettled([r ? redubScene(r) : null, m ? extractMusic(m) : null]);
+      done += 1;
+      setAutoProgress({ done, total });
+    }
+    setAutoProgress(null);
+    await reload();
+    return { redub: redubScenes.length, music: musicScenes.length };
+  }, [levelId, redubScene, extractMusic, reload]);
+
   const deleteScene = useCallback(async (sceneKey: string) => {
     if (!levelId) return;
     await deletePreKRedub(levelId, sceneKey);
@@ -572,7 +608,25 @@ export function useBennyRedub(levelId: string | null) {
     extractMusic,
     runMusicAll,
     runFullAuto,
+    redoChangedClips,
     deleteScene,
     redubFromRegion,
   };
+}
+
+export interface ClipCropRow {
+  anchor_scene_key: string;
+  source_kind: string | null;
+  source_trim_start_seconds: number | null;
+  source_trim_end_seconds: number | null;
+}
+
+/** Which scenes have a voice or music track made from an older crop. */
+export function scenesWithChangedCrop(scenes: RedubSceneInput[], clips: ClipCropRow[]) {
+  const changed = (kind: "redub" | "music") => scenes.filter((s) =>
+    clips.some((c) => c.source_kind === kind && c.anchor_scene_key === s.sceneKey && cropChangedSinceRedub(
+      { start: c.source_trim_start_seconds, end: c.source_trim_end_seconds },
+      { trimIn: s.sourceTrimStartSeconds ?? 0, trimOut: s.sourceTrimEndSeconds ?? null, raw: s.sourceRawDurationSeconds ?? null },
+    )));
+  return { redubScenes: changed("redub"), musicScenes: changed("music") };
 }

@@ -74,3 +74,37 @@ export function paddingNeeded(lengthSeconds: number, minSeconds = MIN_ISOLATION_
   return lengthSeconds >= minSeconds ? 0 : minSeconds - lengthSeconds;
 }
 
+
+/** Video crop that a generated redub/music track was made from. */
+export interface SavedCrop {
+  start: number | null | undefined;
+  end: number | null | undefined;
+}
+
+/** The clip's crop as it is right now. */
+export interface CurrentCrop {
+  trimIn: number;
+  trimOut: number | null | undefined;
+  raw: number | null | undefined;
+}
+
+const CROP_TOLERANCE_SECONDS = 0.05;
+
+/**
+ * True when the video's crop was changed after this audio was generated, so
+ * the audio may now be the wrong words or the wrong length.
+ * Audio made before crops were remembered (start unknown) is never flagged.
+ */
+export function cropChangedSinceRedub(saved: SavedCrop, current: CurrentCrop): boolean {
+  if (saved.start == null || !Number.isFinite(Number(saved.start))) return false;
+  const savedStart = Number(saved.start);
+  if (Math.abs(savedStart - (current.trimIn || 0)) > CROP_TOLERANCE_SECONDS) return true;
+  const raw = current.raw != null && current.raw > 0 ? current.raw : null;
+  const resolveEnd = (end: number | null | undefined) =>
+    end != null && Number(end) > 0 ? Math.min(Number(end), raw ?? Number(end)) : raw;
+  const a = resolveEnd(saved.end);
+  const b = resolveEnd(current.trimOut);
+  if (a == null && b == null) return false;
+  if (a == null || b == null) return true;
+  return Math.abs(a - b) > CROP_TOLERANCE_SECONDS;
+}
