@@ -1,3 +1,4 @@
+import { isPreCutAudioClip } from "@/lib/preKSharedSource";
 // Realigns Pre-K audio clips (redub + music) so their `trim_start_seconds`
 // and `trim_end_seconds` follow the current video trims
 // on the parent scene. Fixes the "audio ~0.8s ahead of video" drift that
@@ -70,6 +71,8 @@ export async function alignPreKAudioClipsToVideoTrims(
     if (!scene) continue;
 
     const raw = scene.raw;
+    // Clips cut to their own window already start at 0; don't shift them.
+    if (isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), raw)) continue;
     const trimIn = scene.trimIn;
     const trimOut = scene.trimOut;
 

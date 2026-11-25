@@ -154,3 +154,38 @@ export async function redubFromSourceRegion(args: RedubFromRegionArgs): Promise<
     signedUrl: data?.signedUrl ?? undefined,
   };
 }
+
+/**
+ * Cut exactly one clip's [start, end] window out of its source video and
+ * upload it as a WAV. Several clip slots can share one long video file, so
+ * redub / music extraction must never send the whole file (that copied the
+ * same full-length audio into every box).
+ */
+export async function uploadTrimmedSourceWav(args: {
+  levelId: string;
+  sceneKey: string;
+  sourceVideoStoragePath: string;
+  startSeconds: number;
+  endSeconds?: number | null;
+}): Promise<{ wavPath: string; lengthSeconds: number }> {
+  const { data: signed, error: signErr } = await supabase.storage
+    .from(VIDEO_BUCKET)
+    .createSignedUrl(args.sourceVideoStoragePath, 60 * 60);
+  if (signErr || !signed?.signedUrl) throw new Error("Could not sign source video URL.");
+  const audioBuf = await fetchAsAudioBuffer(signed.signedUrl);
+  const start = Math.max(0, args.startSeconds || 0);
+  const end = Math.min(audioBuf.duration, args.endSeconds && args.endSeconds > start ? args.endSeconds : audioBuf.duration);
+  if (end - start < 0.05) throw new Error("This clip's crop is empty.");
+  const wav = encodeWav(sliceBuffer(audioBuf, start, end));
+  const wavPath = `redub-source/${args.levelId}/${args.sceneKey}-${Date.now()}.wav`;
+  const up = await supabase.storage.from(PREK_AUDIO_BUCKET).upload(wavPath, wav, { contentType: "audio/wav", upsert: true });
+  if (up.error) throw new Error(`Clip audio upload failed: ${up.error.message}`);
+  return { wavPath, lengthSeconds: end - start };
+}
+
+/** True when a clip uses only part of its source file. */
+export function clipNeedsSourceCut(trimIn?: number | null, trimOut?: number | null, rawDuration?: number | null): boolean {
+  if ((trimIn ?? 0) > 0.01) return true;
+  if (trimOut != null && trimOut > 0 && (!rawDuration || trimOut < rawDuration - 0.05)) return true;
+  return false;
+}

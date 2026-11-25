@@ -1,3 +1,4 @@
+import { uploadTrimmedSourceWav, clipNeedsSourceCut } from "@/lib/preKRedubRegion";
 // useBennyRedub — orchestrator for calling the prek-clip-redub edge function.
 //
 // Given a Pre-K level's scenes + source storage paths, this hook:
@@ -91,6 +92,44 @@ export interface LevelRedubSettings {
   musicPaths: Record<string, string>;
   generatedAt: string | null;
   musicGeneratedAt: string | null;
+}
+
+
+// Builds the request fields for a clip's source audio. When the clip only
+// uses part of its video (common when one long video fills several slots),
+// cut that part out first so each box gets its own audio.
+async function buildClipSource(levelId: string, scene: RedubSceneInput) {
+  if (!clipNeedsSourceCut(scene.sourceTrimStartSeconds, scene.sourceTrimEndSeconds, scene.sourceRawDurationSeconds)) {
+    return {
+      preCut: false,
+      fields: {
+        sourceStoragePath: scene.sourceStoragePath,
+        sceneDurationSeconds: scene.sceneDurationSeconds,
+        sourceRawDurationSeconds: scene.sourceRawDurationSeconds,
+        sourceTrimStartSeconds: scene.sourceTrimStartSeconds,
+        sourceTrimEndSeconds: scene.sourceTrimEndSeconds,
+      } as Record<string, unknown>,
+    };
+  }
+  const { wavPath, lengthSeconds } = await uploadTrimmedSourceWav({
+    levelId,
+    sceneKey: scene.sceneKey,
+    sourceVideoStoragePath: scene.sourceStoragePath,
+    startSeconds: scene.sourceTrimStartSeconds ?? 0,
+    endSeconds: scene.sourceTrimEndSeconds ?? null,
+  });
+  return {
+    preCut: true,
+    fields: {
+      sourceStoragePath: wavPath,
+      sourceBucket: PREK_AUDIO_BUCKET,
+      clipIsPreTrimmed: true,
+      sceneDurationSeconds: lengthSeconds,
+      sourceRawDurationSeconds: lengthSeconds,
+      sourceTrimStartSeconds: 0,
+      sourceTrimEndSeconds: lengthSeconds,
+    } as Record<string, unknown>,
+  };
 }
 
 export function useBennyRedub(levelId: string | null) {
@@ -235,14 +274,18 @@ export function useBennyRedub(levelId: string | null) {
     }
     setStates((m) => ({ ...m, [scene.sceneKey]: { status: "running", progressMessage: isolate ? "Isolating voice…" : "Redubbing…" } }));
 
+    let clipSource: Awaited<ReturnType<typeof buildClipSource>>;
+    try {
+      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "running", progressMessage: "Cutting this clip's audio…" } }));
+      clipSource = await buildClipSource(levelId, scene);
+    } catch (e) {
+      setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: (e as Error).message } }));
+      return false;
+    }
     const baseBody = {
       levelId,
       sceneKey: scene.sceneKey,
-      sourceStoragePath: scene.sourceStoragePath,
-      sceneDurationSeconds: scene.sceneDurationSeconds,
-      sourceRawDurationSeconds: scene.sourceRawDurationSeconds,
-      sourceTrimStartSeconds: scene.sourceTrimStartSeconds,
-      sourceTrimEndSeconds: scene.sourceTrimEndSeconds,
+      ...clipSource.fields,
       voiceId,
       stability: overrides?.stability ?? settings.stability,
       similarityBoost: overrides?.similarityBoost ?? settings.similarityBoost,
@@ -255,7 +298,8 @@ export function useBennyRedub(levelId: string | null) {
       // Phase A — isolation. Skipped if isolate=false, if forceReisolate is
       // off and we already have a stored isolated stem (retry-friendly:
       // don't re-pay ElevenLabs when Phase B failed but Phase A succeeded).
-      const needsPhaseA = isolate && (forceReisolate || !isolatedStoragePath);
+      // A cut clip always re-isolates: an old stored stem may be the whole shared video.
+      const needsPhaseA = isolate && (forceReisolate || clipSource.preCut || !isolatedStoragePath);
       if (needsPhaseA) {
         const { data: isoData, error: isoError } = await supabase.functions.invoke("prek-clip-redub", {
           body: { ...baseBody, stage: "isolate", isolate: true, isolateOnly: false },
@@ -334,16 +378,13 @@ export function useBennyRedub(levelId: string | null) {
     let resumeJobId: string | undefined;
 
     try {
+      const musicSource = (await buildClipSource(levelId, scene)).fields;
       while (true) {
         const { data, error } = await supabase.functions.invoke("prek-clip-music-extract", {
           body: {
             levelId,
             sceneKey: scene.sceneKey,
-            sourceStoragePath: scene.sourceStoragePath,
-            sceneDurationSeconds: scene.sceneDurationSeconds,
-            sourceRawDurationSeconds: scene.sourceRawDurationSeconds,
-            sourceTrimStartSeconds: scene.sourceTrimStartSeconds,
-            sourceTrimEndSeconds: scene.sourceTrimEndSeconds,
+            ...musicSource,
             resumeJobId,
           },
         });

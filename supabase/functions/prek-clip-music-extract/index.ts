@@ -41,6 +41,8 @@ interface Body {
   sourceTrimStartSeconds?: number;
   sourceTrimEndSeconds?: number;
   resumeJobId?: string;
+  /** Set to the audio bucket when the client uploaded a pre-cut WAV of just this clip. */
+  sourceBucket?: string;
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
@@ -142,7 +144,8 @@ Deno.serve(async (req) => {
       }
 
       // 1. Download source.
-      const dl = await admin.storage.from(VIDEO_BUCKET).download(body.sourceStoragePath);
+      const srcBucket = body.sourceBucket === AUDIO_BUCKET ? AUDIO_BUCKET : VIDEO_BUCKET;
+      const dl = await admin.storage.from(srcBucket).download(body.sourceStoragePath);
       if (dl.error || !dl.data) return json({ error: `Source download failed: ${dl.error?.message}` }, 500);
       const srcBytes = new Uint8Array(await dl.data.arrayBuffer());
 
@@ -151,7 +154,7 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "X-License-Key": apiKey,
-          "Content-Disposition": `attachment; filename="source.mp4"`,
+          "Content-Disposition": `attachment; filename="${srcBucket === AUDIO_BUCKET ? "source.wav" : "source.mp4"}"`,
           "Content-Type": "application/octet-stream",
         },
         body: srcBytes,

@@ -1,3 +1,4 @@
+import { findSharedSourceIssues, isPreCutAudioClip } from "@/lib/preKSharedSource";
 import { supabase } from "@/integrations/supabase/client";
 import { parseOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
@@ -188,6 +189,32 @@ export async function auditPreKLevelIntegrity(
     if (t.raw != null && t.trimOut != null && t.trimOut > t.raw + 0.05) issues.push({ severity: "error", code: "bad-trim", message: `${sceneKey} trim-out is beyond the video duration.` });
   }
 
+  // Clips that share one long video: find overlapping / open-ended crops.
+  try {
+    const pathByScene = new Map<string, string | null>();
+    pathByScene.set(SCENE_KEYS.opening, storagePathOnly(level.opening_video_url));
+    sorted.forEach((w, idx) => {
+      pathByScene.set(SCENE_KEYS.wordFirst(idx + 1), storagePathOnly(w.first_video_url));
+      pathByScene.set(SCENE_KEYS.wordSecond(idx + 1), storagePathOnly(w.second_video_url));
+    });
+    pathByScene.set(SCENE_KEYS.closing, storagePathOnly(level.closing_video_url));
+    const folders = new Set([...pathByScene.values()].filter((p): p is string => !!p).map((p) => p.split("/").slice(0, -1).join("/")));
+    const etagByPath = new Map<string, string>();
+    for (const folder of folders) {
+      const { data: files } = await supabase.storage.from(PREK_VIDEO_BUCKET).list(folder, { limit: 1000 });
+      (files ?? []).forEach((f) => {
+        const etag = (f.metadata as { eTag?: string } | null)?.eTag;
+        if (etag) etagByPath.set(`${folder}/${f.name}`, etag);
+      });
+    }
+    const windows = [...pathByScene.entries()].flatMap(([sceneKey, p]) => {
+      const t = trimMap.get(sceneKey);
+      if (!p || !t) return [];
+      return [{ sceneKey, fileId: etagByPath.get(p) ?? p, trimIn: t.trimIn, trimOut: t.trimOut, raw: t.raw }];
+    });
+    findSharedSourceIssues(windows).forEach((i) => issues.push({ severity: "warning", code: i.code, message: i.message }));
+  } catch { /* storage listing is best-effort */ }
+
   const storagePaths = requiredPaths.map(storagePathOnly).filter((p): p is string => !!p);
   if (storagePaths.length > 0) {
     const { data } = await supabase.storage.from(PREK_VIDEO_BUCKET).createSignedUrls(storagePaths, 60);
@@ -219,7 +246,8 @@ export async function auditPreKLevelIntegrity(
     const expectedTrim = trimMap.get(c.anchor_scene_key);
     if (!expectedTrim) return;
     const actualTrimStart = Number(c.trim_start_seconds ?? 0);
-    if (Math.abs(actualTrimStart - expectedTrim.trimIn) > 0.05) {
+    const preCut = isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), expectedTrim.raw);
+    if (!preCut && Math.abs(actualTrimStart - expectedTrim.trimIn) > 0.05) {
       issues.push({ severity: "error", code: "audio-trim-drift", message: `${c.anchor_scene_key} audio trim (${actualTrimStart.toFixed(2)}s) does not match video trim (${expectedTrim.trimIn.toFixed(2)}s).` });
     }
     const baseEnd = Number(c.trim_end_seconds ?? c.duration_seconds ?? 0);
