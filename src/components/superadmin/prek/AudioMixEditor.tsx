@@ -874,7 +874,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
       <Card>
         <CardHeader className="py-3 flex flex-row items-center justify-between">
           <CardTitle className="text-base">Mixer</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => addTrack()}><Plus className="h-3 w-3 mr-1"/> Add Track</Button>
+          <Button size="sm" variant="outline" onClick={() => addTrack()} title="Redubs and music go on the Benny rows automatically"><Plus className="h-3 w-3 mr-1"/> Add empty track</Button>
         </CardHeader>
         <CardContent className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
           <p className="text-[11px] text-muted-foreground">

@@ -1,3 +1,4 @@
+import { MIN_ISOLATION_SECONDS, paddingNeeded } from "./preKSharedSource";
 // Region Rescue for Pre-K redubs.
 //
 // Given a source video/audio storage path and a [startSec, endSec] window,
@@ -176,11 +177,22 @@ export async function uploadTrimmedSourceWav(args: {
   const start = Math.max(0, args.startSeconds || 0);
   const end = Math.min(audioBuf.duration, args.endSeconds && args.endSeconds > start ? args.endSeconds : audioBuf.duration);
   if (end - start < 0.05) throw new Error("This clip's crop is empty.");
-  const wav = encodeWav(sliceBuffer(audioBuf, start, end));
+  const wav = encodeWav(padBufferToMin(sliceBuffer(audioBuf, start, end), MIN_ISOLATION_SECONDS));
   const wavPath = `redub-source/${args.levelId}/${args.sceneKey}-${Date.now()}.wav`;
   const up = await supabase.storage.from(PREK_AUDIO_BUCKET).upload(wavPath, wav, { contentType: "audio/wav", upsert: true });
   if (up.error) throw new Error(`Clip audio upload failed: ${up.error.message}`);
   return { wavPath, lengthSeconds: end - start };
+}
+
+function padBufferToMin(buf: AudioBuffer, minSeconds: number): AudioBuffer {
+  const pad = paddingNeeded(buf.duration, minSeconds);
+  if (pad <= 0) return buf;
+  const tmpCtx = new (window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  const out = tmpCtx.createBuffer(buf.numberOfChannels, Math.ceil(minSeconds * buf.sampleRate), buf.sampleRate);
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) out.getChannelData(ch).set(buf.getChannelData(ch));
+  void tmpCtx.close?.();
+  return out;
 }
 
 /** True when a clip uses only part of its source file. */

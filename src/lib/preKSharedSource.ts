@@ -64,3 +64,13 @@ export function redubPreflightIssues(scenes: Array<{
     raw: s.sourceRawDurationSeconds ?? null,
   })));
 }
+
+/** ElevenLabs Voice Isolation rejects audio under 4.6s; pad short cuts with
+ *  trailing silence. The saved clip is trimmed back to the real length. */
+export const MIN_ISOLATION_SECONDS = 5;
+
+/** Seconds of silence to append so a cut reaches the minimum length. */
+export function paddingNeeded(lengthSeconds: number, minSeconds = MIN_ISOLATION_SECONDS): number {
+  return lengthSeconds >= minSeconds ? 0 : minSeconds - lengthSeconds;
+}
+

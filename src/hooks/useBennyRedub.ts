@@ -360,6 +360,20 @@ export function useBennyRedub(levelId: string | null) {
       return true;
     } catch (e) {
       const msg = (e as Error).message || "Unknown error";
+      // Remove this clip's old redub box so a failure never leaves a stale
+      // (often whole-video) redub that looks like it worked.
+      await supabase
+        .from("prek_level_audio_clips")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("level_id", levelId)
+        .eq("anchor_scene_key", scene.sceneKey)
+        .eq("source_kind", "redub")
+        .is("deleted_at", null);
+      setSettings((s) => {
+        const audioPaths = { ...s.audioPaths };
+        delete audioPaths[scene.sceneKey];
+        return { ...s, audioPaths };
+      });
       setStates((m) => ({ ...m, [scene.sceneKey]: { status: "error", errorMessage: msg } }));
       return false;
     }

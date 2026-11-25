@@ -337,8 +337,10 @@ async function ensureRedubClip(
   // the last frame while fixed redub audio finishes.
   // Region-rescue redubs are already trimmed to the exact phrase, so we play
   // them start-to-end without any tail trimming.
+  // Pre-cut clips may carry trailing silence padding (ElevenLabs needs ≥4.6s),
+  // so stop playback at the clip's real length.
   const redubTrimEnd = args.clipIsPreTrimmed
-    ? null
+    ? rawDuration
     : trimEnd != null && rawDuration != null
       ? Math.min(rawDuration, trimEnd + 2) >= rawDuration - 0.01
         ? null
