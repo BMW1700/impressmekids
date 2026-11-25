@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+import { findSharedSourceIssues } from "@/lib/preKSharedSource";
 import { uploadTrimmedSourceWav, clipNeedsSourceCut } from "@/lib/preKRedubRegion";
 // useBennyRedub — orchestrator for calling the prek-clip-redub edge function.
 //
@@ -130,6 +132,23 @@ async function buildClipSource(levelId: string, scene: RedubSceneInput) {
       sourceTrimEndSeconds: lengthSeconds,
     } as Record<string, unknown>,
   };
+}
+
+// Stop before spending credits when shared-video crops overlap or have no end.
+export function redubPreflightIssues(scenes: RedubSceneInput[]) {
+  return findSharedSourceIssues(scenes.map((s) => ({
+    sceneKey: s.sceneKey,
+    fileId: s.sourceStoragePath,
+    trimIn: s.sourceTrimStartSeconds ?? 0,
+    trimOut: s.sourceTrimEndSeconds && s.sourceTrimEndSeconds > 0 ? s.sourceTrimEndSeconds : null,
+    raw: s.sourceRawDurationSeconds ?? null,
+  })));
+}
+function blockedByPreflight(scenes: RedubSceneInput[]): boolean {
+  const issues = redubPreflightIssues(scenes);
+  if (issues.length === 0) return false;
+  toast.error(`Fix these crops first: ${issues.map((i) => i.message).join(" ")}`, { duration: 12000 });
+  return true;
 }
 
 export function useBennyRedub(levelId: string | null) {
@@ -357,6 +376,7 @@ export function useBennyRedub(levelId: string | null) {
   }, [levelId, settings.voiceId, settings.stability, settings.similarityBoost, settings.isolatedPaths, signedIsolatedUrls]);
 
   const redubAll = useCallback(async (scenes: RedubSceneInput[]) => {
+    if (blockedByPreflight(scenes)) return;
     setBatchProgress({ done: 0, total: scenes.length });
     let done = 0;
     for (const s of scenes) {
@@ -428,6 +448,7 @@ export function useBennyRedub(levelId: string | null) {
   // Scenes flow through a small worker pool so we get concurrency without
   // hammering ElevenLabs / LALAL.
   const runFullAuto = useCallback(async (scenes: RedubSceneInput[]) => {
+    if (blockedByPreflight(scenes)) return;
     const CONCURRENCY = 3;
     // Clear stale per-scene status so previous run's errors don't linger.
     setStates((m) => {
@@ -460,6 +481,7 @@ export function useBennyRedub(levelId: string | null) {
 
   // Bulk LALAL music extraction with 3-worker concurrency.
   const runMusicAll = useCallback(async (scenes: RedubSceneInput[]) => {
+    if (blockedByPreflight(scenes)) return;
     const CONCURRENCY = 3;
     setMusicStates((m) => {
       const next = { ...m };

@@ -43,6 +43,7 @@ interface Body {
   resumeJobId?: string;
   /** Set to the audio bucket when the client uploaded a pre-cut WAV of just this clip. */
   sourceBucket?: string;
+  clipIsPreTrimmed?: boolean;
 }
 
 // Retry helper: retries on network errors, 5xx, and 429 rate limits.
@@ -296,6 +297,7 @@ Deno.serve(async (req) => {
       sourceRawDurationSeconds: body.sourceRawDurationSeconds,
       sourceTrimStartSeconds: body.sourceTrimStartSeconds,
       sourceTrimEndSeconds: body.sourceTrimEndSeconds,
+      clipIsPreTrimmed: body.clipIsPreTrimmed === true,
     });
 
     const { data: signed } = await admin.storage.from(AUDIO_BUCKET).createSignedUrl(outPath, 60 * 60 * 24 * 7);
@@ -320,6 +322,7 @@ async function ensureMusicClip(
     sourceRawDurationSeconds?: number;
     sourceTrimStartSeconds?: number;
     sourceTrimEndSeconds?: number;
+    clipIsPreTrimmed?: boolean;
   },
 ) {
   // Idempotent track upsert — safe when parallel workers race for the same
@@ -398,6 +401,7 @@ async function ensureMusicClip(
     trim_end_seconds: Math.min(rawDuration, trimEnd),
     manual_crop_start_seconds: 0,
     manual_crop_end_seconds: 0,
+    source_pre_cut: args.clipIsPreTrimmed === true,
     playback_rate: 1.0,
     source_kind: "music" as const,
   };

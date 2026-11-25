@@ -366,6 +366,7 @@ async function ensureRedubClip(
     manual_crop_end_seconds: 0,
     playback_rate: 1.0,
     source_kind: "redub" as const,
+    source_pre_cut: args.clipIsPreTrimmed === true,
   };
 
   if (existingClip?.id) {

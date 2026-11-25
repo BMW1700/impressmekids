@@ -228,7 +228,7 @@ export async function auditPreKLevelIntegrity(
 
   const { data: clipRows } = await supabase
     .from("prek_level_audio_clips")
-    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, manual_crop_start_seconds, manual_crop_end_seconds, duration_seconds")
+    .select("id, track_index, source_kind, anchor_scene_key, trim_start_seconds, trim_end_seconds, manual_crop_start_seconds, manual_crop_end_seconds, duration_seconds, source_pre_cut")
     .eq("level_id", level.id)
     .is("deleted_at", null)
     .in("track_index", [PREK_MUSIC_TRACK_INDEX, PREK_REDUB_TRACK_INDEX]);
@@ -246,7 +246,7 @@ export async function auditPreKLevelIntegrity(
     const expectedTrim = trimMap.get(c.anchor_scene_key);
     if (!expectedTrim) return;
     const actualTrimStart = Number(c.trim_start_seconds ?? 0);
-    const preCut = isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), expectedTrim.raw);
+    const preCut = (c as any).source_pre_cut === true || isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), expectedTrim.raw);
     if (!preCut && Math.abs(actualTrimStart - expectedTrim.trimIn) > 0.05) {
       issues.push({ severity: "error", code: "audio-trim-drift", message: `${c.anchor_scene_key} audio trim (${actualTrimStart.toFixed(2)}s) does not match video trim (${expectedTrim.trimIn.toFixed(2)}s).` });
     }

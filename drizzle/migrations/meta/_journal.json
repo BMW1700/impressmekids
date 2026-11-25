@@ -29,6 +29,13 @@
       "when": 1795640664876,
       "tag": "0003_harden_definer_functions_and_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795642916636,
+      "tag": "0004_audio_clip_source_pre_cut",
+      "breakpoints": true
     }
   ]
 }

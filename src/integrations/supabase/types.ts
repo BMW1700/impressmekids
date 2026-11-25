@@ -5245,6 +5245,7 @@ export type Database = {
           playback_rate: number
           sort_order: number
           source_kind: string
+          source_pre_cut: boolean
           storage_path: string
           track_index: number
           trim_end_seconds: number | null
@@ -5275,6 +5276,7 @@ export type Database = {
           playback_rate?: number
           sort_order?: number
           source_kind?: string
+          source_pre_cut?: boolean
           storage_path: string
           track_index: number
           trim_end_seconds?: number | null
@@ -5305,6 +5307,7 @@ export type Database = {
           playback_rate?: number
           sort_order?: number
           source_kind?: string
+          source_pre_cut?: boolean
           storage_path?: string
           track_index?: number
           trim_end_seconds?: number | null

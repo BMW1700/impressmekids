@@ -55,7 +55,7 @@ export async function alignPreKAudioClipsToVideoTrims(
   const { data: clips, error } = await supabase
     .from("prek_level_audio_clips")
     .select(
-      "id, anchor_scene_key, source_kind, track_index, trim_start_seconds, trim_end_seconds, duration_seconds",
+      "id, anchor_scene_key, source_kind, track_index, trim_start_seconds, trim_end_seconds, duration_seconds, source_pre_cut",
     )
     .eq("level_id", levelId)
     .is("deleted_at", null)
@@ -72,7 +72,7 @@ export async function alignPreKAudioClipsToVideoTrims(
 
     const raw = scene.raw;
     // Clips cut to their own window already start at 0; don't shift them.
-    if (isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), raw)) continue;
+    if ((c as any).source_pre_cut === true || isPreCutAudioClip(c.duration_seconds == null ? null : Number(c.duration_seconds), raw)) continue;
     const trimIn = scene.trimIn;
     const trimOut = scene.trimOut;
 

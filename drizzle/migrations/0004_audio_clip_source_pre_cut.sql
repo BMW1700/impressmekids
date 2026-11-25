@@ -1,0 +1,1 @@
+ALTER TABLE public.prek_level_audio_clips ADD COLUMN IF NOT EXISTS source_pre_cut boolean NOT NULL DEFAULT false;
