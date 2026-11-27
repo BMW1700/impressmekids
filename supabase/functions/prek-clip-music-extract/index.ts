@@ -17,6 +17,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { ensurePreKTrackRow } from "../_shared/prekTrackRow.ts";
 
 const VIDEO_BUCKET = "prek-level-videos";
 const AUDIO_BUCKET = "prek-level-audio";
@@ -334,18 +335,7 @@ async function ensureMusicClip(
 ) {
   // Idempotent track upsert — safe when parallel workers race for the same
   // (level, track_index). ignoreDuplicates skips if the track already exists.
-  await admin
-    .from("prek_level_audio_tracks")
-    .upsert(
-      {
-        level_id: args.levelId,
-        track_index: MUSIC_TRACK_INDEX,
-        name: MUSIC_TRACK_NAME,
-        volume: 0.8,
-        muted: false,
-      },
-      { onConflict: "level_id,track_index", ignoreDuplicates: true },
-    );
+  await ensurePreKTrackRow(admin, { levelId: args.levelId, trackIndex: MUSIC_TRACK_INDEX, name: MUSIC_TRACK_NAME, volume: 0.8 });
 
   const { data: existingClip } = await admin
     .from("prek_level_audio_clips")

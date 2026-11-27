@@ -2,4 +2,4 @@
 
 - Build iOS with Vite's `native` mode: hosted Lovable asset pointers must resolve over the production HTTPS origin instead of the bundled app origin, while website builds retain same-origin paths.
 - Resolve database-supplied Lovable media paths with the shared native media resolver; leave signed private URLs and bundled local files unchanged to preserve access controls.
-- Keep native social sign-in hidden until a secure external-browser session handoff is implemented and tested; displaying web-only OAuth buttons does not make phone login functional.
+- Keep native social sign-in hidden until a secure external-browser session handoff is implemented and tested; displaying web-only OAuth buttons does not make phone login functional.- Save Pre-K redub/music/bulk clips only after `ensurePreKTrackRow` (insert + revive soft-deleted row); a plain upsert with ignoreDuplicates leaves clips on a hidden deleted row.

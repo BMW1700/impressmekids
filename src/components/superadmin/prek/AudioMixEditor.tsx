@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { ensurePreKTrackRow, findHiddenClipRows, defaultVolumeForRow, type HiddenClipRow } from "@/lib/preKTrackRow";
 import { toast } from "sonner";
 import {
   usePreKAudioMix,
@@ -203,12 +204,25 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
   // Soft-delete a track + cascade-soft-delete its clips. Undoable.
   const deleteTrack = async (t: PreKAudioTrack) => {
     const trackClips = mix.clips.filter((c) => c.track_index === t.track_index);
-    if (trackClips.length > 0 && !confirm(`Delete "${t.name}" and its ${trackClips.length} clip(s)? You can undo this.`)) return;
+    const bennyRow = t.track_index === 90 ? "voice" : t.track_index === 89 ? "music" : null;
+    const msg = bennyRow
+      ? `Delete "${t.name}"? This removes ALL Benny ${bennyRow} for this level (${trackClips.length} clip(s)). The next ${bennyRow === "voice" ? "redub" : "music"} run will bring the row back. You can undo this.`
+      : `Delete "${t.name}" and its ${trackClips.length} clip(s)? You can undo this.`;
+    if ((trackClips.length > 0 || bennyRow) && !confirm(msg)) return;
     const now = new Date().toISOString();
     await supabase.from("prek_level_audio_clips").update({ deleted_at: now }).eq("level_id", levelId).eq("track_index", t.track_index).is("deleted_at", null);
     await supabase.from("prek_level_audio_tracks").update({ deleted_at: now }).eq("id", t.id);
     // Undo: restore the track (clips with matching track_index are restored too)
     pushUndo({ kind: "track-soft-delete", id: t.id });
+    mix.reload();
+  };
+
+  // Restore a row whose clips exist but are hidden (row missing or deleted).
+  const restoreHiddenRow = async (row: HiddenClipRow) => {
+    await ensurePreKTrackRow(supabase, {
+      levelId, trackIndex: row.trackIndex, name: row.label, volume: defaultVolumeForRow(row.trackIndex),
+    });
+    toast.success(`${row.label} row restored — ${row.clipCount} clip(s) visible again`);
     mix.reload();
   };
 
@@ -608,6 +622,7 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mix.loading, mix.tracks.length]);
 
+  const hiddenRows = useMemo(() => findHiddenClipRows(mix.tracks, mix.clips), [mix.tracks, mix.clips]);
   const selectedClip = mix.clips.find((c) => c.id === selectedClipId) || null;
   const selectedTrack = selectedClip ? mix.tracks.find((t) => t.track_index === selectedClip.track_index) ?? null : null;
 
@@ -835,6 +850,14 @@ export const AudioMixEditor = ({ levelId, level, words }: Props) => {
           <CardTitle className="text-base">Timeline</CardTitle>
         </CardHeader>
         <CardContent>
+          {hiddenRows.map((row) => (
+            <div key={row.trackIndex} className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm">
+              <span className="flex-1 min-w-[200px]">
+                {row.clipCount} {row.label} clip(s) are hidden because their row was deleted.
+              </span>
+              <Button size="sm" variant="destructive" onClick={() => restoreHiddenRow(row)}>Restore row</Button>
+            </div>
+          ))}
           <TimelineCanvas
             graph={sceneGraph}
             tracks={mix.tracks}

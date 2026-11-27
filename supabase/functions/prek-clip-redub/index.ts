@@ -19,6 +19,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { ensurePreKTrackRow } from "../_shared/prekTrackRow.ts";
 
 const ELEVENLABS_STS_MODEL = "eleven_multilingual_sts_v2";
 const VIDEO_BUCKET = "prek-level-videos";
@@ -301,18 +302,7 @@ async function ensureRedubClip(
 ) {
   // 1. Idempotent track upsert — safe under parallel workers racing the same
   // (level_id, track_index). ignoreDuplicates skips if a track already exists.
-  await admin
-    .from("prek_level_audio_tracks")
-    .upsert(
-      {
-        level_id: args.levelId,
-        track_index: REDUB_TRACK_INDEX,
-        name: REDUB_TRACK_NAME,
-        volume: 1.0,
-        muted: false,
-      },
-      { onConflict: "level_id,track_index", ignoreDuplicates: true },
-    );
+  await ensurePreKTrackRow(admin, { levelId: args.levelId, trackIndex: REDUB_TRACK_INDEX, name: REDUB_TRACK_NAME, volume: 1.0 });
 
   // 2. Upsert the redub clip for this scene (unique per (level, track, scene) when source_kind='redub').
   const { data: existingClip } = await admin

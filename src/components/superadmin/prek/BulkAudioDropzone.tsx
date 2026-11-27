@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ensurePreKTrackRow } from "@/lib/preKTrackRow";
 import { isVideoScene, type SceneGraph } from "@/lib/preKSceneGraph";
 import { PREK_AUDIO_BUCKET } from "@/lib/preKAudioUpload";
 import { mirrorToR2Async } from "@/lib/r2Mirror";
@@ -113,12 +114,7 @@ export const BulkAudioDropzone = ({ levelId, sceneGraph }: Props) => {
       if (slices.length === 0) { toast.error("All slices were empty."); return; }
 
       // 2. Ensure track row exists (idempotent).
-      await supabase
-        .from("prek_level_audio_tracks")
-        .upsert(
-          { level_id: levelId, track_index: trackIndex, name: trackName, volume: target === "music" ? 0.8 : 1.0, muted: false },
-          { onConflict: "level_id,track_index", ignoreDuplicates: true },
-        );
+      await ensurePreKTrackRow(supabase, { levelId, trackIndex, name: trackName, volume: target === "music" ? 0.8 : 1.0 });
 
       // 3. Upload + insert one clip per slice, anchored to the matching scene.
       const placedIds: string[] = [];

@@ -1,5 +1,6 @@
 import { findSharedSourceIssues, isPreCutAudioClip, cropChangedSinceRedub } from "@/lib/preKSharedSource";
 import { supabase } from "@/integrations/supabase/client";
+import { findHiddenClipRows } from "@/lib/preKTrackRow";
 import { parseOriginalAudioMap } from "@/lib/preKOriginalAudio";
 import { PREK_VIDEO_BUCKET } from "@/lib/preKLevelFromDb";
 import { SCENE_KEYS } from "@/lib/preKSceneGraph";
@@ -234,6 +235,20 @@ export async function auditPreKLevelIntegrity(
     .in("track_index", [PREK_MUSIC_TRACK_INDEX, PREK_REDUB_TRACK_INDEX]);
 
   const clips = ((clipRows ?? []) as unknown as AudioClipRow[]);
+
+  // Clips saved onto a deleted/missing row are invisible in the editor.
+  const { data: trackRows } = await supabase
+    .from("prek_level_audio_tracks")
+    .select("track_index")
+    .eq("level_id", level.id)
+    .is("deleted_at", null);
+  findHiddenClipRows((trackRows ?? []) as { track_index: number }[], clips).forEach((row) => {
+    issues.push({
+      severity: "error",
+      code: "hidden-audio-row",
+      message: `${row.clipCount} ${row.label} clip(s) are hidden: their row was deleted. Open the timeline and click "Restore row".`,
+    });
+  });
   const redubAnchors = new Set(clips.filter((c) => c.track_index === PREK_REDUB_TRACK_INDEX || c.source_kind === "redub").map((c) => c.anchor_scene_key));
   const musicAnchors = new Set(clips.filter((c) => c.track_index === PREK_MUSIC_TRACK_INDEX || c.source_kind === "music").map((c) => c.anchor_scene_key));
   const hasOverlayAudio = clips.length > 0;
